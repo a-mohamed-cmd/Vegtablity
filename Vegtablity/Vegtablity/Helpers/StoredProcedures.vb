@@ -39,5 +39,26 @@ Namespace Helpers
         ' =============================================
         Public Const SP_LICENSE_CHECK As String = "[Security].[sp_License_Check]"
 
+        ' =============================================
+        ' Settings Schema - Units
+        ' =============================================
+        Public Const SP_UNIT_GETALL As String = "[Settings].[sp_Unit_GetAll]"
+        Public Const SP_UNIT_SAVE As String = "[Settings].[sp_Unit_Save]"
+        Public Const SP_UNIT_DELETE As String = "[Settings].[sp_Unit_Delete]"
+
+        ' =============================================
+        ' Settings Schema - Categories
+        ' =============================================
+        Public Const SP_CATEGORY_GETALL As String = "[Settings].[sp_Category_GetAll]"
+        Public Const SP_CATEGORY_SAVE As String = "[Settings].[sp_Category_Save]"
+        Public Const SP_CATEGORY_DELETE As String = "[Settings].[sp_Category_Delete]"
+
+        ' =============================================
+        ' Settings Schema - Warehouses
+        ' =============================================
+        Public Const SP_WAREHOUSE_GETALL As String = "[Settings].[sp_Warehouse_GetAll]"
+        Public Const SP_WAREHOUSE_SAVE As String = "[Settings].[sp_Warehouse_Save]"
+        Public Const SP_WAREHOUSE_DELETE As String = "[Settings].[sp_Warehouse_Delete]"
+
     End Class
 End Namespace

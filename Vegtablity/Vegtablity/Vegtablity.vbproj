@@ -148,6 +148,7 @@
     <Compile Include="Services\Session.vb" />
     <Compile Include="Services\UserService.vb" />
     <Compile Include="Services\UserManagementService.vb" />
+    <Compile Include="Services\SettingsService.vb" />
     <Compile Include="Services\RoleService.vb" />
     <Compile Include="Services\PermissionService.vb" />
     <Compile Include="ViewModels\BaseViewModel.vb" />
@@ -155,6 +156,10 @@
     <Compile Include="ViewModels\LoginViewModel.vb" />
     <Compile Include="ViewModels\DashboardViewModel.vb" />
     <Compile Include="ViewModels\UserManagementViewModel.vb" />
+    <Compile Include="ViewModels\SettingsViewModel.vb" />
+    <Compile Include="Models\Unit.vb" />
+    <Compile Include="Models\Category.vb" />
+    <Compile Include="Models\Warehouse.vb" />
     <Compile Include="Helpers\RelayCommand.vb" />
     <Compile Include="Helpers\StoredProcedures.vb" />
     <Compile Include="Helpers\ValidationHelper.vb" />
@@ -174,6 +179,9 @@
     <Compile Include="Views\UserManagementPage.xaml.vb">
       <DependentUpon>UserManagementPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\SettingsPage.xaml.vb">
+      <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\LicenseWindow.xaml">
@@ -189,6 +197,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\UserManagementPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\SettingsPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

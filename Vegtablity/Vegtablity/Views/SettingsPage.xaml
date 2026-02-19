@@ -1,0 +1,163 @@
+<UserControl x:Class="Views.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+
+    <UserControl.DataContext>
+        <vm:SettingsViewModel/>
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Tab Control -->
+        <TabControl Grid.Row="0" BorderThickness="0" Background="Transparent">
+
+            <!-- ========== TAB 1: الوحدات (Units) ========== -->
+            <TabItem Header="  📏 الوحدات  " FontSize="14" FontWeight="SemiBold">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="320"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Units List -->
+                    <DataGrid Grid.Column="0" ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit}"
+                              AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                              BorderThickness="1" BorderBrush="#dcdde1" Margin="0,0,15,0"
+                              RowHeight="38" ColumnHeaderHeight="40">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding UnitID}" Width="60"/>
+                            <DataGridTextColumn Header="اسم الوحدة" Binding="{Binding UnitName}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Edit Panel -->
+                    <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="15" BorderBrush="#eee" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="تفاصيل الوحدة" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+
+                            <!-- اسم الوحدة -->
+                            <TextBlock Text="اسم الوحدة *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditUnitName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding UnitNameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
+                                       Visibility="{Binding UnitNameError, Converter={StaticResource StringToVisConverter}}"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                <Button Content="💾 حفظ" Command="{Binding SaveUnitCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewUnitCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5" Background="#3498db"/>
+                                <Button Content="🚫 تعطيل" Command="{Binding DeleteUnitCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5" Background="#e74c3c"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ========== TAB 2: التصنيفات (Categories) ========== -->
+            <TabItem Header="  📂 التصنيفات  " FontSize="14" FontWeight="SemiBold">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="320"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Categories List -->
+                    <DataGrid Grid.Column="0" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
+                              AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                              BorderThickness="1" BorderBrush="#dcdde1" Margin="0,0,15,0"
+                              RowHeight="38" ColumnHeaderHeight="40">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding CatID}" Width="60"/>
+                            <DataGridTextColumn Header="اسم التصنيف" Binding="{Binding CatName}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Edit Panel -->
+                    <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="15" BorderBrush="#eee" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="تفاصيل التصنيف" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+
+                            <!-- اسم التصنيف -->
+                            <TextBlock Text="اسم التصنيف *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditCatName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding CatNameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
+                                       Visibility="{Binding CatNameError, Converter={StaticResource StringToVisConverter}}"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                                <Button Content="💾 حفظ" Command="{Binding SaveCategoryCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewCategoryCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5" Background="#3498db"/>
+                                <Button Content="🚫 تعطيل" Command="{Binding DeleteCategoryCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5" Background="#e74c3c"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ========== TAB 3: المخازن (Warehouses) ========== -->
+            <TabItem Header="  🏪 المخازن  " FontSize="14" FontWeight="SemiBold">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Warehouses List -->
+                    <DataGrid Grid.Column="0" ItemsSource="{Binding Warehouses}" SelectedItem="{Binding SelectedWarehouse}"
+                              AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                              BorderThickness="1" BorderBrush="#dcdde1" Margin="0,0,15,0"
+                              RowHeight="38" ColumnHeaderHeight="40">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ID" Binding="{Binding WarehouseID}" Width="60"/>
+                            <DataGridTextColumn Header="اسم المخزن" Binding="{Binding WarehouseName}" Width="*"/>
+                            <DataGridTextColumn Header="العنوان" Binding="{Binding Address}" Width="*"/>
+                            <DataGridTextColumn Header="أمين المخزن" Binding="{Binding KeeperName}" Width="120"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Edit Panel -->
+                    <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="15" BorderBrush="#eee" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="تفاصيل المخزن" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+
+                            <!-- اسم المخزن -->
+                            <TextBlock Text="اسم المخزن *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditWarehouseName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding WarehouseNameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
+                                       Visibility="{Binding WarehouseNameError, Converter={StaticResource StringToVisConverter}}"/>
+
+                            <!-- العنوان -->
+                            <TextBlock Text="العنوان" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditWarehouseAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
+
+                            <!-- أمين المخزن -->
+                            <TextBlock Text="أمين المخزن" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditWarehouseKeeper, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="💾 حفظ" Command="{Binding SaveWarehouseCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewWarehouseCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5" Background="#3498db"/>
+                                <Button Content="🚫 تعطيل" Command="{Binding DeleteWarehouseCommand}" Style="{StaticResource ModernButtonStyle}" Width="80" Margin="5" Background="#e74c3c"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="1" CornerRadius="0,0,12,12" Background="#ecf0f1" Padding="15,8">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="#2c3e50" FontSize="13"/>
+        </Border>
+    </Grid>
+</UserControl>

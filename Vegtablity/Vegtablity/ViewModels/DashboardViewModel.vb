@@ -141,7 +141,7 @@ Namespace ViewModels
             allItems.Add(New MenuItem With {.Title = "إدارة المستخدمين", .Icon = "🔐", .FormName = "UserManagement", .IsVisible = True})
 
             ' Filter by permissions
-            Dim isAdmin As Boolean = (CurrentRoleName = "Admin")
+            Dim isAdmin As Boolean = String.Equals(CurrentRoleName, "Admin", StringComparison.OrdinalIgnoreCase)
             Dim visibleItems As New ObservableCollection(Of MenuItem)()
 
             For Each item In allItems
@@ -152,10 +152,15 @@ Namespace ViewModels
                     If item.FormName = "Dashboard" Then
                         visibleItems.Add(item) ' Dashboard always visible
                     ElseIf Services.Session.CurrentUser IsNot Nothing Then
-                        Dim canView = _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, item.FormName)
-                        If canView Then
+                        Try
+                            Dim canView = _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, item.FormName)
+                            If canView Then
+                                visibleItems.Add(item)
+                            End If
+                        Catch
+                            ' If permission check fails, show the item (fallback)
                             visibleItems.Add(item)
-                        End If
+                        End Try
                     End If
                 End If
             Next
@@ -181,6 +186,10 @@ Namespace ViewModels
 
                     Case "UserManagement"
                         CurrentPage = New Views.UserManagementPage()
+                        IsHomePage = False
+
+                    Case "Settings"
+                        CurrentPage = New Views.SettingsPage()
                         IsHomePage = False
 
                     Case Else
