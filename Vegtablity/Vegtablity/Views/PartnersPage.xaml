@@ -1,0 +1,303 @@
+<UserControl x:Class="Views.PartnersPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+
+    <UserControl.DataContext>
+        <vm:PartnersViewModel/>
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+    </UserControl.Resources>
+
+    <!-- Fade-in animation for entire page -->
+    <UserControl.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.5">
+                        <DoubleAnimation.EasingFunction>
+                            <CubicEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </UserControl.Triggers>
+
+    <TabControl>
+        <TabControl.Triggers>
+            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.15">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </TabControl.Triggers>
+
+        <!-- ==================== تبويب العملاء ==================== -->
+        <TabItem Header="👤 العملاء">
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header with Search -->
+                <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,5">
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,-30,0,5" To="0,0,0,5" Duration="0:0:0.4">
+                                        <ThicknessAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </ThicknessAnimation.EasingFunction>
+                                    </ThicknessAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="👤 إدارة العملاء" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding CustomerSearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Main Content -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- DataGrid -->
+                    <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
+                        <DataGrid ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  BorderThickness="0" Margin="5" RowHeight="38" ColumnHeaderHeight="40">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding PartnerID}" Width="50"/>
+                                <DataGridTextColumn Header="اسم العميل" Binding="{Binding PartnerName}" Width="*"/>
+                                <DataGridTextColumn Header="الهاتف" Binding="{Binding Phone}" Width="120"/>
+                                <DataGridTextColumn Header="العنوان" Binding="{Binding Address}" Width="150"/>
+                                <DataGridTextColumn Header="الرصيد" Binding="{Binding CurrentBalance, StringFormat=N2}" Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <!-- Edit Panel -->
+                    <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="18" BorderBrush="#eee" BorderThickness="1">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.3">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <ThicknessAnimation Storyboard.TargetProperty="Margin" From="20,0,0,0" To="0,0,0,0" Duration="0:0:0.5" BeginTime="0:0:0.3">
+                                            <ThicknessAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </ThicknessAnimation.EasingFunction>
+                                        </ThicknessAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
+                        <StackPanel>
+                            <TextBlock Text="بيانات العميل" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="اسم العميل *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditCustomerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding CustomerNameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
+                                       Visibility="{Binding CustomerNameError, Converter={StaticResource StringToVisConverter}}"/>
+
+                            <TextBlock Text="الهاتف" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditCustomerPhone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="العنوان" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditCustomerAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="💾 حفظ" Command="{Binding SaveCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                                <Button Content="🚫 تعطيل" Command="{Binding DeleteCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Status Bar -->
+                <Border Grid.Row="2" CornerRadius="0,0,12,12" Background="#ecf0f1" Padding="12,6" Margin="0,5,0,0">
+                    <TextBlock Text="{Binding CustomerStatusMessage}" Foreground="#2c3e50" FontSize="13"/>
+                </Border>
+            </Grid>
+        </TabItem>
+
+        <!-- ==================== تبويب الموردين ==================== -->
+        <TabItem Header="🏭 الموردين">
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header with Search -->
+                <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,5">
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,-30,0,5" To="0,0,0,5" Duration="0:0:0.4">
+                                        <ThicknessAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </ThicknessAnimation.EasingFunction>
+                                    </ThicknessAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="🏭 إدارة الموردين" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding SupplierSearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Main Content -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- DataGrid -->
+                    <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
+                        <DataGrid ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}"
+                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                  BorderThickness="0" Margin="5" RowHeight="38" ColumnHeaderHeight="40">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="ID" Binding="{Binding PartnerID}" Width="50"/>
+                                <DataGridTextColumn Header="اسم المورد" Binding="{Binding PartnerName}" Width="*"/>
+                                <DataGridTextColumn Header="الهاتف" Binding="{Binding Phone}" Width="120"/>
+                                <DataGridTextColumn Header="العنوان" Binding="{Binding Address}" Width="150"/>
+                                <DataGridTextColumn Header="الرصيد" Binding="{Binding CurrentBalance, StringFormat=N2}" Width="100"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+
+                    <!-- Edit Panel -->
+                    <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="18" BorderBrush="#eee" BorderThickness="1">
+                        <Border.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.3">
+                                            <DoubleAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <ThicknessAnimation Storyboard.TargetProperty="Margin" From="20,0,0,0" To="0,0,0,0" Duration="0:0:0.5" BeginTime="0:0:0.3">
+                                            <ThicknessAnimation.EasingFunction>
+                                                <CubicEase EasingMode="EaseOut"/>
+                                            </ThicknessAnimation.EasingFunction>
+                                        </ThicknessAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Border.Triggers>
+                        <StackPanel>
+                            <TextBlock Text="بيانات المورد" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+
+                            <TextBlock Text="اسم المورد *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditSupplierName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding SupplierNameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
+                                       Visibility="{Binding SupplierNameError, Converter={StaticResource StringToVisConverter}}"/>
+
+                            <TextBlock Text="الهاتف" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditSupplierPhone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="العنوان" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditSupplierAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15"/>
+
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="💾 حفظ" Command="{Binding SaveSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                                <Button Content="🚫 تعطيل" Command="{Binding DeleteSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Status Bar -->
+                <Border Grid.Row="2" CornerRadius="0,0,12,12" Background="#ecf0f1" Padding="12,6" Margin="0,5,0,0">
+                    <TextBlock Text="{Binding SupplierStatusMessage}" Foreground="#2c3e50" FontSize="13"/>
+                </Border>
+            </Grid>
+        </TabItem>
+    </TabControl>
+</UserControl>

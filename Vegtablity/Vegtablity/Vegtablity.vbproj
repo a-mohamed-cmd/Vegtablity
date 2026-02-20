@@ -149,6 +149,10 @@
     <Compile Include="Services\UserService.vb" />
     <Compile Include="Services\UserManagementService.vb" />
     <Compile Include="Services\SettingsService.vb" />
+    <Compile Include="Services\InventoryService.vb" />
+    <Compile Include="Services\PartnerService.vb" />
+    <Compile Include="Services\AccountingService.vb" />
+    <Compile Include="Services\VoucherService.vb" />
     <Compile Include="Services\RoleService.vb" />
     <Compile Include="Services\PermissionService.vb" />
     <Compile Include="ViewModels\BaseViewModel.vb" />
@@ -157,9 +161,17 @@
     <Compile Include="ViewModels\DashboardViewModel.vb" />
     <Compile Include="ViewModels\UserManagementViewModel.vb" />
     <Compile Include="ViewModels\SettingsViewModel.vb" />
+    <Compile Include="ViewModels\InventoryViewModel.vb" />
+    <Compile Include="ViewModels\PartnersViewModel.vb" />
+    <Compile Include="ViewModels\AccountingViewModel.vb" />
+    <Compile Include="ViewModels\VouchersViewModel.vb" />
     <Compile Include="Models\Unit.vb" />
     <Compile Include="Models\Category.vb" />
     <Compile Include="Models\Warehouse.vb" />
+    <Compile Include="Models\Product.vb" />
+    <Compile Include="Models\Partner.vb" />
+    <Compile Include="Models\Account.vb" />
+    <Compile Include="Models\Voucher.vb" />
     <Compile Include="Helpers\RelayCommand.vb" />
     <Compile Include="Helpers\StoredProcedures.vb" />
     <Compile Include="Helpers\ValidationHelper.vb" />
@@ -182,6 +194,24 @@
     <Compile Include="Views\SettingsPage.xaml.vb">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\InventoryPage.xaml.vb">
+      <DependentUpon>InventoryPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PartnersPage.xaml.vb">
+      <DependentUpon>PartnersPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\AccountingPage.xaml.vb">
+      <DependentUpon>AccountingPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\VouchersPage.xaml.vb">
+      <DependentUpon>VouchersPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ReceiptVoucherPage.xaml.vb">
+      <DependentUpon>ReceiptVoucherPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PaymentVoucherPage.xaml.vb">
+      <DependentUpon>PaymentVoucherPage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\LicenseWindow.xaml">
@@ -201,6 +231,30 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\SettingsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\InventoryPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PartnersPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\AccountingPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\VouchersPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ReceiptVoucherPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PaymentVoucherPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -28,3 +28,7 @@ Desktop.ini
 # Database files
 *.mdf
 *.ldf
+
+# MS Office / Temporary
+~$*
+*.tmp

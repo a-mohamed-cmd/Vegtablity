@@ -259,26 +259,9 @@ BEGIN
 END
 
 -- =============================================
+-- =============================================
 -- 7. السندات المالية (Schema: Accounting)
 -- =============================================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Vouchers' AND schema_id = SCHEMA_ID('Accounting'))
-BEGIN
-    CREATE TABLE [Accounting].[Vouchers] (
-        VoucherID INT PRIMARY KEY IDENTITY(1,1),
-        VoucherType NVARCHAR(20) NOT NULL, 
-        VoucherDate DATETIME DEFAULT GETDATE(),
-        PartnerID INT NULL, 
-        AccountID INT NULL, 
-        Amount DECIMAL(18, 2) NOT NULL,
-        Description NVARCHAR(255),
-        PaymentMethod NVARCHAR(20) DEFAULT 'Cash', 
-        UserID INT,
-        IsPosted BIT DEFAULT 0,
-        FOREIGN KEY (PartnerID) REFERENCES [Sales].[Partners](PartnerID),
-        FOREIGN KEY (AccountID) REFERENCES [Accounting].[ChartOfAccounts](AccountID),
-        FOREIGN KEY (UserID) REFERENCES [Security].[Users](UserID)
-    );
-END
 
 -- ============================================= -- 4.2 الإجراءات المخزنة (Stored Procedures) -- ============================================= GO
 
@@ -550,3 +533,347 @@ IF OBJECT_ID('[Settings].[trg_PreventDeleteUsedCategory]', 'TR') IS NOT NULL DRO
 GO
 IF OBJECT_ID('[Settings].[trg_PreventDeleteUsedWarehouse]', 'TR') IS NOT NULL DROP TRIGGER [Settings].[trg_PreventDeleteUsedWarehouse];
 GO
+
+IF NOT EXISTS (SELECT * FROM sys.sequences WHERE name = 'seq_VoucherNo' AND schema_id = SCHEMA_ID('Accounting'))
+    CREATE SEQUENCE [Accounting].[seq_VoucherNo] AS INT START WITH 2025001 INCREMENT BY 1;
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Vouchers' AND schema_id = SCHEMA_ID('Accounting'))
+BEGIN
+    CREATE TABLE [Accounting].[Vouchers] (
+        VoucherID INT PRIMARY KEY IDENTITY(1,1),
+        VoucherNo INT NOT NULL DEFAULT (NEXT VALUE FOR [Accounting].[seq_VoucherNo]),
+        VoucherType NVARCHAR(20) NOT NULL, 
+        VoucherDate DATETIME DEFAULT GETDATE(),
+        PartnerID INT NULL, 
+        AccountID INT NULL, 
+        Amount DECIMAL(18, 2) NOT NULL,
+        Description NVARCHAR(255),
+        PaymentMethod NVARCHAR(20) DEFAULT 'Cash', 
+        UserID INT,
+        IsPosted BIT DEFAULT 0,
+        FOREIGN KEY (PartnerID) REFERENCES [Sales].[Partners](PartnerID),
+        FOREIGN KEY (AccountID) REFERENCES [Accounting].[ChartOfAccounts](AccountID),
+        FOREIGN KEY (UserID) REFERENCES [Security].[Users](UserID)
+    );
+END
+
+
+
+-- =============================================
+-- 1. تسلسل أرقام القيود + إنشاء جدول القيود المحاسبية
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.sequences WHERE name = 'seq_EntryNo' AND schema_id = SCHEMA_ID('Accounting'))
+    CREATE SEQUENCE [Accounting].[seq_EntryNo] AS INT START WITH 22200101 INCREMENT BY 1;
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'JournalEntries' AND schema_id = SCHEMA_ID('Accounting'))
+BEGIN
+    CREATE TABLE [Accounting].[JournalEntries] (
+        EntryID INT PRIMARY KEY IDENTITY(1,1),
+        EntryNo INT NOT NULL DEFAULT (NEXT VALUE FOR [Accounting].[seq_EntryNo]),
+        EntryDate DATETIME DEFAULT GETDATE(),
+        ReferenceType NVARCHAR(20) NOT NULL,       -- 'Voucher' / 'Invoice'
+        ReferenceID INT NOT NULL,                    -- رقم السند أو الفاتورة
+        AccountID INT NOT NULL,
+        DebitAmount DECIMAL(18, 2) DEFAULT 0,
+        CreditAmount DECIMAL(18, 2) DEFAULT 0,
+        Description NVARCHAR(255),
+        UserID INT NULL,
+        CreatedAt DATETIME DEFAULT GETDATE(),
+        FOREIGN KEY (AccountID) REFERENCES [Accounting].[ChartOfAccounts](AccountID),
+        FOREIGN KEY (UserID) REFERENCES [Security].[Users](UserID)
+    );
+END
+GO
+
+-- =============================================
+-- نحتاج حساب صندوق وحساب بنك افتراضيين
+-- يمكنك تعديل الأرقام حسب شجرة حساباتك
+-- =============================================
+-- سنستخدم PaymentMethod لتحديد الحساب:
+--   Cash => أول حساب اسمه 'الصندوق' (أو AccountID يُحدد يدوياً)
+--   Bank => أول حساب اسمه 'البنك'
+-- =============================================
+
+-- =============================================
+-- 2. Trigger: عند INSERT أو UPDATE على Vouchers
+--    إذا أصبح IsPosted = 1 => ينشئ قيدين
+--    إذا تغير IsPosted من 1 إلى 0 => يحذف القيود
+--    إذا تعدّل سند مرحّل => يحدّث القيود
+-- =============================================
+IF OBJECT_ID('[Accounting].[trg_Voucher_Post]', 'TR') IS NOT NULL
+    DROP TRIGGER [Accounting].[trg_Voucher_Post];
+GO
+
+CREATE TRIGGER [Accounting].[trg_Voucher_Post]
+ON [Accounting].[Vouchers]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- ========== حالة إلغاء الترحيل (IsPosted تغير من 1 إلى 0) ==========
+    IF EXISTS (SELECT 1 FROM deleted) -- UPDATE فقط
+    BEGIN
+        DELETE JE
+        FROM [Accounting].[JournalEntries] JE
+        INNER JOIN inserted i ON JE.ReferenceID = i.VoucherID AND JE.ReferenceType = 'Voucher'
+        INNER JOIN deleted d ON d.VoucherID = i.VoucherID
+        WHERE d.IsPosted = 1 AND i.IsPosted = 0;
+    END
+
+    -- ========== حالة تعديل سند مرحّل (IsPosted ظل 1 ولكن البيانات تغيرت) ==========
+    IF EXISTS (SELECT 1 FROM deleted)
+    BEGIN
+        -- حذف القيود القديمة للسندات المرحّلة التي تغيرت بياناتها
+        DELETE JE
+        FROM [Accounting].[JournalEntries] JE
+        INNER JOIN inserted i ON JE.ReferenceID = i.VoucherID AND JE.ReferenceType = 'Voucher'
+        INNER JOIN deleted d ON d.VoucherID = i.VoucherID
+        WHERE d.IsPosted = 1 AND i.IsPosted = 1
+          AND (d.Amount <> i.Amount OR ISNULL(d.AccountID,0) <> ISNULL(i.AccountID,0) 
+               OR ISNULL(d.PaymentMethod,'') <> ISNULL(i.PaymentMethod,''));
+    END
+
+    -- ========== إنشاء القيود للسندات المرحّلة ==========
+    -- (تشمل: ترحيل جديد + تعديل سند مرحّل أعيد إنشاء قيوده)
+    INSERT INTO [Accounting].[JournalEntries] (EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT 
+        i.VoucherDate,
+        'Voucher',
+        i.VoucherID,
+        -- === الحساب المقابل (الصندوق أو البنك) ===
+        i.AccountID,
+        -- === سند قبض: المدين هو الحساب المحدد ===
+        CASE WHEN i.VoucherType = 'Receipt' THEN 0 ELSE i.Amount END,
+        -- === سند قبض: الدائن هو الحساب المحدد ===
+        CASE WHEN i.VoucherType = 'Receipt' THEN i.Amount ELSE 0 END,
+        ISNULL(i.Description, '') + N' - سند رقم ' + CAST(i.VoucherNo AS NVARCHAR),
+        i.UserID
+    FROM inserted i
+    LEFT JOIN deleted d ON d.VoucherID = i.VoucherID
+    WHERE i.IsPosted = 1 
+      AND i.AccountID IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM [Accounting].[JournalEntries] 
+          WHERE ReferenceType = 'Voucher' AND ReferenceID = i.VoucherID
+      );
+
+    -- === القيد الثاني: حساب الصندوق/البنك (الطرف المقابل) ===
+    -- نبحث عن حساب الصندوق أو البنك من شجرة الحسابات
+    INSERT INTO [Accounting].[JournalEntries] (EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT 
+        i.VoucherDate,
+        'Voucher',
+        i.VoucherID,
+        -- حساب الصندوق أو البنك
+        CASE 
+            WHEN i.PaymentMethod = 'Cash' THEN 
+                ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1), i.AccountID)
+            ELSE 
+                ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%بنك%' AND IsTransactional = 1), i.AccountID)
+        END,
+        -- سند قبض: الصندوق مدين / سند صرف: الصندوق دائن
+        CASE WHEN i.VoucherType = 'Receipt' THEN i.Amount ELSE 0 END,
+        CASE WHEN i.VoucherType = 'Receipt' THEN 0 ELSE i.Amount END,
+        ISNULL(i.Description, '') + N' - سند رقم ' + CAST(i.VoucherNo AS NVARCHAR),
+        i.UserID
+    FROM inserted i
+    LEFT JOIN deleted d ON d.VoucherID = i.VoucherID
+    WHERE i.IsPosted = 1 
+      AND i.AccountID IS NOT NULL
+      -- فقط إذا لم يكن القيد الثاني موجوداً (القيد الأول أُضيف أعلاه = سطر واحد فقط)
+      AND (SELECT COUNT(*) FROM [Accounting].[JournalEntries] 
+           WHERE ReferenceType = 'Voucher' AND ReferenceID = i.VoucherID) = 1;
+END
+GO
+
+-- =============================================
+-- 3. Trigger: عند DELETE على Vouchers
+--    يحذف جميع القيود المرتبطة بالسند
+-- =============================================
+IF OBJECT_ID('[Accounting].[trg_Voucher_Delete]', 'TR') IS NOT NULL
+    DROP TRIGGER [Accounting].[trg_Voucher_Delete];
+GO
+
+CREATE TRIGGER [Accounting].[trg_Voucher_Delete]
+ON [Accounting].[Vouchers]
+AFTER DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DELETE FROM [Accounting].[JournalEntries]
+    WHERE ReferenceType = 'Voucher' 
+      AND ReferenceID IN (SELECT VoucherID FROM deleted);
+END
+GO
+
+PRINT N'✅ تم إنشاء جدول القيود والـ Triggers بنجاح';
+GO
+
+
+
+-- =============================================
+-- 1. جلب جميع السندات حسب النوع
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_GetAll];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_GetAll]
+    @VoucherType NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
+           P.PartnerName, V.AccountID, A.AccountName,
+           V.Amount, V.Description, V.PaymentMethod, V.UserID,
+           U.FullName AS UserName, V.IsPosted
+    FROM [Accounting].[Vouchers] V
+    LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
+    WHERE V.VoucherType = @VoucherType
+    ORDER BY V.VoucherID DESC;
+END
+GO
+
+-- =============================================
+-- 2. جلب سند بالـ ID
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_GetByID];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_GetByID]
+    @VoucherID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
+           P.PartnerName, V.AccountID, A.AccountName,
+           V.Amount, V.Description, V.PaymentMethod, V.UserID,
+           U.FullName AS UserName, V.IsPosted
+    FROM [Accounting].[Vouchers] V
+    LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
+    WHERE V.VoucherID = @VoucherID;
+END
+GO
+
+-- =============================================
+-- 3. حفظ سند (إضافة أو تعديل)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_Save]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_Save];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_Save]
+    @VoucherID INT = 0,
+    @VoucherType NVARCHAR(20),
+    @VoucherDate DATETIME,
+    @PartnerID INT = NULL,
+    @AccountID INT = NULL,
+    @Amount DECIMAL(18,2),
+    @Description NVARCHAR(255) = NULL,
+    @PaymentMethod NVARCHAR(20) = 'Cash',
+    @UserID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @VoucherID = 0
+    BEGIN
+        INSERT INTO [Accounting].[Vouchers] (VoucherType, VoucherDate, PartnerID, AccountID, Amount, Description, PaymentMethod, UserID, IsPosted)
+        VALUES (@VoucherType, @VoucherDate, @PartnerID, @AccountID, @Amount, @Description, @PaymentMethod, @UserID, 0);
+        SELECT SCOPE_IDENTITY() AS VoucherID;
+    END
+    ELSE
+    BEGIN
+        -- لا يمكن تعديل سند مرحّل
+        IF EXISTS (SELECT 1 FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID AND IsPosted = 1)
+        BEGIN
+            RAISERROR(N'لا يمكن تعديل سند مرحّل', 16, 1);
+            RETURN;
+        END
+        UPDATE [Accounting].[Vouchers] 
+        SET VoucherType = @VoucherType, VoucherDate = @VoucherDate, PartnerID = @PartnerID, AccountID = @AccountID,
+            Amount = @Amount, Description = @Description, PaymentMethod = @PaymentMethod
+        WHERE VoucherID = @VoucherID;
+        SELECT @VoucherID AS VoucherID;
+    END
+END
+GO
+
+-- =============================================
+-- 4. حذف سند (فقط إذا لم يُرحّل)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_Delete];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_Delete]
+    @VoucherID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1 FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID AND IsPosted = 1)
+    BEGIN
+        RAISERROR(N'لا يمكن حذف سند مرحّل', 16, 1);
+        RETURN;
+    END
+    DELETE FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID;
+END
+GO
+
+-- =============================================
+-- 5. بحث بالوصف أو اسم الشريك
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_Search]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_Search];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_Search]
+    @VoucherType NVARCHAR(20),
+    @SearchText NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
+           P.PartnerName, V.AccountID, A.AccountName,
+           V.Amount, V.Description, V.PaymentMethod, V.UserID,
+           U.FullName AS UserName, V.IsPosted
+    FROM [Accounting].[Vouchers] V
+    LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
+    WHERE V.VoucherType = @VoucherType
+      AND (V.Description LIKE '%' + @SearchText + '%' OR P.PartnerName LIKE '%' + @SearchText + '%'
+           OR CAST(V.VoucherID AS NVARCHAR) = @SearchText)
+    ORDER BY V.VoucherID DESC;
+END
+GO
+
+-- =============================================
+-- 6. ترحيل سند (يُفعّل الـ Trigger لإنشاء القيود)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_Post]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_Post];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_Post]
+    @VoucherID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID)
+    BEGIN
+        RAISERROR(N'السند غير موجود', 16, 1);
+        RETURN;
+    END
+    IF EXISTS (SELECT 1 FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID AND IsPosted = 1)
+    BEGIN
+        RAISERROR(N'السند مرحّل بالفعل', 16, 1);
+        RETURN;
+    END
+    IF EXISTS (SELECT 1 FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID AND AccountID IS NULL)
+    BEGIN
+        RAISERROR(N'يجب تحديد الحساب قبل الترحيل', 16, 1);
+        RETURN;
+    END
+    -- تحديث IsPosted يُفعّل الـ Trigger تلقائياً
+    UPDATE [Accounting].[Vouchers] SET IsPosted = 1 WHERE VoucherID = @VoucherID;
+END
+GO
+
+

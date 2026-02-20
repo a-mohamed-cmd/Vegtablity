@@ -126,6 +126,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ToggleExpandCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteToggleExpand)
+            End Get
+        End Property
+
         Private Sub LoadMenuItems()
             Dim allItems As New List(Of MenuItem)()
 
@@ -134,7 +140,28 @@ Namespace ViewModels
             allItems.Add(New MenuItem With {.Title = "المبيعات", .Icon = "🛒", .FormName = "Sales", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "المشتريات", .Icon = "📦", .FormName = "Purchases", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "المخزون", .Icon = "🏪", .FormName = "Inventory", .IsVisible = True})
-            allItems.Add(New MenuItem With {.Title = "الحسابات", .Icon = "📊", .FormName = "Accounting", .IsVisible = True})
+
+            ' === قسم الحسابات (قابل للتوسيع) ===
+            Dim accountingChildren As New ObservableCollection(Of MenuItem)()
+            accountingChildren.Add(New MenuItem With {.Title = "شجرة الحسابات", .Icon = "🌳", .FormName = "ChartOfAccounts", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "سند قبض", .Icon = "📥", .FormName = "ReceiptVoucher", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "سند صرف", .Icon = "📤", .FormName = "PaymentVoucher", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "قيود اليومية", .Icon = "📋", .FormName = "JournalEntries", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "كشف حساب", .Icon = "📄", .FormName = "AccountStatement", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "ميزان المراجعة", .Icon = "⚖", .FormName = "TrialBalance", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "المركز المالي", .Icon = "🏦", .FormName = "BalanceSheet", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "أرباح وخسائر", .Icon = "📊", .FormName = "ProfitLoss", .IsVisible = True})
+
+            allItems.Add(New MenuItem With {
+                .Title = "الحسابات",
+                .Icon = "📊",
+                .FormName = "Accounting",
+                .IsVisible = True,
+                .IsParent = True,
+                .IsExpanded = False,
+                .Children = accountingChildren
+            })
+
             allItems.Add(New MenuItem With {.Title = "العملاء والموردين", .Icon = "👥", .FormName = "Partners", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "التقارير", .Icon = "📈", .FormName = "Reports", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "الإعدادات", .Icon = "⚙", .FormName = "Settings", .IsVisible = True})
@@ -173,9 +200,22 @@ Namespace ViewModels
             End If
         End Sub
 
+        Private Sub ExecuteToggleExpand(parameter As Object)
+            Dim item = TryCast(parameter, MenuItem)
+            If item IsNot Nothing AndAlso item.IsParent Then
+                item.IsExpanded = Not item.IsExpanded
+            End If
+        End Sub
+
         Private Sub ExecuteNavigate(parameter As Object)
             Dim item = TryCast(parameter, MenuItem)
             If item IsNot Nothing Then
+                ' If it's a parent item, toggle expand instead of navigate
+                If item.IsParent Then
+                    item.IsExpanded = Not item.IsExpanded
+                    Return
+                End If
+
                 SelectedMenuItem = item
 
                 ' Navigate to page based on FormName
@@ -191,6 +231,51 @@ Namespace ViewModels
                     Case "Settings"
                         CurrentPage = New Views.SettingsPage()
                         IsHomePage = False
+
+                    Case "Inventory"
+                        CurrentPage = New Views.InventoryPage()
+                        IsHomePage = False
+
+                    Case "Partners"
+                        CurrentPage = New Views.PartnersPage()
+                        IsHomePage = False
+
+                    Case "ChartOfAccounts"
+                        CurrentPage = New Views.AccountingPage()
+                        IsHomePage = False
+
+                    Case "ReceiptVoucher"
+                        CurrentPage = New Views.ReceiptVoucherPage()
+                        IsHomePage = False
+
+                    Case "PaymentVoucher"
+                        CurrentPage = New Views.PaymentVoucherPage()
+                        IsHomePage = False
+
+                    Case "JournalEntries"
+                        ' سيتم بناؤه لاحقاً
+                        CurrentPage = Nothing
+                        IsHomePage = True
+
+                    Case "AccountStatement"
+                        ' سيتم بناؤه لاحقاً
+                        CurrentPage = Nothing
+                        IsHomePage = True
+
+                    Case "TrialBalance"
+                        ' سيتم بناؤه لاحقاً
+                        CurrentPage = Nothing
+                        IsHomePage = True
+
+                    Case "BalanceSheet"
+                        ' سيتم بناؤه لاحقاً
+                        CurrentPage = Nothing
+                        IsHomePage = True
+
+                    Case "ProfitLoss"
+                        ' سيتم بناؤه لاحقاً
+                        CurrentPage = Nothing
+                        IsHomePage = True
 
                     Case Else
                         ' Future pages will be added here
