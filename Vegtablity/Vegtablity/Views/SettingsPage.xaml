@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
-             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             xmlns:views="clr-namespace:Vegtablity.Views">
 
     <UserControl.DataContext>
         <vm:SettingsViewModel/>
@@ -152,6 +153,11 @@
                         </StackPanel>
                     </Border>
                 </Grid>
+            </TabItem>
+
+            <!-- ========== TAB 4: بيانات الشركة (Company Info) ========== -->
+            <TabItem Header="  🏢 بيانات الشركة  " FontSize="14" FontWeight="SemiBold">
+                <views:CompanySettingsPage />
             </TabItem>
         </TabControl>
 

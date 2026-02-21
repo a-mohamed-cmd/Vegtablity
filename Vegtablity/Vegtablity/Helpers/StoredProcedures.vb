@@ -99,5 +99,15 @@ Namespace Helpers
         Public Const SP_VOUCHER_SEARCH As String = "[Accounting].[sp_Voucher_Search]"
         Public Const SP_VOUCHER_POST As String = "[Accounting].[sp_Voucher_Post]"
 
+        ' =============================================
+        ' Reports Schema
+        ' =============================================
+        Public Const SP_REPORT_ACCOUNTSTATEMENT As String = "[Accounting].[sp_Report_AccountStatement]"
+
+        ' =============================================
+        ' Settings Schema - Company Settings
+        ' =============================================
+        Public Const SP_COMPANY_SETTINGS_GET As String = "Settings.sp_CompanySettings_Get"
+        Public Const SP_COMPANY_SETTINGS_SAVE As String = "Settings.sp_CompanySettings_Save"
     End Class
 End Namespace

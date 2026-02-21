@@ -1,97 +1,98 @@
-Imports System.Data
 Imports Dapper
+Imports System.Data
 Imports Vegtablity.Models
 
 Namespace Services
     Public Class SettingsService
-        Private ReadOnly _dbHelper As DatabaseHelper
+        Private ReadOnly _dbHelper As New DatabaseHelper()
 
-        Public Sub New()
-            _dbHelper = New DatabaseHelper()
+        Public Function GetCompanyInfo() As CompanyInfo
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim info = conn.Query(Of CompanyInfo)(
+                    Helpers.StoredProcedures.SP_COMPANY_SETTINGS_GET,
+                    commandType:=CommandType.StoredProcedure
+                ).FirstOrDefault()
+                Return info
+            End Using
+        End Function
+
+        Public Sub SaveCompanyInfo(info As CompanyInfo)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_COMPANY_SETTINGS_SAVE,
+                    New With {
+                        .CompanyName = info.CompanyName,
+                        .Address = info.Address,
+                        .Phone = info.Phone,
+                        .Email = info.Email,
+                        .Logo = info.Logo
+                    },
+                    commandType:=CommandType.StoredProcedure
+                )
+            End Using
         End Sub
 
-        ' ===== Units (الوحدات) =====
-
-        Public Function GetAllUnits() As List(Of Unit)
+        ' === Units ===
+        Public Function GetAllUnits() As IEnumerable(Of Unit)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.Query(Of Unit)(
-                    Helpers.StoredProcedures.SP_UNIT_GETALL,
-                    commandType:=CommandType.StoredProcedure).AsList()
+                Return conn.Query(Of Unit)(Helpers.StoredProcedures.SP_UNIT_GETALL, commandType:=CommandType.StoredProcedure)
             End Using
         End Function
 
-        Public Function SaveUnit(unit As Unit) As Integer
+        Public Sub SaveUnit(u As Unit)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.ExecuteScalar(Of Integer)(
-                    Helpers.StoredProcedures.SP_UNIT_SAVE,
-                    New With {unit.UnitID, unit.UnitName},
-                    commandType:=CommandType.StoredProcedure)
+                conn.Execute(Helpers.StoredProcedures.SP_UNIT_SAVE, New With {.UnitID = u.UnitID, .UnitName = u.UnitName}, commandType:=CommandType.StoredProcedure)
             End Using
-        End Function
+        End Sub
 
         Public Sub DeleteUnit(unitID As Integer)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                conn.Execute(
-                    Helpers.StoredProcedures.SP_UNIT_DELETE,
-                    New With {.UnitID = unitID},
-                    commandType:=CommandType.StoredProcedure)
+                conn.Execute(Helpers.StoredProcedures.SP_UNIT_DELETE, New With {.UnitID = unitID}, commandType:=CommandType.StoredProcedure)
             End Using
         End Sub
 
-        ' ===== Categories (التصنيفات) =====
-
-        Public Function GetAllCategories() As List(Of Category)
+        ' === Categories ===
+        Public Function GetAllCategories() As IEnumerable(Of Category)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.Query(Of Category)(
-                    Helpers.StoredProcedures.SP_CATEGORY_GETALL,
-                    commandType:=CommandType.StoredProcedure).AsList()
+                Return conn.Query(Of Category)(Helpers.StoredProcedures.SP_CATEGORY_GETALL, commandType:=CommandType.StoredProcedure)
             End Using
         End Function
 
-        Public Function SaveCategory(cat As Category) As Integer
+        Public Sub SaveCategory(c As Category)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.ExecuteScalar(Of Integer)(
-                    Helpers.StoredProcedures.SP_CATEGORY_SAVE,
-                    New With {cat.CatID, cat.CatName},
-                    commandType:=CommandType.StoredProcedure)
+                conn.Execute(Helpers.StoredProcedures.SP_CATEGORY_SAVE, New With {.CatID = c.CatID, .CatName = c.CatName}, commandType:=CommandType.StoredProcedure)
             End Using
-        End Function
+        End Sub
 
         Public Sub DeleteCategory(catID As Integer)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                conn.Execute(
-                    Helpers.StoredProcedures.SP_CATEGORY_DELETE,
-                    New With {.CatID = catID},
-                    commandType:=CommandType.StoredProcedure)
+                conn.Execute(Helpers.StoredProcedures.SP_CATEGORY_DELETE, New With {.CatID = catID}, commandType:=CommandType.StoredProcedure)
             End Using
         End Sub
 
-        ' ===== Warehouses (المخازن) =====
-
-        Public Function GetAllWarehouses() As List(Of Warehouse)
+        ' === Warehouses ===
+        Public Function GetAllWarehouses() As IEnumerable(Of Warehouse)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.Query(Of Warehouse)(
-                    Helpers.StoredProcedures.SP_WAREHOUSE_GETALL,
-                    commandType:=CommandType.StoredProcedure).AsList()
+                Return conn.Query(Of Warehouse)(Helpers.StoredProcedures.SP_WAREHOUSE_GETALL, commandType:=CommandType.StoredProcedure)
             End Using
         End Function
 
-        Public Function SaveWarehouse(wh As Warehouse) As Integer
+        Public Sub SaveWarehouse(w As Warehouse)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.ExecuteScalar(Of Integer)(
-                    Helpers.StoredProcedures.SP_WAREHOUSE_SAVE,
-                    New With {wh.WarehouseID, wh.WarehouseName, wh.Address, wh.KeeperName},
-                    commandType:=CommandType.StoredProcedure)
-            End Using
-        End Function
-
-        Public Sub DeleteWarehouse(whID As Integer)
-            Using conn As IDbConnection = _dbHelper.GetConnection()
-                conn.Execute(
-                    Helpers.StoredProcedures.SP_WAREHOUSE_DELETE,
-                    New With {.WarehouseID = whID},
-                    commandType:=CommandType.StoredProcedure)
+                conn.Execute(Helpers.StoredProcedures.SP_WAREHOUSE_SAVE, New With {
+                    .WarehouseID = w.WarehouseID,
+                    .WarehouseName = w.WarehouseName,
+                    .Address = w.Address,
+                    .KeeperName = w.KeeperName
+                }, commandType:=CommandType.StoredProcedure)
             End Using
         End Sub
+
+        Public Sub DeleteWarehouse(warehouseID As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(Helpers.StoredProcedures.SP_WAREHOUSE_DELETE, New With {.WarehouseID = warehouseID}, commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
+
     End Class
 End Namespace

@@ -613,81 +613,78 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- ========== حالة إلغاء الترحيل (IsPosted تغير من 1 إلى 0) ==========
-    IF EXISTS (SELECT 1 FROM deleted) -- UPDATE فقط
-    BEGIN
-        DELETE JE
-        FROM [Accounting].[JournalEntries] JE
-        INNER JOIN inserted i ON JE.ReferenceID = i.VoucherID AND JE.ReferenceType = 'Voucher'
-        INNER JOIN deleted d ON d.VoucherID = i.VoucherID
-        WHERE d.IsPosted = 1 AND i.IsPosted = 0;
-    END
+    -- 1. Handle Unposting (IsPosted 1 -> 0): Delete entries
+    DELETE JE
+    FROM [Accounting].[JournalEntries] JE
+    INNER JOIN deleted d ON JE.ReferenceID = d.VoucherID AND JE.ReferenceType = 'Voucher'
+    INNER JOIN inserted i ON i.VoucherID = d.VoucherID
+    WHERE d.IsPosted = 1 AND i.IsPosted = 0;
 
-    -- ========== حالة تعديل سند مرحّل (IsPosted ظل 1 ولكن البيانات تغيرت) ==========
-    IF EXISTS (SELECT 1 FROM deleted)
-    BEGIN
-        -- حذف القيود القديمة للسندات المرحّلة التي تغيرت بياناتها
-        DELETE JE
-        FROM [Accounting].[JournalEntries] JE
-        INNER JOIN inserted i ON JE.ReferenceID = i.VoucherID AND JE.ReferenceType = 'Voucher'
-        INNER JOIN deleted d ON d.VoucherID = i.VoucherID
-        WHERE d.IsPosted = 1 AND i.IsPosted = 1
-          AND (d.Amount <> i.Amount OR ISNULL(d.AccountID,0) <> ISNULL(i.AccountID,0) 
-               OR ISNULL(d.PaymentMethod,'') <> ISNULL(i.PaymentMethod,''));
-    END
+    -- 2. Handle Updates to Posted Vouchers (IsPosted 1 -> 1 with changes): Delete old entries
+    DELETE JE
+    FROM [Accounting].[JournalEntries] JE
+    INNER JOIN deleted d ON JE.ReferenceID = d.VoucherID AND JE.ReferenceType = 'Voucher'
+    INNER JOIN inserted i ON i.VoucherID = d.VoucherID
+    WHERE d.IsPosted = 1 AND i.IsPosted = 1
+      AND (d.Amount <> i.Amount OR ISNULL(d.AccountID,0) <> ISNULL(i.AccountID,0)
+           OR ISNULL(d.PaymentMethod,'') <> ISNULL(i.PaymentMethod,''));
 
-    -- ========== إنشاء القيود للسندات المرحّلة ==========
-    -- (تشمل: ترحيل جديد + تعديل سند مرحّل أعيد إنشاء قيوده)
-    INSERT INTO [Accounting].[JournalEntries] (EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-    SELECT 
-        i.VoucherDate,
-        'Voucher',
-        i.VoucherID,
-        -- === الحساب المقابل (الصندوق أو البنك) ===
-        i.AccountID,
-        -- === سند قبض: المدين هو الحساب المحدد ===
-        CASE WHEN i.VoucherType = 'Receipt' THEN 0 ELSE i.Amount END,
-        -- === سند قبض: الدائن هو الحساب المحدد ===
-        CASE WHEN i.VoucherType = 'Receipt' THEN i.Amount ELSE 0 END,
-        ISNULL(i.Description, '') + N' - سند رقم ' + CAST(i.VoucherNo AS NVARCHAR),
-        i.UserID
+    -- 3. Prepare for Insertion: Assign ONE EntryNo per Voucher
+    DECLARE @VoucherEntryMap TABLE (VoucherID INT, EntryNo INT);
+
+    INSERT INTO @VoucherEntryMap (VoucherID, EntryNo)
+    SELECT i.VoucherID, NEXT VALUE FOR [Accounting].[seq_EntryNo]
     FROM inserted i
     LEFT JOIN deleted d ON d.VoucherID = i.VoucherID
-    WHERE i.IsPosted = 1 
-      AND i.AccountID IS NOT NULL
-      AND NOT EXISTS (
-          SELECT 1 FROM [Accounting].[JournalEntries] 
-          WHERE ReferenceType = 'Voucher' AND ReferenceID = i.VoucherID
+    WHERE i.IsPosted = 1
+      AND (
+          -- New Post
+          ISNULL(d.IsPosted, 0) = 0
+          -- OR Re-Post (Modified)
+          OR (d.IsPosted = 1 AND (d.Amount <> i.Amount OR ISNULL(d.AccountID,0) <> ISNULL(i.AccountID,0) OR ISNULL(d.PaymentMethod,'') <> ISNULL(i.PaymentMethod,'')))
       );
 
-    -- === القيد الثاني: حساب الصندوق/البنك (الطرف المقابل) ===
-    -- نبحث عن حساب الصندوق أو البنك من شجرة الحسابات
-    INSERT INTO [Accounting].[JournalEntries] (EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-    SELECT 
+    -- 4. Insert Journal Entries (Both Legs)
+
+    -- Leg 1: The Selected Account (Customer/Vendor/Expense/etc.)
+    
+    INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT
+        m.EntryNo,
         i.VoucherDate,
         'Voucher',
         i.VoucherID,
-        -- حساب الصندوق أو البنك
-        CASE 
-            WHEN i.PaymentMethod = 'Cash' THEN 
-                ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1), i.AccountID)
-            ELSE 
-                ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%بنك%' AND IsTransactional = 1), i.AccountID)
-        END,
-        -- سند قبض: الصندوق مدين / سند صرف: الصندوق دائن
-        CASE WHEN i.VoucherType = 'Receipt' THEN i.Amount ELSE 0 END,
-        CASE WHEN i.VoucherType = 'Receipt' THEN 0 ELSE i.Amount END,
+        i.AccountID,
+        CASE WHEN i.VoucherType = 'Payment' THEN i.Amount ELSE 0 END, -- Payment: Dr Account
+        CASE WHEN i.VoucherType = 'Receipt' THEN i.Amount ELSE 0 END, -- Receipt: Cr Account
         ISNULL(i.Description, '') + N' - سند رقم ' + CAST(i.VoucherNo AS NVARCHAR),
         i.UserID
     FROM inserted i
-    LEFT JOIN deleted d ON d.VoucherID = i.VoucherID
-    WHERE i.IsPosted = 1 
-      AND i.AccountID IS NOT NULL
-      -- فقط إذا لم يكن القيد الثاني موجوداً (القيد الأول أُضيف أعلاه = سطر واحد فقط)
-      AND (SELECT COUNT(*) FROM [Accounting].[JournalEntries] 
-           WHERE ReferenceType = 'Voucher' AND ReferenceID = i.VoucherID) = 1;
+    JOIN @VoucherEntryMap m ON m.VoucherID = i.VoucherID;
+
+    -- Leg 2: The Fund Account (Cash/Bank)
+    -- Receipt -> Debit | Payment -> Credit
+    INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT
+        m.EntryNo,
+        i.VoucherDate,
+        'Voucher',
+        i.VoucherID,
+        CASE
+            WHEN i.PaymentMethod = 'Cash' THEN
+                ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1), i.AccountID)
+            ELSE
+                ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%بنك%' AND IsTransactional = 1), i.AccountID)
+        END,
+        CASE WHEN i.VoucherType = 'Receipt' THEN i.Amount ELSE 0 END, -- Receipt: Dr Cash
+        CASE WHEN i.VoucherType = 'Payment' THEN i.Amount ELSE 0 END, -- Payment: Cr Cash
+        ISNULL(i.Description, '') + N' - سند رقم ' + CAST(i.VoucherNo AS NVARCHAR),
+        i.UserID
+    FROM inserted i
+    JOIN @VoucherEntryMap m ON m.VoucherID = i.VoucherID;
 END
 GO
+
 
 -- =============================================
 -- 3. Trigger: عند DELETE على Vouchers
@@ -712,8 +709,6 @@ GO
 
 PRINT N'✅ تم إنشاء جدول القيود والـ Triggers بنجاح';
 GO
-
-
 
 -- =============================================
 -- 1. جلب جميع السندات حسب النوع
@@ -876,4 +871,121 @@ BEGIN
 END
 GO
 
+
+
+-- =============================================
+-- 1. كشف حساب (Account Statement)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Report_AccountStatement]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Report_AccountStatement];
+GO
+
+CREATE PROCEDURE [Accounting].[sp_Report_AccountStatement]
+    @AccountID INT,
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. حساب الرصيد الافتتاحى (ما قبل الفترة)
+    DECLARE @OpeningBalance DECIMAL(18, 2) = 0;
+
+    SELECT @OpeningBalance = ISNULL(SUM(DebitAmount - CreditAmount), 0)
+    FROM [Accounting].[JournalEntries]
+    WHERE AccountID = @AccountID
+      AND CAST(EntryDate AS DATE) < @StartDate;
+
+    -- النتيجة 1: الرصيد الافتتاحي
+    SELECT @OpeningBalance AS OpeningBalance;
+
+    -- النتيجة 2: الحركات
+    SELECT 
+        JE.EntryID,
+        JE.EntryNo,
+        JE.EntryDate,
+        JE.ReferenceType,
+        JE.ReferenceID,
+        JE.Description,
+        JE.DebitAmount,
+        JE.CreditAmount,
+        -- الرصيد التراكمي = الرصيد الافتتاحي + مجموع (مدين - دائن) للحركات السابقة والحالية
+        @OpeningBalance + SUM(JE.DebitAmount - JE.CreditAmount) OVER (ORDER BY JE.EntryDate, JE.EntryID ROWS UNBOUNDED PRECEDING) AS Balance
+    FROM [Accounting].[JournalEntries] JE
+    WHERE JE.AccountID = @AccountID
+      AND CAST(JE.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate
+    ORDER BY JE.EntryDate, JE.EntryID;
+
+    -- إرجاع الرصيد الافتتاحي كأول سطر (اختياري، أو يمكن للواجهة التعامل معه)
+    -- لكن عادة يفضل عرضه في الواجهة منفصلاً أو كسطر أول وهمي.
+    -- هنا سنكتفي بإرجاع البيانات وسنقوم بعرض الرصيد الافتتاحي في الواجهة.
+    
+    -- إضافة: يمكن إرجاع الرصيد الافتتاحي في Select منفصلة أو Output Parameter
+    -- لكن للتبسيط، سنقوم بإرجاع dataset ثانية
+END
+GO
+
+
+-- =============================================
+-- 1. Create CompanySettings Table
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CompanySettings' AND schema_id = SCHEMA_ID('Settings'))
+BEGIN
+    CREATE TABLE [Settings].[CompanySettings] (
+        SettingID INT PRIMARY KEY DEFAULT 1, -- Only one row allowed
+        CompanyName NVARCHAR(200) NOT NULL,
+        Address NVARCHAR(255),
+        Phone NVARCHAR(50),
+        Email NVARCHAR(100),
+        Logo VARBINARY(MAX),
+        CONSTRAINT CK_OnlyOneRow CHECK (SettingID = 1)
+    );
+
+    -- Insert default record
+    INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName)
+    VALUES (1, N'شركة الخضروات');
+END
+GO
+
+-- =============================================
+-- 2. Stored Procedures
+-- =============================================
+
+-- Get Company Settings
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Get]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Get];
+GO
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Get]
+AS
+BEGIN
+    SELECT TOP 1 * FROM [Settings].[CompanySettings];
+END
+GO
+
+-- Save Company Settings
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Save];
+GO
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
+    @CompanyName NVARCHAR(200),
+    @Address NVARCHAR(255) = NULL,
+    @Phone NVARCHAR(50) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Logo VARBINARY(MAX) = NULL
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
+    BEGIN
+        UPDATE [Settings].[CompanySettings]
+        SET CompanyName = @CompanyName,
+            Address = @Address,
+            Phone = @Phone,
+            Email = @Email,
+            Logo = @Logo
+        WHERE SettingID = 1;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo);
+    END
+END
+GO
 

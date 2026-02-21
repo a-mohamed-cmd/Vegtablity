@@ -61,5 +61,23 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure).AsList()
             End Using
         End Function
+        Public Function GetAccountStatement(accountID As Integer, startDate As Date, endDate As Date) As AccountStatementReport
+            Dim report As New AccountStatementReport()
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Using multi = conn.QueryMultiple(
+                    Helpers.StoredProcedures.SP_REPORT_ACCOUNTSTATEMENT,
+                    New With {.AccountID = accountID, .StartDate = startDate, .EndDate = endDate},
+                    commandType:=CommandType.StoredProcedure)
+
+                    ' 1. Opening Balance
+                    report.OpeningBalance = multi.Read(Of Decimal)().FirstOrDefault()
+
+                    ' 2. Transactions
+                    report.Transactions = multi.Read(Of AccountStatementItem)().ToList()
+                End Using
+            End Using
+            Return report
+        End Function
+
     End Class
 End Namespace

@@ -164,7 +164,22 @@ Namespace ViewModels
 
             allItems.Add(New MenuItem With {.Title = "العملاء والموردين", .Icon = "👥", .FormName = "Partners", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "التقارير", .Icon = "📈", .FormName = "Reports", .IsVisible = True})
-            allItems.Add(New MenuItem With {.Title = "الإعدادات", .Icon = "⚙", .FormName = "Settings", .IsVisible = True})
+
+            ' === قسم الإعدادات (قابل للتوسيع) ===
+            Dim settingsChildren As New ObservableCollection(Of MenuItem)()
+            settingsChildren.Add(New MenuItem With {.Title = "إعدادات عامة", .Icon = "⚙", .FormName = "Settings", .IsVisible = True})
+            settingsChildren.Add(New MenuItem With {.Title = "بيانات الشركة", .Icon = "🏢", .FormName = "CompanySettings", .IsVisible = True})
+
+            allItems.Add(New MenuItem With {
+                .Title = "الإعدادات",
+                .Icon = "⚙",
+                .FormName = "SettingsParent",
+                .IsVisible = True,
+                .IsParent = True,
+                .IsExpanded = False,
+                .Children = settingsChildren
+            })
+
             allItems.Add(New MenuItem With {.Title = "إدارة المستخدمين", .Icon = "🔐", .FormName = "UserManagement", .IsVisible = True})
 
             ' Filter by permissions
@@ -240,6 +255,10 @@ Namespace ViewModels
                         CurrentPage = New Views.PartnersPage()
                         IsHomePage = False
 
+                    Case "CompanySettings"
+                        CurrentPage = New Views.CompanySettingsPage()
+                        IsHomePage = False
+
                     Case "ChartOfAccounts"
                         CurrentPage = New Views.AccountingPage()
                         IsHomePage = False
@@ -258,9 +277,8 @@ Namespace ViewModels
                         IsHomePage = True
 
                     Case "AccountStatement"
-                        ' سيتم بناؤه لاحقاً
-                        CurrentPage = Nothing
-                        IsHomePage = True
+                        CurrentPage = New Views.AccountStatementPage()
+                        IsHomePage = False
 
                     Case "TrialBalance"
                         ' سيتم بناؤه لاحقاً
