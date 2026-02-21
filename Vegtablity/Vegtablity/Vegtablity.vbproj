@@ -109,6 +109,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="SQL\08_ManualJournals.sql" />
     <Content Include="SQL\08_JournalEntries_Triggers.sql" />
     <Content Include="SQL\09_StoredProcedures_Reports.sql" />
     <Content Include="SQL\10_CompanySettings.sql" />
@@ -173,6 +174,7 @@
     <Compile Include="Models\RolePermission.vb" />
     <Compile Include="Models\CompanyInfo.vb" />
     <Compile Include="Models\Voucher.vb" />
+    <Compile Include="Models\JournalEntryModels.vb" />
     <Compile Include="Models\ReportModels.vb" />
     <Compile Include="Models\MenuItem.vb" />
     <Compile Include="Services\DatabaseHelper.vb" />
@@ -199,6 +201,7 @@
     <Compile Include="ViewModels\VouchersViewModel.vb" />
     <Compile Include="ViewModels\CompanySettingsViewModel.vb" />
     <Compile Include="ViewModels\AccountStatementViewModel.vb" />
+    <Compile Include="ViewModels\JournalEntryViewModel.vb" />
     <Compile Include="Models\Unit.vb" />
     <Compile Include="Models\Category.vb" />
     <Compile Include="Models\Warehouse.vb" />
@@ -207,10 +210,12 @@
     <Compile Include="Models\Account.vb" />
     <Compile Include="Helpers\RelayCommand.vb" />
     <Compile Include="Helpers\ArabicTextHelper.vb" />
+    <Compile Include="Helpers\BooleanInverterConverter.vb" />
     <Compile Include="Helpers\ReportExporter.vb" />
     <Compile Include="Helpers\StoredProcedures.vb" />
     <Compile Include="Helpers\ValidationHelper.vb" />
     <Compile Include="Helpers\NullToVisibilityConverter.vb" />
+    <Compile Include="Helpers\UIValueConverters.vb" />
     <Compile Include="Helpers\StringToVisibilityConverter.vb" />
     <Compile Include="Views\LicenseWindow.xaml.vb">
       <DependentUpon>LicenseWindow.xaml</DependentUpon>
@@ -253,6 +258,9 @@
     </Compile>
     <Compile Include="Views\CompanySettingsPage.xaml.vb">
       <DependentUpon>CompanySettingsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\JournalEntryPage.xaml.vb">
+      <DependentUpon>JournalEntryPage.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -305,6 +313,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\CompanySettingsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\JournalEntryPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

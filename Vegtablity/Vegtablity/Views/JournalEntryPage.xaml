@@ -1,0 +1,219 @@
+<UserControl x:Class="Views.JournalEntryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+
+    <UserControl.DataContext>
+        <vm:JournalEntryViewModel/>
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+        <helpers:BooleanInverterConverter x:Key="BoolToInvertedConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+        
+        <helpers:BooleanToTextConverter x:Key="PostedTextConverter" TrueText="تم الترحيل" FalseText="قيد الانتظار"/>
+        <helpers:BooleanToBrushConverter x:Key="PostedCardBrushConverter">
+            <helpers:BooleanToBrushConverter.TrueBrush>
+                <SolidColorBrush Color="#f1f9f5"/> <!-- Light green for posted -->
+            </helpers:BooleanToBrushConverter.TrueBrush>
+            <helpers:BooleanToBrushConverter.FalseBrush>
+                <SolidColorBrush Color="White"/>
+            </helpers:BooleanToBrushConverter.FalseBrush>
+        </helpers:BooleanToBrushConverter>
+        <helpers:BooleanToBrushConverter x:Key="PostedLabelBrushConverter">
+            <helpers:BooleanToBrushConverter.TrueBrush>
+                <SolidColorBrush Color="#27ae60"/>
+            </helpers:BooleanToBrushConverter.TrueBrush>
+            <helpers:BooleanToBrushConverter.FalseBrush>
+                <SolidColorBrush Color="#f39c12"/>
+            </helpers:BooleanToBrushConverter.FalseBrush>
+        </helpers:BooleanToBrushConverter>
+    </UserControl.Resources>
+
+    <!-- Page Fade-in (omitted for brevity) -->
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,5" BorderBrush="#dcdde1" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="📝 القيود المحاسبية اليدوية" FontSize="18" FontWeight="Bold" Foreground="#8e44ad" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="🆕 قيد جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#3498db" Margin="5,0"/>
+                    <Button Content="💾 حفظ" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#27ae60" Margin="5,0"/>
+                    <Button Content="📌 ترحيل" Command="{Binding PostCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#8e44ad" Margin="5,0"/>
+                    <Button Content="🖨️ طباعة" Command="{Binding PrintCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#7f8c8d" Margin="5,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Journals List -->
+            <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border Background="#ecf0f1" Padding="8" CornerRadius="8,8,0,0">
+                        <TextBlock Text="آخر القيود" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    </Border>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding JournalList}" SelectedItem="{Binding SelectedJournal}" BorderThickness="0" HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="10,8" BorderBrush="#f1f2f6" BorderThickness="0,0,0,1" 
+                                        Background="{Binding IsPosted, Converter={StaticResource PostedCardBrushConverter}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock FontWeight="Bold" FontSize="13" Foreground="#2c3e50">
+                                                <Run Text="قيد رقم: "/>
+                                                <Run Text="{Binding JournalNo}"/>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Description}" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="Gray"/>
+                                            <TextBlock Text="{Binding JDate, StringFormat=\{0:yyyy/MM/dd\}}" FontSize="11" Foreground="Silver" Margin="0,2,0,0"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Padding="6,3" CornerRadius="12" 
+                                                Background="{Binding IsPosted, Converter={StaticResource PostedLabelBrushConverter}}" 
+                                                VerticalAlignment="Center">
+                                             <TextBlock Text="{Binding IsPosted, Converter={StaticResource PostedTextConverter}}" 
+                                                        Foreground="White" FontSize="10" FontWeight="Bold"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- Entry Editor -->
+            <Border Grid.Column="1" CornerRadius="10" Background="White" Padding="15" BorderBrush="#eee" BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header Info -->
+                    <Grid Grid.Row="0" Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="التاريخ:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <DatePicker Grid.Column="1" SelectedDate="{Binding CurrentJournal.JDate}" Width="150" HorizontalAlignment="Left" 
+                                    IsEnabled="{Binding CurrentJournal.IsPosted, Converter={StaticResource BoolToInvertedConverter}}"/>
+                        
+                        <TextBlock Grid.Column="2" Text="الوصف:" VerticalAlignment="Center" Margin="20,0,10,0"/>
+                        <TextBox Grid.Column="3" Text="{Binding CurrentJournal.Description}" Style="{StaticResource ModernTextBoxStyle}"
+                                 IsReadOnly="{Binding CurrentJournal.IsPosted}"/>
+                    </Grid>
+
+                    <!-- Details DataGrid -->
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding CurrentJournal.Details}" AutoGenerateColumns="False" 
+                              CanUserAddRows="False" GridLinesVisibility="Horizontal" RowHeight="35"
+                              CellEditEnding="DataGrid_CellEditEnding"
+                              IsReadOnly="{Binding CurrentJournal.IsPosted}">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="الحساب" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding AccountName}" VerticalAlignment="Center" Margin="5,0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                                <DataGridTemplateColumn.CellEditingTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.Accounts, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  SelectedValue="{Binding AccountID}" SelectedValuePath="AccountID" 
+                                                  IsEditable="True" DisplayMemberPath="AccountName"
+                                                  TextSearch.TextPath="AccountName">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock>
+                                                        <Run Text="{Binding AccountCode}"/> - <Run Text="{Binding AccountName}"/>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellEditingTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="مدين" Binding="{Binding Debit, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="100"/>
+                            <DataGridTextColumn Header="دائن" Binding="{Binding Credit, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" Width="100"/>
+                            <DataGridTextColumn Header="ملاحظات" Binding="{Binding Notes}" Width="200"/>
+
+                            <DataGridTemplateColumn Width="40">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="❌" Command="{Binding DataContext.DeleteLineCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Foreground="Red"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Footer Totals -->
+                    <Grid Grid.Row="2" Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <Button Grid.Row="0" Grid.Column="0" Content="➕ إضافة سطر" Command="{Binding AddLineCommand}" Width="120" HorizontalAlignment="Left" Style="{StaticResource ModernButtonStyle}" Background="#95a5a6"/>
+                        
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="الإجماليات:" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Grid.Row="0" Grid.Column="2" Text="{Binding TotalDebit, StringFormat=N2, Mode=OneWay}" IsReadOnly="True" FontWeight="Bold" Foreground="#c0392b" TextAlignment="Right" Margin="2"/>
+                        <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding TotalCredit, StringFormat=N2, Mode=OneWay}" IsReadOnly="True" FontWeight="Bold" Foreground="#27ae60" TextAlignment="Right" Margin="2"/>
+                        
+                        <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Text="{Binding Difference, StringFormat=الفرق: \{0:N2\}}" 
+                                   HorizontalAlignment="Center" Foreground="#e67e22" FontWeight="Bold" Margin="0,5,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Difference, Converter={StaticResource StringToVisConverter}}" Value="Visible">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

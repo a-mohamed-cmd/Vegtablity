@@ -257,5 +257,128 @@ Namespace Helpers
             End Try
         End Sub
 
+        ' ===================================================
+        ' Export Single Journal to PDF
+        ' ===================================================
+        Public Shared Sub ExportJournalToPdf(journal As JournalHeader)
+            Try
+                If journal Is Nothing Then Return
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير القيد إلى PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                dlg.FileName = "قيد_رقم_" & journal.JournalNo & "_" & DateTime.Now.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                doc.Info.Title = "قيد يومية رقم - " & journal.JournalNo
+
+                Dim fontBold = New XFont("Arial", 11, XFontStyle.Bold)
+                Dim fontReg = New XFont("Arial", 9, XFontStyle.Regular)
+                Dim fontLarge = New XFont("Arial", 16, XFontStyle.Bold)
+
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim margin = 40.0
+                Dim width = page.Width.Point - margin * 2
+                Dim y = margin
+
+                ' --- Header Branding ---
+                If company IsNot Nothing Then
+                    If company.Logo IsNot Nothing AndAlso company.Logo.Length > 0 Then
+                        Try
+                            Using ms As New MemoryStream(company.Logo)
+                                gfx.DrawImage(XImage.FromStream(ms), margin, y, 50, 50)
+                            End Using
+                        Catch
+                        End Try
+                    End If
+                    gfx.DrawString(ArabicTextHelper.Fix(company.CompanyName), fontLarge, XBrushes.Black,
+                                   New XRect(margin + 60, y, width - 60, 25), XStringFormats.TopLeft)
+                    y += 60
+                End If
+
+                ' --- Journal Title ---
+                gfx.DrawLine(XPens.DarkGray, margin, y, margin + width, y)
+                y += 10
+                gfx.DrawString(ArabicTextHelper.Fix("سند قيد يومية رقم: " & journal.JournalNo), fontBold, XBrushes.Black,
+                               New XRect(margin, y, width, 20), XStringFormats.TopCenter)
+                y += 25
+
+                ' --- Journal Info ---
+                gfx.DrawString(ArabicTextHelper.Fix("التاريخ: " & journal.JDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Black, margin, y)
+                y += 15
+                gfx.DrawString(ArabicTextHelper.Fix("الوصف: " & journal.Description), fontReg, XBrushes.Black, margin, y)
+                y += 25
+
+                ' --- Table Header ---
+                Dim cols() As Double = {150, 150, 70, 70}
+                Dim headers() As String = {"الحساب", "ملاحظات", "مدين", "دائن"}
+                Dim x = margin
+                gfx.DrawRectangle(XBrushes.LightGray, margin, y, width, 20)
+
+                ' Sum of columns is 440, but A4 Portrait is ~515 width at 40 margin. Let's adjust.
+                cols(0) = width * 0.35 ' Account
+                cols(1) = width * 0.35 ' Notes
+                cols(2) = width * 0.15 ' Debit
+                cols(3) = width * 0.15 ' Credit
+
+                For i = 0 To headers.Length - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(headers(i)), fontBold, XBrushes.Black, New XRect(x + 2, y + 2, cols(i) - 4, 16), XStringFormats.TopLeft)
+                    x += cols(i)
+                Next
+                y += 20
+
+                ' --- Table Rows ---
+                For Each d In journal.Details
+                    x = margin
+                    gfx.DrawString(ArabicTextHelper.Fix(d.AccountName), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(0) - 4, 16), XStringFormats.TopLeft)
+                    x += cols(0)
+                    gfx.DrawString(ArabicTextHelper.Fix(d.Notes), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(1) - 4, 16), XStringFormats.TopLeft)
+                    x += cols(1)
+                    gfx.DrawString(d.Debit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(2) - 4, 16), XStringFormats.TopRight)
+                    x += cols(2)
+                    gfx.DrawString(d.Credit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(3) - 4, 16), XStringFormats.TopRight)
+
+                    y += 18
+                    gfx.DrawLine(XPens.LightGray, margin, y, margin + width, y)
+
+                    ' Simple page overflow check
+                    If y > page.Height.Point - margin - 100 Then
+                        page = doc.AddPage()
+                        gfx = XGraphics.FromPdfPage(page)
+                        y = margin
+                    End If
+                Next
+
+                ' --- Totals ---
+                y += 10
+                gfx.DrawRectangle(XBrushes.GhostWhite, margin, y, width, 20)
+                gfx.DrawString(ArabicTextHelper.Fix("الإجمالي:"), fontBold, XBrushes.Black, margin + 10, y + 4)
+
+                Dim totalDebit = journal.Details.Sum(Function(d) d.Debit)
+                Dim totalCredit = journal.Details.Sum(Function(d) d.Credit)
+
+                gfx.DrawString(totalDebit.ToString("N2"), fontBold, XBrushes.DarkRed, New XRect(margin + width - cols(3) - cols(2), y + 4, cols(2) - 4, 16), XStringFormats.TopRight)
+                gfx.DrawString(totalCredit.ToString("N2"), fontBold, XBrushes.DarkGreen, New XRect(margin + width - cols(3), y + 4, cols(3) - 4, 16), XStringFormats.TopRight)
+
+                ' --- Signatures ---
+                y += 60
+                gfx.DrawString(ArabicTextHelper.Fix("المحاسب: ....................."), fontReg, XBrushes.Black, margin, y)
+                gfx.DrawString(ArabicTextHelper.Fix("المدير: ....................."), fontReg, XBrushes.Black, margin + width - 150, y)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء طباعة القيد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
     End Class
 End Namespace

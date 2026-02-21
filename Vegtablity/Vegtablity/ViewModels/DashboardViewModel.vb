@@ -272,9 +272,8 @@ Namespace ViewModels
                         IsHomePage = False
 
                     Case "JournalEntries"
-                        ' سيتم بناؤه لاحقاً
-                        CurrentPage = Nothing
-                        IsHomePage = True
+                        CurrentPage = New Views.JournalEntryPage()
+                        IsHomePage = False
 
                     Case "AccountStatement"
                         CurrentPage = New Views.AccountStatementPage()

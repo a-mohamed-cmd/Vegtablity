@@ -79,5 +79,64 @@ Namespace Services
             Return report
         End Function
 
+        ' === Manual Journal Entry Methods ===
+
+        Public Function GetAllJournalHeaders() As List(Of JournalHeader)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of JournalHeader)(
+                    Helpers.StoredProcedures.SP_JOURNALENTRY_GETALL,
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+
+        Public Function GetJournalDetails(jid As Integer) As List(Of JournalDetail)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of JournalDetail)(
+                    Helpers.StoredProcedures.SP_JOURNALENTRY_GETDETAILS,
+                    New With {.JID = jid},
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+
+        Public Function SaveJournalEntry(header As JournalHeader) As Integer
+            ' Build XML for details (works on all SQL Server versions)
+            Dim xmlBuilder As New Text.StringBuilder()
+            xmlBuilder.Append("<details>")
+            For Each d In header.Details
+                ' Escape special characters for XML
+                Dim notes = If(d.Notes, "").Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("""", "&quot;")
+                
+                xmlBuilder.AppendFormat("<item AccountID=""{0}"" Debit=""{1}"" Credit=""{2}"" Notes=""{3}"" />",
+                                         d.AccountID,
+                                         d.Debit.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                                         d.Credit.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                                         notes)
+            Next
+            xmlBuilder.Append("</details>")
+
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.ExecuteScalar(Of Integer)(
+                    Helpers.StoredProcedures.SP_JOURNALENTRY_SAVE,
+                    New With {
+                        header.JID,
+                        header.JDate,
+                        header.Description,
+                        header.UserID,
+                        header.TotalAmount,
+                        .DetailsXml = xmlBuilder.ToString()
+                    },
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Function
+
+        Public Sub PostJournalEntry(jid As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_JOURNALENTRY_POST,
+                    New With {.JID = jid},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
+
     End Class
 End Namespace

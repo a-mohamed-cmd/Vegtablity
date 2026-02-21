@@ -100,6 +100,14 @@ Namespace Helpers
         Public Const SP_VOUCHER_POST As String = "[Accounting].[sp_Voucher_Post]"
 
         ' =============================================
+        ' Accounting Schema - Journal Entries
+        ' =============================================
+        Public Const SP_JOURNALENTRY_GETALL As String = "[Accounting].[sp_JournalEntry_GetAll]"
+        Public Const SP_JOURNALENTRY_GETDETAILS As String = "[Accounting].[sp_JournalEntry_GetDetails]"
+        Public Const SP_JOURNALENTRY_SAVE As String = "[Accounting].[sp_JournalEntry_Save]"
+        Public Const SP_JOURNALENTRY_POST As String = "[Accounting].[sp_JournalEntry_Post]"
+
+        ' =============================================
         ' Reports Schema
         ' =============================================
         Public Const SP_REPORT_ACCOUNTSTATEMENT As String = "[Accounting].[sp_Report_AccountStatement]"
