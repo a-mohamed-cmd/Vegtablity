@@ -113,6 +113,7 @@
     <Content Include="SQL\08_JournalEntries_Triggers.sql" />
     <Content Include="SQL\09_StoredProcedures_Reports.sql" />
     <Content Include="SQL\10_CompanySettings.sql" />
+    <Content Include="SQL\11_TrialBalance.sql" />
     <Content Include="SQL\SQLVegtablity.sql" />
     <Import Include="System.Threading.Tasks" />
     <Import Include="System.Linq" />
@@ -202,6 +203,7 @@
     <Compile Include="ViewModels\CompanySettingsViewModel.vb" />
     <Compile Include="ViewModels\AccountStatementViewModel.vb" />
     <Compile Include="ViewModels\JournalEntryViewModel.vb" />
+    <Compile Include="ViewModels\TrialBalanceViewModel.vb" />
     <Compile Include="Models\Unit.vb" />
     <Compile Include="Models\Category.vb" />
     <Compile Include="Models\Warehouse.vb" />
@@ -209,6 +211,7 @@
     <Compile Include="Models\Partner.vb" />
     <Compile Include="Models\Account.vb" />
     <Compile Include="Helpers\RelayCommand.vb" />
+    <Compile Include="Helpers\BindingProxy.vb" />
     <Compile Include="Helpers\ArabicTextHelper.vb" />
     <Compile Include="Helpers\BooleanInverterConverter.vb" />
     <Compile Include="Helpers\ReportExporter.vb" />
@@ -261,6 +264,9 @@
     </Compile>
     <Compile Include="Views\JournalEntryPage.xaml.vb">
       <DependentUpon>JournalEntryPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\TrialBalancePage.xaml.vb">
+      <DependentUpon>TrialBalancePage.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -317,6 +323,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\JournalEntryPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\TrialBalancePage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

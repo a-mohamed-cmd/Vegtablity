@@ -1139,3 +1139,266 @@ BEGIN
     );
 END
 GO
+
+IF OBJECT_ID('[Accounting].[sp_Report_TrialBalance]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Report_TrialBalance];
+GO
+
+CREATE PROCEDURE [Accounting].[sp_Report_TrialBalance]
+    @StartDate DATETIME,
+    @EndDate DATETIME,
+    @ReportLevel INT = 0 -- 0: Transactional, 1: Main, 2: Sub, 3: Group
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. Calculate Transactional Totals
+    WITH RawTotals AS (
+        SELECT 
+            AccountID,
+            SUM(CASE WHEN EntryDate < @StartDate THEN (DebitAmount - CreditAmount) ELSE 0 END) as OpeningBalance,
+            SUM(CASE WHEN EntryDate >= @StartDate AND EntryDate <= @EndDate THEN DebitAmount ELSE 0 END) as PeriodDebit,
+            SUM(CASE WHEN EntryDate >= @StartDate AND EntryDate <= @EndDate THEN CreditAmount ELSE 0 END) as PeriodCredit
+        FROM [Accounting].[JournalEntries]
+        GROUP BY AccountID
+    ),
+    -- 2. Build Account Hierarchy with recursive leaf counts/sums
+    Hierarchy AS (
+        SELECT 
+            AccountID, 
+            ParentAccountID, 
+            AccountCode, 
+            AccountName, 
+            AccountLevel, 
+            IsTransactional,
+            AccountID as RootParentID -- Tracking the ancestor at the requested level
+        FROM [Accounting].[ChartOfAccounts]
+        WHERE (@ReportLevel = @ReportLevel )
+           
+
+        UNION ALL
+
+        SELECT 
+            c.AccountID, 
+            c.ParentAccountID, 
+            c.AccountCode, 
+            c.AccountName, 
+            c.AccountLevel, 
+            c.IsTransactional,
+            h.RootParentID
+        FROM [Accounting].[ChartOfAccounts] c
+        JOIN Hierarchy h ON c.ParentAccountID = h.AccountID
+    )
+    -- 3. Final Aggregation based on the RootParentID (the requested level)
+    SELECT 
+        h.RootParentID as AccountID,
+        p.AccountCode,
+        p.AccountName,
+        p.AccountType,
+        SUM(ISNULL(r.OpeningBalance, 0)) as OpeningBalance,
+        SUM(ISNULL(r.PeriodDebit, 0)) as PeriodDebit,
+        SUM(ISNULL(r.PeriodCredit, 0)) as PeriodCredit,
+        -- Ending = Opening + (MoveDr - MoveCr)
+        (SUM(ISNULL(r.OpeningBalance, 0)) + SUM(ISNULL(r.PeriodDebit, 0)) - SUM(ISNULL(r.PeriodCredit, 0))) as EndingBalance,
+        
+        -- Keep Dr/Cr for internal use if needed
+        CASE WHEN (SUM(ISNULL(r.OpeningBalance, 0)) + SUM(ISNULL(r.PeriodDebit, 0)) - SUM(ISNULL(r.PeriodCredit, 0))) >= 0 
+             THEN (SUM(ISNULL(r.OpeningBalance, 0)) + SUM(ISNULL(r.PeriodDebit, 0)) - SUM(ISNULL(r.PeriodCredit, 0))) 
+             ELSE 0 END as EndingDebit,
+        CASE WHEN (SUM(ISNULL(r.OpeningBalance, 0)) + SUM(ISNULL(r.PeriodDebit, 0)) - SUM(ISNULL(r.PeriodCredit, 0))) < 0 
+             THEN ABS(SUM(ISNULL(r.OpeningBalance, 0)) + SUM(ISNULL(r.PeriodDebit, 0)) - SUM(ISNULL(r.PeriodCredit, 0))) 
+             ELSE 0 END as EndingCredit
+
+    FROM Hierarchy h
+    LEFT JOIN RawTotals r ON h.AccountID = r.AccountID
+    JOIN [Accounting].[ChartOfAccounts] p ON h.RootParentID = p.AccountID
+    WHERE h.IsTransactional = 1 -- Only sum up transactional data
+    GROUP BY h.RootParentID, p.AccountCode, p.AccountName, p.AccountType
+    ORDER BY p.AccountCode;
+END
+GO
+
+-- =============================================
+-- 1. جلب جميع الحسابات
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_GetAll];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT A.AccountID, A.AccountCode, A.AccountName, A.ParentAccountID, 
+           P.AccountName AS ParentAccountName,
+           A.AccountType, A.AccountLevel, A.IsTransactional
+    FROM [Accounting].[ChartOfAccounts] A
+    LEFT JOIN [Accounting].[ChartOfAccounts] P ON A.ParentAccountID = P.AccountID
+    ORDER BY A.AccountCode;
+END
+GO
+
+-- =============================================
+-- 2. جلب حساب بالـ ID
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_GetByID];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_GetByID]
+    @AccountID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT A.AccountID, A.AccountCode, A.AccountName, A.ParentAccountID,
+           P.AccountName AS ParentAccountName,
+           A.AccountType, A.AccountLevel, A.IsTransactional
+    FROM [Accounting].[ChartOfAccounts] A
+    LEFT JOIN [Accounting].[ChartOfAccounts] P ON A.ParentAccountID = P.AccountID
+    WHERE A.AccountID = @AccountID;
+END
+GO
+
+-- =============================================
+-- 3. حفظ حساب (إضافة أو تعديل)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_Save]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Save];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_Save]
+    @AccountID INT = 0,
+    @AccountCode NVARCHAR(20),
+    @AccountName NVARCHAR(150),
+    @ParentAccountID INT = NULL,
+    @AccountType NVARCHAR(50),
+    @AccountLevel INT = 1,
+    @IsTransactional BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- التحقق: إذا كان الحساب مراد جعله "فرعي/يقبل قيود" ولكن له أبناء بالفعل في الشجرة
+    IF @AccountID <> 0 AND @IsTransactional = 1
+    BEGIN
+        IF EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @AccountID)
+        BEGIN
+            RAISERROR(N'لا يمكن جعل الحساب "فرعي" لأنه أب لحسابات أخرى في الشجرة.', 16, 1);
+            RETURN;
+        END
+    END
+
+    IF @AccountID = 0
+    BEGIN
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES (@AccountCode, @AccountName, @ParentAccountID, @AccountType, @AccountLevel, @IsTransactional);
+        SELECT SCOPE_IDENTITY() AS AccountID;
+    END
+    ELSE
+    BEGIN
+        UPDATE [Accounting].[ChartOfAccounts] 
+        SET AccountCode = @AccountCode, AccountName = @AccountName, ParentAccountID = @ParentAccountID,
+            AccountType = @AccountType, AccountLevel = @AccountLevel, IsTransactional = @IsTransactional
+        WHERE AccountID = @AccountID;
+        SELECT @AccountID AS AccountID;
+    END
+END
+GO
+
+-- =============================================
+-- 4. حذف حساب (فقط إذا لم يُستخدم في قيود)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Delete];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_Delete]
+    @AccountID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- منع الحذف إذا تم استخدام الحساب في قيود
+    IF EXISTS (SELECT 1 FROM [Accounting].[JournalDetails] WHERE AccountID = @AccountID)
+    BEGIN
+        RAISERROR(N'لا يمكن حذف حساب مستخدم في قيود محاسبية', 16, 1);
+        RETURN;
+    END
+    -- منع الحذف إذا له حسابات فرعية
+    IF EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @AccountID)
+    BEGIN
+        RAISERROR(N'لا يمكن حذف حساب له حسابات فرعية', 16, 1);
+        RETURN;
+    END
+    DELETE FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @AccountID;
+END
+GO
+
+-- =============================================
+-- 5. بحث بالكود أو الاسم
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_Search]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Search];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_Search]
+    @SearchText NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT A.AccountID, A.AccountCode, A.AccountName, A.ParentAccountID,
+           P.AccountName AS ParentAccountName,
+           A.AccountType, A.AccountLevel, A.IsTransactional
+    FROM [Accounting].[ChartOfAccounts] A
+    LEFT JOIN [Accounting].[ChartOfAccounts] P ON A.ParentAccountID = P.AccountID
+    WHERE A.AccountCode LIKE '%' + @SearchText + '%' OR A.AccountName LIKE '%' + @SearchText + '%'
+    ORDER BY A.AccountCode;
+END
+GO
+
+-- =============================================
+-- 6. جلب الحسابات الأب فقط (غير الفرعية) للـ ComboBox
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_GetParents]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_GetParents];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_GetParents]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT AccountID, AccountCode, AccountName, AccountType, AccountLevel
+    FROM [Accounting].[ChartOfAccounts]
+    ORDER BY AccountCode;
+END
+GO
+
+-- =============================================
+-- 4. تعديل بيانات حساب (Explicit Update)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_Update]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Update];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_Update]
+    @AccountID INT,
+    @AccountCode NVARCHAR(20),
+    @AccountName NVARCHAR(150),
+    @ParentAccountID INT = NULL,
+    @AccountType NVARCHAR(50),
+    @AccountLevel INT = 1,
+    @IsTransactional BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- التحقق من وجود الحساب
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @AccountID)
+    BEGIN
+        RAISERROR(N'الحساب غير موجود.', 16, 1);
+        RETURN;
+    END
+
+    -- التحقق: إذا كان الحساب له أبناء، لا يمكن جعله "فرعي"
+    IF @IsTransactional = 1 AND EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @AccountID)
+    BEGIN
+        RAISERROR(N'لا يمكن جعل الحساب "فرعي" لأنه أب لحسابات أخرى.', 16, 1);
+        RETURN;
+    END
+
+    UPDATE [Accounting].[ChartOfAccounts] 
+    SET AccountCode = @AccountCode, 
+        AccountName = @AccountName, 
+        ParentAccountID = @ParentAccountID,
+        AccountType = @AccountType, 
+        AccountLevel = @AccountLevel, 
+        IsTransactional = @IsTransactional
+    WHERE AccountID = @AccountID;
+
+    SELECT @AccountID AS AccountID;
+END
+GO

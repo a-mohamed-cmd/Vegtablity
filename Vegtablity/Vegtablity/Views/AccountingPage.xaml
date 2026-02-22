@@ -10,6 +10,7 @@
 
     <UserControl.Resources>
         <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+        <helpers:BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
     </UserControl.Resources>
 
     <!-- Fade-in animation -->
@@ -90,8 +91,9 @@
                         </BeginStoryboard>
                     </EventTrigger>
                 </Border.Triggers>
-                <DataGrid ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount}"
+                <DataGrid ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                          SelectionMode="Single" SelectionUnit="FullRow"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                           BorderThickness="0" Margin="5" RowHeight="36" ColumnHeaderHeight="40">
                     <DataGrid.Columns>
@@ -106,7 +108,18 @@
             </Border>
 
             <!-- Edit Panel -->
-            <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="18" BorderBrush="#eee" BorderThickness="1">
+            <Border Grid.Column="1" CornerRadius="10" Padding="18" BorderBrush="#eee" BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="#fafafa"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                <Setter Property="Background" Value="#fffaf0"/>
+                                <Setter Property="BorderBrush" Value="#f39c12"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Border.Triggers>
                     <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                         <BeginStoryboard>
@@ -126,7 +139,16 @@
                     </EventTrigger>
                 </Border.Triggers>
                 <StackPanel>
-                    <TextBlock Text="بيانات الحساب" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding PanelTitle}" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                        <Border Grid.Column="1" Background="#34495e" CornerRadius="4" Padding="6,2" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisConverter}}">
+                            <TextBlock Text="وضع التعديل" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                        </Border>
+                    </Grid>
 
                     <!-- رمز الحساب -->
                     <TextBlock Text="رمز الحساب *" FontWeight="SemiBold" Margin="0,0,0,4"/>
@@ -142,7 +164,7 @@
 
                     <!-- الحساب الأب -->
                     <TextBlock Text="الحساب الأب" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding ParentAccounts}" SelectedValue="{Binding EditParentAccountID}" 
+                    <ComboBox ItemsSource="{Binding DisplayParentAccounts}" SelectedValue="{Binding EditParentAccountID}" 
                               SelectedValuePath="AccountID" Margin="0,0,0,10">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
@@ -165,10 +187,11 @@
                     <TextBox Text="{Binding EditAccountLevel, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
 
                     <!-- حساب فرعي -->
-                    <CheckBox Content="حساب فرعي (يقبل قيود مباشرة)" IsChecked="{Binding EditIsTransactional}" Margin="0,0,0,15" FontSize="13"/>
+                    <CheckBox Content="حساب فرعي (يقبل قيود مباشرة)" IsChecked="{Binding EditIsTransactional}" 
+                              IsEnabled="{Binding IsTransactionalEnabled}" Margin="0,0,0,15" FontSize="13"/>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Content="💾 حفظ" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
+                        <Button Content="{Binding SaveActionText}" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
                         <Button Content="🆕 جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
                         <Button Content="🗑️ حذف" Command="{Binding DeleteCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
                     </StackPanel>

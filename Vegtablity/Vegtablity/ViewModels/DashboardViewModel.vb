@@ -280,9 +280,8 @@ Namespace ViewModels
                         IsHomePage = False
 
                     Case "TrialBalance"
-                        ' سيتم بناؤه لاحقاً
-                        CurrentPage = Nothing
-                        IsHomePage = True
+                        CurrentPage = New Views.TrialBalancePage()
+                        IsHomePage = False
 
                     Case "BalanceSheet"
                         ' سيتم بناؤه لاحقاً

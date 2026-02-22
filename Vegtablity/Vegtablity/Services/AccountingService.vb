@@ -29,10 +29,19 @@ Namespace Services
 
         Public Function SaveAccount(a As Account) As Integer
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.ExecuteScalar(Of Integer)(
-                    Helpers.StoredProcedures.SP_ACCOUNT_SAVE,
-                    New With {a.AccountID, a.AccountCode, a.AccountName, a.ParentAccountID, a.AccountType, a.AccountLevel, a.IsTransactional},
-                    commandType:=CommandType.StoredProcedure)
+                If a.AccountID = 0 Then
+                    ' Insert mode
+                    Return conn.ExecuteScalar(Of Integer)(
+                        Helpers.StoredProcedures.SP_ACCOUNT_SAVE,
+                        New With {a.AccountID, a.AccountCode, a.AccountName, a.ParentAccountID, a.AccountType, a.AccountLevel, a.IsTransactional},
+                        commandType:=CommandType.StoredProcedure)
+                Else
+                    ' Update mode (Explicit)
+                    Return conn.ExecuteScalar(Of Integer)(
+                        Helpers.StoredProcedures.SP_ACCOUNT_UPDATE,
+                        New With {a.AccountID, a.AccountCode, a.AccountName, a.ParentAccountID, a.AccountType, a.AccountLevel, a.IsTransactional},
+                        commandType:=CommandType.StoredProcedure)
+                End If
             End Using
         End Function
 
@@ -137,6 +146,18 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure)
             End Using
         End Sub
+
+        Public Function GetTrialBalance(startDate As Date, endDate As Date, Optional reportLevel As Integer = 0) As TrialBalanceReport
+            Dim report As New TrialBalanceReport() With {.StartDate = startDate, .EndDate = endDate}
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim results = conn.Query(Of TrialBalanceItem)(
+                    Helpers.StoredProcedures.SP_REPORT_TRIALBALANCE,
+                    New With {.StartDate = startDate, .EndDate = endDate, .ReportLevel = reportLevel},
+                    commandType:=CommandType.StoredProcedure)
+                report.Items = results.ToList()
+            End Using
+            Return report
+        End Function
 
     End Class
 End Namespace

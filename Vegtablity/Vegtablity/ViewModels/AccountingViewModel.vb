@@ -1,4 +1,5 @@
 Imports System.Collections.ObjectModel
+Imports System.Linq
 Imports System.Windows
 Imports System.Windows.Input
 Imports Vegtablity.Models
@@ -14,6 +15,7 @@ Namespace ViewModels
         Private _selectedAccount As Account
         Private _isEditing As Boolean
         Private _searchText As String
+        Private _isInternalSync As Boolean = False
 
         ' حقول التعديل
         Private _editAccountCode As String
@@ -22,6 +24,10 @@ Namespace ViewModels
         Private _editAccountType As String
         Private _editAccountLevel As Integer
         Private _editIsTransactional As Boolean
+        Private _isTransactionalEnabled As Boolean = True
+        Private _panelTitle As String = "إضافة حساب جديد"
+        Private _saveActionText As String = "إضافة"
+        Private _displayParentAccounts As ObservableCollection(Of Account)
 
         ' أخطاء
         Private _accountCodeError As String
@@ -37,6 +43,10 @@ Namespace ViewModels
             LoadParentAccounts()
             EditIsTransactional = True
             EditAccountLevel = 1
+            PanelTitle = "📁 إضافة حساب جديد"
+            SaveActionText = "إضافة"
+            UpdateDisplayParentAccounts()
+            StatusMessage = "جاهز " & DateTime.Now.ToString("HH:mm:ss")
         End Sub
 
 #Region "Properties"
@@ -63,20 +73,72 @@ Namespace ViewModels
                 Return _selectedAccount
             End Get
             Set(value As Account)
-                SetProperty(_selectedAccount, value)
-                If value IsNot Nothing Then
-                    EditAccountCode = value.AccountCode
-                    EditAccountName = value.AccountName
-                    EditParentAccountID = value.ParentAccountID
-                    EditAccountType = value.AccountType
-                    EditAccountLevel = value.AccountLevel
-                    EditIsTransactional = value.IsTransactional
-                    IsEditing = True
-                    AccountCodeError = Nothing
-                    AccountNameError = Nothing
+                ' Using SetProperty to ensure correct notification and change detection
+                If SetProperty(_selectedAccount, value) Then
+                    UpdateFieldsFromSelected()
                 End If
             End Set
         End Property
+
+        Private Sub UpdateFieldsFromSelected()
+            ' Deep Sync: Prevent recursive UI feedback during data loading
+            _isInternalSync = True
+            
+            Try
+                ' 1. Clear validation state
+                AccountCodeError = Nothing
+                AccountNameError = Nothing
+
+                If _selectedAccount IsNot Nothing Then
+                    ' 2. Prepare the UI Context FIRST
+                    ' We update the lists before setting the values to ensure ComboBoxes find their items
+                    UpdateDisplayParentAccounts()
+                    
+                    ' 3. Enter Editing Mode (Set properties directly to trigger individual notifications)
+                    IsEditing = True
+                    PanelTitle = "✏️ تعديل بيانات الحساب"
+                    SaveActionText = "تحديث"
+
+                    ' 4. Map Data Fields
+                    EditAccountCode = _selectedAccount.AccountCode
+                    EditAccountName = _selectedAccount.AccountName
+                    EditParentAccountID = _selectedAccount.ParentAccountID
+                    EditAccountType = _selectedAccount.AccountType
+                    EditAccountLevel = _selectedAccount.AccountLevel
+                    EditIsTransactional = _selectedAccount.IsTransactional
+                    
+                    ' 5. UI State check
+                    Dim hasChildren = If(Accounts IsNot Nothing, Accounts.Any(Function(a) a.ParentAccountID.HasValue AndAlso a.ParentAccountID.Value = _selectedAccount.AccountID), False)
+                    IsTransactionalEnabled = Not hasChildren
+                    
+                    StatusMessage = "✅ وضع التعديل: تحميل بيانات [" & _selectedAccount.AccountName & "]"
+                Else
+                    ' Reset to Add Mode
+                    IsEditing = False
+                    PanelTitle = "📁 إضافة حساب جديد"
+                    SaveActionText = "إضافة"
+                    
+                    EditAccountCode = ""
+                    EditAccountName = ""
+                    EditParentAccountID = Nothing
+                    EditAccountType = "Assets"
+                    EditAccountLevel = 1
+                    EditIsTransactional = True
+                    IsTransactionalEnabled = True
+                    
+                    UpdateDisplayParentAccounts()
+                    StatusMessage = "ℹ️ وضع الإضافة: في انتظار اختيار حساب..."
+                End If
+            Catch ex As Exception
+                StatusMessage = "❌ خطأ في تحميل البيانات: " & ex.Message
+            Finally
+                _isInternalSync = False
+            End Try
+            
+            ' Final broadcast to ensure any complex bindings or triggers refresh
+            ' Note: We use string.Empty to refresh all properties on this instance
+            OnPropertyChanged("") 
+        End Sub
 
         Public Property IsEditing As Boolean
             Get
@@ -135,7 +197,22 @@ Namespace ViewModels
                 Return _editParentAccountID
             End Get
             Set(value As Integer?)
-                SetProperty(_editParentAccountID, value)
+                If SetProperty(_editParentAccountID, value) Then
+                    ' Only automate if this is a user change (not during selection load)
+                    If Not _isInternalSync Then
+                        If value.HasValue AndAlso ParentAccounts IsNot Nothing Then
+                            ' Automate Level and Type inheritance
+                            Dim parent = ParentAccounts.FirstOrDefault(Function(a) a.AccountID = value.Value)
+                            If parent IsNot Nothing Then
+                                EditAccountLevel = parent.AccountLevel + 1
+                                EditAccountType = parent.AccountType
+                            End If
+                        ElseIf Not value.HasValue Then
+                            ' Reset to default if no parent
+                            EditAccountLevel = 1
+                        End If
+                    End If
+                End If
             End Set
         End Property
 
@@ -163,6 +240,42 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 SetProperty(_editIsTransactional, value)
+            End Set
+        End Property
+
+        Public Property IsTransactionalEnabled As Boolean
+            Get
+                Return _isTransactionalEnabled
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isTransactionalEnabled, value)
+            End Set
+        End Property
+
+        Public Property PanelTitle As String
+            Get
+                Return _panelTitle
+            End Get
+            Set(value As String)
+                SetProperty(_panelTitle, value)
+            End Set
+        End Property
+
+        Public Property SaveActionText As String
+            Get
+                Return _saveActionText
+            End Get
+            Set(value As String)
+                SetProperty(_saveActionText, value)
+            End Set
+        End Property
+
+        Public Property DisplayParentAccounts As ObservableCollection(Of Account)
+            Get
+                Return _displayParentAccounts
+            End Get
+            Set(value As ObservableCollection(Of Account))
+                SetProperty(_displayParentAccounts, value)
             End Set
         End Property
 
@@ -226,9 +339,45 @@ Namespace ViewModels
         Private Sub LoadParentAccounts()
             Try
                 ParentAccounts = New ObservableCollection(Of Account)(_accountingService.GetParentAccounts())
+                UpdateDisplayParentAccounts()
             Catch ex As Exception
                 StatusMessage = "خطأ في تحميل الحسابات الأب: " & ex.Message
             End Try
+        End Sub
+
+        Private Sub UpdateDisplayParentAccounts()
+            If ParentAccounts Is Nothing Then 
+                DisplayParentAccounts = New ObservableCollection(Of Account)()
+                Return
+            End If
+            
+            ' Prevent circular reference:
+            ' 1. Hide the account itself
+            ' 2. Hide all its descendants (children, grandchildren, etc.)
+            If SelectedAccount IsNot Nothing Then
+                Dim invalidIDs As New HashSet(Of Integer)()
+                invalidIDs.Add(SelectedAccount.AccountID)
+                
+                ' Simple recursive discovery of descendants in the current flat list
+                AddDescendantsToSet(SelectedAccount.AccountID, invalidIDs)
+
+                DisplayParentAccounts = New ObservableCollection(Of Account)(
+                    ParentAccounts.Where(Function(a) Not invalidIDs.Contains(a.AccountID))
+                )
+            Else
+                DisplayParentAccounts = New ObservableCollection(Of Account)(ParentAccounts)
+            End If
+        End Sub
+
+        Private Sub AddDescendantsToSet(parentID As Integer, visitedSet As HashSet(Of Integer))
+            If Accounts Is Nothing Then Return
+            ' Safely compare Nullable(Of Integer) to Integer
+            Dim children = Accounts.Where(Function(a) a.ParentAccountID.HasValue AndAlso a.ParentAccountID.Value = parentID).Select(Function(a) a.AccountID).ToList()
+            For Each childID In children
+                If visitedSet.Add(childID) Then
+                    AddDescendantsToSet(childID, visitedSet)
+                End If
+            Next
         End Sub
 
         Private Sub SearchAccounts()
@@ -259,12 +408,23 @@ Namespace ViewModels
             EditAccountLevel = 1
             EditIsTransactional = True
             IsEditing = False
+            PanelTitle = "📁 إضافة حساب جديد"
+            SaveActionText = "إضافة"
             AccountCodeError = Nothing
             AccountNameError = Nothing
+            StatusMessage = "تم البدء بإضافة حساب جديد."
         End Sub
 
         Private Sub ExecuteSave(obj As Object)
             If Not ValidateAccount() Then Return
+
+            ' Confirmation for updates
+            If IsEditing AndAlso SelectedAccount IsNot Nothing Then
+                If MessageBox.Show("هل أنت متأكد من حفظ التعديلات على حساب: " & SelectedAccount.AccountName & "؟",
+                                   "تأكيد التعديل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.No Then
+                    Return
+                End If
+            End If
 
             Try
                 Dim a As New Account With {

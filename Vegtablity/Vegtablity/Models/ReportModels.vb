@@ -37,4 +37,79 @@ Namespace Models
         Public Property CreditAmount As Decimal
         Public Property Balance As Decimal
     End Class
+
+    Public Class TrialBalanceItem
+        Public Property AccountID As Integer
+        Public Property AccountCode As String
+        Public Property AccountName As String
+        Public Property AccountType As String
+        
+        ' Net Balances
+        Public Property OpeningBalance As Decimal
+        Public Property EndingBalance As Decimal
+
+        ' Movements
+        Public Property PeriodDebit As Decimal
+        Public Property PeriodCredit As Decimal
+        
+        ' Keep for Detailed view compatibility
+        Public Property OpeningDebit As Decimal
+        Public Property OpeningCredit As Decimal
+        Public Property EndingDebit As Decimal
+        Public Property EndingCredit As Decimal
+    End Class
+
+    Public Class TrialBalanceReport
+        Public Property StartDate As DateTime
+        Public Property EndDate As DateTime
+        Public Property Items As New List(Of TrialBalanceItem)
+
+        Public ReadOnly Property TotalOpeningBalance As Decimal
+            Get
+                Return Items.Sum(Function(i) i.OpeningBalance)
+            End Get
+        End Property
+
+        Public ReadOnly Property TotalEndingBalance As Decimal
+            Get
+                Return Items.Sum(Function(i) i.EndingBalance)
+            End Get
+        End Property
+        
+        Public ReadOnly Property TotalOpeningDebit As Decimal
+            Get
+                Return Items.Sum(Function(i) i.OpeningDebit)
+            End Get
+        End Property
+
+        Public ReadOnly Property TotalOpeningCredit As Decimal
+            Get
+                Return Items.Sum(Function(i) i.OpeningCredit)
+            End Get
+        End Property
+
+        Public ReadOnly Property TotalPeriodDebit As Decimal
+            Get
+                Return Items.Sum(Function(i) i.PeriodDebit)
+            End Get
+        End Property
+
+        Public ReadOnly Property TotalPeriodCredit As Decimal
+            Get
+                Return Items.Sum(Function(i) i.PeriodCredit)
+            End Get
+        End Property
+
+        Public ReadOnly Property TotalEndingDebit As Decimal
+            Get
+                Return Items.Sum(Function(i) i.EndingDebit)
+            End Get
+        End Property
+
+        Public ReadOnly Property TotalEndingCredit As Decimal
+            Get
+                Return Items.Sum(Function(i) i.EndingCredit)
+            End Get
+        End Property
+    End Class
 End Namespace

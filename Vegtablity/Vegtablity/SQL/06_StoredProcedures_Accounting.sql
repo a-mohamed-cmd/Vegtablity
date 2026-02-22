@@ -42,7 +42,7 @@ END
 GO
 
 -- =============================================
--- 3. حفظ حساب (إضافة أو تعديل)
+-- 3. حفظ حساب (إضافة)
 -- =============================================
 IF OBJECT_ID('[Accounting].[sp_Account_Save]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Save];
 GO
@@ -57,6 +57,17 @@ CREATE PROCEDURE [Accounting].[sp_Account_Save]
 AS
 BEGIN
     SET NOCOUNT ON;
+
+    -- التحقق: إذا كان الحساب مراد جعله "فرعي/يقبل قيود" ولكن له أبناء بالفعل في الشجرة
+    IF @AccountID <> 0 AND @IsTransactional = 1
+    BEGIN
+        IF EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @AccountID)
+        BEGIN
+            RAISERROR(N'لا يمكن جعل الحساب "فرعي" لأنه أب لحسابات أخرى في الشجرة.', 16, 1);
+            RETURN;
+        END
+    END
+
     IF @AccountID = 0
     BEGIN
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
@@ -71,6 +82,50 @@ BEGIN
         WHERE AccountID = @AccountID;
         SELECT @AccountID AS AccountID;
     END
+END
+GO
+
+-- =============================================
+-- 4. تعديل بيانات حساب (Explicit Update)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Account_Update]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Update];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_Update]
+    @AccountID INT,
+    @AccountCode NVARCHAR(20),
+    @AccountName NVARCHAR(150),
+    @ParentAccountID INT = NULL,
+    @AccountType NVARCHAR(50),
+    @AccountLevel INT = 1,
+    @IsTransactional BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- التحقق من وجود الحساب
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @AccountID)
+    BEGIN
+        RAISERROR(N'الحساب غير موجود.', 16, 1);
+        RETURN;
+    END
+
+    -- التحقق: إذا كان الحساب له أبناء، لا يمكن جعله "فرعي"
+    IF @IsTransactional = 1 AND EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @AccountID)
+    BEGIN
+        RAISERROR(N'لا يمكن جعل الحساب "فرعي" لأنه أب لحسابات أخرى.', 16, 1);
+        RETURN;
+    END
+
+    UPDATE [Accounting].[ChartOfAccounts] 
+    SET AccountCode = @AccountCode, 
+        AccountName = @AccountName, 
+        ParentAccountID = @ParentAccountID,
+        AccountType = @AccountType, 
+        AccountLevel = @AccountLevel, 
+        IsTransactional = @IsTransactional
+    WHERE AccountID = @AccountID;
+
+    SELECT @AccountID AS AccountID;
 END
 GO
 

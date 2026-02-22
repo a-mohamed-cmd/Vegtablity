@@ -8,6 +8,11 @@ Imports Vegtablity.Services
 
 Namespace Helpers
     Public Class ReportExporter
+        Private Shared ReadOnly fontBold As New XFont("Arial", 11, XFontStyle.Bold)
+        Private Shared ReadOnly fontReg As New XFont("Arial", 9, XFontStyle.Regular)
+        Private Shared ReadOnly fontSmall As New XFont("Arial", 8, XFontStyle.Regular)
+        Private Shared ReadOnly fontLarge As New XFont("Arial", 18, XFontStyle.Bold)
+        Private Shared ReadOnly fontTitle As New XFont("Arial", 16, XFontStyle.Bold)
 
         ' ===================================================
         ' Export to CSV using StreamWriter (Arabic Support)
@@ -106,53 +111,25 @@ Namespace Helpers
                 Dim fontLarge = New XFont("Arial", 18, XFontStyle.Bold)
 
                 Dim margin = 30.0
-                Dim pageIndex = 0
+                Dim pageCount = 0
 
-                Dim addNewPageWithHeader = Function() As XGraphics
-                                               Dim p = doc.AddPage()
-                                               p.Size = PdfSharp.PageSize.A4
-                                               p.Orientation = PdfSharp.PageOrientation.Landscape
-                                               Dim g = XGraphics.FromPdfPage(p)
-                                               Dim currentY = margin
-                                               Dim pWidth = p.Width.Point - margin * 2
+                Dim drawHeaderFunc = Function(ByRef p As PdfPage) As XGraphics
+                                         Dim g = XGraphics.FromPdfPage(p)
+                                         Dim currentY = margin
+                                         Dim pWidth = p.Width.Point - margin * 2
+                                         pageCount += 1
 
-                                               ' --- Header Branding ---
-                                               If company IsNot Nothing Then
-                                                   ' Logo
-                                                   If company.Logo IsNot Nothing AndAlso company.Logo.Length > 0 Then
-                                                       Try
-                                                           Using ms As New MemoryStream(company.Logo)
-                                                               Dim img = XImage.FromStream(ms)
-                                                               g.DrawImage(img, margin, currentY, 60, 60)
-                                                           End Using
-                                                       Catch ex As Exception
-                                                       End Try
-                                                   End If
-
-                                                   ' Company Name
-                                                   g.DrawString(ArabicTextHelper.Fix(company.CompanyName), fontLarge, XBrushes.Black,
-                                       New XRect(margin + 70, currentY, pWidth - 70, 25), XStringFormats.TopLeft)
-
-                                                   g.DrawString(ArabicTextHelper.Fix(If(company.Email, "")), fontSmall,
-                                        XBrushes.Gray, New XRect(margin + 70, currentY + 25, pWidth - 70, 15), XStringFormats.TopLeft)
-                                                   g.DrawString(ArabicTextHelper.Fix(If(company.Phone, "")), fontSmall,
-                                        XBrushes.Gray, New XRect(margin + 70, currentY + 40, pWidth - 70, 15), XStringFormats.TopLeft)
-
-                                                   currentY += 75
-                                               End If
-
-                                               ' Page Number
-                                               pageIndex += 1
-                                               g.DrawString(ArabicTextHelper.Fix("Page: " & pageIndex), fontSmall, XBrushes.Gray,
-                                 New XRect(margin, p.Height.Point - margin + 5, pWidth, 15), XStringFormats.TopRight)
-
-                                               Return g
-                                           End Function
+                                         DrawReportHeader(g, company, p, currentY, margin, pWidth, pageCount)
+                                         Return g
+                                     End Function
 
                 ' Initial Page
-                Dim gfx = addNewPageWithHeader()
-                Dim pageWidth = doc.Pages(0).Width.Point - margin * 2
-                Dim y = margin + (If(company IsNot Nothing, 75, 0))
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                page.Orientation = PdfSharp.PageOrientation.Landscape
+                Dim gfx = drawHeaderFunc(page)
+                Dim pageWidth = page.Width.Point - margin * 2
+                Dim y = margin + 80 ' Header height + buffer
 
                 ' Title
                 gfx.DrawString(ArabicTextHelper.Fix("Account Statement: " & accountName), New XFont("Arial", 14, XFontStyle.Bold),
@@ -185,8 +162,11 @@ Namespace Helpers
                 For Each item In report.Transactions
                     ' Check if we need a new page
                     If y > doc.Pages(0).Height.Point - margin - 60 Then
-                        gfx = addNewPageWithHeader()
-                        y = margin + (If(company IsNot Nothing, 75, 0))
+                        Dim newPage = doc.AddPage()
+                        newPage.Size = PdfSharp.PageSize.A4
+                        newPage.Orientation = PdfSharp.PageOrientation.Landscape
+                        gfx = drawHeaderFunc(newPage)
+                        y = margin + 80
 
                         ' Re-draw table header on new page
                         x = margin
@@ -231,8 +211,11 @@ Namespace Helpers
                 ' Totals row
                 y += 5
                 If y > doc.Pages(0).Height.Point - margin - 30 Then
-                    gfx = addNewPageWithHeader()
-                    y = margin + (If(company IsNot Nothing, 75, 0))
+                    Dim newPage = doc.AddPage()
+                    newPage.Size = PdfSharp.PageSize.A4
+                    newPage.Orientation = PdfSharp.PageOrientation.Landscape
+                    gfx = drawHeaderFunc(newPage)
+                    y = margin + 80
                 End If
 
                 Dim totalBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
@@ -286,22 +269,11 @@ Namespace Helpers
                 Dim gfx = XGraphics.FromPdfPage(page)
                 Dim margin = 40.0
                 Dim width = page.Width.Point - margin * 2
-                Dim y = margin
+                Dim currentY = margin
 
-                ' --- Header Branding ---
-                If company IsNot Nothing Then
-                    If company.Logo IsNot Nothing AndAlso company.Logo.Length > 0 Then
-                        Try
-                            Using ms As New MemoryStream(company.Logo)
-                                gfx.DrawImage(XImage.FromStream(ms), margin, y, 50, 50)
-                            End Using
-                        Catch
-                        End Try
-                    End If
-                    gfx.DrawString(ArabicTextHelper.Fix(company.CompanyName), fontLarge, XBrushes.Black,
-                                   New XRect(margin + 60, y, width - 60, 25), XStringFormats.TopLeft)
-                    y += 60
-                End If
+                DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
+
+                Dim y = currentY
 
                 ' --- Journal Title ---
                 gfx.DrawLine(XPens.DarkGray, margin, y, margin + width, y)
@@ -378,6 +350,235 @@ Namespace Helpers
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء طباعة القيد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Trial Balance to CSV
+        ' ===================================================
+        Public Shared Sub ExportTrialBalanceToCsv(report As TrialBalanceReport, startDate As Date, endDate As Date, isDetailed As Boolean)
+            Try
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير ميزان المراجعة إلى CSV"
+                dlg.Filter = "CSV Files (*.csv)|*.csv"
+                dlg.FileName = "ميزان_المراجعة_" & startDate.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                    sw.WriteLine("ميزان المراجعة")
+                    sw.WriteLine("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd"))
+                    sw.WriteLine()
+
+                    ' --- Table Headers ---
+                    Dim headers As New List(Of String) From {"كود الحساب", "اسم الحساب", "رصيد أول"}
+                    If isDetailed Then
+                        headers.Add("مدين الحركة")
+                        headers.Add("دائن الحركة")
+                    End If
+                    headers.Add("رصيد آخر")
+
+                    sw.WriteLine(String.Join(",", headers))
+
+                    ' --- Data Rows ---
+                    For Each i In report.Items
+                        Dim row As New List(Of String) From {
+                            i.AccountCode,
+                            """" & i.AccountName & """",
+                            i.OpeningBalance.ToString("F2")
+                        }
+                        If isDetailed Then
+                            row.Add(i.PeriodDebit.ToString("F2"))
+                            row.Add(i.PeriodCredit.ToString("F2"))
+                        End If
+                        row.Add(i.EndingBalance.ToString("F2"))
+
+                        sw.WriteLine(String.Join(",", row))
+                    Next
+
+                    ' --- Summary ---
+                    sw.WriteLine()
+                    Dim totals As New List(Of String) From {"", "الإجمالي", report.TotalOpeningBalance.ToString("F2")}
+                    If isDetailed Then
+                        totals.Add(report.TotalPeriodDebit.ToString("F2"))
+                        totals.Add(report.TotalPeriodCredit.ToString("F2"))
+                    End If
+                    totals.Add(report.TotalEndingBalance.ToString("F2"))
+                    sw.WriteLine(String.Join(",", totals))
+                End Using
+
+                If File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("Error: " & ex.Message)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Trial Balance to PDF (Landscape)
+        ' ===================================================
+        Public Shared Sub ExportTrialBalanceToPdf(report As TrialBalanceReport, startDate As Date, endDate As Date, isDetailed As Boolean)
+            Try
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير ميزان المراجعة إلى PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                dlg.FileName = "ميزان_المراجعة_" & startDate.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                page.Orientation = PdfSharp.PageOrientation.Landscape
+                Dim gfx = XGraphics.FromPdfPage(page)
+
+                Dim fontBold = New XFont("Arial", 11, XFontStyle.Bold)
+                Dim fontReg = New XFont("Arial", 9, XFontStyle.Regular)
+                Dim fontTitle = New XFont("Arial", 16, XFontStyle.Bold)
+
+                Dim margin = 30.0
+                Dim width = page.Width.Point - margin * 2
+                Dim currentY = margin
+                Dim pageCount = 1
+
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                DrawReportHeader(gfx, company, page, currentY, margin, width, pageCount)
+
+                Dim y = currentY
+
+                ' --- Title ---
+                gfx.DrawString(ArabicTextHelper.Fix("ميزان المراجعة"), fontTitle, XBrushes.Black, New XRect(margin, y, width, 25), XStringFormats.TopCenter)
+                y += 30
+                gfx.DrawString(ArabicTextHelper.Fix("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Black, margin, y)
+                y += 20
+
+                ' --- Table Header ---
+                Dim cols As New List(Of Double) From {width * 0.12, width * 0.35, width * 0.15} ' Code, Name, Opening
+                If isDetailed Then
+                    cols.Add(width * 0.12) ' Period Dr
+                    cols.Add(width * 0.12) ' Period Cr
+                End If
+                cols.Add(width * 0.14) ' Ending
+
+                Dim headers As New List(Of String) From {"كود الحساب", "اسم الحساب", "رصيد أول"}
+                If isDetailed Then
+                    headers.Add("مدين الحركة")
+                    headers.Add("دائن الحركة")
+                End If
+                headers.Add("رصيد آخر")
+
+                Dim x = margin
+                gfx.DrawRectangle(XBrushes.LightGray, margin, y, width, 20)
+                For idx = 0 To headers.Count - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(headers(idx)), fontBold, XBrushes.Black, New XRect(x + 5, y + 3, cols(idx) - 10, 16), XStringFormats.TopLeft)
+                    x += cols(idx)
+                Next
+                y += 20
+
+                ' --- Table Body ---
+                For Each item In report.Items
+                    x = margin
+                    gfx.DrawString(item.AccountCode, fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(0) - 10, 16), XStringFormats.TopLeft)
+                    x += cols(0)
+                    gfx.DrawString(ArabicTextHelper.Fix(item.AccountName), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(1) - 10, 16), XStringFormats.TopLeft)
+                    x += cols(1)
+                    gfx.DrawString(item.OpeningBalance.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(2) - 10, 16), XStringFormats.TopRight)
+                    x += cols(2)
+
+                    Dim curPos = 3
+                    If isDetailed Then
+                        gfx.DrawString(item.PeriodDebit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
+                        x += cols(curPos)
+                        curPos += 1
+                        gfx.DrawString(item.PeriodCredit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
+                        x += cols(curPos)
+                        curPos += 1
+                    End If
+
+                    gfx.DrawString(item.EndingBalance.ToString("N2"), fontBold, XBrushes.DarkBlue, New XRect(x + 5, y + 3, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
+
+                    y += 18
+                    gfx.DrawLine(XPens.LightGray, margin, y, margin + width, y)
+
+                    ' Page overflow check
+                    If y > page.Height.Point - margin - 50 Then
+                        page = doc.AddPage()
+                        page.Orientation = PdfSharp.PageOrientation.Landscape
+                        gfx = XGraphics.FromPdfPage(page)
+                        currentY = margin
+                        pageCount += 1
+                        DrawReportHeader(gfx, company, page, currentY, margin, width, pageCount)
+                        y = currentY
+                    End If
+                Next
+
+                ' --- Summary ---
+                y += 10
+                gfx.DrawRectangle(XBrushes.GhostWhite, margin, y, width, 22)
+                x = margin + cols(0) + cols(1)
+                gfx.DrawString(report.TotalOpeningBalance.ToString("N2"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(2) - 10, 16), XStringFormats.TopRight)
+                x += cols(2)
+
+                If isDetailed Then
+                    gfx.DrawString(report.TotalPeriodDebit.ToString("N2"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(3) - 10, 16), XStringFormats.TopRight)
+                    x += cols(3)
+                    gfx.DrawString(report.TotalPeriodCredit.ToString("N2"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(4) - 10, 16), XStringFormats.TopRight)
+                    x += cols(4)
+                End If
+                gfx.DrawString(report.TotalEndingBalance.ToString("N2"), fontBold, XBrushes.DarkGreen, New XRect(x + 5, y + 4, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("Error: " & ex.Message)
+            End Try
+        End Sub
+        ' ===================================================
+        ' PDF Branding Helper
+        ' ===================================================
+        Private Shared Sub DrawReportHeader(gfx As XGraphics, company As CompanyInfo, page As PdfPage, ByRef currentY As Double, margin As Double, pWidth As Double, pageIndex As Integer)
+            If company IsNot Nothing Then
+                ' 1. Draw Logo
+                If company.Logo IsNot Nothing AndAlso company.Logo.Length > 0 Then
+                    Try
+                        Using ms As New MemoryStream(company.Logo)
+                            Dim img = XImage.FromStream(ms)
+                            gfx.DrawImage(img, margin, currentY, 60, 60)
+                        End Using
+                    Catch
+                    End Try
+                End If
+
+                ' 2. Company Info (Left Aligned)
+                Dim textX = margin + 70
+                gfx.DrawString(ArabicTextHelper.Fix(company.CompanyName), fontLarge, XBrushes.Black, New XRect(textX, currentY, pWidth - 70, 25), XStringFormats.TopLeft)
+
+                Dim subTextY = currentY + 25
+                If Not String.IsNullOrEmpty(company.Address) Then
+                    gfx.DrawString(ArabicTextHelper.Fix(company.Address), fontReg, XBrushes.Gray, New XRect(textX, subTextY, pWidth - 70, 15), XStringFormats.TopLeft)
+                    subTextY += 15
+                End If
+
+                Dim contactInfo = ""
+                If Not String.IsNullOrEmpty(company.Phone) Then contactInfo &= "Tel: " & company.Phone & "  "
+                If Not String.IsNullOrEmpty(company.Email) Then contactInfo &= "Email: " & company.Email
+
+                If Not String.IsNullOrEmpty(contactInfo) Then
+                    gfx.DrawString(ArabicTextHelper.Fix(contactInfo), fontSmall, XBrushes.Gray, New XRect(textX, subTextY, pWidth - 70, 15), XStringFormats.TopLeft)
+                End If
+            End If
+
+            ' 3. Page Number (Bottom Right of Header)
+            gfx.DrawString(ArabicTextHelper.Fix("صفحة: " & pageIndex), fontReg, XBrushes.Black, New XRect(margin, currentY + 45, pWidth, 15), XStringFormats.TopRight)
+
+            ' 4. Separator Line
+            currentY += 65
+            gfx.DrawLine(New XPen(XColors.DarkGray, 1.5), margin, currentY, margin + pWidth, currentY)
+            currentY += 10
         End Sub
 
     End Class

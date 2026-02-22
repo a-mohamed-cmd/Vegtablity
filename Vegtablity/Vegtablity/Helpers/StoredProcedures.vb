@@ -85,6 +85,7 @@ Namespace Helpers
         Public Const SP_ACCOUNT_GETALL As String = "[Accounting].[sp_Account_GetAll]"
         Public Const SP_ACCOUNT_GETBYID As String = "[Accounting].[sp_Account_GetByID]"
         Public Const SP_ACCOUNT_SAVE As String = "[Accounting].[sp_Account_Save]"
+        Public Const SP_ACCOUNT_UPDATE As String = "[Accounting].[sp_Account_Update]"
         Public Const SP_ACCOUNT_DELETE As String = "[Accounting].[sp_Account_Delete]"
         Public Const SP_ACCOUNT_SEARCH As String = "[Accounting].[sp_Account_Search]"
         Public Const SP_ACCOUNT_GETPARENTS As String = "[Accounting].[sp_Account_GetParents]"
@@ -111,6 +112,7 @@ Namespace Helpers
         ' Reports Schema
         ' =============================================
         Public Const SP_REPORT_ACCOUNTSTATEMENT As String = "[Accounting].[sp_Report_AccountStatement]"
+        Public Const SP_REPORT_TRIALBALANCE As String = "[Accounting].[sp_Report_TrialBalance]"
 
         ' =============================================
         ' Settings Schema - Company Settings
