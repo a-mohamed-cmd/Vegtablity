@@ -41,7 +41,7 @@ Namespace Helpers
 
                     sw.WriteLine("كشف حساب: " & accountName)
                     sw.WriteLine("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd"))
-                    sw.WriteLine("الرصيد الافتتاحي: " & report.OpeningBalance.ToString("F2"))
+                    sw.WriteLine("الرصيد الافتتاحي: " & report.OpeningBalance.ToString("F3"))
                     sw.WriteLine()
 
                     ' --- Table Headers ---
@@ -55,16 +55,16 @@ Namespace Helpers
                             item.EntryDate.ToString("yyyy/MM/dd"),
                             """" & If(item.ReferenceType, "").Replace("""", """""") & """",
                             """" & If(item.Description, "").Replace("""", """""") & """",
-                            item.DebitAmount.ToString("F2"),
-                            item.CreditAmount.ToString("F2"),
-                            item.Balance.ToString("F2")
+                            item.DebitAmount.ToString("F3"),
+                            item.CreditAmount.ToString("F3"),
+                            item.Balance.ToString("F3")
                         }
                         sw.WriteLine(String.Join(",", row))
                     Next
 
                     ' --- Totals ---
                     sw.WriteLine()
-                    Dim totals = {"", "", "", "الإجمالي", report.TotalDebit.ToString("F2"), report.TotalCredit.ToString("F2"), report.EndingBalance.ToString("F2")}
+                    Dim totals = {"", "", "", "الإجمالي", report.TotalDebit.ToString("F3"), report.TotalCredit.ToString("F3"), report.EndingBalance.ToString("F3")}
                     sw.WriteLine(String.Join(",", totals))
                 End Using
 
@@ -191,7 +191,7 @@ Namespace Helpers
                         If(desc.Length > 35, desc.Substring(0, 35) & "...", desc),
                         item.DebitAmount.ToString("N2"),
                         item.CreditAmount.ToString("N2"),
-                        item.Balance.ToString("N2")
+                        item.Balance.ToString("N3")
                     }
 
                     For i = 0 To rowData.Length - 1
@@ -221,7 +221,7 @@ Namespace Helpers
                 Dim totalBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
                 gfx.DrawRectangle(totalBrush, margin, y, pageWidth, 20)
                 x = margin
-                Dim totals() As String = {"", "", "", "TOTAL", report.TotalDebit.ToString("N2"), report.TotalCredit.ToString("N2"), report.EndingBalance.ToString("N2")}
+                Dim totals() As String = {"", "", "", "TOTAL", report.TotalDebit.ToString("N2"), report.TotalCredit.ToString("N2"), report.EndingBalance.ToString("N3")}
                 For i = 0 To totals.Length - 1
                     gfx.DrawString(ArabicTextHelper.Fix(totals(i)), fontBold, XBrushes.White, New XRect(x + 2, y + 3, cols(i) - 4, 16), XStringFormats.TopLeft)
                     x += cols(i)
@@ -313,9 +313,9 @@ Namespace Helpers
                     x += cols(0)
                     gfx.DrawString(ArabicTextHelper.Fix(d.Notes), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(1) - 4, 16), XStringFormats.TopLeft)
                     x += cols(1)
-                    gfx.DrawString(d.Debit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(2) - 4, 16), XStringFormats.TopRight)
+                    gfx.DrawString(d.Debit.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(2) - 4, 16), XStringFormats.TopRight)
                     x += cols(2)
-                    gfx.DrawString(d.Credit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(3) - 4, 16), XStringFormats.TopRight)
+                    gfx.DrawString(d.Credit.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 2, y + 2, cols(3) - 4, 16), XStringFormats.TopRight)
 
                     y += 18
                     gfx.DrawLine(XPens.LightGray, margin, y, margin + width, y)
@@ -336,8 +336,8 @@ Namespace Helpers
                 Dim totalDebit = journal.Details.Sum(Function(d) d.Debit)
                 Dim totalCredit = journal.Details.Sum(Function(d) d.Credit)
 
-                gfx.DrawString(totalDebit.ToString("N2"), fontBold, XBrushes.DarkRed, New XRect(margin + width - cols(3) - cols(2), y + 4, cols(2) - 4, 16), XStringFormats.TopRight)
-                gfx.DrawString(totalCredit.ToString("N2"), fontBold, XBrushes.DarkGreen, New XRect(margin + width - cols(3), y + 4, cols(3) - 4, 16), XStringFormats.TopRight)
+                gfx.DrawString(totalDebit.ToString("N3"), fontBold, XBrushes.DarkRed, New XRect(margin + width - cols(3) - cols(2), y + 4, cols(2) - 4, 16), XStringFormats.TopRight)
+                gfx.DrawString(totalCredit.ToString("N3"), fontBold, XBrushes.DarkGreen, New XRect(margin + width - cols(3), y + 4, cols(3) - 4, 16), XStringFormats.TopRight)
 
                 ' --- Signatures ---
                 y += 60
@@ -384,25 +384,25 @@ Namespace Helpers
                         Dim row As New List(Of String) From {
                             i.AccountCode,
                             """" & i.AccountName & """",
-                            i.OpeningBalance.ToString("F2")
+                            i.OpeningBalance.ToString("F3")
                         }
                         If isDetailed Then
-                            row.Add(i.PeriodDebit.ToString("F2"))
-                            row.Add(i.PeriodCredit.ToString("F2"))
+                            row.Add(i.PeriodDebit.ToString("F3"))
+                            row.Add(i.PeriodCredit.ToString("F3"))
                         End If
-                        row.Add(i.EndingBalance.ToString("F2"))
+                        row.Add(i.EndingBalance.ToString("F3"))
 
                         sw.WriteLine(String.Join(",", row))
                     Next
 
                     ' --- Summary ---
                     sw.WriteLine()
-                    Dim totals As New List(Of String) From {"", "الإجمالي", report.TotalOpeningBalance.ToString("F2")}
+                    Dim totals As New List(Of String) From {"", "الإجمالي", report.TotalOpeningBalance.ToString("F3")}
                     If isDetailed Then
-                        totals.Add(report.TotalPeriodDebit.ToString("F2"))
-                        totals.Add(report.TotalPeriodCredit.ToString("F2"))
+                        totals.Add(report.TotalPeriodDebit.ToString("F3"))
+                        totals.Add(report.TotalPeriodCredit.ToString("F3"))
                     End If
-                    totals.Add(report.TotalEndingBalance.ToString("F2"))
+                    totals.Add(report.TotalEndingBalance.ToString("F3"))
                     sw.WriteLine(String.Join(",", totals))
                 End Using
 
@@ -485,20 +485,20 @@ Namespace Helpers
                     x += cols(0)
                     gfx.DrawString(ArabicTextHelper.Fix(item.AccountName), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(1) - 10, 16), XStringFormats.TopLeft)
                     x += cols(1)
-                    gfx.DrawString(item.OpeningBalance.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(2) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(item.OpeningBalance.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(2) - 10, 16), XStringFormats.TopRight)
                     x += cols(2)
 
                     Dim curPos = 3
                     If isDetailed Then
-                        gfx.DrawString(item.PeriodDebit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
+                        gfx.DrawString(item.PeriodDebit.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
                         x += cols(curPos)
                         curPos += 1
-                        gfx.DrawString(item.PeriodCredit.ToString("N2"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
+                        gfx.DrawString(item.PeriodCredit.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
                         x += cols(curPos)
                         curPos += 1
                     End If
 
-                    gfx.DrawString(item.EndingBalance.ToString("N2"), fontBold, XBrushes.DarkBlue, New XRect(x + 5, y + 3, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(item.EndingBalance.ToString("N3"), fontBold, XBrushes.DarkBlue, New XRect(x + 5, y + 3, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
 
                     y += 18
                     gfx.DrawLine(XPens.LightGray, margin, y, margin + width, y)
@@ -519,16 +519,16 @@ Namespace Helpers
                 y += 10
                 gfx.DrawRectangle(XBrushes.GhostWhite, margin, y, width, 22)
                 x = margin + cols(0) + cols(1)
-                gfx.DrawString(report.TotalOpeningBalance.ToString("N2"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(2) - 10, 16), XStringFormats.TopRight)
+                gfx.DrawString(report.TotalOpeningBalance.ToString("N3"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(2) - 10, 16), XStringFormats.TopRight)
                 x += cols(2)
 
                 If isDetailed Then
-                    gfx.DrawString(report.TotalPeriodDebit.ToString("N2"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(3) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(report.TotalPeriodDebit.ToString("N3"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(3) - 10, 16), XStringFormats.TopRight)
                     x += cols(3)
-                    gfx.DrawString(report.TotalPeriodCredit.ToString("N2"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(4) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(report.TotalPeriodCredit.ToString("N3"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(4) - 10, 16), XStringFormats.TopRight)
                     x += cols(4)
                 End If
-                gfx.DrawString(report.TotalEndingBalance.ToString("N2"), fontBold, XBrushes.DarkGreen, New XRect(x + 5, y + 4, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
+                gfx.DrawString(report.TotalEndingBalance.ToString("N3"), fontBold, XBrushes.DarkGreen, New XRect(x + 5, y + 4, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
 
                 doc.Save(dlg.FileName)
                 Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
@@ -537,6 +537,211 @@ Namespace Helpers
                 MessageBox.Show("Error: " & ex.Message)
             End Try
         End Sub
+
+        ' ===================================================
+        ' Export Single Payment Voucher (طباعة سند صرف)
+        ' ===================================================
+        Public Shared Sub ExportPaymentVoucherToPdf(voucher As Voucher)
+            Try
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "حفظ سند الصرف كـ PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                dlg.FileName = "سند_صرف_" & voucher.VoucherNo & "_" & DateTime.Now.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A5
+                page.Orientation = PdfSharp.PageOrientation.Landscape
+                Dim gfx = XGraphics.FromPdfPage(page)
+
+                Dim margin = 20.0
+                Dim width = page.Width.Point - margin * 2
+                Dim currentY = margin
+
+                ' 1. Header & Branding
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+                DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
+
+                Dim labelFont = New XFont("Arial", 10, XFontStyle.Bold)
+                Dim valueFont = New XFont("Arial", 11, XFontStyle.Regular)
+
+                ' 2. Voucher Title & Status
+                currentY += 10
+                Dim title = "سند صرف"
+                gfx.DrawString(ArabicTextHelper.Fix(title), fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+
+                ' Status Badge
+                Dim statusText = If(voucher.IsPosted, "(Posted)", "(Draft)")
+                Dim statusBrush = If(voucher.IsPosted, XBrushes.DarkGreen, XBrushes.Gray)
+                gfx.DrawString(ArabicTextHelper.Fix(statusText), labelFont, statusBrush, New XRect(margin + 5, currentY, 150, 20), XStringFormats.TopLeft)
+
+                currentY += 45
+
+                ' 3. Voucher Info Grid
+
+                ' Row 1: No and Date
+                gfx.DrawString(ArabicTextHelper.Fix("رقم السند:"), labelFont, XBrushes.Black, New XRect(width - margin - 40, currentY, 50, 20), XStringFormats.TopRight)
+                gfx.DrawString(voucher.VoucherNo.ToString(), valueFont, XBrushes.Black, New XRect(width - margin - 150, currentY, 100, 20), XStringFormats.TopRight)
+
+                gfx.DrawString(ArabicTextHelper.Fix("التاريخ:"), labelFont, XBrushes.Black, New XRect(margin, currentY, 50, 20), XStringFormats.TopLeft)
+                gfx.DrawString(voucher.VoucherDate.ToString("yyyy/MM/dd"), valueFont, XBrushes.Black, New XRect(margin + 60, currentY, 100, 20), XStringFormats.TopLeft)
+
+                currentY += 30
+
+                ' Row 2: Pay to
+                Dim payToLabel = If(Not String.IsNullOrEmpty(voucher.PartnerName), "يصرف للمكرم:", "يصرف لحساب:")
+                Dim payToValue = If(Not String.IsNullOrEmpty(voucher.PartnerName), voucher.PartnerName, voucher.AccountName)
+
+                gfx.DrawString(ArabicTextHelper.Fix(payToLabel), labelFont, XBrushes.Black, New XRect(width - margin - 70, currentY, 80, 20), XStringFormats.TopRight)
+                gfx.DrawRectangle(XPens.LightGray, margin, currentY - 2, width - 85, 24)
+                gfx.DrawString(ArabicTextHelper.Fix(payToValue), valueFont, XBrushes.Black, New XRect(margin + 5, currentY + 2, width - 95, 20), XStringFormats.TopRight)
+
+                currentY += 35
+
+                ' Row 3: Amount
+                gfx.DrawString(ArabicTextHelper.Fix("مبلغ وقدره:"), labelFont, XBrushes.Black, New XRect(width - margin - 70, currentY, 80, 20), XStringFormats.TopRight)
+
+                ' Amount Box
+                Dim amountRect As New XRect(width - margin - 190, currentY - 5, 110, 30)
+                gfx.DrawRectangle(XBrushes.WhiteSmoke, amountRect)
+                gfx.DrawRectangle(XPens.Black, amountRect)
+                gfx.DrawString(voucher.Amount.ToString("N3"), fontBold, XBrushes.Black, New XRect(width - margin - 185, currentY, 100, 20), XStringFormats.Center)
+
+                ' Amount in Words (Tafqeet) - Centered and Spaced Down
+                Dim tafqeet = CurrencyToLetters.Convert(voucher.Amount, "دينار كويتي", "فلس", 3)
+                gfx.DrawString(ArabicTextHelper.Fix(tafqeet), fontReg, XBrushes.Black, New XRect(margin, currentY + 12, width, 25), XStringFormats.TopCenter)
+
+                currentY += 50
+
+                ' Row 4: Description
+                gfx.DrawString(ArabicTextHelper.Fix("وذلك عن:"), labelFont, XBrushes.Black, New XRect(width - margin - 70, currentY, 80, 20), XStringFormats.TopRight)
+                gfx.DrawRectangle(XPens.LightGray, margin, currentY - 2, width - 85, 40)
+                gfx.DrawString(ArabicTextHelper.Fix(voucher.Description), fontReg, XBrushes.Black, New XRect(margin + 5, currentY + 2, width - 95, 35), XStringFormats.TopRight)
+
+                currentY += 60
+
+                ' 4. Signatures
+                Dim sigY = currentY + 20
+                gfx.DrawLine(XPens.Black, margin + 20, sigY, margin + 120, sigY)
+                gfx.DrawString(ArabicTextHelper.Fix("المحاسب"), labelFont, XBrushes.Black, New XRect(margin + 20, sigY + 5, 100, 20), XStringFormats.TopCenter)
+
+                gfx.DrawLine(XPens.Black, width - 100 + margin, sigY, width + margin, sigY)
+                gfx.DrawString(ArabicTextHelper.Fix("المستلم"), labelFont, XBrushes.Black, New XRect(width - 100 + margin, sigY + 5, 100, 20), XStringFormats.TopCenter)
+
+                ' 5. Save and Close
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء طباعة السند: " & ex.Message)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Single Receipt Voucher (طباعة سند قبض)
+        ' ===================================================
+        Public Shared Sub ExportReceiptVoucherToPdf(voucher As Voucher)
+            Try
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "حفظ سند القبض كـ PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                dlg.FileName = "سند_قبض_" & voucher.VoucherNo & "_" & DateTime.Now.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A5
+                page.Orientation = PdfSharp.PageOrientation.Landscape
+                Dim gfx = XGraphics.FromPdfPage(page)
+
+                Dim margin = 20.0
+                Dim width = page.Width.Point - margin * 2
+                Dim currentY = margin
+
+                ' 1. Header & Branding
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+                DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
+
+                Dim labelFont = New XFont("Arial", 10, XFontStyle.Bold)
+                Dim valueFont = New XFont("Arial", 11, XFontStyle.Regular)
+
+                ' 2. Voucher Title & Status
+                currentY += 10
+                Dim title = "سند قبض"
+                gfx.DrawString(ArabicTextHelper.Fix(title), fontTitle, XBrushes.DarkGreen, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+
+                ' Status Badge
+                Dim statusText = If(voucher.IsPosted, "(Posted)", "(Draft)")
+                Dim statusBrush = If(voucher.IsPosted, XBrushes.DarkGreen, XBrushes.Gray)
+                gfx.DrawString(ArabicTextHelper.Fix(statusText), labelFont, statusBrush, New XRect(margin + 5, currentY, 150, 20), XStringFormats.TopLeft)
+
+                currentY += 45
+
+                ' 3. Voucher Info Grid
+
+                ' Row 1: No and Date
+                gfx.DrawString(ArabicTextHelper.Fix("رقم السند:"), labelFont, XBrushes.Black, New XRect(width - margin - 40, currentY, 50, 20), XStringFormats.TopRight)
+                gfx.DrawString(voucher.VoucherNo.ToString(), valueFont, XBrushes.Black, New XRect(width - margin - 150, currentY, 100, 20), XStringFormats.TopRight)
+
+                gfx.DrawString(ArabicTextHelper.Fix("التاريخ:"), labelFont, XBrushes.Black, New XRect(margin, currentY, 50, 20), XStringFormats.TopLeft)
+                gfx.DrawString(voucher.VoucherDate.ToString("yyyy/MM/dd"), valueFont, XBrushes.Black, New XRect(margin + 60, currentY, 100, 20), XStringFormats.TopLeft)
+
+                currentY += 30
+
+                ' Row 2: Received from
+                Dim fromLabel = If(Not String.IsNullOrEmpty(voucher.PartnerName), "استلمنا من المكرم:", "استحقاق لحساب:")
+                Dim fromValue = If(Not String.IsNullOrEmpty(voucher.PartnerName), voucher.PartnerName, voucher.AccountName)
+
+                gfx.DrawString(ArabicTextHelper.Fix(fromLabel), labelFont, XBrushes.Black, New XRect(width - margin - 100, currentY, 110, 20), XStringFormats.TopRight)
+                gfx.DrawRectangle(XPens.LightGray, margin, currentY - 2, width - 115, 24)
+                gfx.DrawString(ArabicTextHelper.Fix(fromValue), valueFont, XBrushes.Black, New XRect(margin + 5, currentY + 2, width - 125, 20), XStringFormats.TopRight)
+
+                currentY += 35
+
+                ' Row 3: Amount
+                gfx.DrawString(ArabicTextHelper.Fix("مبلغ وقدره:"), labelFont, XBrushes.Black, New XRect(width - margin - 70, currentY, 80, 20), XStringFormats.TopRight)
+
+                ' Amount Box
+                Dim amountRect As New XRect(width - margin - 190, currentY - 5, 110, 30)
+                gfx.DrawRectangle(XBrushes.WhiteSmoke, amountRect)
+                gfx.DrawRectangle(XPens.Black, amountRect)
+                gfx.DrawString(voucher.Amount.ToString("N3"), fontBold, XBrushes.Black, New XRect(width - margin - 185, currentY, 100, 20), XStringFormats.Center)
+
+                ' Amount in Words (Tafqeet) - Centered and Spaced Down
+                Dim tafqeet = CurrencyToLetters.Convert(voucher.Amount, "دينار كويتي", "فلس", 3)
+                gfx.DrawString(ArabicTextHelper.Fix(tafqeet), fontReg, XBrushes.Black, New XRect(margin, currentY + 12, width, 25), XStringFormats.TopCenter)
+
+                currentY += 50
+
+                ' Row 4: Description
+                gfx.DrawString(ArabicTextHelper.Fix("وذلك عن:"), labelFont, XBrushes.Black, New XRect(width - margin - 70, currentY, 80, 20), XStringFormats.TopRight)
+                gfx.DrawRectangle(XPens.LightGray, margin, currentY - 2, width - 85, 40)
+                gfx.DrawString(ArabicTextHelper.Fix(voucher.Description), fontReg, XBrushes.Black, New XRect(margin + 5, currentY + 2, width - 95, 35), XStringFormats.TopRight)
+
+                currentY += 60
+
+                ' 4. Signatures
+                Dim sigY = currentY + 20
+                gfx.DrawLine(XPens.Black, margin + 20, sigY, margin + 120, sigY)
+                gfx.DrawString(ArabicTextHelper.Fix("المحاسب"), labelFont, XBrushes.Black, New XRect(margin + 20, sigY + 5, 100, 20), XStringFormats.TopCenter)
+
+                gfx.DrawLine(XPens.Black, width - 100 + margin, sigY, width + margin, sigY)
+                gfx.DrawString(ArabicTextHelper.Fix("أمين الصندوق"), labelFont, XBrushes.Black, New XRect(width - 100 + margin, sigY + 5, 100, 20), XStringFormats.TopCenter)
+
+                ' 5. Save and Close
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء طباعة السند: " & ex.Message)
+            End Try
+        End Sub
+
         ' ===================================================
         ' PDF Branding Helper
         ' ===================================================

@@ -56,8 +56,9 @@ Namespace Helpers
         Public Shared Function Fix(text As String) As String
             If String.IsNullOrEmpty(text) Then Return ""
 
-            ' Regex pattern to match Arabic blocks including common Arabic punctuation/diacritics
-            Dim pattern As String = "([\u0600-\u06FF\uFB50-\uFEFC\u0750-\u077F]+)"
+            ' Regex pattern to match Arabic blocks including spaces and common punctuation
+            ' Excluded parentheses as they often wrap English text and split the RTL block incorrectly
+            Dim pattern As String = "([\u0600-\u06FF\uFB50-\uFEFC\u0750-\u077F\s\.\,،؛\:\!\?\-]+)"
             Dim segments As String() = Regex.Split(text, pattern)
             
             Dim result As New StringBuilder()

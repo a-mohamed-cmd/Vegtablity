@@ -103,72 +103,71 @@
                         <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethod}" Width="80"/>
                         <DataGridCheckBoxColumn Header="مرحّل" Binding="{Binding IsPosted}" Width="55"/>
                         <DataGridTextColumn Header="الوصف" Binding="{Binding Description}" Width="*"/>
+                        <DataGridTemplateColumn Width="60" Header="طباعة">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="🖨️" Command="{Binding DataContext.PrintPaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
+                                            CommandParameter="{Binding}"
+                                            Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" FontSize="14" Cursor="Hand" Padding="5,0"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </Border>
 
             <!-- Edit Panel -->
-            <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="18" BorderBrush="#eee" BorderThickness="1">
-                <Border.Triggers>
-                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.3">
-                                    <DoubleAnimation.EasingFunction>
-                                        <CubicEase EasingMode="EaseOut"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                                <ThicknessAnimation Storyboard.TargetProperty="Margin" From="20,0,0,0" To="0,0,0,0" Duration="0:0:0.5" BeginTime="0:0:0.3">
-                                    <ThicknessAnimation.EasingFunction>
-                                        <CubicEase EasingMode="EaseOut"/>
-                                    </ThicknessAnimation.EasingFunction>
-                                </ThicknessAnimation>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </EventTrigger>
-                </Border.Triggers>
-                <StackPanel>
-                    <TextBlock Text="بيانات سند الصرف" FontSize="16" FontWeight="Bold" Foreground="#e74c3c" Margin="0,0,0,15"/>
+            <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="15" BorderBrush="#eee" BorderThickness="1">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="بيانات سند الصرف" FontSize="16" FontWeight="Bold" Foreground="#e74c3c" Margin="0,0,0,15"/>
 
-                    <TextBlock Text="التاريخ" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <DatePicker SelectedDate="{Binding EditPaymentDate}" Margin="0,0,0,10"/>
+                        <TextBlock Text="التاريخ" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <DatePicker SelectedDate="{Binding EditPaymentDate}" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="الشريك" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding Partners}" SelectedValue="{Binding EditPaymentPartnerID}"
-                              SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName" Margin="0,0,0,10"/>
+                        <TextBlock Text="الشريك" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding Partners}" SelectedValue="{Binding EditPaymentPartnerID}"
+                                  SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding Accounts}" SelectedValue="{Binding EditPaymentAccountID}"
-                              SelectedValuePath="AccountID" Margin="0,0,0,10">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock>
-                                    <Run Text="{Binding AccountCode}"/>
-                                    <Run Text=" - "/>
-                                    <Run Text="{Binding AccountName}"/>
-                                </TextBlock>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                        <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding Accounts}" SelectedValue="{Binding EditPaymentAccountID}"
+                                  SelectedValuePath="AccountID" Margin="0,0,0,10">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="{Binding AccountCode}"/>
+                                        <Run Text=" - "/>
+                                        <Run Text="{Binding AccountName}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
 
-                    <TextBlock Text="المبلغ *" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
-                    <TextBlock Text="{Binding PaymentAmountError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
-                               Visibility="{Binding PaymentAmountError, Converter={StaticResource StringToVisConverter}}"/>
+                        <TextBlock Text="المبلغ *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding PaymentAmountError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
+                                   Visibility="{Binding PaymentAmountError, Converter={StaticResource StringToVisConverter}}"/>
 
-                    <TextBlock Text="طريقة الدفع" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding EditPaymentPaymentMethod}" Margin="0,0,0,10"/>
+                        <TextBlock Text="طريقة الدفع" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding EditPaymentPaymentMethod}" Margin="0,0,0,10"/>
 
-                    <TextBlock Text="الوصف" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding EditPaymentDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15" TextWrapping="Wrap" MinHeight="40"/>
+                        <TextBlock Text="الوصف" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding EditPaymentDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15" TextWrapping="Wrap" MinHeight="40"/>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button Content="💾 حفظ" Command="{Binding SavePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                        <Button Content="🆕 جديد" Command="{Binding NewPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
-                        <Button Content="🗑️ حذف" Command="{Binding DeletePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                            <Button Content="💾 حفظ" Command="{Binding SavePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
+                            <Button Content="🆕 جديد" Command="{Binding NewPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                            <Button Content="🗑️ حذف" Command="{Binding DeletePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
+                        </StackPanel>
+
+                        <Border BorderBrush="#eee" BorderThickness="0,1,0,0" Margin="0,10" Padding="0,10,0,0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="📌 ترحيل" Command="{Binding PostPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="130" Height="40" Background="#e74c3c" FontSize="14" FontWeight="Bold" Margin="5"/>
+                                <Button Content="🖨️ طباعة" Command="{Binding PrintPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="130" Height="40" Background="#34495e" FontSize="14" FontWeight="Bold" Margin="5"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
-                    <Button Content="📌 ترحيل" Command="{Binding PostPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="180" Margin="0,8,0,0" Background="#e74c3c" FontSize="14" FontWeight="Bold"/>
-                </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
 

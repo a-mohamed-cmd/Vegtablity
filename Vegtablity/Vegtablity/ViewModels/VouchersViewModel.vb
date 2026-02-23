@@ -369,6 +369,11 @@ Namespace ViewModels
                 Return New Helpers.RelayCommand(AddressOf ExecutePostReceipt, Function(o) SelectedReceipt IsNot Nothing AndAlso Not SelectedReceipt.IsPosted)
             End Get
         End Property
+        Public ReadOnly Property PrintReceiptCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecutePrintReceipt, Function(o) SelectedReceipt IsNot Nothing)
+            End Get
+        End Property
 #End Region
 
 #Region "Commands - Payments"
@@ -390,6 +395,11 @@ Namespace ViewModels
         Public ReadOnly Property PostPaymentCommand As ICommand
             Get
                 Return New Helpers.RelayCommand(AddressOf ExecutePostPayment, Function(o) SelectedPayment IsNot Nothing AndAlso Not SelectedPayment.IsPosted)
+            End Get
+        End Property
+        Public ReadOnly Property PrintPaymentCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecutePrintPayment, Function(o) SelectedPayment IsNot Nothing)
             End Get
         End Property
 #End Region
@@ -469,14 +479,28 @@ Namespace ViewModels
             If MessageBox.Show("هل أنت متأكد من ترحيل هذا السند؟" & vbCrLf & "سيتم إنشاء قيد محاسبي تلقائياً.",
                                "تأكيد الترحيل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.Yes Then
                 Try
-                    _voucherService.PostVoucher(SelectedReceipt.VoucherID)
+                    Dim currentID = SelectedReceipt.VoucherID
+                    _voucherService.PostVoucher(currentID)
                     ReceiptStatusMessage = "تم ترحيل السند وإنشاء القيد بنجاح. ✅"
                     LoadReceipts()
-                    ExecuteNewReceipt(Nothing)
+                    ' Re-select the same voucher so user can print it
+                    SelectedReceipt = Receipts.FirstOrDefault(Function(v) v.VoucherID = currentID)
                 Catch ex As Exception
                     ReceiptStatusMessage = "خطأ: " & ex.Message
                 End Try
             End If
+        End Sub
+
+        Private Sub ExecutePrintReceipt(obj As Object)
+            Dim voucherToPrint = TryCast(obj, Voucher)
+            If voucherToPrint Is Nothing Then voucherToPrint = SelectedReceipt
+            If voucherToPrint Is Nothing Then Return
+            
+            Try
+                Helpers.ReportExporter.ExportReceiptVoucherToPdf(voucherToPrint)
+            Catch ex As Exception
+                ReceiptStatusMessage = "خطأ في الطباعة: " & ex.Message
+            End Try
         End Sub
 #End Region
 
@@ -555,14 +579,28 @@ Namespace ViewModels
             If MessageBox.Show("هل أنت متأكد من ترحيل هذا السند؟" & vbCrLf & "سيتم إنشاء قيد محاسبي تلقائياً.",
                                "تأكيد الترحيل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.Yes Then
                 Try
-                    _voucherService.PostVoucher(SelectedPayment.VoucherID)
+                    Dim currentID = SelectedPayment.VoucherID
+                    _voucherService.PostVoucher(currentID)
                     PaymentStatusMessage = "تم ترحيل السند وإنشاء القيد بنجاح. ✅"
                     LoadPayments()
-                    ExecuteNewPayment(Nothing)
+                    ' Re-select the same voucher so user can print it
+                    SelectedPayment = Payments.FirstOrDefault(Function(v) v.VoucherID = currentID)
                 Catch ex As Exception
                     PaymentStatusMessage = "خطأ: " & ex.Message
                 End Try
             End If
+        End Sub
+
+        Private Sub ExecutePrintPayment(obj As Object)
+            Dim voucherToPrint = TryCast(obj, Voucher)
+            If voucherToPrint Is Nothing Then voucherToPrint = SelectedPayment
+            If voucherToPrint Is Nothing Then Return
+            
+            Try
+                Helpers.ReportExporter.ExportPaymentVoucherToPdf(voucherToPrint)
+            Catch ex As Exception
+                PaymentStatusMessage = "خطأ في الطباعة: " & ex.Message
+            End Try
         End Sub
 #End Region
 

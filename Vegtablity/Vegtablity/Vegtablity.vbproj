@@ -212,6 +212,7 @@
     <Compile Include="Models\Account.vb" />
     <Compile Include="Helpers\RelayCommand.vb" />
     <Compile Include="Helpers\BindingProxy.vb" />
+    <Compile Include="Helpers\CurrencyToLetters.vb" />
     <Compile Include="Helpers\ArabicTextHelper.vb" />
     <Compile Include="Helpers\BooleanInverterConverter.vb" />
     <Compile Include="Helpers\ReportExporter.vb" />

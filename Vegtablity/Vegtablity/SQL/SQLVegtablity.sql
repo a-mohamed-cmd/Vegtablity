@@ -147,11 +147,6 @@ BEGIN
     );
 
 
--- إضافة الحسابات الرئيسية 
-INSERT INTO [Accounting].ChartOfAccounts (AccountCode, AccountName, AccountType, AccountLevel, IsTransactional) VALUES (N'1', N'الأصول', N'Assets', 0, 0), (N'2', N'الخصوم', N'Liabilities', 0, 0), (N'3', N'المصروفات', N'Expenses', 0, 0), (N'4', N'الإيرادات', N'Revenue', 0, 0);
--- أصول متداولة -> نقدية 
-INSERT INTO Accounting.ChartOfAccounts(AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional) VALUES (N'1101', N'الصندوق الرئيسي', 1, N'Assets', 1, 1);
-
 
 end
 go
@@ -1172,7 +1167,7 @@ BEGIN
             IsTransactional,
             AccountID as RootParentID -- Tracking the ancestor at the requested level
         FROM [Accounting].[ChartOfAccounts]
-        WHERE (@ReportLevel = @ReportLevel )
+        WHERE (AccountLevel = @ReportLevel )
            
 
         UNION ALL
@@ -1211,7 +1206,7 @@ BEGIN
     FROM Hierarchy h
     LEFT JOIN RawTotals r ON h.AccountID = r.AccountID
     JOIN [Accounting].[ChartOfAccounts] p ON h.RootParentID = p.AccountID
-    WHERE h.IsTransactional = 1 -- Only sum up transactional data
+    WHERE h.IsTransactional = 1   -- Only sum up transactional data
     GROUP BY h.RootParentID, p.AccountCode, p.AccountName, p.AccountType
     ORDER BY p.AccountCode;
 END
@@ -1402,3 +1397,82 @@ BEGIN
     SELECT @AccountID AS AccountID;
 END
 GO
+
+
+IF OBJECT_ID('[Accounting].[sp_Setup_InitialAccounts]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Setup_InitialAccounts];
+GO
+CREATE PROCEDURE [Accounting].[sp_Setup_InitialAccounts]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT;
+
+    -- 1. الحسابات الرئيسية (Level 0)
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, AccountType, AccountLevel, IsTransactional)
+        VALUES ('1', N'الأصول', 'Assets', 0, 0);
+    SELECT @AssetsID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1';
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '2')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, AccountType, AccountLevel, IsTransactional)
+        VALUES ('2', N'الالتزامات', 'Liabilities', 0, 0);
+    SELECT @LiabilitiesID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '2';
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '3')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, AccountType, AccountLevel, IsTransactional)
+        VALUES ('3', N'حقوق الملكية', 'Equity', 0, 0);
+    SELECT @EquityID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '3';
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '4')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, AccountType, AccountLevel, IsTransactional)
+        VALUES ('4', N'الإيرادات', 'Revenue', 0, 0);
+    SELECT @RevenueID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '4';
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '5')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, AccountType, AccountLevel, IsTransactional)
+        VALUES ('5', N'المصروفات', 'Expenses', 0, 0);
+    SELECT @ExpensesID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '5';
+
+    -- 2. تحت الأصول (Assets)
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '11')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('11', N'النقدية والبنوك', @AssetsID, 'Assets', 1, 0);
+    
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('12', N'العملاء / الذمم المدينة', @AssetsID, 'Assets', 1, 0);
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '13')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('13', N'المخزون', @AssetsID, 'Assets', 1, 0);
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '14')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('14', N'الأصول الثابتة', @AssetsID, 'Assets', 1, 0);
+
+    -- 3. تحت الالتزامات (Liabilities)
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '21')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('21', N'الموردون / الذمم الدائنة', @LiabilitiesID, 'Liabilities', 1, 0);
+
+    -- 4. تحت الإيرادات (Revenues)
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '41')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('41', N'إيرادات المبيعات', @RevenueID, 'Revenue', 1, 0);
+
+    -- 5. تحت المصروفات (Expenses)
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '51')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('51', N'تكلفة البضاعة المباعة - COGS', @ExpensesID, 'Expenses', 1, 0);
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '52')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('52', N'المصاريف التشغيلية', @ExpensesID, 'Expenses', 1, 0);
+
+    SELECT N'تمت تهيئة الحسابات الرئيسية بنجاح.' AS Result;
+END
+GO
+
+EXEC Accounting.sp_Setup_InitialAccounts
+
+
