@@ -8,6 +8,7 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
         <helpers:BooleanInverterConverter x:Key="BoolToInvertedConverter"/>
         <helpers:BindingProxy x:Key="Proxy" Data="{Binding}"/>
+        <helpers:AccountingAmountConverter x:Key="AccountConverter"/>
     </UserControl.Resources>
 
     <UserControl.DataContext>
@@ -78,7 +79,7 @@
                     <DataGridTextColumn Header="اسم الحساب" Binding="{Binding AccountName}" Width="*"/>
                     
                     <!-- Opening Balance (Net) -->
-                    <DataGridTextColumn Header="رصيد أول" Binding="{Binding OpeningBalance, StringFormat=N2}" Width="110">
+                    <DataGridTextColumn Header="رصيد أول" Binding="{Binding OpeningBalance, Converter={StaticResource AccountConverter}}" Width="110">
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
                                 <Setter Property="Background" Value="#fcfaf8"/>
@@ -94,7 +95,7 @@
                     </DataGridTextColumn>
 
                     <!-- Period Movements -->
-                    <DataGridTextColumn Header="مدين الحركة" Binding="{Binding PeriodDebit, StringFormat=N2}" Width="110" 
+                    <DataGridTextColumn Header="مدين الحركة" Binding="{Binding PeriodDebit, Converter={StaticResource AccountConverter}}" Width="110" 
                                         Visibility="{Binding Data.IsDetailedReport, Source={StaticResource Proxy}, Converter={StaticResource BoolToVisConverter}}">
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
@@ -102,7 +103,7 @@
                             </Style>
                         </DataGridTextColumn.CellStyle>
                     </DataGridTextColumn>
-                    <DataGridTextColumn Header="دائن الحركة" Binding="{Binding PeriodCredit, StringFormat=N2}" Width="110"
+                    <DataGridTextColumn Header="دائن الحركة" Binding="{Binding PeriodCredit, Converter={StaticResource AccountConverter}}" Width="110"
                                         Visibility="{Binding Data.IsDetailedReport, Source={StaticResource Proxy}, Converter={StaticResource BoolToVisConverter}}">
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
@@ -112,7 +113,7 @@
                     </DataGridTextColumn>
 
                     <!-- Ending Balance (Net) -->
-                    <DataGridTextColumn Header="رصيد آخر" Binding="{Binding EndingBalance, StringFormat=N2}" Width="110">
+                    <DataGridTextColumn Header="رصيد آخر" Binding="{Binding EndingBalance, Converter={StaticResource AccountConverter}}" Width="110">
                         <DataGridTextColumn.CellStyle>
                             <Style TargetType="DataGridCell">
                                 <Setter Property="Background" Value="#f1f9f5"/>
@@ -138,22 +139,22 @@
                 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <TextBlock Text="أول:" Foreground="#bdc3c7" Margin="0,0,5,0"/>
-                    <TextBlock Text="{Binding ReportData.TotalOpeningBalance, StringFormat=N2}" Foreground="White" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding ReportData.TotalOpeningBalance, Converter={StaticResource AccountConverter}}" Foreground="White" FontWeight="Bold"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsDetailedReport, Converter={StaticResource BoolToVisConverter}}">
                     <TextBlock Text="حركة مدين:" Foreground="#bdc3c7" Margin="0,0,5,0"/>
-                    <TextBlock Text="{Binding ReportData.TotalPeriodDebit, StringFormat=N2}" Foreground="White" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding ReportData.TotalPeriodDebit, Converter={StaticResource AccountConverter}}" Foreground="White" FontWeight="Bold"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Visibility="{Binding IsDetailedReport, Converter={StaticResource BoolToVisConverter}}">
                     <TextBlock Text="حركة دائن:" Foreground="#bdc3c7" Margin="0,0,5,0"/>
-                    <TextBlock Text="{Binding ReportData.TotalPeriodCredit, StringFormat=N2}" Foreground="White" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding ReportData.TotalPeriodCredit, Converter={StaticResource AccountConverter}}" Foreground="White" FontWeight="Bold"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <TextBlock Text="ختامي:" Foreground="#bdc3c7" Margin="0,0,5,0"/>
-                    <TextBlock Text="{Binding ReportData.TotalEndingBalance, StringFormat=N2}" Foreground="#55efc4" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding ReportData.TotalEndingBalance, Converter={StaticResource AccountConverter}}" Foreground="#55efc4" FontWeight="Bold"/>
                 </StackPanel>
             </UniformGrid>
         </Border>

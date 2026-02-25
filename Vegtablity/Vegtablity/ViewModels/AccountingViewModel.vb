@@ -38,7 +38,7 @@ Namespace ViewModels
         Private _accountTypes As ObservableCollection(Of String)
 
         Public Sub New()
-            AccountTypes = New ObservableCollection(Of String)({"Assets", "Liabilities", "Expenses", "Revenue"})
+            AccountTypes = New ObservableCollection(Of String)({"Assets", "Liabilities", "Equity", "Expenses", "Revenue"})
             LoadAccounts()
             LoadParentAccounts()
             EditIsTransactional = True

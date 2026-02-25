@@ -249,7 +249,12 @@ BEGIN
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('21', N'الموردون / الذمم الدائنة', @LiabilitiesID, 'Liabilities', 1, 0);
 
-    -- 4. تحت الإيرادات (Revenues)
+    -- 4. تحت حقوق الملكية (Equity)
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '31')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('31', N'أرباح وخسائر مبقاة', @EquityID, 'Equity', 1, 0);
+
+    -- 5. تحت الإيرادات (Revenues)
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '41')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('41', N'إيرادات المبيعات', @RevenueID, 'Revenue', 1, 0);

@@ -10,6 +10,7 @@
 
     <UserControl.Resources>
         <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
     </UserControl.Resources>
 
     <!-- Page Fade-in -->
@@ -101,7 +102,7 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="رقم السند" Binding="{Binding VoucherNo}" Width="80"/>
                                 <DataGridTextColumn Header="التاريخ" Binding="{Binding VoucherDate, StringFormat=\{0:yyyy/MM/dd\}}" Width="100"/>
-                                <DataGridTextColumn Header="الشريك" Binding="{Binding PartnerName}" Width="130"/>
+                                <DataGridTextColumn Header="المستلم منه" Binding="{Binding PartnerName}" Width="130"/>
                                 <DataGridTextColumn Header="الحساب" Binding="{Binding AccountName}" Width="130"/>
                                 <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N2}" Width="100"/>
                                 <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethod}" Width="80"/>
@@ -129,9 +130,35 @@
                             <TextBlock Text="التاريخ" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <DatePicker SelectedDate="{Binding EditReceiptDate}" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="الشريك" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding Partners}" SelectedValue="{Binding EditReceiptPartnerID}"
-                                      SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName" Margin="0,0,0,10"/>
+                            <TextBlock Text="المستلم منه" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0" ItemsSource="{Binding Partners}" SelectedValue="{Binding EditReceiptPartnerID}"
+                                          SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"/>
+                                <Button Grid.Column="1" Content="➕" Command="{Binding OpenNewPartnerCommand}" CommandParameter="Receipt"
+                                        Width="30" Padding="0" Margin="5,0,0,0" ToolTip="إضافة مستلم جديد"
+                                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
+                            </Grid>
+
+                            <!-- Quick Add Partner Form -->
+                            <Border Background="#f1f2f6" CornerRadius="5" Padding="10" Margin="0,0,0,10"
+                                    Visibility="{Binding IsAddingNewPartner, Converter={StaticResource BoolToVisConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="اسم المستلم الجديد *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewPartnerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
+                                    
+                                    <TextBlock Text="النوع" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding PartnerTypesList}" SelectedItem="{Binding NewPartnerType}" Margin="0,0,0,10"/>
+                                    
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button Content="إلغاء" Command="{Binding CancelNewPartnerCommand}" Margin="0,0,5,0" Width="60" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
+                                        <Button Content="حفظ" Command="{Binding SaveNewPartnerCommand}" CommandParameter="Receipt" Width="60" Background="#27ae60" Foreground="White" BorderThickness="0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
 
                             <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <ComboBox ItemsSource="{Binding Accounts}" SelectedValue="{Binding EditReceiptAccountID}"
@@ -153,7 +180,7 @@
                                        Visibility="{Binding ReceiptAmountError, Converter={StaticResource StringToVisConverter}}"/>
 
                             <TextBlock Text="طريقة الدفع" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding EditReceiptPaymentMethod}" Margin="0,0,0,10"/>
+                            <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedValue="{Binding EditReceiptPaymentMethod}" SelectedValuePath="AccountID" DisplayMemberPath="AccountName" Margin="0,0,0,10"/>
 
                             <TextBlock Text="الوصف" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditReceiptDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15" TextWrapping="Wrap" MinHeight="40"/>
@@ -254,7 +281,7 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="رقم السند" Binding="{Binding VoucherNo}" Width="80"/>
                                 <DataGridTextColumn Header="التاريخ" Binding="{Binding VoucherDate, StringFormat=\{0:yyyy/MM/dd\}}" Width="100"/>
-                                <DataGridTextColumn Header="الشريك" Binding="{Binding PartnerName}" Width="130"/>
+                                <DataGridTextColumn Header="المستلم" Binding="{Binding PartnerName}" Width="130"/>
                                 <DataGridTextColumn Header="الحساب" Binding="{Binding AccountName}" Width="130"/>
                                 <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N2}" Width="100"/>
                                 <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethod}" Width="80"/>
@@ -282,9 +309,35 @@
                             <TextBlock Text="التاريخ" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <DatePicker SelectedDate="{Binding EditPaymentDate}" Margin="0,0,0,10"/>
 
-                            <TextBlock Text="الشريك" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding Partners}" SelectedValue="{Binding EditPaymentPartnerID}"
-                                      SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName" Margin="0,0,0,10"/>
+                            <TextBlock Text="المستلم" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0" ItemsSource="{Binding Partners}" SelectedValue="{Binding EditPaymentPartnerID}"
+                                          SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"/>
+                                <Button Grid.Column="1" Content="➕" Command="{Binding OpenNewPartnerCommand}" CommandParameter="Payment"
+                                        Width="30" Padding="0" Margin="5,0,0,0" ToolTip="إضافة مستلم جديد"
+                                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
+                            </Grid>
+
+                            <!-- Quick Add Partner Form -->
+                            <Border Background="#f1f2f6" CornerRadius="5" Padding="10" Margin="0,0,0,10"
+                                    Visibility="{Binding IsAddingNewPartner, Converter={StaticResource BoolToVisConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="اسم المستلم الجديد *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding NewPartnerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
+                                    
+                                    <TextBlock Text="النوع" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding PartnerTypesList}" SelectedItem="{Binding NewPartnerType}" Margin="0,0,0,10"/>
+                                    
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button Content="إلغاء" Command="{Binding CancelNewPartnerCommand}" Margin="0,0,5,0" Width="60" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
+                                        <Button Content="حفظ" Command="{Binding SaveNewPartnerCommand}" CommandParameter="Payment" Width="60" Background="#27ae60" Foreground="White" BorderThickness="0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
 
                             <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <ComboBox ItemsSource="{Binding Accounts}" SelectedValue="{Binding EditPaymentAccountID}"
@@ -306,7 +359,7 @@
                                        Visibility="{Binding PaymentAmountError, Converter={StaticResource StringToVisConverter}}"/>
 
                             <TextBlock Text="طريقة الدفع" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding EditPaymentPaymentMethod}" Margin="0,0,0,10"/>
+                            <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedValue="{Binding EditPaymentPaymentMethod}" SelectedValuePath="AccountID" DisplayMemberPath="AccountName" Margin="0,0,0,10"/>
 
                             <TextBlock Text="الوصف" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditPaymentDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15" TextWrapping="Wrap" MinHeight="40"/>

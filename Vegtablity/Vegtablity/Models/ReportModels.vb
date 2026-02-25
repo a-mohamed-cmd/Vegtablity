@@ -112,4 +112,26 @@ Namespace Models
             End Get
         End Property
     End Class
+    Public Class FinancialReportItem
+        Public Property AccountID As Integer
+        Public Property AccountCode As String
+        Public Property AccountName As String
+        Public Property AccountType As String
+        Public Property Balance As Decimal
+    End Class
+
+    Public Class FinancialReport
+        Public Property Title As String
+        Public Property StartDate As DateTime?
+        Public Property EndDate As DateTime
+        Public Property Items As New List(Of FinancialReportItem)
+
+        Public ReadOnly Property TotalBalance As Decimal
+            Get
+                ' For P&L, this represents Net Profit/Loss if Rev and Exp are passed
+                ' For Balance Sheet, this should be 0 if balanced
+                Return Items.Sum(Function(i) i.Balance)
+            End Get
+        End Property
+    End Class
 End Namespace

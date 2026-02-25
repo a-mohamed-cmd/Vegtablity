@@ -115,6 +115,7 @@ BEGIN
         'Voucher',
         i.VoucherID,
         CASE
+            WHEN isnumeric(i.PaymentMethod) = 1 THEN CAST(i.PaymentMethod AS INT)
             WHEN i.PaymentMethod = 'Cash' THEN
                 ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1), i.AccountID)
             ELSE

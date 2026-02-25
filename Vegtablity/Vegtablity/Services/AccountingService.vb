@@ -159,5 +159,58 @@ Namespace Services
             Return report
         End Function
 
+        Public Function GetProfitLoss(startDate As Date, endDate As Date, Optional reportLevel As Integer = 0) As FinancialReport
+            Dim report As New FinancialReport() With {
+                .Title = "قائمة الأرباح والخسائر",
+                .StartDate = startDate,
+                .EndDate = endDate
+            }
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim results = conn.Query(Of FinancialReportItem)(
+                    Helpers.StoredProcedures.SP_REPORT_PROFITLOSS,
+                    New With {.StartDate = startDate, .EndDate = endDate, .ReportLevel = reportLevel},
+                    commandType:=CommandType.StoredProcedure)
+                report.Items = results.ToList()
+            End Using
+            Return report
+        End Function
+
+        Public Function GetBalanceSheet(asOfDate As Date, Optional reportLevel As Integer = 0) As FinancialReport
+            Dim report As New FinancialReport() With {
+                .Title = "قائمة المركز المالي",
+                .EndDate = asOfDate
+            }
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim results = conn.Query(Of FinancialReportItem)(
+                    Helpers.StoredProcedures.SP_REPORT_BALANCESHEET,
+                    New With {.AsOfDate = asOfDate, .ReportLevel = reportLevel},
+                    commandType:=CommandType.StoredProcedure)
+                report.Items = results.ToList()
+            End Using
+            Return report
+        End Function
+
+        ' =============================================
+        ' Year-End Closing
+        ' =============================================
+        Public Function CloseFiscalYear(closingDate As Date, retainedEarningsAccountID As Integer, userID As Integer) As (ResultID As Integer, EntryNo As Integer, ResultMsg As String)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                ' Ensure QuerySingleOrDefault is from Dapper
+                Dim result = conn.QueryFirstOrDefault(
+                    Helpers.StoredProcedures.SP_ACCOUNTING_YEARENDCLOSE,
+                    New With {
+                        .ClosingDate = closingDate,
+                        .RetainedEarningsAccountID = retainedEarningsAccountID,
+                        .UserID = userID
+                    },
+                    commandType:=CommandType.StoredProcedure)
+
+                If result IsNot Nothing Then
+                    Return (Convert.ToInt32(result.ResultID), Convert.ToInt32(result.EntryNo), Convert.ToString(result.ResultMsg))
+                End If
+
+                Return (0, 0, "Failed to close fiscal year")
+            End Using
+        End Function
     End Class
 End Namespace

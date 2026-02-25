@@ -2,6 +2,8 @@ Imports System.IO
 Imports System.Text
 Imports PdfSharp.Pdf
 Imports PdfSharp.Drawing
+Imports PdfSharp
+Imports System.Linq
 Imports Microsoft.Win32
 Imports Vegtablity.Models
 Imports Vegtablity.Services
@@ -13,6 +15,16 @@ Namespace Helpers
         Private Shared ReadOnly fontSmall As New XFont("Arial", 8, XFontStyle.Regular)
         Private Shared ReadOnly fontLarge As New XFont("Arial", 18, XFontStyle.Bold)
         Private Shared ReadOnly fontTitle As New XFont("Arial", 16, XFontStyle.Bold)
+        Private Shared ReadOnly headerFont As New XFont("Arial", 11, XFontStyle.Bold)
+
+        ' Helper to format financial amounts (parentheses for negative)
+        Private Shared Function FormatAmount(amt As Decimal) As String
+            If amt < 0 Then
+                Return "(" & Math.Abs(amt).ToString("N3") & ")"
+            Else
+                Return amt.ToString("N3")
+            End If
+        End Function
 
         ' ===================================================
         ' Export to CSV using StreamWriter (Arabic Support)
@@ -485,20 +497,20 @@ Namespace Helpers
                     x += cols(0)
                     gfx.DrawString(ArabicTextHelper.Fix(item.AccountName), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(1) - 10, 16), XStringFormats.TopLeft)
                     x += cols(1)
-                    gfx.DrawString(item.OpeningBalance.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(2) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(FormatAmount(item.OpeningBalance), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(2) - 10, 16), XStringFormats.TopRight)
                     x += cols(2)
 
                     Dim curPos = 3
                     If isDetailed Then
-                        gfx.DrawString(item.PeriodDebit.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
+                        gfx.DrawString(FormatAmount(item.PeriodDebit), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
                         x += cols(curPos)
                         curPos += 1
-                        gfx.DrawString(item.PeriodCredit.ToString("N3"), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
+                        gfx.DrawString(FormatAmount(item.PeriodCredit), fontReg, XBrushes.Black, New XRect(x + 5, y + 3, cols(curPos) - 10, 16), XStringFormats.TopRight)
                         x += cols(curPos)
                         curPos += 1
                     End If
 
-                    gfx.DrawString(item.EndingBalance.ToString("N3"), fontBold, XBrushes.DarkBlue, New XRect(x + 5, y + 3, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(FormatAmount(item.EndingBalance), fontBold, XBrushes.DarkBlue, New XRect(x + 5, y + 3, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
 
                     y += 18
                     gfx.DrawLine(XPens.LightGray, margin, y, margin + width, y)
@@ -519,16 +531,16 @@ Namespace Helpers
                 y += 10
                 gfx.DrawRectangle(XBrushes.GhostWhite, margin, y, width, 22)
                 x = margin + cols(0) + cols(1)
-                gfx.DrawString(report.TotalOpeningBalance.ToString("N3"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(2) - 10, 16), XStringFormats.TopRight)
+                gfx.DrawString(FormatAmount(report.TotalOpeningBalance), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(2) - 10, 16), XStringFormats.TopRight)
                 x += cols(2)
 
                 If isDetailed Then
-                    gfx.DrawString(report.TotalPeriodDebit.ToString("N3"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(3) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(FormatAmount(report.TotalPeriodDebit), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(3) - 10, 16), XStringFormats.TopRight)
                     x += cols(3)
-                    gfx.DrawString(report.TotalPeriodCredit.ToString("N3"), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(4) - 10, 16), XStringFormats.TopRight)
+                    gfx.DrawString(FormatAmount(report.TotalPeriodCredit), fontBold, XBrushes.Black, New XRect(x + 5, y + 4, cols(4) - 10, 16), XStringFormats.TopRight)
                     x += cols(4)
                 End If
-                gfx.DrawString(report.TotalEndingBalance.ToString("N3"), fontBold, XBrushes.DarkGreen, New XRect(x + 5, y + 4, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
+                gfx.DrawString(FormatAmount(report.TotalEndingBalance), fontBold, XBrushes.DarkGreen, New XRect(x + 5, y + 4, cols(headers.Count - 1) - 10, 16), XStringFormats.TopRight)
 
                 doc.Save(dlg.FileName)
                 Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
@@ -739,6 +751,176 @@ Namespace Helpers
 
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء طباعة السند: " & ex.Message)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Financial Reports PDF Export
+        ' ===================================================
+
+        Public Shared Sub ExportProfitLossToPdf(report As FinancialReport, startDate As Date, endDate As Date)
+            Try
+                Dim dlg As New SaveFileDialog() With {
+                    .Filter = "PDF Files (*.pdf)|*.pdf",
+                    .FileName = "Profit_Loss_Report_" & DateTime.Now.ToString("yyyyMMdd_HHmm") & ".pdf"
+                }
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim margin As Double = 40
+                Dim width = page.Width.Point - (2 * margin)
+                Dim currentY As Double = 20
+
+                Dim service As New Services.SettingsService()
+                Dim company = service.GetCompanyInfo()
+
+                DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
+
+                ' Title
+                gfx.DrawString(ArabicTextHelper.Fix(report.Title), fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+                currentY += 35
+                gfx.DrawString(ArabicTextHelper.Fix("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 20), XStringFormats.TopCenter)
+                currentY += 35
+
+                ' Revenues
+                DrawFinancialSection(gfx, "الإيرادات", report.Items.Where(Function(i) i.AccountType = "Revenue").ToList(), currentY, margin, width)
+
+                ' Expenses
+                currentY += 20
+                DrawFinancialSection(gfx, "المصروفات", report.Items.Where(Function(i) i.AccountType = "Expenses").ToList(), currentY, margin, width)
+
+                ' Net Result
+                currentY += 30
+                gfx.DrawRectangle(XBrushes.WhiteSmoke, margin, currentY, width, 35)
+                gfx.DrawRectangle(XPens.DarkSlateGray, margin, currentY, width, 35)
+
+                Dim netLabel As String = If(report.TotalBalance < 0, "صافي الربح:", "صافي الخسارة:")
+                gfx.DrawString(ArabicTextHelper.Fix(netLabel), fontLarge, XBrushes.Black, New XRect(margin + 10, currentY + 7, width, 25), XStringFormats.TopLeft)
+                gfx.DrawString(FormatAmount(Math.Abs(report.TotalBalance)), fontLarge, XBrushes.DarkGreen, New XRect(margin, currentY + 7, width - 10, 25), XStringFormats.TopRight)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير PDF: " & ex.Message)
+            End Try
+        End Sub
+
+        Public Shared Sub ExportBalanceSheetToPdf(report As FinancialReport, asOfDate As Date)
+            Try
+                Dim dlg As New SaveFileDialog() With {
+                    .Filter = "PDF Files (*.pdf)|*.pdf",
+                    .FileName = "Balance_Sheet_" & DateTime.Now.ToString("yyyyMMdd_HHmm") & ".pdf"
+                }
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim margin As Double = 40
+                Dim width = page.Width.Point - (2 * margin)
+                Dim currentY As Double = 20
+
+                Dim service As New Services.SettingsService()
+                Dim company = service.GetCompanyInfo()
+
+                DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
+
+                ' Title
+                gfx.DrawString(ArabicTextHelper.Fix(report.Title), fontTitle, XBrushes.DarkBlue, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+                currentY += 35
+                gfx.DrawString(ArabicTextHelper.Fix("كما في تاريخ: " & asOfDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 20), XStringFormats.TopCenter)
+                currentY += 35
+
+                ' Assets
+                DrawFinancialSection(gfx, "الأصول", report.Items.Where(Function(i) i.AccountType = "Assets").ToList(), currentY, margin, width)
+
+                ' Liabilities
+                currentY += 20
+                DrawFinancialSection(gfx, "الالتزامات", report.Items.Where(Function(i) i.AccountType = "Liabilities").ToList(), currentY, margin, width)
+
+                ' Equity
+                currentY += 20
+                DrawFinancialSection(gfx, "حقوق الملكية", report.Items.Where(Function(i) i.AccountType = "Equity").ToList(), currentY, margin, width)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير PDF: " & ex.Message)
+            End Try
+        End Sub
+
+        Private Shared Sub DrawFinancialSection(gfx As XGraphics, title As String, items As List(Of FinancialReportItem), ByRef currentY As Double, margin As Double, width As Double)
+            ' Section Header
+            gfx.DrawRectangle(XBrushes.AntiqueWhite, margin, currentY, width, 25)
+            gfx.DrawString(ArabicTextHelper.Fix(title), headerFont, XBrushes.Black, New XRect(margin + 5, currentY + 5, width, 20), XStringFormats.TopLeft)
+            currentY += 25
+
+            ' Table Headers
+            gfx.DrawRectangle(XBrushes.LightGray, margin, currentY, 100, 20)
+            gfx.DrawString(ArabicTextHelper.Fix("الكود"), fontBold, XBrushes.Black, New XRect(margin, currentY + 3, 100, 20), XStringFormats.TopCenter)
+
+            gfx.DrawRectangle(XBrushes.LightGray, margin + 100, currentY, width - 220, 20)
+            gfx.DrawString(ArabicTextHelper.Fix("اسم الحساب"), fontBold, XBrushes.Black, New XRect(margin + 105, currentY + 3, width - 230, 20), XStringFormats.TopLeft)
+
+            gfx.DrawRectangle(XBrushes.LightGray, margin + width - 120, currentY, 120, 20)
+            gfx.DrawString(ArabicTextHelper.Fix("المبلغ"), fontBold, XBrushes.Black, New XRect(margin + width - 115, currentY + 3, 110, 20), XStringFormats.TopRight)
+            currentY += 20
+
+            ' Items
+            Dim total As Decimal = 0
+            For Each itm In items
+                gfx.DrawString(itm.AccountCode, fontReg, XBrushes.Black, New XRect(margin, currentY + 3, 100, 20), XStringFormats.TopCenter)
+                gfx.DrawString(ArabicTextHelper.Fix(itm.AccountName), fontReg, XBrushes.Black, New XRect(margin + 105, currentY + 3, width - 230, 20), XStringFormats.TopLeft)
+                gfx.DrawString(FormatAmount(itm.Balance), fontReg, XBrushes.Black, New XRect(margin + width - 115, currentY + 3, 110, 20), XStringFormats.TopRight)
+
+                gfx.DrawLine(XPens.LightGray, margin, currentY + 20, margin + width, currentY + 20)
+                currentY += 20
+                total += itm.Balance
+            Next
+
+            ' Section Total
+            gfx.DrawString(ArabicTextHelper.Fix("إجمالي " & title), fontBold, XBrushes.Black, New XRect(margin + 105, currentY + 3, width - 230, 20), XStringFormats.TopLeft)
+            gfx.DrawString(FormatAmount(total), fontBold, XBrushes.Black, New XRect(margin + width - 115, currentY + 3, 110, 20), XStringFormats.TopRight)
+            currentY += 25
+        End Sub
+
+        Public Shared Sub ExportFinancialToCsv(report As FinancialReport)
+            Try
+                Dim dlg As New SaveFileDialog() With {.Filter = "CSV Files (*.csv)|*.csv", .FileName = report.Title & ".csv"}
+                If dlg.ShowDialog() <> True Then Return
+
+                Using sw As New StreamWriter(dlg.FileName, False, System.Text.Encoding.UTF8)
+                    ' Header
+                    sw.WriteLine(report.Title)
+                    If report.StartDate.HasValue Then
+                        sw.WriteLine("الفترة: " & report.StartDate.Value.ToString("yyyy/MM/dd") & " - " & report.EndDate.ToString("yyyy/MM/dd"))
+                    Else
+                        sw.WriteLine("تاريخ: " & report.EndDate.ToString("yyyy/MM/dd"))
+                    End If
+                    sw.WriteLine()
+
+                    ' Table
+                    sw.WriteLine("الكود,اسم الحساب,المبلغ,النوع")
+                    For Each itm In report.Items
+                        sw.WriteLine(String.Format("{0},{1},{2},{3}",
+                            itm.AccountCode,
+                            itm.AccountName,
+                            itm.Balance.ToString("F3"),
+                            itm.AccountType))
+                    Next
+
+                    sw.WriteLine()
+                    sw.WriteLine("الإجمالي:," & report.TotalBalance.ToString("F3"))
+                End Using
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير CSV: " & ex.Message)
             End Try
         End Sub
 

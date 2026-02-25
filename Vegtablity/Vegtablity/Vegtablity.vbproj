@@ -204,6 +204,9 @@
     <Compile Include="ViewModels\AccountStatementViewModel.vb" />
     <Compile Include="ViewModels\JournalEntryViewModel.vb" />
     <Compile Include="ViewModels\TrialBalanceViewModel.vb" />
+    <Compile Include="ViewModels\BalanceSheetViewModel.vb" />
+    <Compile Include="ViewModels\ProfitLossViewModel.vb" />
+    <Compile Include="ViewModels\YearEndCloseViewModel.vb" />
     <Compile Include="Models\Unit.vb" />
     <Compile Include="Models\Category.vb" />
     <Compile Include="Models\Warehouse.vb" />
@@ -269,6 +272,15 @@
     <Compile Include="Views\TrialBalancePage.xaml.vb">
       <DependentUpon>TrialBalancePage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\ProfitLossPage.xaml.vb">
+      <DependentUpon>ProfitLossPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\BalanceSheetPage.xaml.vb">
+      <DependentUpon>BalanceSheetPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\YearEndClosePage.xaml.vb">
+      <DependentUpon>YearEndClosePage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\LicenseWindow.xaml">
@@ -328,6 +340,18 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\TrialBalancePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ProfitLossPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\BalanceSheetPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\YearEndClosePage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

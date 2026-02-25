@@ -151,6 +151,7 @@ Namespace ViewModels
             accountingChildren.Add(New MenuItem With {.Title = "ميزان المراجعة", .Icon = "⚖", .FormName = "TrialBalance", .IsVisible = True})
             accountingChildren.Add(New MenuItem With {.Title = "المركز المالي", .Icon = "🏦", .FormName = "BalanceSheet", .IsVisible = True})
             accountingChildren.Add(New MenuItem With {.Title = "أرباح وخسائر", .Icon = "📊", .FormName = "ProfitLoss", .IsVisible = True})
+            accountingChildren.Add(New MenuItem With {.Title = "الإقفال السنوي", .Icon = "🔒", .FormName = "YearEndClose", .IsVisible = True})
 
             allItems.Add(New MenuItem With {
                 .Title = "الحسابات",
@@ -284,14 +285,16 @@ Namespace ViewModels
                         IsHomePage = False
 
                     Case "BalanceSheet"
-                        ' سيتم بناؤه لاحقاً
-                        CurrentPage = Nothing
-                        IsHomePage = True
+                        CurrentPage = New Views.BalanceSheetPage()
+                        IsHomePage = False
 
                     Case "ProfitLoss"
-                        ' سيتم بناؤه لاحقاً
-                        CurrentPage = Nothing
-                        IsHomePage = True
+                        CurrentPage = New Views.ProfitLossPage()
+                        IsHomePage = False
+
+                    Case "YearEndClose"
+                        CurrentPage = New Views.YearEndClosePage()
+                        IsHomePage = False
 
                     Case Else
                         ' Future pages will be added here

@@ -113,6 +113,10 @@ Namespace Helpers
         ' =============================================
         Public Const SP_REPORT_ACCOUNTSTATEMENT As String = "[Accounting].[sp_Report_AccountStatement]"
         Public Const SP_REPORT_TRIALBALANCE As String = "[Accounting].[sp_Report_TrialBalance]"
+        Public Const SP_REPORT_PROFITLOSS As String = "[Accounting].[sp_Report_ProfitLoss]"
+        Public Const SP_REPORT_BALANCESHEET As String = "[Accounting].[sp_Report_BalanceSheet]"
+        
+        Public Const SP_ACCOUNTING_YEARENDCLOSE As String = "[Accounting].[sp_Accounting_YearEndClose]"
 
         ' =============================================
         ' Settings Schema - Company Settings

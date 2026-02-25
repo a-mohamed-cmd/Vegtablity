@@ -56,4 +56,24 @@ Namespace Helpers
             Return False
         End Function
     End Class
+    Public Class AccountingAmountConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            If value Is Nothing OrElse Not IsNumeric(value) Then Return "0.000"
+
+            Dim amount = System.Convert.ToDecimal(value)
+            Dim format = "N3"
+
+            If amount < 0 Then
+                Return String.Format("({0})", Math.Abs(amount).ToString(format, culture))
+            Else
+                Return amount.ToString(format, culture)
+            End If
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
 End Namespace

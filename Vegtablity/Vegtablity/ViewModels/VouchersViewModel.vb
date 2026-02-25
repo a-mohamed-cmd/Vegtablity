@@ -44,18 +44,125 @@ Namespace ViewModels
         ' ===== Lookups =====
         Private _partners As ObservableCollection(Of Partner)
         Private _accounts As ObservableCollection(Of Account)
-        Private _paymentMethods As ObservableCollection(Of String)
+        Private _paymentMethods As ObservableCollection(Of Account)
+
+        ' ===== Quick Add Partner =====
+        Private _isAddingNewPartner As Boolean
+        Private _newPartnerName As String
+        Private _newPartnerType As String
+        Private _partnerTypesList As ObservableCollection(Of String)
 
         Public Sub New()
-            PaymentMethods = New ObservableCollection(Of String)({"Cash", "Bank"})
+            PartnerTypesList = New ObservableCollection(Of String)({"Customer", "Supplier", "Employee", "Delegate", "Other"})
             EditReceiptDate = DateTime.Now
             EditPaymentDate = DateTime.Now
-            EditReceiptPaymentMethod = "Cash"
-            EditPaymentPaymentMethod = "Cash"
             LoadLookups()
+            If PaymentMethods IsNot Nothing AndAlso PaymentMethods.Count > 0 Then
+                EditReceiptPaymentMethod = PaymentMethods.First().AccountID.ToString()
+                EditPaymentPaymentMethod = PaymentMethods.First().AccountID.ToString()
+            End If
             LoadReceipts()
             LoadPayments()
         End Sub
+
+#Region "Quick Add Partner"
+        Public Property IsAddingNewPartner As Boolean
+            Get
+                Return _isAddingNewPartner
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isAddingNewPartner, value)
+            End Set
+        End Property
+
+        Public Property NewPartnerName As String
+            Get
+                Return _newPartnerName
+            End Get
+            Set(value As String)
+                SetProperty(_newPartnerName, value)
+            End Set
+        End Property
+
+        Public Property NewPartnerType As String
+            Get
+                Return _newPartnerType
+            End Get
+            Set(value As String)
+                SetProperty(_newPartnerType, value)
+            End Set
+        End Property
+
+        Public Property PartnerTypesList As ObservableCollection(Of String)
+            Get
+                Return _partnerTypesList
+            End Get
+            Set(value As ObservableCollection(Of String))
+                SetProperty(_partnerTypesList, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property OpenNewPartnerCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteOpenNewPartner)
+            End Get
+        End Property
+
+        Public ReadOnly Property CancelNewPartnerCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteCancelNewPartner)
+            End Get
+        End Property
+
+        Public ReadOnly Property SaveNewPartnerCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteSaveNewPartner)
+            End Get
+        End Property
+
+        Private Sub ExecuteOpenNewPartner(obj As Object)
+            Dim context As String = If(obj IsNot Nothing, obj.ToString(), "Receipt")
+            NewPartnerName = ""
+            NewPartnerType = If(context = "Receipt", "Customer", "Supplier")
+            IsAddingNewPartner = True
+        End Sub
+
+        Private Sub ExecuteCancelNewPartner(obj As Object)
+            IsAddingNewPartner = False
+        End Sub
+
+        Private Sub ExecuteSaveNewPartner(obj As Object)
+            If String.IsNullOrWhiteSpace(NewPartnerName) Then
+                MessageBox.Show("يرجى إدخال اسم المستلم / الشريك.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            Try
+                Dim p As New Partner With {
+                    .PartnerName = NewPartnerName.Trim(),
+                    .PartnerType = NewPartnerType,
+                    .Phone = "",
+                    .Address = ""
+                }
+                Dim newId = _partnerService.SavePartner(p)
+                
+                ' إعادة تحميل قائمة الشركاء
+                LoadLookups()
+                
+                ' تحديد الشريك الجديد بناءً على الشاشة (قبض أم صرف)
+                Dim context As String = If(obj IsNot Nothing, obj.ToString(), "Receipt")
+                If context = "Receipt" Then
+                    EditReceiptPartnerID = newId
+                Else
+                    EditPaymentPartnerID = newId
+                End If
+                
+                IsAddingNewPartner = False
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء حفظ الشريك الجديد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+#End Region
 
 #Region "Lookups"
         Public Property Partners As ObservableCollection(Of Partner)
@@ -76,28 +183,27 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property PaymentMethods As ObservableCollection(Of String)
+        Public Property PaymentMethods As ObservableCollection(Of Account)
             Get
                 Return _paymentMethods
             End Get
-            Set(value As ObservableCollection(Of String))
+            Set(value As ObservableCollection(Of Account))
                 SetProperty(_paymentMethods, value)
             End Set
         End Property
 
         Private Sub LoadLookups()
             Try
-                ' تحميل كل الشركاء (عملاء + موردين)
-                Dim customers = _partnerService.GetAllPartners("Customer")
-                Dim suppliers = _partnerService.GetAllPartners("Supplier")
-                Dim allPartners As New List(Of Partner)
-                allPartners.AddRange(customers)
-                allPartners.AddRange(suppliers)
+                ' تحميل كل الشركاء بمختلف أنواعهم
+                Dim allPartners = _partnerService.GetAllPartners("All")
                 Partners = New ObservableCollection(Of Partner)(allPartners)
 
                 ' تحميل الحسابات القابلة للقيد فقط (IsTransactional = 1)
                 Dim allAccounts = _accountingService.GetAllAccounts()
                 Accounts = New ObservableCollection(Of Account)(allAccounts.Where(Function(a) a.IsTransactional))
+
+                ' تحميل حسابات طريقة الدفع (النقدية والبنوك AccountCode = 11)
+                PaymentMethods = New ObservableCollection(Of Account)(allAccounts.Where(Function(a) a.IsTransactional AndAlso a.AccountCode.StartsWith("11")))
             Catch ex As Exception
                 ReceiptStatusMessage = "خطأ في تحميل البيانات: " & ex.Message
             End Try
@@ -428,7 +534,11 @@ Namespace ViewModels
             EditReceiptAccountID = Nothing
             EditReceiptAmount = 0
             EditReceiptDescription = ""
-            EditReceiptPaymentMethod = "Cash"
+            If PaymentMethods IsNot Nothing AndAlso PaymentMethods.Count > 0 Then
+                EditReceiptPaymentMethod = PaymentMethods.First().AccountID.ToString()
+            Else
+                EditReceiptPaymentMethod = ""
+            End If
             IsEditingReceipt = False
             ReceiptAmountError = Nothing
         End Sub
@@ -528,7 +638,11 @@ Namespace ViewModels
             EditPaymentAccountID = Nothing
             EditPaymentAmount = 0
             EditPaymentDescription = ""
-            EditPaymentPaymentMethod = "Cash"
+            If PaymentMethods IsNot Nothing AndAlso PaymentMethods.Count > 0 Then
+                EditPaymentPaymentMethod = PaymentMethods.First().AccountID.ToString()
+            Else
+                EditPaymentPaymentMethod = ""
+            End If
             IsEditingPayment = False
             PaymentAmountError = Nothing
         End Sub

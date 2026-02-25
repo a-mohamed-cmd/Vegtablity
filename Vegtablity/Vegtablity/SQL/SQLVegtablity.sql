@@ -130,6 +130,112 @@ BEGIN
     );
 END
 
+
+-- =============================================
+-- Partners (الشركاء) - Stored Procedures
+-- العملاء والموردين
+-- Soft Delete (IsActive)
+-- =============================================
+USE VegtablityDB;
+GO
+
+-- =============================================
+-- 1. جلب جميع الشركاء النشطين حسب النوع
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Partner_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Partner_GetAll];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_GetAll]
+    @PartnerType NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    FROM [Sales].[Partners]
+    WHERE IsActive = 1 AND (@PartnerType = 'All' OR PartnerType = @PartnerType)
+    ORDER BY PartnerID;
+END
+GO
+
+-- =============================================
+-- 2. جلب شريك بالـ ID
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Partner_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Partner_GetByID];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_GetByID]
+    @PartnerID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    FROM [Sales].[Partners]
+    WHERE PartnerID = @PartnerID;
+END
+GO
+
+-- =============================================
+-- 3. حفظ شريك (إضافة أو تعديل)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Partner_Save]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Partner_Save];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_Save]
+    @PartnerID INT = 0,
+    @PartnerName NVARCHAR(150),
+    @PartnerType NVARCHAR(20),
+    @Phone NVARCHAR(20) = NULL,
+    @Address NVARCHAR(255) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @PartnerID = 0
+    BEGIN
+        INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive)
+        VALUES (@PartnerName, @PartnerType, @Phone, @Address, 0, 1);
+        SELECT SCOPE_IDENTITY() AS PartnerID;
+    END
+    ELSE
+    BEGIN
+        UPDATE [Sales].[Partners] 
+        SET PartnerName = @PartnerName, PartnerType = @PartnerType, Phone = @Phone, Address = @Address
+        WHERE PartnerID = @PartnerID;
+        SELECT @PartnerID AS PartnerID;
+    END
+END
+GO
+
+-- =============================================
+-- 4. تعطيل شريك (Soft Delete)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Partner_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Partner_Delete];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_Delete]
+    @PartnerID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [Sales].[Partners] SET IsActive = 0 WHERE PartnerID = @PartnerID;
+END
+GO
+
+-- =============================================
+-- 5. بحث بالاسم أو الهاتف
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Partner_Search]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Partner_Search];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_Search]
+    @PartnerType NVARCHAR(20),
+    @SearchText NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    FROM [Sales].[Partners]
+    WHERE IsActive = 1 AND PartnerType = @PartnerType
+      AND (PartnerName LIKE '%' + @SearchText + '%' OR Phone LIKE '%' + @SearchText + '%')
+    ORDER BY PartnerID;
+END
+GO
+
+
 -- =============================================
 -- 4. المحاسبة (Schema: Accounting)
 -- =============================================
@@ -639,6 +745,7 @@ BEGIN
         'Voucher',
         i.VoucherID,
         CASE
+            WHEN isnumeric(i.PaymentMethod) = 1 THEN CAST(i.PaymentMethod AS INT)
             WHEN i.PaymentMethod = 'Cash' THEN
                 ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1), i.AccountID)
             ELSE
@@ -1100,7 +1207,7 @@ AS
 BEGIN
     SELECT JID, JournalNo, JDate, Description, TotalAmount, IsPosted, ReferenceType
     FROM [Accounting].[JournalHeader]
-    WHERE ReferenceType = 'Manual'
+    WHERE ReferenceType in( 'Manual', 'YearEndClose')
     ORDER BY JID DESC;
 END
 GO
@@ -1226,7 +1333,7 @@ BEGIN
            A.AccountType, A.AccountLevel, A.IsTransactional
     FROM [Accounting].[ChartOfAccounts] A
     LEFT JOIN [Accounting].[ChartOfAccounts] P ON A.ParentAccountID = P.AccountID
-    ORDER BY A.AccountCode;
+    ORDER BY A.AccountType,A.AccountCode;
 END
 GO
 
@@ -1405,7 +1512,7 @@ CREATE PROCEDURE [Accounting].[sp_Setup_InitialAccounts]
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT;
+    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT,@profit int ,@banckandcash int;
 
     -- 1. الحسابات الرئيسية (Level 0)
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1')
@@ -1423,6 +1530,16 @@ BEGIN
         VALUES ('3', N'حقوق الملكية', 'Equity', 0, 0);
     SELECT @EquityID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '3';
 
+	    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '31')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName,ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('31', N'أرباح وخسائر',@EquityID, 'Equity', 1, 0);
+    SELECT @Profit = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '31';
+
+	IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '311')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName,ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('311', N'أرباح وخسائر مرحله', @Profit,'Equity', 2, 1);
+    SELECT @Profit = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '311';
+
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '4')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, AccountType, AccountLevel, IsTransactional)
         VALUES ('4', N'الإيرادات', 'Revenue', 0, 0);
@@ -1437,7 +1554,14 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '11')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('11', N'النقدية والبنوك', @AssetsID, 'Assets', 1, 0);
-    
+	select @banckandcash = accountID from [Accounting].[ChartOfAccounts] WHERE AccountCode = '11';
+
+        -- 2. تحت الأصول (Assets)
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1101')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('1101', N'الصندوق الرئيسي', @banckandcash, 'Assets', 2, 1);
+
+
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('12', N'العملاء / الذمم المدينة', @AssetsID, 'Assets', 1, 0);
@@ -1449,6 +1573,8 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '14')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('14', N'الأصول الثابتة', @AssetsID, 'Assets', 1, 0);
+
+
 
     -- 3. تحت الالتزامات (Liabilities)
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '21')
@@ -1476,3 +1602,275 @@ GO
 EXEC Accounting.sp_Setup_InitialAccounts
 
 
+
+-- =============================================
+-- 1. قائمة الأرباح والخسائر (Profit & Loss)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Report_ProfitLoss]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Report_ProfitLoss];
+GO
+
+CREATE PROCEDURE [Accounting].[sp_Report_ProfitLoss]
+    @StartDate DATETIME,
+    @EndDate DATETIME,
+    @ReportLevel INT = 0 -- 0: Main Categoric, 1: Sub, 2: Group
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. Calculate Transactional Totals for Revenue and Expenses
+    WITH RawTotals AS (
+        SELECT 
+            A.AccountID,
+            SUM(
+                CASE 
+                    WHEN A.AccountType = 'Revenue' THEN (JE.DebitAmount - JE.CreditAmount )
+                    WHEN A.AccountType = 'Expenses' THEN (JE.DebitAmount - JE.CreditAmount)
+                    ELSE (JE.DebitAmount - JE.CreditAmount)
+                END
+            ) as PeriodBalance
+        FROM [Accounting].[JournalEntries] JE
+        JOIN [Accounting].[ChartOfAccounts] A ON JE.AccountID = A.AccountID
+        WHERE A.AccountType IN ('Revenue', 'Expenses')
+          AND JE.EntryDate BETWEEN @StartDate AND @EndDate
+        GROUP BY A.AccountID
+    ),
+    -- 2. Build Hierarchy
+    Hierarchy AS (
+        SELECT 
+            AccountID, 
+            ParentAccountID, 
+            AccountCode, 
+            AccountName, 
+            AccountLevel, 
+            IsTransactional,
+            AccountID as RootParentID
+        FROM [Accounting].[ChartOfAccounts]
+        WHERE AccountLevel = @ReportLevel
+          AND AccountType IN ('Revenue', 'Expenses')
+
+        UNION ALL
+
+        SELECT 
+            c.AccountID, 
+            c.ParentAccountID, 
+            c.AccountCode, 
+            c.AccountName, 
+            c.AccountLevel, 
+            c.IsTransactional,
+            h.RootParentID
+        FROM [Accounting].[ChartOfAccounts] c
+        JOIN Hierarchy h ON c.ParentAccountID = h.AccountID
+    )
+    -- 3. Aggregation
+    SELECT 
+        h.RootParentID as AccountID,
+        p.AccountCode,
+        p.AccountName,
+        p.AccountType,
+        SUM(ISNULL(r.PeriodBalance, 0)) as Balance
+    FROM Hierarchy h
+    LEFT JOIN RawTotals r ON h.AccountID = r.AccountID
+    JOIN [Accounting].[ChartOfAccounts] p ON h.RootParentID = p.AccountID
+    WHERE h.IsTransactional = 1
+    GROUP BY h.RootParentID, p.AccountCode, p.AccountName, p.AccountType
+    ORDER BY p.AccountCode;
+END
+GO
+
+-- =============================================
+-- 2. قائمة المركز المالي (Balance Sheet)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Report_BalanceSheet]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Report_BalanceSheet];
+GO
+
+CREATE PROCEDURE [Accounting].[sp_Report_BalanceSheet]
+    @AsOfDate DATETIME,
+    @ReportLevel INT = 0 -- 0: Main, 1: Sub, 2: Group
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. Calculate Transactional Totals for Assets, Liabilities, and Equity
+    -- Important: In accounting, Balance Sheet items are cumulative.
+    WITH RawTotals AS (
+        SELECT 
+            A.AccountID,
+            SUM(
+                CASE 
+                    WHEN A.AccountType = 'Assets' THEN (JE.DebitAmount - JE.CreditAmount)
+                    WHEN A.AccountType IN ('Liabilities', 'Equity') THEN (JE.CreditAmount - JE.DebitAmount)
+                    ELSE (JE.DebitAmount - JE.CreditAmount)
+                END
+            ) as CurrentBalance
+        FROM [Accounting].[JournalEntries] JE
+        JOIN [Accounting].[ChartOfAccounts] A ON JE.AccountID = A.AccountID
+        WHERE A.AccountType IN ('Assets', 'Liabilities', 'Equity')
+          AND JE.EntryDate <= @AsOfDate
+        GROUP BY A.AccountID
+    ),
+    -- 2. Build Hierarchy
+    Hierarchy AS (
+        SELECT 
+            AccountID, 
+            ParentAccountID, 
+            AccountCode, 
+            AccountName, 
+            AccountLevel, 
+            IsTransactional,
+            AccountID as RootParentID
+        FROM [Accounting].[ChartOfAccounts]
+        WHERE AccountLevel = @ReportLevel
+          AND AccountType IN ('Assets', 'Liabilities', 'Equity')
+
+        UNION ALL
+
+        SELECT 
+            c.AccountID, 
+            c.ParentAccountID, 
+            c.AccountCode, 
+            c.AccountName, 
+            c.AccountLevel, 
+            c.IsTransactional,
+            h.RootParentID
+        FROM [Accounting].[ChartOfAccounts] c
+        JOIN Hierarchy h ON c.ParentAccountID = h.AccountID
+    )
+    -- 3. Aggregation
+    SELECT 
+        h.RootParentID as AccountID,
+        p.AccountCode,
+        p.AccountName,
+        p.AccountType,
+        SUM(ISNULL(r.CurrentBalance, 0)) as Balance
+    FROM Hierarchy h
+    LEFT JOIN RawTotals r ON h.AccountID = r.AccountID
+    JOIN [Accounting].[ChartOfAccounts] p ON h.RootParentID = p.AccountID
+    WHERE h.IsTransactional = 1
+    GROUP BY h.RootParentID, p.AccountCode, p.AccountName, p.AccountType
+    ORDER BY p.AccountCode;
+END
+GO
+
+-- =============================================
+-- 13. الإقفال السنوي (Year-End Closing)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Accounting_YearEndClose]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Accounting_YearEndClose];
+GO
+
+CREATE PROCEDURE [Accounting].[sp_Accounting_YearEndClose]
+    @ClosingDate DATETIME,
+    @RetainedEarningsAccountID INT,
+    @UserID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- 1. التأكد من وجود حساب الأرباح المبقاة
+        IF NOT EXISTS(SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @RetainedEarningsAccountID)
+            THROW 50001, N'حساب أرباح وخسائر مبقاة غير موجود، يرجى تهيئته.', 1;
+
+        -- 2. حساب أرصدة الإيرادات والمصروفات حتى تاريخ الإقفال
+        DECLARE @Balances TABLE (AccountID INT, Balance DECIMAL(18,2), AccType NVARCHAR(50));
+
+        INSERT INTO @Balances (AccountID, Balance, AccType)
+        SELECT 
+            A.AccountID,
+            SUM(
+                CASE 
+                    WHEN A.AccountType = 'Revenue' THEN (JE.CreditAmount - JE.DebitAmount)
+                    WHEN A.AccountType = 'Expenses' THEN (JE.DebitAmount - JE.CreditAmount)
+                    ELSE 0
+                END
+            ),
+            A.AccountType
+        FROM [Accounting].[JournalEntries] JE
+        JOIN [Accounting].[ChartOfAccounts] A ON JE.AccountID = A.AccountID
+        WHERE A.AccountType IN ('Revenue', 'Expenses')
+          AND JE.EntryDate <= @ClosingDate
+        GROUP BY A.AccountID, A.AccountType
+        HAVING SUM(JE.DebitAmount - JE.CreditAmount) <> 0 OR SUM(JE.CreditAmount - JE.DebitAmount) <> 0;
+
+        -- إذا لم تكن هناك أرصدة للإقفال
+        IF NOT EXISTS(SELECT 1 FROM @Balances WHERE Balance <> 0)
+        BEGIN
+            COMMIT TRANSACTION;
+            SELECT 0 AS ResultID, N'لا توجد حركات إيرادات أو مصروفات لإقفالها حتى هذا التاريخ.' AS ResultMsg;
+            RETURN;
+        END
+
+        -- 3. إنشاء رأس قيد الإقفال (JournalHeader)
+        DECLARE @JID INT;
+        DECLARE @Desc NVARCHAR(255) = N'قيد إقفال السنة المالية حتى تاريخ ' + FORMAT(@ClosingDate, 'yyyy/MM/dd');
+
+        INSERT INTO [Accounting].[JournalHeader] (JDate, Description, UserID, IsPosted, TotalAmount, ReferenceType)
+        VALUES (@ClosingDate, @Desc, @UserID, 0, 0, 'YearEndClose');
+        
+        SET @JID = SCOPE_IDENTITY();
+
+        -- 4. إدراج تفاصيل قيد الإقفال (JournalDetails)
+        
+        -- إقفال الإيرادات (طبيعتها دائنة، يتم إقفالها مدين)
+        INSERT INTO [Accounting].[JournalDetails] (JID, AccountID, Debit, Credit, Notes)
+        SELECT @JID, AccountID, 
+               CASE WHEN Balance > 0 THEN Balance ELSE 0 END, 
+               CASE WHEN Balance < 0 THEN ABS(Balance) ELSE 0 END,
+               @Desc
+        FROM @Balances WHERE AccType = 'Revenue' AND Balance <> 0;
+
+        -- إقفال المصروفات (طبيعتها مدينة، يتم إقفالها دائن)
+        INSERT INTO [Accounting].[JournalDetails] (JID, AccountID, Debit, Credit, Notes)
+        SELECT @JID, AccountID, 
+               CASE WHEN Balance < 0 THEN ABS(Balance) ELSE 0 END, 
+               CASE WHEN Balance > 0 THEN Balance ELSE 0 END,
+               @Desc
+        FROM @Balances WHERE AccType = 'Expenses' AND Balance <> 0;
+
+        -- 5. إقفال صافي الربح / الخسارة في الأرباح المبقاة
+        DECLARE @TotalRevenues DECIMAL(18,2) = ISNULL((SELECT SUM(Balance) FROM @Balances WHERE AccType = 'Revenue'), 0);
+        DECLARE @TotalExpenses DECIMAL(18,2) = ISNULL((SELECT SUM(Balance) FROM @Balances WHERE AccType = 'Expenses'), 0);
+        DECLARE @NetProfit DECIMAL(18,2) = @TotalRevenues - @TotalExpenses;
+
+        IF @NetProfit <> 0
+        BEGIN
+            INSERT INTO [Accounting].[JournalDetails] (JID, AccountID, Debit, Credit, Notes)
+            VALUES (@JID, @RetainedEarningsAccountID,
+                    CASE WHEN @NetProfit < 0 THEN ABS(@NetProfit) ELSE 0 END,   -- خسارة -> نقلل من الأرباح المبقاة (مدين)
+                    CASE WHEN @NetProfit > 0 THEN @NetProfit ELSE 0 END,         -- ربح -> نضيف للأرباح المبقاة (دائن)
+                    N'إقفال صافي الربح / الخسارة');
+        END
+
+        -- 6. تحديث إجمالي القيد
+        DECLARE @TotalDebit DECIMAL(18,2) = ISNULL((SELECT SUM(Debit) FROM [Accounting].[JournalDetails] WHERE JID = @JID), 0);
+        UPDATE [Accounting].[JournalHeader] SET TotalAmount = @TotalDebit WHERE JID = @JID;
+
+        -- 7. ترحيل القيد لإثبات الحركات في سجل القيود العام
+        DECLARE @JournalNo INT;
+        SELECT @JournalNo = JournalNo FROM [Accounting].[JournalHeader] WHERE JID = @JID;
+
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            @JournalNo,
+            @ClosingDate,
+            'YearEndClose',
+            @JID,
+            D.AccountID,
+            D.Debit,
+            D.Credit,
+            ISNULL(D.Notes, @Desc),
+            @UserID
+        FROM [Accounting].[JournalDetails] D
+        WHERE D.JID = @JID;
+
+        UPDATE [Accounting].[JournalHeader] SET IsPosted = 1 WHERE JID = @JID;
+
+        COMMIT TRANSACTION;
+        SELECT @JID AS ResultID, @JournalNo AS EntryNo, N'تم إقفال السنة المالية وترحيل القيد بنجاح.' AS ResultMsg;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
