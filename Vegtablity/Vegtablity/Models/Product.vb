@@ -12,5 +12,12 @@ Namespace Models
         Public Property SalePrice As Decimal
         Public Property AlertQty As Decimal
         Public Property IsActive As Boolean
+
+        Public ReadOnly Property SearchText As String
+            Get
+                If String.IsNullOrWhiteSpace(Barcode) Then Return ProductName
+                Return $"{ProductName} - {Barcode}"
+            End Get
+        End Property
     End Class
 End Namespace

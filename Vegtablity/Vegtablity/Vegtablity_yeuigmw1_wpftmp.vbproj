@@ -50,55 +50,8 @@
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xaml">
-      <RequiredTargetFramework>4.0</RequiredTargetFramework>
-    </Reference>
-    <Reference Include="WindowsBase" />
-    <Reference Include="PresentationCore" />
-    <Reference Include="PresentationFramework" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Drawing" />
-    <Reference Include="ClosedXML">
-      <HintPath>packages\ClosedXML.0.102.2\lib\netstandard2.0\ClosedXML.dll</HintPath>
-    </Reference>
-    <Reference Include="PdfSharp">
-      <HintPath>packages\PDFsharp.1.50.5147\lib\net20\PdfSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="DocumentFormat.OpenXml">
-      <HintPath>packages\DocumentFormat.OpenXml.2.16.0\lib\net46\DocumentFormat.OpenXml.dll</HintPath>
-    </Reference>
-    <Reference Include="ExcelNumberFormat">
-      <HintPath>packages\ExcelNumberFormat.1.1.0\lib\net20\ExcelNumberFormat.dll</HintPath>
-    </Reference>
-    <Reference Include="Irony">
-      <HintPath>packages\Irony.NetCore.1.0.11\lib\net461\Irony.dll</HintPath>
-    </Reference>
-    <Reference Include="XLParser">
-      <HintPath>packages\XLParser.1.5.2\lib\net461\XLParser.dll</HintPath>
-    </Reference>
-    <Reference Include="SixLabors.Fonts">
-      <HintPath>packages\SixLabors.Fonts.1.0.0\lib\netstandard2.0\SixLabors.Fonts.dll</HintPath>
-    </Reference>
-    <Reference Include="System.IO.Packaging">
-      <HintPath>packages\System.IO.Packaging.6.0.0\lib\net461\System.IO.Packaging.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ApplicationDefinition Include="Application.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </ApplicationDefinition>
-    <Page Include="MainWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Compile Include="Application.xaml.vb">
       <DependentUpon>Application.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -178,9 +131,6 @@
     <Compile Include="Models\JournalEntryModels.vb" />
     <Compile Include="Models\ReportModels.vb" />
     <Compile Include="Models\MenuItem.vb" />
-    <Compile Include="Models\InvoiceHeader.vb" />
-    <Compile Include="Models\InvoiceDetail.vb" />
-    <Compile Include="Models\ProductStock.vb" />
     <Compile Include="Services\DatabaseHelper.vb" />
     <Compile Include="Services\SettingsService.vb" />
     <Compile Include="Services\LicenseService.vb" />
@@ -193,9 +143,6 @@
     <Compile Include="Services\VoucherService.vb" />
     <Compile Include="Services\RoleService.vb" />
     <Compile Include="Services\PermissionService.vb" />
-    <Compile Include="Services\InvoiceService.vb" />
-    <Compile Include="Services\ProductService.vb" />
-    <Compile Include="Services\WarehouseService.vb" />
     <Compile Include="ViewModels\BaseViewModel.vb" />
     <Compile Include="ViewModels\LicenseViewModel.vb" />
     <Compile Include="ViewModels\LoginViewModel.vb" />
@@ -297,94 +244,60 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Views\LicenseWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\LoginWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\DashboardWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\UserManagementPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\SettingsPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\InventoryPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\PartnersPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\AccountingPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\VouchersPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\ReceiptVoucherPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\PaymentVoucherPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\AccountStatementPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\CompanySettingsPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\JournalEntryPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\TrialBalancePage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\ProfitLossPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\BalanceSheetPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\YearEndClosePage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\PurchaseInvoicePage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\SalesInvoicePage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Resources\Styles.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Views\UserManagementWindow.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <ItemGroup>
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\ClosedXML.0.102.2\lib\netstandard2.0\ClosedXML.dll" />
+    <ReferencePath Include="C:\Users\ACER\.nuget\packages\dapper\2.1.35\lib\net461\Dapper.dll" />
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\DocumentFormat.OpenXml.2.16.0\lib\net46\DocumentFormat.OpenXml.dll" />
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\ExcelNumberFormat.1.1.0\lib\net20\ExcelNumberFormat.dll" />
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\Irony.NetCore.1.0.11\lib\net461\Irony.dll" />
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\PDFsharp.1.50.5147\lib\net20\PdfSharp.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\PresentationCore.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\PresentationFramework.dll" />
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\SixLabors.Fonts.1.0.0\lib\netstandard2.0\SixLabors.Fonts.dll" />
+    <ReferencePath Include="C:\Users\ACER\.nuget\packages\system.codedom\8.0.0\lib\net462\System.CodeDom.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Configuration.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Core.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Data.DataSetExtensions.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Data.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Drawing.dll" />
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\System.IO.Packaging.6.0.0\lib\net461\System.IO.Packaging.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Management.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Net.Http.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Xaml.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Xml.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\System.Xml.Linq.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\WindowsBase.dll" />
+    <ReferencePath Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\packages\XLParser.1.5.2\lib\net461\XLParser.dll" />
+    <ReferencePath Include="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.8\Facades\netstandard.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\MainWindow.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\LicenseWindow.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\LoginWindow.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\DashboardWindow.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\UserManagementPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\SettingsPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\InventoryPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\PartnersPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\AccountingPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\VouchersPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\ReceiptVoucherPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\PaymentVoucherPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\AccountStatementPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\CompanySettingsPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\JournalEntryPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\TrialBalancePage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\ProfitLossPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\BalanceSheetPage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\YearEndClosePage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\PurchaseInvoicePage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\SalesInvoicePage.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Views\UserManagementWindow.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Application.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\Vegtablity_Content.g.vb" />
+    <Compile Include="D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\Debug\GeneratedInternalTypeHelper.g.vb" />
+  </ItemGroup>
 </Project>

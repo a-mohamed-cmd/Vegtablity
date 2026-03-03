@@ -32,7 +32,7 @@ Namespace Services
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Return conn.ExecuteScalar(Of Integer)(
                     Helpers.StoredProcedures.SP_PARTNER_SAVE,
-                    New With {p.PartnerID, p.PartnerName, p.PartnerType, p.Phone, p.Address},
+                    New With {p.PartnerID, p.PartnerName, p.PartnerType, p.Phone, p.Address, p.AccountID},
                     commandType:=CommandType.StoredProcedure)
             End Using
         End Function

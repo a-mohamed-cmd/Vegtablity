@@ -130,7 +130,7 @@ CREATE PROCEDURE [Settings].[sp_Warehouse_GetAll]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT WarehouseID, WarehouseName, Address, KeeperName, IsActive FROM [Settings].[Warehouses] WHERE IsActive = 1 ORDER BY WarehouseID;
+    SELECT WarehouseID, WarehouseName, Address, KeeperName, IsActive, AccountID FROM [Settings].[Warehouses] WHERE IsActive = 1 ORDER BY WarehouseID;
 END
 GO
 
@@ -141,20 +141,21 @@ CREATE PROCEDURE [Settings].[sp_Warehouse_Save]
     @WarehouseID INT = 0,
     @WarehouseName NVARCHAR(100),
     @Address NVARCHAR(255) = NULL,
-    @KeeperName NVARCHAR(100) = NULL
+    @KeeperName NVARCHAR(100) = NULL,
+    @AccountID INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     IF @WarehouseID = 0
     BEGIN
-        INSERT INTO [Settings].[Warehouses] (WarehouseName, Address, KeeperName, IsActive) 
-        VALUES (@WarehouseName, @Address, @KeeperName, 1);
+        INSERT INTO [Settings].[Warehouses] (WarehouseName, Address, KeeperName, IsActive, AccountID) 
+        VALUES (@WarehouseName, @Address, @KeeperName, 1, @AccountID);
         SELECT SCOPE_IDENTITY() AS WarehouseID;
     END
     ELSE
     BEGIN
         UPDATE [Settings].[Warehouses] 
-        SET WarehouseName = @WarehouseName, Address = @Address, KeeperName = @KeeperName 
+        SET WarehouseName = @WarehouseName, Address = @Address, KeeperName = @KeeperName, AccountID = @AccountID 
         WHERE WarehouseID = @WarehouseID;
         SELECT @WarehouseID AS WarehouseID;
     END

@@ -7,5 +7,6 @@ Namespace Models
         Public Property Address As String
         Public Property CurrentBalance As Decimal
         Public Property IsActive As Boolean
+        Public Property AccountID As Integer?
     End Class
 End Namespace

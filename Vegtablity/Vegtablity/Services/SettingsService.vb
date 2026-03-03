@@ -83,7 +83,8 @@ Namespace Services
                     .WarehouseID = w.WarehouseID,
                     .WarehouseName = w.WarehouseName,
                     .Address = w.Address,
-                    .KeeperName = w.KeeperName
+                    .KeeperName = w.KeeperName,
+                    .AccountID = w.AccountID
                 }, commandType:=CommandType.StoredProcedure)
             End Using
         End Sub

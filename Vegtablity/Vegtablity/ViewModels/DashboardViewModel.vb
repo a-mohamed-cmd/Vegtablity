@@ -244,6 +244,14 @@ Namespace ViewModels
                         CurrentPage = New Views.UserManagementPage()
                         IsHomePage = False
 
+                    Case "Sales"
+                        CurrentPage = New Views.SalesInvoicePage()
+                        IsHomePage = False
+
+                    Case "Purchases"
+                        CurrentPage = New Views.PurchaseInvoicePage()
+                        IsHomePage = False
+
                     Case "Settings"
                         CurrentPage = New Views.SettingsPage()
                         IsHomePage = False

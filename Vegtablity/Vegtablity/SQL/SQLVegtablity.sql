@@ -110,8 +110,66 @@ BEGIN
         WarehouseID INT PRIMARY KEY IDENTITY(1,1),
         WarehouseName NVARCHAR(100) NOT NULL UNIQUE,
         Address NVARCHAR(255),
-        KeeperName NVARCHAR(100)
+        KeeperName NVARCHAR(100),
+        AccountID INT NULL
     );
+END
+GO
+
+ 
+
+
+IF OBJECT_ID('[Settings].[trg_Warehouse_AfterInsert]', 'TR') IS NOT NULL DROP TRIGGER [Settings].[trg_Warehouse_AfterInsert];
+GO
+
+CREATE TRIGGER [Settings].[trg_Warehouse_AfterInsert]
+ON [Settings].[Warehouses]
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @InventoryParentID INT;
+    SELECT @InventoryParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '13';
+
+    IF @InventoryParentID IS NULL RETURN;
+
+    DECLARE @WarehouseID INT, @WarehouseName NVARCHAR(100);
+    
+    DECLARE cur CURSOR FOR SELECT WarehouseID, WarehouseName FROM inserted;
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @WarehouseID, @WarehouseName;
+    
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        -- Find the next available AccountCode under 13 (e.g., 1301, 1302)
+        DECLARE @MaxCode NVARCHAR(20);
+        SELECT @MaxCode = MAX(AccountCode) FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @InventoryParentID;
+        
+        DECLARE @NextCode NVARCHAR(20);
+        IF @MaxCode IS NULL
+            SET @NextCode = '1301';
+        ELSE
+            SET @NextCode = CAST((CAST(@MaxCode AS BIGINT) + 1) AS NVARCHAR(20));
+
+        DECLARE @NewAccountID INT;
+        
+        -- Insert into ChartOfAccounts
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES (@NextCode, N'مخزون - ' + @WarehouseName, @InventoryParentID, 'Assets', 2, 1);
+        
+        SET @NewAccountID = SCOPE_IDENTITY();
+
+        -- Link the newly created AccountID back to the Warehouse
+        UPDATE [Settings].[Warehouses] 
+        SET AccountID = @NewAccountID 
+        WHERE WarehouseID = @WarehouseID;
+
+        FETCH NEXT FROM cur INTO @WarehouseID, @WarehouseName;
+    END
+
+    CLOSE cur;
+    DEALLOCATE cur;
 END
 
 -- =============================================
@@ -126,30 +184,107 @@ BEGIN
         Phone NVARCHAR(20),
         Address NVARCHAR(255),
         CurrentBalance DECIMAL(18, 2) DEFAULT 0,
-        IsActive BIT DEFAULT 1
+        IsActive BIT DEFAULT 1,
+        AccountID INT NULL
     );
 END
+GO
 
+IF OBJECT_ID('[Sales].[trg_Partner_AfterInsert]', 'TR') IS NOT NULL DROP TRIGGER [Sales].[trg_Partner_AfterInsert];
+GO
+
+CREATE TRIGGER [Sales].[trg_Partner_AfterInsert]
+ON [Sales].[Partners]
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @CustomerParentID INT, @SupplierParentID INT;
+    SELECT @CustomerParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12'; -- العملاء
+    SELECT @SupplierParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '21'; -- الموردون
+
+    DECLARE @PartnerID INT, @PartnerName NVARCHAR(150), @PartnerType NVARCHAR(20);
+    
+    DECLARE cur CURSOR FOR SELECT PartnerID, PartnerName, PartnerType FROM inserted;
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @PartnerID, @PartnerName, @PartnerType;
+    
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        DECLARE @TargetParentID INT;
+        DECLARE @AccountPrefix NVARCHAR(20);
+        
+        IF @PartnerType = 'Customer'
+        BEGIN
+            SET @TargetParentID = @CustomerParentID;
+            SET @AccountPrefix = 'عميل - ';
+        END
+        ELSE IF @PartnerType = 'Supplier'
+        BEGIN
+            SET @TargetParentID = @SupplierParentID;
+            SET @AccountPrefix = 'مورد - ';
+        END
+        
+        IF @TargetParentID IS NOT NULL
+        BEGIN
+            -- Find the next available AccountCode under the appropriate Parent
+            DECLARE @MaxCode NVARCHAR(20);
+            SELECT @MaxCode = MAX(AccountCode) FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @TargetParentID;
+            
+            DECLARE @NextCode NVARCHAR(20);
+            IF @MaxCode IS NULL
+            BEGIN
+                IF @PartnerType = 'Customer' SET @NextCode = '1201';
+                ELSE SET @NextCode = '2101';
+            END
+            ELSE
+            BEGIN
+                SET @NextCode = CAST((CAST(@MaxCode AS BIGINT) + 1) AS NVARCHAR(20));
+            END
+
+            DECLARE @NewAccountID INT;
+            
+            -- Insert into ChartOfAccounts
+            INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+            VALUES (@NextCode, @AccountPrefix + @PartnerName, @TargetParentID, 
+                   CASE WHEN @PartnerType = 'Customer' THEN 'Assets' ELSE 'Liabilities' END, 2, 1);
+            
+            SET @NewAccountID = SCOPE_IDENTITY();
+
+            -- Link the newly created AccountID back to the Partner
+            UPDATE [Sales].[Partners] 
+            SET AccountID = @NewAccountID 
+            WHERE PartnerID = @PartnerID;
+        END
+
+        FETCH NEXT FROM cur INTO @PartnerID, @PartnerName, @PartnerType;
+    END
+
+    CLOSE cur;
+    DEALLOCATE cur;
+END
+go
 
 -- =============================================
 -- Partners (الشركاء) - Stored Procedures
 -- العملاء والموردين
 -- Soft Delete (IsActive)
 -- =============================================
-USE VegtablityDB;
-GO
+
 
 -- =============================================
 -- 1. جلب جميع الشركاء النشطين حسب النوع
 -- =============================================
-IF OBJECT_ID('[Sales].[sp_Partner_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Partner_GetAll];
+IF OBJECT_ID('[Sales].[sp_Partner_GetAll]', 'P') IS NOT NULL 
+DROP PROCEDURE [Sales].[sp_Partner_GetAll];
 GO
 CREATE PROCEDURE [Sales].[sp_Partner_GetAll]
     @PartnerType NVARCHAR(20)
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
     FROM [Sales].[Partners]
     WHERE IsActive = 1 AND (@PartnerType = 'All' OR PartnerType = @PartnerType)
     ORDER BY PartnerID;
@@ -166,7 +301,7 @@ CREATE PROCEDURE [Sales].[sp_Partner_GetByID]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
     FROM [Sales].[Partners]
     WHERE PartnerID = @PartnerID;
 END
@@ -182,20 +317,21 @@ CREATE PROCEDURE [Sales].[sp_Partner_Save]
     @PartnerName NVARCHAR(150),
     @PartnerType NVARCHAR(20),
     @Phone NVARCHAR(20) = NULL,
-    @Address NVARCHAR(255) = NULL
+    @Address NVARCHAR(255) = NULL,
+    @AccountID INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     IF @PartnerID = 0
     BEGIN
-        INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive)
-        VALUES (@PartnerName, @PartnerType, @Phone, @Address, 0, 1);
+        INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID)
+        VALUES (@PartnerName, @PartnerType, @Phone, @Address, 0, 1, @AccountID);
         SELECT SCOPE_IDENTITY() AS PartnerID;
     END
     ELSE
     BEGIN
         UPDATE [Sales].[Partners] 
-        SET PartnerName = @PartnerName, PartnerType = @PartnerType, Phone = @Phone, Address = @Address
+        SET PartnerName = @PartnerName, PartnerType = @PartnerType, Phone = @Phone, Address = @Address, AccountID = @AccountID
         WHERE PartnerID = @PartnerID;
         SELECT @PartnerID AS PartnerID;
     END
@@ -227,7 +363,7 @@ CREATE PROCEDURE [Sales].[sp_Partner_Search]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
     FROM [Sales].[Partners]
     WHERE IsActive = 1 AND PartnerType = @PartnerType
       AND (PartnerName LIKE '%' + @SearchText + '%' OR Phone LIKE '%' + @SearchText + '%')
@@ -286,10 +422,18 @@ BEGIN
         ProductID INT NOT NULL,
         WarehouseID INT NOT NULL,
         CurrentQty DECIMAL(18, 2) DEFAULT 0,
+        AvgCostPrice DECIMAL(18, 2) DEFAULT 0,   -- متوسط سعر التكلفة المرجح لكل مخزن
         FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID),
         FOREIGN KEY (WarehouseID) REFERENCES [Settings].[Warehouses](WarehouseID),
         UNIQUE(ProductID, WarehouseID)
     );
+END
+
+-- Add AvgCostPrice to existing ProductStock table if column doesn't exist
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Inventory].[ProductStock]') AND name = 'AvgCostPrice')
+BEGIN
+    ALTER TABLE [Inventory].[ProductStock]
+    ADD AvgCostPrice DECIMAL(18, 2) DEFAULT 0;
 END
 
 -- =============================================
@@ -355,60 +499,6 @@ CREATE PROCEDURE [Security].[sp_User_Login]
   END 
   GO
 
--- 2. حفظ فاتورة (رأس وتفاصيل) + القيد المحاسبي
- IF OBJECT_ID('[Sales].[sp_Invoice_Save]', 'P') IS NOT NULL 
- DROP PROCEDURE [Sales].[sp_Invoice_Save]; 
- GO
-
-CREATE PROCEDURE [Sales].[sp_Invoice_Save]
- @InvType NVARCHAR(20), @PartnerID INT,
-  @WarehouseID INT,
-   @TotalAmount DECIMAL(18,2), -- ... باقي البارامترات
-    @UserID INT,
-	 @InvoiceID INT OUTPUT -- يرجع رقم الفاتورة الجديدة 
-	 AS
-	  BEGIN 
-	  SET NOCOUNT ON;
-	   BEGIN TRY
-	    BEGIN TRANSACTION;
-
--- أ. حفظ الرأس
-    INSERT INTO [Sales].InvoiceHeader (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, UserID)
-    VALUES (@InvType, GETDATE(), @PartnerID, @WarehouseID, @TotalAmount, @UserID);
-    
-    SET @InvoiceID = SCOPE_IDENTITY();
-    
-    -- ب. التفاصيل... (كود الإدراج سيكون هنا)
-    
-    -- ج. تحديث المخزون...
-    
-    -- د. إنشاء القيد الآلي
-    DECLARE @JID INT;
-    INSERT INTO [Accounting].[JournalHeader] (JDate, Description, UserID, ReferenceType, ReferenceID)
-    VALUES (GETDATE(), N'فاتورة ' + @InvType + N' رقم ' + CAST(@InvoiceID AS NVARCHAR), @UserID, 'Invoice', @InvoiceID);
-    
-    SET @JID = SCOPE_IDENTITY();
-    
-    -- تفاصيل القيد (مثال مبسط لمبيعات نقدية)
-    IF @InvType = 'Sales'
-    BEGIN
-        -- من ح/ الصندوق (1101)
-        INSERT INTO [Accounting].[JournalDetails] (JID, AccountID, Debit, Credit)
-        VALUES (@JID, 1, @TotalAmount, 0); 
-        
-        -- إلى ح/ المبيعات (4101)
-        INSERT INTO [Accounting].[JournalDetails] (JID, AccountID, Debit, Credit)
-        VALUES (@JID, 2, 0, @TotalAmount); 
-    END
-    
-    COMMIT TRANSACTION;
-END TRY
-BEGIN CATCH
-    ROLLBACK TRANSACTION;
-    THROW;
-END CATCH
-END
- GO
 
 -- ============================================= -- 4.3 المراقبات (Triggers) -- ============================================= GO -- تريجر لمنع حذف الفواتير المرحلة 
 IF OBJECT_ID('[Sales].[trg_PreventDeletePostedInvoice]', 'TR') IS NOT NULL
@@ -555,7 +645,7 @@ CREATE PROCEDURE [Settings].[sp_Warehouse_GetAll]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT WarehouseID, WarehouseName, Address, KeeperName, IsActive FROM [Settings].[Warehouses] WHERE IsActive = 1 ORDER BY WarehouseID;
+    SELECT WarehouseID, WarehouseName, Address, KeeperName, IsActive, AccountID FROM [Settings].[Warehouses] WHERE IsActive = 1 ORDER BY WarehouseID;
 END
 GO
 
@@ -566,20 +656,21 @@ CREATE PROCEDURE [Settings].[sp_Warehouse_Save]
     @WarehouseID INT = 0,
     @WarehouseName NVARCHAR(100),
     @Address NVARCHAR(255) = NULL,
-    @KeeperName NVARCHAR(100) = NULL
+    @KeeperName NVARCHAR(100) = NULL,
+    @AccountID INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     IF @WarehouseID = 0
     BEGIN
-        INSERT INTO [Settings].[Warehouses] (WarehouseName, Address, KeeperName, IsActive) 
-        VALUES (@WarehouseName, @Address, @KeeperName, 1);
+        INSERT INTO [Settings].[Warehouses] (WarehouseName, Address, KeeperName, IsActive, AccountID) 
+        VALUES (@WarehouseName, @Address, @KeeperName, 1, @AccountID);
         SELECT SCOPE_IDENTITY() AS WarehouseID;
     END
     ELSE
     BEGIN
         UPDATE [Settings].[Warehouses] 
-        SET WarehouseName = @WarehouseName, Address = @Address, KeeperName = @KeeperName 
+        SET WarehouseName = @WarehouseName, Address = @Address, KeeperName = @KeeperName, AccountID = @AccountID 
         WHERE WarehouseID = @WarehouseID;
         SELECT @WarehouseID AS WarehouseID;
     END
@@ -597,6 +688,8 @@ BEGIN
     UPDATE [Settings].[Warehouses] SET IsActive = 0 WHERE WarehouseID = @WarehouseID;
 END
 GO
+
+
 
 -- =============================================
 -- 4. حذف Triggers القديمة (لم نعد نحتاجها مع Soft Delete)
@@ -1512,7 +1605,7 @@ CREATE PROCEDURE [Accounting].[sp_Setup_InitialAccounts]
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT,@profit int ,@banckandcash int;
+    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT,@profit int ,@banckandcash int,@costcode int;
 
     -- 1. الحسابات الرئيسية (Level 0)
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1')
@@ -1590,6 +1683,12 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '51')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('51', N'تكلفة البضاعة المباعة - COGS', @ExpensesID, 'Expenses', 1, 0);
+select @costcode = accountID from [Accounting].[ChartOfAccounts] WHERE AccountCode = '51';
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '5101')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('5101', N'تكلفة البضاعة المباعة', @costcode, 'Expenses', 2, 1);
+ 
 
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '52')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
@@ -1874,3 +1973,907 @@ BEGIN
     END CATCH
 END
 GO
+
+-- =============================================
+-- Vegtablity - All Stored Procedures
+-- Schema: [Security]
+-- Execute this script in SQL Server Management Studio (SSMS)
+-- =============================================
+
+USE [VegtablityDB]
+GO
+
+-- =============================================
+-- 1. sp_User_Login
+-- =============================================
+IF OBJECT_ID('[Security].[sp_User_Login]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_Login]
+GO
+CREATE PROCEDURE [Security].[sp_User_Login]
+    @Username NVARCHAR(100),
+    @PasswordHash NVARCHAR(256)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT u.UserID, u.RoleID, r.RoleName, u.Username, u.FullName, u.IsActive, u.CreatedAt
+    FROM [Security].[Users] u
+    INNER JOIN [Security].[Roles] r ON u.RoleID = r.RoleID
+    WHERE u.Username = @Username AND u.PasswordHash = @PasswordHash AND u.IsActive = 1
+END
+GO
+
+-- =============================================
+-- 2. sp_User_GetAll
+-- =============================================
+IF OBJECT_ID('[Security].[sp_User_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_GetAll]
+GO
+CREATE PROCEDURE [Security].[sp_User_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT u.UserID, u.RoleID, r.RoleName, u.Username, u.FullName, u.IsActive, u.CreatedAt
+    FROM [Security].[Users] u
+    INNER JOIN [Security].[Roles] r ON u.RoleID = r.RoleID
+    ORDER BY u.UserID
+END
+GO
+
+-- =============================================
+-- 3. sp_User_Add
+-- =============================================
+IF OBJECT_ID('[Security].[sp_User_Add]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_Add]
+GO
+CREATE PROCEDURE [Security].[sp_User_Add]
+    @RoleID INT,
+    @Username NVARCHAR(100),
+    @PasswordHash NVARCHAR(256),
+    @FullName NVARCHAR(200),
+    @IsActive BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO [Security].[Users] (RoleID, Username, PasswordHash, FullName, IsActive)
+    VALUES (@RoleID, @Username, @PasswordHash, @FullName, @IsActive);
+    SELECT SCOPE_IDENTITY();
+END
+GO
+
+-- =============================================
+-- 4. sp_User_Update
+-- =============================================
+IF OBJECT_ID('[Security].[sp_User_Update]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_Update]
+GO
+CREATE PROCEDURE [Security].[sp_User_Update]
+    @UserID INT,
+    @RoleID INT,
+    @Username NVARCHAR(100),
+    @FullName NVARCHAR(200),
+    @IsActive BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [Security].[Users]
+    SET RoleID = @RoleID, Username = @Username, FullName = @FullName, IsActive = @IsActive
+    WHERE UserID = @UserID
+END
+GO
+
+-- =============================================
+-- 5. sp_User_Delete
+-- =============================================
+IF OBJECT_ID('[Security].[sp_User_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_Delete]
+GO
+CREATE PROCEDURE [Security].[sp_User_Delete]
+    @UserID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [Security].[Users] WHERE UserID = @UserID
+END
+GO
+
+-- =============================================
+-- 6. sp_User_ResetPassword
+-- =============================================
+IF OBJECT_ID('[Security].[sp_User_ResetPassword]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_ResetPassword]
+GO
+CREATE PROCEDURE [Security].[sp_User_ResetPassword]
+    @UserID INT,
+    @NewPasswordHash NVARCHAR(256)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [Security].[Users] SET PasswordHash = @NewPasswordHash WHERE UserID = @UserID
+END
+GO
+
+-- =============================================
+-- 7. sp_Role_GetAll
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Role_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Role_GetAll]
+GO
+CREATE PROCEDURE [Security].[sp_Role_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM [Security].[Roles] ORDER BY RoleName
+END
+GO
+
+-- =============================================
+-- 8. sp_Role_Add
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Role_Add]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Role_Add]
+GO
+CREATE PROCEDURE [Security].[sp_Role_Add]
+    @RoleName NVARCHAR(100),
+    @Description NVARCHAR(300)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO [Security].[Roles] (RoleName, Description) VALUES (@RoleName, @Description);
+    SELECT SCOPE_IDENTITY();
+END
+GO
+
+-- =============================================
+-- 9. sp_Role_Update
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Role_Update]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Role_Update]
+GO
+CREATE PROCEDURE [Security].[sp_Role_Update]
+    @RoleID INT,
+    @RoleName NVARCHAR(100),
+    @Description NVARCHAR(300)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [Security].[Roles] SET RoleName = @RoleName, Description = @Description WHERE RoleID = @RoleID
+END
+GO
+
+-- =============================================
+-- 10. sp_Role_Delete (Deletes role + its permissions)
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Role_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Role_Delete]
+GO
+CREATE PROCEDURE [Security].[sp_Role_Delete]
+    @RoleID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION
+        DELETE FROM [Security].[RolePermissions] WHERE RoleID = @RoleID;
+        DELETE FROM [Security].[Roles] WHERE RoleID = @RoleID;
+    COMMIT TRANSACTION
+END
+GO
+
+-- =============================================
+-- 11. sp_Permission_GetByRole
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Permission_GetByRole]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Permission_GetByRole]
+GO
+CREATE PROCEDURE [Security].[sp_Permission_GetByRole]
+    @RoleID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM [Security].[RolePermissions] WHERE RoleID = @RoleID
+END
+GO
+
+-- =============================================
+-- 12. sp_Permission_Save (Insert or Update)
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Permission_Save]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Permission_Save]
+GO
+CREATE PROCEDURE [Security].[sp_Permission_Save]
+    @PermID INT,
+    @RoleID INT,
+    @FormName NVARCHAR(100),
+    @CanAdd BIT,
+    @CanEdit BIT,
+    @CanDelete BIT,
+    @CanView BIT,
+    @CanPrint BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @PermID > 0
+    BEGIN
+        UPDATE [Security].[RolePermissions]
+        SET CanAdd = @CanAdd, CanEdit = @CanEdit, CanDelete = @CanDelete, CanView = @CanView, CanPrint = @CanPrint
+        WHERE PermID = @PermID
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [Security].[RolePermissions] (RoleID, FormName, CanAdd, CanEdit, CanDelete, CanView, CanPrint)
+        VALUES (@RoleID, @FormName, @CanAdd, @CanEdit, @CanDelete, @CanView, @CanPrint)
+    END
+END
+GO
+
+-- =============================================
+-- 13. sp_Permission_CanView
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Permission_CanView]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Permission_CanView]
+GO
+CREATE PROCEDURE [Security].[sp_Permission_CanView]
+    @RoleID INT,
+    @FormName NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT CanView FROM [Security].[RolePermissions] WHERE RoleID = @RoleID AND FormName = @FormName
+END
+GO
+
+-- =============================================
+-- 14. sp_Permission_Delete
+-- =============================================
+IF OBJECT_ID('[Security].[sp_Permission_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Permission_Delete]
+GO
+CREATE PROCEDURE [Security].[sp_Permission_Delete]
+    @PermID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [Security].[RolePermissions] WHERE PermID = @PermID
+END
+GO
+
+-- =============================================
+-- 15. sp_License_Check
+-- =============================================
+IF OBJECT_ID('[Security].[sp_License_Check]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_License_Check]
+GO
+CREATE PROCEDURE [Security].[sp_License_Check]
+    @MachineHWID NVARCHAR(100)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT CAST(CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END AS BIT) AS IsLicensed
+    FROM [Security].[DeviceLicenses]
+    WHERE MachineHWID = @MachineHWID AND IsActive = 1
+END
+GO
+
+
+-- =============================================
+-- Inventory Schema - Stored Procedures
+-- الأصناف (Products)
+-- مع Soft Delete (IsActive)
+-- =============================================
+USE VegtablityDB;
+GO
+
+-- =============================================
+-- 0. إضافة أعمدة جديدة (إذا لم تكن موجودة)
+-- =============================================
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Inventory].[Products]') AND name = 'IsActive')
+    ALTER TABLE [Inventory].[Products] ADD IsActive BIT NOT NULL DEFAULT 1;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Inventory].[Products]') AND name = 'ProductNameEn')
+    ALTER TABLE [Inventory].[Products] ADD ProductNameEn NVARCHAR(150) NULL;
+GO
+
+-- =============================================
+-- 1. جلب جميع الأصناف النشطة مع اسم الوحدة والتصنيف
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Product_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetAll];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName,
+        p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.IsActive = 1
+    ORDER BY p.ProductID;
+END
+GO
+
+-- =============================================
+-- 2. جلب صنف بالـ ID
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Product_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetByID];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetByID]
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName,
+        p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.ProductID = @ProductID;
+END
+GO
+
+-- =============================================
+-- 3. حفظ صنف (إضافة أو تعديل - Save = Add/Update)
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Product_Save]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_Save];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_Save]
+    @ProductID INT = 0,
+    @ProductName NVARCHAR(150),
+    @ProductNameEn NVARCHAR(150) = NULL,
+    @Barcode NVARCHAR(50) = NULL,
+    @CategoryID INT = NULL,
+    @UnitID INT = NULL,
+    @PurchasePrice DECIMAL(18,2) = 0,
+    @SalePrice DECIMAL(18,2) = 0,
+    @AlertQty DECIMAL(18,2) = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @ProductID = 0
+    BEGIN
+        INSERT INTO [Inventory].[Products] 
+            (ProductName, ProductNameEn, Barcode, CategoryID, UnitID, PurchasePrice, SalePrice, AlertQty, IsActive)
+        VALUES 
+            (@ProductName, @ProductNameEn, @Barcode, @CategoryID, @UnitID, @PurchasePrice, @SalePrice, @AlertQty, 1);
+        SELECT SCOPE_IDENTITY() AS ProductID;
+    END
+    ELSE
+    BEGIN
+        UPDATE [Inventory].[Products] 
+        SET ProductName = @ProductName, ProductNameEn = @ProductNameEn, Barcode = @Barcode, CategoryID = @CategoryID,
+            UnitID = @UnitID, PurchasePrice = @PurchasePrice, SalePrice = @SalePrice, AlertQty = @AlertQty
+        WHERE ProductID = @ProductID;
+        SELECT @ProductID AS ProductID;
+    END
+END
+GO
+
+-- =============================================
+-- 4. تعطيل صنف (Soft Delete)
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Product_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_Delete];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_Delete]
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [Inventory].[Products] SET IsActive = 0 WHERE ProductID = @ProductID;
+END
+GO
+
+-- =============================================
+-- 5. بحث بالباركود
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Product_GetByBarcode]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetByBarcode];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetByBarcode]
+    @Barcode NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName,
+        p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.Barcode = @Barcode AND p.IsActive = 1;
+END
+GO
+
+-- =============================================
+-- 6. بحث بالاسم (LIKE) - عربي + انجليزي + باركود
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Product_Search]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_Search];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_Search]
+    @SearchText NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName,
+        p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.IsActive = 1 AND (
+        p.ProductName LIKE '%' + @SearchText + '%' 
+        OR p.ProductNameEn LIKE '%' + @SearchText + '%' 
+        OR p.Barcode LIKE '%' + @SearchText + '%'
+    )
+    ORDER BY p.ProductID;
+END
+GO
+
+
+-- =============================================
+-- Invoices Triggers (Inventory & Accounting)
+-- =============================================
+USE VegtablityDB;
+GO
+
+-- =============================================
+-- Trigger: trg_Invoice_Post
+-- Handles Both Inventory Stock Updates AND Accounting Journal Entries
+-- =============================================
+IF OBJECT_ID('[Sales].[trg_Invoice_Post]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_Invoice_Post];
+GO
+
+CREATE TRIGGER [Sales].[trg_Invoice_Post]
+ON [Sales].[InvoiceHeader]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Only proceed if IsPosted changed from 0 to 1
+    IF UPDATE(IsPosted)
+    BEGIN
+        -- ==========================================================
+        -- 1. INVENTORY UPDATES
+        -- ==========================================================
+
+        -- STEP A: Update AvgCostPrice BEFORE touching CurrentQty (weighted average formula)
+        --   NewAvgCost = (OldQty * OldAvgCost + NewQty * BuyPrice) / (OldQty + NewQty)
+        UPDATE S
+        SET S.AvgCostPrice =
+            CASE
+                WHEN (S.CurrentQty + D.Quantity) > 0
+                THEN (S.CurrentQty * ISNULL(S.AvgCostPrice, 0) + D.Quantity * D.UnitPrice)
+                     / (S.CurrentQty + D.Quantity)
+                ELSE D.UnitPrice
+            END
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
+        INNER JOIN inserted i ON D.InvID = i.InvID
+        INNER JOIN deleted F ON i.InvID = F.InvID
+        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
+          AND i.InvType = 'Purchase' 
+          AND S.WarehouseID = i.WarehouseID;
+
+        -- STEP B: Increase CurrentQty (after AvgCostPrice is already updated)
+        UPDATE S
+        SET S.CurrentQty = S.CurrentQty + D.Quantity
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
+        INNER JOIN inserted i ON D.InvID = i.InvID
+        INNER JOIN deleted F ON i.InvID = F.InvID
+        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
+          AND i.InvType = 'Purchase' 
+          AND S.WarehouseID = i.WarehouseID;
+
+        -- Missing Stock Records for Purchases (Insert if not exists - AvgCostPrice = UnitPrice)
+        INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+        SELECT D.ProductID, i.WarehouseID, SUM(D.Quantity),
+               SUM(D.Quantity * D.UnitPrice) / NULLIF(SUM(D.Quantity), 0) -- weighted avg for first purchase
+        FROM [Sales].[InvoiceDetails] D
+        INNER JOIN inserted i ON D.InvID = i.InvID
+        INNER JOIN deleted F ON i.InvID = F.InvID
+        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
+          AND i.InvType = 'Purchase'
+          AND NOT EXISTS (
+              SELECT 1 FROM [Inventory].[ProductStock] S2 
+              WHERE S2.ProductID = D.ProductID AND S2.WarehouseID = i.WarehouseID
+          )
+        GROUP BY D.ProductID, i.WarehouseID;
+
+        -- Sales: Decrease Stock
+        UPDATE S
+        SET S.CurrentQty = S.CurrentQty - D.Quantity
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
+        INNER JOIN inserted i ON D.InvID = i.InvID
+        INNER JOIN deleted F ON i.InvID = F.InvID
+        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
+          AND i.InvType = 'Sales'
+          AND S.WarehouseID = i.WarehouseID;
+
+        -- Missing Stock Records for Sales (Insert negative if completely missing, to prevent failure)
+        INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty)
+        SELECT D.ProductID, i.WarehouseID, -SUM(D.Quantity)
+        FROM [Sales].[InvoiceDetails] D
+        INNER JOIN inserted i ON D.InvID = i.InvID
+        INNER JOIN deleted F ON i.InvID = F.InvID
+        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
+          AND i.InvType = 'Sales'
+          AND NOT EXISTS (
+              SELECT 1 FROM [Inventory].[ProductStock] S2 
+              WHERE S2.ProductID = D.ProductID AND S2.WarehouseID = i.WarehouseID
+          )
+        GROUP BY D.ProductID, i.WarehouseID;
+
+        -- ==========================================================
+        -- 2. ACCOUNTING UPDATES (JOURNAL ENTRIES)
+        -- ==========================================================
+        
+        -- Get generic Accounts for fallback
+        DECLARE @InventoryAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '13%' AND IsTransactional = 1), 
+                                           (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '13'));
+        
+        DECLARE @SalesAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '41%' AND IsTransactional = 1), 
+                                       (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '41'));
+                                       
+        DECLARE @COGSAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '5101'), 
+                                      ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '51%' AND IsTransactional = 1),
+                                             (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '51')));
+
+        DECLARE @CustomerAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '12%' AND IsTransactional = 1), 
+                                          (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12'));
+
+        DECLARE @VendorAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '21%' AND IsTransactional = 1), 
+                                        (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '21'));
+
+        -- Ensure fallback accounts exist (create dummy if absolutely nothing found - though Setup_InitialAccounts should prevent this)
+
+        DECLARE @InvoiceEntryMap TABLE (InvID INT, InvType NVARCHAR(20), EntryNo INT);
+
+        INSERT INTO @InvoiceEntryMap (InvID, InvType, EntryNo)
+        SELECT i.InvID, i.InvType, NEXT VALUE FOR [Accounting].[seq_EntryNo]
+        FROM inserted i
+        INNER JOIN deleted d ON i.InvID = d.InvID
+        WHERE i.IsPosted = 1 AND d.IsPosted = 0;
+
+        -- ----------------------------------------------------------------
+        -- A. PURCHASE INVOICE ENTRIES
+        -- ----------------------------------------------------------------
+        
+        -- Leg 1: Dr Inventory
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT
+            m.EntryNo,
+            i.InvDate,
+            'Invoice',
+            i.InvID,
+            ISNULL(w.AccountID, @InventoryAcc), -- Dynamically fetch Warehouse AccountID
+            i.NetAmount,  -- Debit Inventory
+            0,            
+            N'فاتورة مشتريات رقم ' + CAST(i.InvID AS NVARCHAR),
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
+        WHERE i.InvType = 'Purchase';
+
+        -- Leg 2: Cr Vendor/Supplier
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT
+            m.EntryNo,
+            i.InvDate,
+            'Invoice',
+            i.InvID,
+            ISNULL(p.AccountID, @VendorAcc),  -- Dynamically fetch Partner's AccountID
+            0,
+            i.NetAmount, -- Credit Supplier
+            N'فاتورة مشتريات رقم ' + CAST(i.InvID AS NVARCHAR),
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        WHERE i.InvType = 'Purchase';
+
+        -- ----------------------------------------------------------------
+        -- B. SALES INVOICE ENTRIES
+        -- ----------------------------------------------------------------
+        
+        -- Sales Part 1: Revenue & Receivables
+        -- Leg 1: Dr Customer
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT
+            m.EntryNo,
+            i.InvDate,
+            'Invoice',
+            i.InvID,
+            ISNULL(p.AccountID, @CustomerAcc), -- Dynamically fetch Partner's AccountID
+            i.NetAmount,  -- Debit Customer
+            0,
+            N'فاتورة مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        WHERE i.InvType = 'Sales';
+
+        -- Leg 2: Cr Sales Revenue
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT
+            m.EntryNo,
+            i.InvDate,
+            'Invoice',
+            i.InvID,
+            @SalesAcc,
+            0,
+            i.NetAmount, -- Credit Sales
+            N'فاتورة مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        WHERE i.InvType = 'Sales';
+
+        -- Sales Part 2: COGS & Inventory
+        -- تحسب بمتوسط سعر التكلفة المرجح (الخاص بهذا المخزن) من ProductStock.AvgCostPrice
+        ;WITH InvoiceCOGS AS (
+            SELECT 
+                d.InvID,
+                SUM(s.AvgCostPrice * d.Quantity) AS TotalCOGS
+            FROM [Sales].[InvoiceDetails] d
+            INNER JOIN inserted i ON d.InvID = i.InvID
+            LEFT JOIN [Inventory].[ProductStock] s 
+                ON s.ProductID = d.ProductID 
+                AND s.WarehouseID = i.WarehouseID
+            GROUP BY d.InvID
+        )
+        -- Leg 3: Dr COGS - تكلفة البضاعة المباعة (يُجلب AccountID من حساب كود 5101)
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT
+            m.EntryNo,
+            i.InvDate,
+            'Invoice',
+            i.InvID,
+            @COGSAcc,        -- AccountID مجلوب من AccountCode = '5101' في ChartOfAccounts
+            cogs.TotalCOGS,  -- Debit COGS (متوسط التكلفة * الكمية)
+            0,
+            N'تكلفة بضاعة مباعة للفاتورة ' + CAST(i.InvID AS NVARCHAR),
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+        WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
+
+        -- Leg 4: Cr Inventory (المخزن - برقم الحساب الخاص بالمخزن)
+        ;WITH InvoiceCOGS AS (
+            SELECT 
+                d.InvID,
+                SUM(s.AvgCostPrice * d.Quantity) AS TotalCOGS
+            FROM [Sales].[InvoiceDetails] d
+            INNER JOIN inserted i ON d.InvID = i.InvID
+            LEFT JOIN [Inventory].[ProductStock] s 
+                ON s.ProductID = d.ProductID 
+                AND s.WarehouseID = i.WarehouseID
+            GROUP BY d.InvID
+        )
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT
+            m.EntryNo,
+            i.InvDate,
+            'Invoice',
+            i.InvID,
+            ISNULL(w.AccountID, @InventoryAcc), -- AccountID الخاص بالمخزن
+            0,
+            cogs.TotalCOGS, -- Credit Inventory/Warehouse
+            N'تكلفة بضاعة مباعة للفاتورة ' + CAST(i.InvID AS NVARCHAR),
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+        LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
+        WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
+
+    END
+END
+GO
+
+
+-- =============================================
+-- Invoices Stored Procedures (Sales & Purchases)
+-- =============================================
+USE VegtablityDB;
+GO
+
+-- =============================================
+-- 2. sp_InvoiceDetail_Save
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_InvoiceDetail_Save]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetail_Save];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoiceDetail_Save]
+    @InvID INT,
+    @ProductID INT,
+    @UnitPrice DECIMAL(18, 2),
+    @Quantity DECIMAL(18, 2),
+    @TotalPrice DECIMAL(18, 2),
+    @CostPrice DECIMAL(18, 2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO [Sales].[InvoiceDetails] (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+    VALUES (@InvID, @ProductID, @UnitPrice, @Quantity, @TotalPrice, @CostPrice);
+END
+GO
+
+-- =============================================
+-- 3. sp_InvoiceDetails_DeleteByInvID
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_DeleteByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_DeleteByInvID];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoiceDetails_DeleteByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 4. sp_Invoice_Delete
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Delete];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_Delete]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Due to ON DELETE CASCADE on InvoiceDetails, this will delete details too
+    DELETE FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 5. sp_Invoice_GetAll
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetAll];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_GetAll]
+    @InvType NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        h.*,
+        p.PartnerName,
+        w.WarehouseName,
+        u.FullName AS UserName
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+    LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
+    WHERE h.InvType = @InvType
+    ORDER BY h.InvID DESC;
+END
+GO
+
+-- =============================================
+-- 6. sp_Invoice_GetByID 
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetByID];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 7. sp_InvoiceDetails_GetByInvID
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_GetByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.*,
+        p.ProductName,
+        p.Barcode
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    WHERE d.InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 8. sp_Stock_GetByProduct
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Stock_GetByProduct]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Stock_GetByProduct];
+GO
+CREATE PROCEDURE [Inventory].[sp_Stock_GetByProduct]
+    @ProductID INT,
+    @WarehouseID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT CurrentQty 
+    FROM [Inventory].[ProductStock] 
+    WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID;
+END
+GO
+
+
+
+-- Add ReferenceNo (Supplier Invoice Number) to InvoiceHeader
+IF NOT EXISTS (
+    SELECT * FROM sys.columns 
+    WHERE object_id = OBJECT_ID('Sales.InvoiceHeader') AND name = 'ReferenceNo'
+)
+BEGIN
+    ALTER TABLE Sales.InvoiceHeader ADD ReferenceNo NVARCHAR(50) NULL;
+END
+GO
+
+-- Add CreatedAt (Addition Date) to InvoiceHeader
+IF NOT EXISTS (
+    SELECT * FROM sys.columns 
+    WHERE object_id = OBJECT_ID('Sales.InvoiceHeader') AND name = 'CreatedAt'
+)
+BEGIN
+    ALTER TABLE Sales.InvoiceHeader ADD CreatedAt DATETIME DEFAULT GETDATE() WITH VALUES;
+END
+GO
+
+-- Create Sequence for Sales Invoices
+IF NOT EXISTS (SELECT * FROM sys.sequences WHERE name = 'SalesInvoiceSeq' AND schema_id = SCHEMA_ID('Sales'))
+BEGIN
+    CREATE SEQUENCE Sales.SalesInvoiceSeq
+    AS INT
+    START WITH 1001
+    INCREMENT BY 1;
+END
+GO
+
+-- Update sp_Invoice_Save to automatically generate sequence for sales invoices
+
+
+IF OBJECT_ID('[Sales].[sp_Invoice_Save]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_Save]
+    @InvID INT = 0,
+    @InvType NVARCHAR(20),
+    @InvDate DATETIME,
+    @PartnerID INT,
+    @WarehouseID INT,
+    @TotalAmount DECIMAL(18, 2),
+    @Discount DECIMAL(18, 2),
+    @NetAmount DECIMAL(18, 2),
+    @PaidAmount DECIMAL(18, 2),
+    @Remainder DECIMAL(18, 2),
+    @UserID INT,
+    @Notes NVARCHAR(255),
+    @IsPosted BIT = 0,
+    @ReferenceNo NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @InvID = 0
+    BEGIN
+        INSERT INTO [Sales].[InvoiceHeader] 
+            (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo)
+        VALUES 
+            (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo);
+        SELECT CAST(SCOPE_IDENTITY() AS INT) AS InvID;
+    END
+    ELSE
+    BEGIN
+        UPDATE [Sales].[InvoiceHeader] 
+        SET InvType = @InvType, InvDate = @InvDate, PartnerID = @PartnerID, WarehouseID = @WarehouseID, 
+            TotalAmount = @TotalAmount, Discount = @Discount, NetAmount = @NetAmount, 
+            PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes, IsPosted = @IsPosted, ReferenceNo = @ReferenceNo
+        WHERE InvID = @InvID;
+        SELECT @InvID AS InvID;
+    END
+END
+GO
+

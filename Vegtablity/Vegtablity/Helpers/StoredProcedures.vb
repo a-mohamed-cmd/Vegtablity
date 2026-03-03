@@ -123,5 +123,24 @@ Namespace Helpers
         ' =============================================
         Public Const SP_COMPANY_SETTINGS_GET As String = "Settings.sp_CompanySettings_Get"
         Public Const SP_COMPANY_SETTINGS_SAVE As String = "Settings.sp_CompanySettings_Save"
+
+        ' =============================================
+        ' Sales Schema - Invoices
+        ' =============================================
+        Public Const SP_INVOICE_GETALL As String = "[Sales].[sp_Invoice_GetAll]"
+        Public Const SP_INVOICE_GETBYID As String = "[Sales].[sp_Invoice_GetByID]"
+        Public Const SP_INVOICE_SAVE As String = "[Sales].[sp_Invoice_Save]"
+        Public Const SP_INVOICE_DELETE As String = "[Sales].[sp_Invoice_Delete]"
+        
+        Public Const SP_INVOICEDETAIL_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"
+        Public Const SP_INVOICEDETAIL_SAVE As String = "[Sales].[sp_InvoiceDetail_Save]"
+        Public Const SP_INVOICEDETAIL_DELETEBYINVID As String = "[Sales].[sp_InvoiceDetails_DeleteByInvID]"
+
+        ' =============================================
+        ' Inventory Schema - Stock
+        ' =============================================
+        Public Const SP_STOCK_GETBYPRODUCT As String = "[Inventory].[sp_Stock_GetByProduct]"
+
+
     End Class
 End Namespace

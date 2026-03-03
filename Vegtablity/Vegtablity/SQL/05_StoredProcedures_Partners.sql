@@ -16,7 +16,7 @@ CREATE PROCEDURE [Sales].[sp_Partner_GetAll]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
     FROM [Sales].[Partners]
     WHERE IsActive = 1 AND PartnerType = @PartnerType
     ORDER BY PartnerID;
@@ -33,7 +33,7 @@ CREATE PROCEDURE [Sales].[sp_Partner_GetByID]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
     FROM [Sales].[Partners]
     WHERE PartnerID = @PartnerID;
 END
@@ -49,20 +49,21 @@ CREATE PROCEDURE [Sales].[sp_Partner_Save]
     @PartnerName NVARCHAR(150),
     @PartnerType NVARCHAR(20),
     @Phone NVARCHAR(20) = NULL,
-    @Address NVARCHAR(255) = NULL
+    @Address NVARCHAR(255) = NULL,
+    @AccountID INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     IF @PartnerID = 0
     BEGIN
-        INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive)
-        VALUES (@PartnerName, @PartnerType, @Phone, @Address, 0, 1);
+        INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID)
+        VALUES (@PartnerName, @PartnerType, @Phone, @Address, 0, 1, @AccountID);
         SELECT SCOPE_IDENTITY() AS PartnerID;
     END
     ELSE
     BEGIN
         UPDATE [Sales].[Partners] 
-        SET PartnerName = @PartnerName, PartnerType = @PartnerType, Phone = @Phone, Address = @Address
+        SET PartnerName = @PartnerName, PartnerType = @PartnerType, Phone = @Phone, Address = @Address, AccountID = @AccountID
         WHERE PartnerID = @PartnerID;
         SELECT @PartnerID AS PartnerID;
     END
@@ -94,7 +95,7 @@ CREATE PROCEDURE [Sales].[sp_Partner_Search]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
     FROM [Sales].[Partners]
     WHERE IsActive = 1 AND PartnerType = @PartnerType
       AND (PartnerName LIKE '%' + @SearchText + '%' OR Phone LIKE '%' + @SearchText + '%')
