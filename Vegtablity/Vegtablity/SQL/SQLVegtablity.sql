@@ -455,10 +455,18 @@ BEGIN
         UserID INT,
         Notes NVARCHAR(255),
         IsPosted BIT DEFAULT 0,
+        PaymentAccountID INT NULL,   -- حساب طريقة الدفع (نقدية 11xx)
         FOREIGN KEY (PartnerID) REFERENCES [Sales].[Partners](PartnerID),
         FOREIGN KEY (WarehouseID) REFERENCES [Settings].[Warehouses](WarehouseID),
         FOREIGN KEY (UserID) REFERENCES [Security].[Users](UserID)
     );
+END
+
+-- Add PaymentAccountID to existing InvoiceHeader table if column doesn't exist
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Sales].[InvoiceHeader]') AND name = 'PaymentAccountID')
+BEGIN
+    ALTER TABLE [Sales].[InvoiceHeader]
+    ADD PaymentAccountID INT NULL;
 END
 
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'InvoiceDetails' AND schema_id = SCHEMA_ID('Sales'))
@@ -2666,6 +2674,48 @@ BEGIN
         LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
         WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
 
+        -- ==========================================================
+        -- C. PAYMENT JOURNAL ENTRIES
+        -- قيد السداد الجزئي عند الترحيل (إذا كان PaidAmount > 0 وتم اختيار حساب دفع)
+        -- ==========================================================
+
+        -- Purchase: Dr Vendor Account / Cr Cash Account (11xx)
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+               ISNULL(p.AccountID, @VendorAcc),  -- Dr حساب المورد
+               i.PaidAmount, 0,
+               N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+               i.PaymentAccountID, 0, i.PaidAmount,  -- Cr حساب الدفع المختار (نقدية)
+               N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+
+        -- Sales: Dr Cash Account (11xx) / Cr Customer Account
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+               i.PaymentAccountID, i.PaidAmount, 0,  -- Dr حساب الدفع المختار (نقدية)
+               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+               ISNULL(p.AccountID, @CustomerAcc), 0, i.PaidAmount,  -- Cr حساب العميل
+               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+
     END
 END
 GO
@@ -2674,7 +2724,51 @@ GO
 -- =============================================
 -- Invoices Stored Procedures (Sales & Purchases)
 -- =============================================
-USE VegtablityDB;
+ 
+
+-- =============================================
+-- 1. sp_Invoice_Save (Header)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_Save]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_Save]
+    @InvID INT = 0,
+    @InvType NVARCHAR(20),
+    @InvDate DATETIME,
+    @PartnerID INT,
+    @WarehouseID INT,
+    @TotalAmount DECIMAL(18, 2),
+    @Discount DECIMAL(18, 2),
+    @NetAmount DECIMAL(18, 2),
+    @PaidAmount DECIMAL(18, 2),
+    @Remainder DECIMAL(18, 2),
+    @UserID INT,
+    @Notes NVARCHAR(255),
+    @IsPosted BIT = 0,
+    @ReferenceNo NVARCHAR(50) = NULL,
+    @PaymentAccountID INT = NULL    -- حساب طريقة الدفع (11xx)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @InvID = 0
+    BEGIN
+        INSERT INTO [Sales].[InvoiceHeader] 
+            (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID)
+        VALUES 
+            (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID);
+        SELECT CAST(SCOPE_IDENTITY() AS INT) AS InvID;
+    END
+    ELSE
+    BEGIN
+        UPDATE [Sales].[InvoiceHeader] 
+        SET InvType = @InvType, InvDate = @InvDate, PartnerID = @PartnerID, WarehouseID = @WarehouseID, 
+            TotalAmount = @TotalAmount, Discount = @Discount, NetAmount = @NetAmount, 
+            PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes,
+            IsPosted = @IsPosted, ReferenceNo = @ReferenceNo, PaymentAccountID = @PaymentAccountID
+        WHERE InvID = @InvID;
+        SELECT @InvID AS InvID;
+    END
+END
 GO
 
 -- =============================================

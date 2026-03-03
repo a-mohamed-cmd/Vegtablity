@@ -295,13 +295,28 @@
                     </Grid>
 
                     <!-- Payment Tracker -->
-                    <Grid Margin="0,15,0,5">
-                        <TextBlock Text="المبلغ المدفوع مباشرة:" Foreground="#64748B" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,120,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,15,0,5" HorizontalAlignment="Stretch">
+                        <TextBlock Text="المبلغ المدفوع:" Foreground="#64748B" FontSize="14" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" Width="140" TextAlignment="Right" Margin="0,0,10,0"/>
                         <TextBox Text="{Binding CurrentInvoice.PaidAmount, UpdateSourceTrigger=PropertyChanged}" 
-                                 Width="100" HorizontalAlignment="Left" TextAlignment="Center"
+                                 Width="100" TextAlignment="Center"
                                  IsEnabled="{Binding IsEditAllowed}"
-                                 Style="{DynamicResource ModernTextBoxStyle}" FontWeight="Bold" Foreground="#10B981" />
-                    </Grid>
+                                 Style="{DynamicResource ModernTextBoxStyle}" FontWeight="Bold" Foreground="#10B981"/>
+                    </StackPanel>
+
+                    <!-- Payment Method -->
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,10" HorizontalAlignment="Stretch">
+                        <TextBlock Text="طريقة الدفع:" Foreground="#64748B" FontSize="14" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" Width="140" TextAlignment="Right" Margin="0,0,10,0"/>
+                        <ComboBox ItemsSource="{Binding CashAccounts}"
+                                  SelectedValue="{Binding CurrentInvoice.PaymentAccountID, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  SelectedValuePath="AccountID"
+                                  DisplayMemberPath="AccountName"
+                                  Width="190"
+                                  IsEnabled="{Binding IsPaymentAccountEnabled}"
+                                  Style="{DynamicResource ModernComboBoxStyle}"
+                                  ToolTip="اختر حساب الصندوق/البنك لتسجيل قيد السداد"/>
+                    </StackPanel>
 
                     <!-- Remainder -->
                     <Grid Margin="0,0,0,0">

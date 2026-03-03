@@ -70,6 +70,15 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure).AsList()
             End Using
         End Function
+
+        ''' <summary>Returns transactional cash/bank accounts (AccountCode LIKE '11%') for payment ComboBox</summary>
+        Public Function GetCashAccounts() As List(Of Account)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim sql = "SELECT AccountID, AccountCode, AccountName FROM [Accounting].[ChartOfAccounts] " &
+                          "WHERE AccountCode LIKE '11%' AND IsTransactional = 1 ORDER BY AccountCode"
+                Return conn.Query(Of Account)(sql).AsList()
+            End Using
+        End Function
         Public Function GetAccountStatement(accountID As Integer, startDate As Date, endDate As Date) As AccountStatementReport
             Dim report As New AccountStatementReport()
             Using conn As IDbConnection = _dbHelper.GetConnection()

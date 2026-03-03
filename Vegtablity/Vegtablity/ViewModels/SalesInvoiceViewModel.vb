@@ -15,11 +15,13 @@ Namespace ViewModels
         Private ReadOnly _productService As ProductService
         Private ReadOnly _warehouseService As WarehouseService
         Private ReadOnly _inventoryService As InventoryService
+        Private ReadOnly _accountingService As AccountingService
 
         ' --- Collections for UI Dropdowns ---
         Public Property Customers As ObservableCollection(Of Partner)
         Public Property Warehouses As ObservableCollection(Of Warehouse)
         Public Property Products As ObservableCollection(Of Product)
+        Public Property CashAccounts As ObservableCollection(Of Account)  ' حسابات النقدية (11xx)
 
         ' Event raised to ask the View to show a Snackbar notification
         Public Event RequestSnackbar As Action(Of String)
@@ -38,6 +40,10 @@ Namespace ViewModels
                 If _currentInvoice IsNot Nothing Then
                     AddHandler _currentInvoice.PropertyChanged, AddressOf OnInvoicePropertyChanged
                 End If
+                ' Notify all derived UI state properties when invoice is replaced (e.g. New Invoice)
+                OnPropertyChanged(NameOf(IsInvoicePosted))
+                OnPropertyChanged(NameOf(IsEditAllowed))
+                OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
             End Set
         End Property
 
@@ -51,6 +57,12 @@ Namespace ViewModels
         Public ReadOnly Property IsEditAllowed As Boolean
             Get
                 Return Not IsInvoicePosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPaymentAccountEnabled As Boolean
+            Get
+                Return IsEditAllowed AndAlso CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.PaidAmount > 0
             End Get
         End Property
 
@@ -78,10 +90,12 @@ Namespace ViewModels
             _productService = New ProductService()
             _warehouseService = New WarehouseService()
             _inventoryService = New InventoryService()
+            _accountingService = New AccountingService()
 
             Customers = New ObservableCollection(Of Partner)()
             Warehouses = New ObservableCollection(Of Warehouse)()
             Products = New ObservableCollection(Of Product)()
+            CashAccounts = New ObservableCollection(Of Account)()
 
             SaveCommand = New RelayCommand(AddressOf ExecuteSave, AddressOf CanExecuteSave)
             PostCommand = New RelayCommand(AddressOf ExecutePost, AddressOf CanExecutePost)
@@ -111,12 +125,26 @@ Namespace ViewModels
             For Each p In productList
                 Products.Add(p)
             Next
+
+            Dim cashList = _accountingService.GetCashAccounts()
+            CashAccounts.Clear()
+            For Each a In cashList
+                CashAccounts.Add(a)
+            Next
         End Sub
 
         Private Sub OnInvoicePropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             If e.PropertyName = NameOf(InvoiceHeader.IsPosted) Then
                 OnPropertyChanged(NameOf(IsInvoicePosted))
                 OnPropertyChanged(NameOf(IsEditAllowed))
+                OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
+            End If
+            If e.PropertyName = NameOf(InvoiceHeader.PaidAmount) Then
+                OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
+                ' Clear payment account if amount becomes 0
+                If CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.PaidAmount = 0 Then
+                    CurrentInvoice.PaymentAccountID = Nothing
+                End If
             End If
             If e.PropertyName = NameOf(InvoiceHeader.WarehouseID) Then
                 ' Revalidate stock for all items if warehouse changes
@@ -149,7 +177,9 @@ Namespace ViewModels
             If Not CurrentInvoice.PartnerID.HasValue Then Return False
             If Not CurrentInvoice.WarehouseID.HasValue Then Return False
             If CurrentInvoice.Details Is Nothing OrElse CurrentInvoice.Details.Count = 0 Then Return False
-            
+            ' إذا أدخل مبلغاً مدفوعاً يجب اختيار طريقة الدفع
+            If CurrentInvoice.PaidAmount > 0 AndAlso Not CurrentInvoice.PaymentAccountID.HasValue Then Return False
+
             Return True
         End Function
 

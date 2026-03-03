@@ -141,6 +141,17 @@ Namespace Models
             End Set
         End Property
 
+        Private _paymentAccountID As Integer?
+        Public Property PaymentAccountID As Integer?  ' حساب طريقة الدفع (11xx)
+            Get
+                Return _paymentAccountID
+            End Get
+            Set(value As Integer?)
+                _paymentAccountID = value
+                OnPropertyChanged(NameOf(PaymentAccountID))
+            End Set
+        End Property
+
         Private _referenceNo As String
         Public Property ReferenceNo As String
             Get

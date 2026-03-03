@@ -23,16 +23,17 @@ CREATE PROCEDURE [Sales].[sp_Invoice_Save]
     @UserID INT,
     @Notes NVARCHAR(255),
     @IsPosted BIT = 0,
-    @ReferenceNo NVARCHAR(50) = NULL
+    @ReferenceNo NVARCHAR(50) = NULL,
+    @PaymentAccountID INT = NULL    -- حساب طريقة الدفع (11xx)
 AS
 BEGIN
     SET NOCOUNT ON;
     IF @InvID = 0
     BEGIN
         INSERT INTO [Sales].[InvoiceHeader] 
-            (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo)
+            (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID)
         VALUES 
-            (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo);
+            (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID);
         SELECT CAST(SCOPE_IDENTITY() AS INT) AS InvID;
     END
     ELSE
@@ -40,7 +41,8 @@ BEGIN
         UPDATE [Sales].[InvoiceHeader] 
         SET InvType = @InvType, InvDate = @InvDate, PartnerID = @PartnerID, WarehouseID = @WarehouseID, 
             TotalAmount = @TotalAmount, Discount = @Discount, NetAmount = @NetAmount, 
-            PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes, IsPosted = @IsPosted, ReferenceNo = @ReferenceNo
+            PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes,
+            IsPosted = @IsPosted, ReferenceNo = @ReferenceNo, PaymentAccountID = @PaymentAccountID
         WHERE InvID = @InvID;
         SELECT @InvID AS InvID;
     END

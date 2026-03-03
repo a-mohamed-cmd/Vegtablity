@@ -65,7 +65,8 @@ Namespace Services
                                 .UserID = header.UserID,
                                 .Notes = header.Notes,
                                 .IsPosted = header.IsPosted,
-                                .ReferenceNo = header.ReferenceNo
+                                .ReferenceNo = header.ReferenceNo,
+                                .PaymentAccountID = header.PaymentAccountID
                             },
                             commandType:=CommandType.StoredProcedure,
                             transaction:=tx)
