@@ -278,10 +278,13 @@
                     <!-- Discount -->
                     <Grid Margin="0,0,0,10">
                         <TextBlock Text="الخصـم:" Foreground="#64748B" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,120,0"/>
-                        <TextBox Text="{Binding CurrentInvoice.Discount, UpdateSourceTrigger=PropertyChanged}" 
+                        <TextBox Text="{Binding CurrentInvoice.Discount, UpdateSourceTrigger=LostFocus}" 
                                  Width="100" HorizontalAlignment="Left" TextAlignment="Center"
                                  IsEnabled="{Binding IsEditAllowed}"
-                                 Style="{DynamicResource ModernTextBoxStyle}" FontWeight="Bold"/>
+                                 Style="{DynamicResource ModernTextBoxStyle}" FontWeight="Bold"
+                                 PreviewTextInput="DecimalBox_PreviewTextInput"
+                                 PreviewKeyDown="DecimalBox_PreviewKeyDown"
+                                 DataObject.Pasting="DecimalBox_Pasting"/>
                     </Grid>
 
                     <Rectangle Fill="#E2E8F0" Height="1" Margin="0,5,0,10"/>
@@ -298,10 +301,13 @@
                     <StackPanel Orientation="Horizontal" Margin="0,15,0,5" HorizontalAlignment="Stretch">
                         <TextBlock Text="المبلغ المدفوع:" Foreground="#64748B" FontSize="14" FontWeight="SemiBold"
                                    VerticalAlignment="Center" Width="140" TextAlignment="Right" Margin="0,0,10,0"/>
-                        <TextBox Text="{Binding CurrentInvoice.PaidAmount, UpdateSourceTrigger=PropertyChanged}" 
+                        <TextBox Text="{Binding CurrentInvoice.PaidAmount, UpdateSourceTrigger=LostFocus}" 
                                  Width="100" TextAlignment="Center"
                                  IsEnabled="{Binding IsEditAllowed}"
-                                 Style="{DynamicResource ModernTextBoxStyle}" FontWeight="Bold" Foreground="#10B981"/>
+                                 Style="{DynamicResource ModernTextBoxStyle}" FontWeight="Bold" Foreground="#10B981"
+                                 PreviewTextInput="DecimalBox_PreviewTextInput"
+                                 PreviewKeyDown="DecimalBox_PreviewKeyDown"
+                                 DataObject.Pasting="DecimalBox_Pasting"/>
                     </StackPanel>
 
                     <!-- Payment Method -->

@@ -1613,7 +1613,7 @@ CREATE PROCEDURE [Accounting].[sp_Setup_InitialAccounts]
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT,@profit int ,@banckandcash int,@costcode int;
+    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT,@profit int ,@banckandcash int,@costcode int,@firstbalance int ,@capital int;
 
     -- 1. الحسابات الرئيسية (Level 0)
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1')
@@ -1635,6 +1635,16 @@ BEGIN
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName,ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('31', N'أرباح وخسائر',@EquityID, 'Equity', 1, 0);
     SELECT @Profit = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '31';
+
+		    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '32')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName,ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('32', N'حساب رأس المال',@EquityID, 'Equity', 1, 0);
+    SELECT @capital = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '32';
+
+	 IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '321')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName,ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('321', N'رصيد أول المده', @capital,'Equity', 2, 1);
+    SELECT @firstbalance = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '321';
 
 	IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '311')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName,ParentAccountID, AccountType, AccountLevel, IsTransactional)
@@ -1681,6 +1691,7 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '21')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('21', N'الموردون / الذمم الدائنة', @LiabilitiesID, 'Liabilities', 1, 0);
+
 
     -- 4. تحت الإيرادات (Revenues)
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '41')
@@ -2971,3 +2982,378 @@ BEGIN
 END
 GO
 
+
+-- =============================================
+-- 1. sp_Invoice_Save (Header)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_Save]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_Save]
+    @InvID INT = 0,
+    @InvType NVARCHAR(20),
+    @InvDate DATETIME,
+    @PartnerID INT,
+    @WarehouseID INT,
+    @TotalAmount DECIMAL(18, 2),
+    @Discount DECIMAL(18, 2),
+    @NetAmount DECIMAL(18, 2),
+    @PaidAmount DECIMAL(18, 2),
+    @Remainder DECIMAL(18, 2),
+    @UserID INT,
+    @Notes NVARCHAR(255),
+    @IsPosted BIT = 0,
+    @ReferenceNo NVARCHAR(50) = NULL,
+    @PaymentAccountID INT = NULL    -- حساب طريقة الدفع (11xx)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @InvID = 0
+    BEGIN
+        INSERT INTO [Sales].[InvoiceHeader] 
+            (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID)
+        VALUES 
+            (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID);
+        SELECT CAST(SCOPE_IDENTITY() AS INT) AS InvID;
+    END
+    ELSE
+    BEGIN
+        UPDATE [Sales].[InvoiceHeader] 
+        SET InvType = @InvType, InvDate = @InvDate, PartnerID = @PartnerID, WarehouseID = @WarehouseID, 
+            TotalAmount = @TotalAmount, Discount = @Discount, NetAmount = @NetAmount, 
+            PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes,
+            IsPosted = @IsPosted, ReferenceNo = @ReferenceNo, PaymentAccountID = @PaymentAccountID
+        WHERE InvID = @InvID;
+        SELECT @InvID AS InvID;
+    END
+END
+GO
+
+-- =============================================
+-- 2. sp_InvoiceDetail_Save
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_InvoiceDetail_Save]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetail_Save];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoiceDetail_Save]
+    @InvID INT,
+    @ProductID INT,
+    @UnitPrice DECIMAL(18, 2),
+    @Quantity DECIMAL(18, 2),
+    @TotalPrice DECIMAL(18, 2),
+    @CostPrice DECIMAL(18, 2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO [Sales].[InvoiceDetails] (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+    VALUES (@InvID, @ProductID, @UnitPrice, @Quantity, @TotalPrice, @CostPrice);
+END
+GO
+
+-- =============================================
+-- 3. sp_InvoiceDetails_DeleteByInvID
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_DeleteByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_DeleteByInvID];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoiceDetails_DeleteByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 4. sp_Invoice_Delete
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_Delete]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Delete];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_Delete]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Due to ON DELETE CASCADE on InvoiceDetails, this will delete details too
+    -- But if IsPosted = 1, maybe we should prevent deletion or let trg handle reverse
+    -- The trg_Invoice_Post handles it on UPDATE. On DELETE we should reverse or prevent.
+    -- For now, simple delete.
+    DELETE FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 5. sp_Invoice_GetAll
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetAll];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_GetAll]
+    @InvType NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        h.*,
+        p.PartnerName,
+        w.WarehouseName,
+        u.FullName AS UserName
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+    LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
+    WHERE h.InvType = @InvType
+    ORDER BY h.InvID DESC;
+END
+GO
+
+-- =============================================
+-- 6. sp_Invoice_GetByID 
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetByID];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 7. sp_InvoiceDetails_GetByInvID
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_GetByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.*,
+        p.ProductName,
+        p.Barcode
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    WHERE d.InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 8. sp_Stock_GetByProduct
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Stock_GetByProduct]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Stock_GetByProduct];
+GO
+CREATE PROCEDURE [Inventory].[sp_Stock_GetByProduct]
+    @ProductID INT,
+    @WarehouseID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT CurrentQty 
+    FROM [Inventory].[ProductStock] 
+    WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID;
+END
+GO
+
+-- =============================================
+-- 9. sp_Invoice_GetFiltered  (Dashboard List with Pagination)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_GetFiltered]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetFiltered];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_GetFiltered]
+    @InvType    NVARCHAR(20)  = NULL,
+    @DateFrom   DATE          = NULL,
+    @DateTo     DATE          = NULL,
+    @IsPosted   BIT           = NULL,
+    @SearchText NVARCHAR(100) = NULL,
+    @PageNumber INT           = 0,      -- Zero-based page index
+    @PageSize   INT           = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Result Set 1: Paged invoice rows
+    SELECT
+        h.InvID,
+        h.InvType,
+        CONVERT(DATE, h.InvDate) AS InvDate,
+        h.PartnerID,
+        ISNULL(p.PartnerName, N'—')   AS PartnerName,
+        h.WarehouseID,
+        ISNULL(w.WarehouseName, N'—') AS WarehouseName,
+        h.TotalAmount,
+        h.Discount,
+        h.NetAmount,
+        h.PaidAmount,
+        h.Remainder,
+        h.IsPosted,
+        h.ReferenceNo,
+        h.Notes
+    FROM   [Sales].[InvoiceHeader]    h
+    LEFT JOIN [Sales].[Partners]      p ON p.PartnerID   = h.PartnerID
+    LEFT JOIN [Settings].[Warehouses] w ON w.WarehouseID = h.WarehouseID
+    WHERE
+        (@InvType    IS NULL OR h.InvType  = @InvType)
+        AND (@DateFrom   IS NULL OR CONVERT(DATE, h.InvDate) >= @DateFrom)
+        AND (@DateTo     IS NULL OR CONVERT(DATE, h.InvDate) <= @DateTo)
+        AND (@IsPosted   IS NULL OR h.IsPosted = @IsPosted)
+        AND (@SearchText IS NULL OR
+             p.PartnerName LIKE '%' + @SearchText + '%'
+          OR CAST(h.InvID AS NVARCHAR) LIKE '%' + @SearchText + '%'
+          OR h.ReferenceNo   LIKE '%' + @SearchText + '%')
+    ORDER BY h.InvID DESC
+    OFFSET (@PageNumber * @PageSize) ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+
+    -- Result Set 2: Total count (for pagination controls)
+    SELECT COUNT(*) AS TotalCount
+    FROM   [Sales].[InvoiceHeader]    h
+    LEFT JOIN [Sales].[Partners]      p ON p.PartnerID = h.PartnerID
+    WHERE
+        (@InvType    IS NULL OR h.InvType  = @InvType)
+        AND (@DateFrom   IS NULL OR CONVERT(DATE, h.InvDate) >= @DateFrom)
+        AND (@DateTo     IS NULL OR CONVERT(DATE, h.InvDate) <= @DateTo)
+        AND (@IsPosted   IS NULL OR h.IsPosted = @IsPosted)
+        AND (@SearchText IS NULL OR
+             p.PartnerName LIKE '%' + @SearchText + '%'
+          OR CAST(h.InvID AS NVARCHAR) LIKE '%' + @SearchText + '%'
+          OR h.ReferenceNo   LIKE '%' + @SearchText + '%');
+END
+GO
+
+-- =============================================
+-- 10. sp_Invoice_GetDashboardStats  (4 KPI cards)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_GetDashboardStats]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetDashboardStats];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_GetDashboardStats]
+    @DateFrom DATE = NULL,
+    @DateTo   DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        COUNT(CASE WHEN InvType = 'Sales'    THEN 1 END)            AS TotalSalesCount,
+        ISNULL(SUM(CASE WHEN InvType = 'Sales'    THEN NetAmount END), 0) AS TotalSalesAmount,
+        ISNULL(SUM(CASE WHEN InvType = 'Sales'    THEN Remainder END), 0) AS SalesRemainder,
+        COUNT(CASE WHEN InvType = 'Purchase' THEN 1 END)            AS TotalPurchaseCount,
+        ISNULL(SUM(CASE WHEN InvType = 'Purchase' THEN NetAmount END), 0) AS TotalPurchaseAmount,
+        ISNULL(SUM(CASE WHEN InvType = 'Purchase' THEN Remainder END), 0) AS PurchaseRemainder,
+        COUNT(*) AS TotalInvoices
+    FROM [Sales].[InvoiceHeader]
+    WHERE IsPosted = 1
+      AND (@DateFrom IS NULL OR CONVERT(DATE, InvDate) >= @DateFrom)
+      AND (@DateTo   IS NULL OR CONVERT(DATE, InvDate) <= @DateTo);
+END
+GO
+
+-- =============================================
+-- 11. sp_Invoice_AddPayment  (payment on posted invoice)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_AddPayment]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_AddPayment];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_AddPayment]
+    @InvID            INT,
+    @PaymentAmount    DECIMAL(18,2),
+    @PaymentAccountID INT,
+    @UserID           INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @InvType   NVARCHAR(20), @PartnerID INT,
+                @Remainder DECIMAL(18,2), @IsPosted  BIT;
+
+        SELECT @InvType   = InvType,
+               @PartnerID = PartnerID,
+               @Remainder = Remainder,
+               @IsPosted  = IsPosted
+        FROM [Sales].[InvoiceHeader]
+        WHERE InvID = @InvID;
+
+        IF @IsPosted = 0
+        BEGIN RAISERROR(N'لا يمكن إضافة سداد لفاتورة غير مرحّلة', 16, 1); RETURN; END
+
+        IF @PaymentAmount <= 0 OR @PaymentAmount > @Remainder
+        BEGIN RAISERROR(N'مبلغ السداد غير صحيح أو يتجاوز المتبقي', 16, 1); RETURN; END
+
+        -- 1. Update header amounts
+        UPDATE [Sales].[InvoiceHeader]
+        SET PaidAmount = PaidAmount + @PaymentAmount,
+            Remainder  = Remainder  - @PaymentAmount
+        WHERE InvID = @InvID;
+
+        -- 2. Get partner account
+        DECLARE @PartnerAccountID INT;
+        SELECT @PartnerAccountID = AccountID FROM [Sales].[Partners] WHERE PartnerID = @PartnerID;
+
+        -- 3. Journal entry (two complementary legs)
+        DECLARE @EntryNo   INT           = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+        DECLARE @EntryDate DATE          = CAST(GETDATE() AS DATE);
+        DECLARE @Desc      NVARCHAR(255) = N'سداد إضافي - فاتورة رقم ' + CAST(@InvID AS NVARCHAR);
+
+        IF @InvType = 'Sales'
+        BEGIN
+            -- Dr Cash  /  Cr Customer
+            INSERT INTO [Accounting].[JournalEntries]
+                (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount,       CreditAmount,      Description, UserID)
+            VALUES
+                (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PaymentAccountID, @PaymentAmount, 0,                @Desc, @UserID),
+                (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PartnerAccountID,  0,               @PaymentAmount, @Desc, @UserID);
+        END
+        ELSE -- Purchase
+        BEGIN
+            -- Dr Vendor  /  Cr Cash
+            INSERT INTO [Accounting].[JournalEntries]
+                (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount,       CreditAmount,      Description, UserID)
+            VALUES
+                (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PartnerAccountID,  @PaymentAmount, 0,               @Desc, @UserID),
+                (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PaymentAccountID,  0,              @PaymentAmount,  @Desc, @UserID);
+        END
+
+        COMMIT TRANSACTION;
+        SELECT 1 AS Success;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+-- =============================================
+-- ⚡ PERFORMANCE INDEXES — InvoiceHeader
+-- =============================================
+
+-- Index 1: Dashboard Stats (sp_Invoice_GetDashboardStats)
+-- يُغطّي COUNT + SUM بدون Full Table Scan
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_InvoiceHeader_Stats'
+      AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+CREATE INDEX IX_InvoiceHeader_Stats
+    ON [Sales].[InvoiceHeader] (IsPosted, InvType)
+    INCLUDE (NetAmount, Remainder);
+GO
+
+-- Index 2: Dashboard Filter List (sp_Invoice_GetFiltered)
+-- يُسرّع الفلترة حسب النوع + الحالة + التاريخ
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_InvoiceHeader_FilteredList'
+      AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+CREATE INDEX IX_InvoiceHeader_FilteredList
+    ON [Sales].[InvoiceHeader] (InvType, IsPosted, InvDate DESC)
+    INCLUDE (PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, ReferenceNo);
+GO
+
+-- Index 3: Partner lookup (JOIN مع Partners)
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_InvoiceHeader_PartnerID'
+      AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+CREATE INDEX IX_InvoiceHeader_PartnerID
+    ON [Sales].[InvoiceHeader] (PartnerID);
+GO

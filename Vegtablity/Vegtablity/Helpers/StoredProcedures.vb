@@ -141,6 +141,13 @@ Namespace Helpers
         ' =============================================
         Public Const SP_STOCK_GETBYPRODUCT As String = "[Inventory].[sp_Stock_GetByProduct]"
 
+        ' =============================================
+        ' Sales Schema - Invoice Dashboard
+        ' =============================================
+        Public Const SP_INVOICE_GET_FILTERED As String = "[Sales].[sp_Invoice_GetFiltered]"
+        Public Const SP_INVOICE_GET_DASHBOARD_STATS As String = "[Sales].[sp_Invoice_GetDashboardStats]"
+        Public Const SP_INVOICE_ADD_PAYMENT As String = "[Sales].[sp_Invoice_AddPayment]"
+        Public Const SP_INVOICEDETAILS_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"
 
     End Class
 End Namespace

@@ -8,6 +8,15 @@ Namespace Views
             InitializeComponent()
         End Sub
 
+        ''' <summary>Allows child pages (e.g. InvoiceDashboardPage) to push a new page into the content area</summary>
+        Public Sub NavigateTo(page As System.Windows.Controls.UserControl)
+            Dim vm = TryCast(Me.DataContext, ViewModels.DashboardViewModel)
+            If vm IsNot Nothing Then
+                vm.CurrentPage = page
+                vm.IsHomePage = False
+            End If
+        End Sub
+
         Private Sub Window_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseDown
             If e.ChangedButton = MouseButton.Left Then
                 Me.DragMove()

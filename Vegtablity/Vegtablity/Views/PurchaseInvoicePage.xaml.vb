@@ -361,5 +361,44 @@ Namespace Views
                 Return FindVisualParent(Of T)(parentObject)
             End If
         End Function
+
+        ' ── Decimal-only input handlers (Discount & PaidAmount) ──
+        Private Sub DecimalBox_PreviewTextInput(sender As Object, e As Input.TextCompositionEventArgs)
+            Dim tb = TryCast(sender, TextBox)
+            If tb Is Nothing Then Return
+            Dim newText = tb.Text.Substring(0, tb.SelectionStart) &
+                          e.Text &
+                          tb.Text.Substring(tb.SelectionStart + tb.SelectionLength)
+            Dim isValid = System.Text.RegularExpressions.Regex.IsMatch(newText, "^\d*\.?\d*$")
+            e.Handled = Not isValid
+        End Sub
+
+        Private Sub DecimalBox_PreviewKeyDown(sender As Object, e As Input.KeyEventArgs)
+            Dim tb = TryCast(sender, TextBox)
+            If tb Is Nothing Then Return
+            Dim isDecimalKey = (e.Key = Input.Key.OemPeriod OrElse
+                                e.Key = Input.Key.Decimal OrElse
+                                e.Key = Input.Key.OemComma)
+            If isDecimalKey Then
+                If Not tb.Text.Contains(".") Then
+                    Dim pos = tb.SelectionStart
+                    Dim current = tb.Text.Remove(pos, tb.SelectionLength)
+                    tb.Text = current.Insert(pos, ".")
+                    tb.SelectionStart = pos + 1
+                End If
+                e.Handled = True
+            End If
+        End Sub
+
+        Private Sub DecimalBox_Pasting(sender As Object, e As System.Windows.DataObjectPastingEventArgs)
+            If e.DataObject.GetDataPresent(GetType(String)) Then
+                Dim pastedText = CStr(e.DataObject.GetData(GetType(String)))
+                If Not System.Text.RegularExpressions.Regex.IsMatch(pastedText, "^\d*\.?\d*$") Then
+                    e.CancelCommand()
+                End If
+            Else
+                e.CancelCommand()
+            End If
+        End Sub
     End Class
 End Namespace

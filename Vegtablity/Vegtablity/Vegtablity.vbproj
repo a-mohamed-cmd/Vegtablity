@@ -181,6 +181,7 @@
     <Compile Include="Models\InvoiceHeader.vb" />
     <Compile Include="Models\InvoiceDetail.vb" />
     <Compile Include="Models\ProductStock.vb" />
+    <Compile Include="Models\InvoiceListItem.vb" />
     <Compile Include="Services\DatabaseHelper.vb" />
     <Compile Include="Services\SettingsService.vb" />
     <Compile Include="Services\LicenseService.vb" />
@@ -215,6 +216,7 @@
     <Compile Include="ViewModels\YearEndCloseViewModel.vb" />
     <Compile Include="ViewModels\PurchaseInvoiceViewModel.vb" />
     <Compile Include="ViewModels\SalesInvoiceViewModel.vb" />
+    <Compile Include="ViewModels\InvoiceDashboardViewModel.vb" />
     <Compile Include="Models\Unit.vb" />
     <Compile Include="Models\Category.vb" />
     <Compile Include="Models\Warehouse.vb" />
@@ -295,6 +297,9 @@
     <Compile Include="Views\SalesInvoicePage.xaml.vb">
       <DependentUpon>SalesInvoicePage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\InvoiceDashboardPage.xaml.vb">
+      <DependentUpon>InvoiceDashboardPage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\LicenseWindow.xaml">
@@ -374,6 +379,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\SalesInvoicePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\InvoiceDashboardPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

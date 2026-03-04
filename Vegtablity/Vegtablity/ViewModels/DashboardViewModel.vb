@@ -164,6 +164,7 @@ Namespace ViewModels
             })
 
             allItems.Add(New MenuItem With {.Title = "العملاء والموردين", .Icon = "👥", .FormName = "Partners", .IsVisible = True})
+            allItems.Add(New MenuItem With {.Title = "لوحة الفواتير", .Icon = "🧾", .FormName = "InvoiceDashboard", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "التقارير", .Icon = "📈", .FormName = "Reports", .IsVisible = True})
 
             ' === قسم الإعدادات (قابل للتوسيع) ===
@@ -302,6 +303,10 @@ Namespace ViewModels
 
                     Case "YearEndClose"
                         CurrentPage = New Views.YearEndClosePage()
+                        IsHomePage = False
+
+                    Case "InvoiceDashboard"
+                        CurrentPage = New Views.InvoiceDashboardPage()
                         IsHomePage = False
 
                     Case Else

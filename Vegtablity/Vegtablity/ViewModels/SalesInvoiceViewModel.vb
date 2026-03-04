@@ -172,6 +172,17 @@ Namespace ViewModels
             ExecuteAddItem(Nothing)
         End Sub
 
+        ''' <summary>Load an existing invoice by ID (called from Invoice Dashboard)</summary>
+        Public Sub LoadInvoice(invID As Integer)
+            Dim loaded = _invoiceService.LoadInvoiceForEdit(invID)
+            If loaded IsNot Nothing Then
+                CurrentInvoice = loaded
+                If Not CurrentInvoice.IsPosted AndAlso CurrentInvoice.Details.Count = 0 Then
+                    ExecuteAddItem(Nothing)
+                End If
+            End If
+        End Sub
+
         Private Function CanExecuteSave(parameter As Object) As Boolean
             If CurrentInvoice Is Nothing OrElse CurrentInvoice.IsPosted Then Return False
             If Not CurrentInvoice.PartnerID.HasValue Then Return False

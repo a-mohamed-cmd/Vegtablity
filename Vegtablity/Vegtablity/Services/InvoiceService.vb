@@ -119,5 +119,84 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure)
             End Using
         End Sub
+
+        ''' <summary>Returns paged filtered invoice list plus total count for the dashboard.</summary>
+        Public Function GetFilteredInvoices(
+                Optional invType As String = Nothing,
+                Optional dateFrom As Date? = Nothing,
+                Optional dateTo As Date? = Nothing,
+                Optional isPosted As Boolean? = Nothing,
+                Optional searchText As String = Nothing,
+                Optional pageNumber As Integer = 0,
+                Optional pageSize As Integer = 20) As (Items As List(Of InvoiceListItem), TotalCount As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Using multi = conn.QueryMultiple(
+                        Helpers.StoredProcedures.SP_INVOICE_GET_FILTERED,
+                        New With {
+                            .InvType    = invType,
+                            .DateFrom   = dateFrom,
+                            .DateTo     = dateTo,
+                            .IsPosted   = isPosted,
+                            .SearchText = searchText,
+                            .PageNumber = pageNumber,
+                            .PageSize   = pageSize
+                        },
+                        commandType:=CommandType.StoredProcedure)
+                    Dim items = multi.Read(Of InvoiceListItem)().ToList()
+                    Dim total = multi.ReadSingle(Of Integer)()
+                    Return (items, total)
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>Returns KPI summary stats for dashboard cards.</summary>
+        Public Function GetDashboardStats(
+                Optional dateFrom As Date? = Nothing,
+                Optional dateTo As Date? = Nothing) As DashboardStats
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.QuerySingleOrDefault(Of DashboardStats)(
+                    Helpers.StoredProcedures.SP_INVOICE_GET_DASHBOARD_STATS,
+                    New With {.DateFrom = dateFrom, .DateTo = dateTo},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Function
+
+        ''' <summary>Adds a payment to a posted invoice and creates the journal entry.</summary>
+        Public Function AddPayment(invID As Integer, amount As Decimal, paymentAccountID As Integer, userID As Integer) As Boolean
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim result = conn.ExecuteScalar(Of Integer)(
+                    Helpers.StoredProcedures.SP_INVOICE_ADD_PAYMENT,
+                    New With {
+                        .InvID            = invID,
+                        .PaymentAmount    = amount,
+                        .PaymentAccountID = paymentAccountID,
+                        .UserID           = userID
+                    },
+                    commandType:=CommandType.StoredProcedure)
+                Return result = 1
+            End Using
+        End Function
+
+        ''' <summary>Loads a full InvoiceHeader with its Details from DB (for open-in-form).</summary>
+        Public Function LoadInvoiceForEdit(invID As Integer) As Models.InvoiceHeader
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                ' Load header
+                Dim header = conn.QuerySingleOrDefault(Of Models.InvoiceHeader)(
+                    Helpers.StoredProcedures.SP_INVOICE_GETBYID,
+                    New With {.InvID = invID},
+                    commandType:=CommandType.StoredProcedure)
+                If header Is Nothing Then Return Nothing
+
+                ' Load details
+                Dim details = conn.Query(Of Models.InvoiceDetail)(
+                    Helpers.StoredProcedures.SP_INVOICEDETAILS_GETBYINVID,
+                    New With {.InvID = invID},
+                    commandType:=CommandType.StoredProcedure).ToList()
+
+                header.Details = New System.Collections.ObjectModel.ObservableCollection(Of Models.InvoiceDetail)(details)
+                Return header
+            End Using
+        End Function
     End Class
 End Namespace
+
