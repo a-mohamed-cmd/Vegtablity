@@ -76,4 +76,57 @@ Namespace Helpers
             Throw New NotImplementedException()
         End Function
     End Class
+
+    Public Class DirToArrowConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Dim dir As String = TryCast(value, String)
+            If dir = "IN" Then Return "▼" ' سهم لأسفل (وارد)
+            If dir = "OUT" Then Return "▲" ' سهم لأعلى (صادر)
+            Return "-"
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
+
+    Public Class DirToColorConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Dim dir As String = TryCast(value, String)
+            If dir = "IN" Then Return New SolidColorBrush(Color.FromRgb(16, 185, 129)) ' Green #10B981
+            If dir = "OUT" Then Return New SolidColorBrush(Color.FromRgb(239, 68, 68)) ' Red #EF4444
+            Return New SolidColorBrush(Color.FromRgb(100, 116, 139)) ' Gray
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
+    Public Class PeriodToColorConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            If value Is Nothing OrElse parameter Is Nothing Then Return New SolidColorBrush(Color.FromRgb(148, 163, 184)) ' Gray #94A3B8
+
+            Dim selectedMonths As Integer
+            Dim buttonMonths As Integer
+
+            If Integer.TryParse(value.ToString(), selectedMonths) AndAlso Integer.TryParse(parameter.ToString(), buttonMonths) Then
+                If selectedMonths = buttonMonths Then
+                    Return New SolidColorBrush(Color.FromRgb(59, 130, 246)) ' Blue #3B82F6 (Selected)
+                End If
+            End If
+
+            Return New SolidColorBrush(Color.FromRgb(148, 163, 184)) ' Gray #94A3B8 (Unselected)
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
+
 End Namespace

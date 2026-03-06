@@ -1,6 +1,7 @@
 Imports System.Collections.ObjectModel
 Imports System.Windows
 Imports System.Windows.Input
+Imports System.Linq
 Imports Vegtablity.Models
 
 Namespace ViewModels
@@ -11,10 +12,16 @@ Namespace ViewModels
         Private ReadOnly _settingsService As New Services.SettingsService()
 
         ' ===== Products =====
+        Private _allProducts As New List(Of Product)()
         Private _products As ObservableCollection(Of Product)
         Private _selectedProduct As Product
         Private _isEditingProduct As Boolean
         Private _searchText As String
+
+        ' ===== Pagination =====
+        Private _currentPage As Integer = 1
+        Private _pageSize As Integer = 20
+        Private _totalPages As Integer = 1
 
         ' ===== Edit fields =====
         Private _editProductName As String
@@ -97,6 +104,54 @@ Namespace ViewModels
                 End If
             End Set
         End Property
+
+#End Region
+
+#Region "Properties - Pagination"
+
+        Public Property CurrentPage As Integer
+            Get
+                Return _currentPage
+            End Get
+            Set(value As Integer)
+                SetProperty(_currentPage, value)
+                OnPropertyChanged(NameOf(PageLabel))
+                OnPropertyChanged(NameOf(CanGoNext))
+                OnPropertyChanged(NameOf(CanGoPrev))
+                UpdatePagination()
+            End Set
+        End Property
+
+        Public Property TotalPages As Integer
+            Get
+                Return _totalPages
+            End Get
+            Private Set(value As Integer)
+                SetProperty(_totalPages, value)
+                OnPropertyChanged(NameOf(PageLabel))
+                OnPropertyChanged(NameOf(CanGoNext))
+                OnPropertyChanged(NameOf(CanGoPrev))
+            End Set
+        End Property
+
+        Public ReadOnly Property PageLabel As String
+            Get
+                Return $"صفحة {CurrentPage} من {TotalPages} ({_allProducts.Count} عنصر)"
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoNext As Boolean
+            Get
+                Return CurrentPage < TotalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoPrev As Boolean
+            Get
+                Return CurrentPage > 1
+            End Get
+        End Property
+
 #End Region
 
 #Region "Properties - Edit Fields"
@@ -252,6 +307,18 @@ Namespace ViewModels
                 Return New Helpers.RelayCommand(AddressOf ExecuteDeleteProduct, Function(o) SelectedProduct IsNot Nothing)
             End Get
         End Property
+
+        Public ReadOnly Property NextPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) CurrentPage += 1, Function(o) CanGoNext)
+            End Get
+        End Property
+
+        Public ReadOnly Property PrevPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) CurrentPage -= 1, Function(o) CanGoPrev)
+            End Get
+        End Property
 #End Region
 
 #Region "Methods"
@@ -266,7 +333,8 @@ Namespace ViewModels
 
         Private Sub LoadProducts()
             Try
-                Products = New ObservableCollection(Of Product)(_inventoryService.GetAllProducts())
+                _allProducts = _inventoryService.GetAllProducts()
+                CalculatePagination()
             Catch ex As Exception
                 StatusMessage = "خطأ في تحميل الأصناف: " & ex.Message
             End Try
@@ -274,10 +342,29 @@ Namespace ViewModels
 
         Private Sub SearchProducts()
             Try
-                Products = New ObservableCollection(Of Product)(_inventoryService.SearchProducts(SearchText))
+                _allProducts = _inventoryService.SearchProducts(SearchText)
+                CalculatePagination()
             Catch ex As Exception
                 StatusMessage = "خطأ في البحث: " & ex.Message
             End Try
+        End Sub
+
+        Private Sub CalculatePagination()
+            TotalPages = Math.Max(1, CInt(Math.Ceiling(_allProducts.Count / _pageSize)))
+            _currentPage = 1 ' Use backing field to avoid triggering UpdatePagination twice
+            OnPropertyChanged(NameOf(CurrentPage))
+            OnPropertyChanged(NameOf(PageLabel))
+            OnPropertyChanged(NameOf(CanGoNext))
+            OnPropertyChanged(NameOf(CanGoPrev))
+            UpdatePagination()
+        End Sub
+
+        Private Sub UpdatePagination()
+            If _allProducts Is Nothing Then Return
+
+            Dim skip = (CurrentPage - 1) * _pageSize
+            Dim pagedData = _allProducts.Skip(skip).Take(_pageSize).ToList()
+            Products = New ObservableCollection(Of Product)(pagedData)
         End Sub
 
         Private Sub ClearErrors()

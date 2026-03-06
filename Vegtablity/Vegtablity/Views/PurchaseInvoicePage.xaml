@@ -56,6 +56,13 @@
 
                 <!-- Action Buttons -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- زر الرجوع -->
+                    <Button x:Name="BtnGoBack" Content="← رجوع"
+                            Click="BtnGoBack_Click"
+                            Style="{DynamicResource ModernButtonStyle}"
+                            Background="#64748B" Margin="0,0,10,0"
+                            ToolTip="العودة للصفحة السابقة"/>
+
                     <Button Content="➕ فاتورة جديدة" Command="{Binding NewCommand}" Click="NewInvoiceButton_Click"
                             Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="0,0,10,0"/>
 

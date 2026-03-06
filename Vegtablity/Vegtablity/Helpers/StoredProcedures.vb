@@ -149,5 +149,12 @@ Namespace Helpers
         Public Const SP_INVOICE_ADD_PAYMENT As String = "[Sales].[sp_Invoice_AddPayment]"
         Public Const SP_INVOICEDETAILS_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"
 
+        ' =============================================
+        ' Inventory Schema - Product Card (بطاقة الصنف)
+        ' =============================================
+        Public Const SP_PRODUCTCARD_GETSUMMARY As String = "[Inventory].[sp_ProductCard_GetSummary]"
+        Public Const SP_PRODUCTCARD_GETMOVEMENTS As String = "[Inventory].[sp_ProductCard_GetMovements]"
+        Public Const SP_PRODUCTCARD_GETCHARTDATA As String = "[Inventory].[sp_ProductCard_GetChartData]"
+
     End Class
 End Namespace

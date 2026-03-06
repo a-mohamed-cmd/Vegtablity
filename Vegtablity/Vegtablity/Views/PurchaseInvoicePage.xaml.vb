@@ -26,6 +26,14 @@ Namespace Views
             timer.Start()
         End Sub
 
+        ''' <summary>زر الرجوع — يعود للصفحة السابقة في النافيجاشن ستاك</summary>
+        Private Sub BtnGoBack_Click(sender As Object, e As System.Windows.RoutedEventArgs)
+            Dim parent = TryCast(System.Windows.Window.GetWindow(Me), DashboardWindow)
+            If parent IsNot Nothing AndAlso parent.CanGoBack Then
+                parent.GoBack()
+            End If
+        End Sub
+
         Private Sub FocusLastRowBarcode()
             Dispatcher.BeginInvoke(New Action(Sub()
                                                   If dgInvoiceDetails IsNot Nothing AndAlso dgInvoiceDetails.Items.Count > 0 Then

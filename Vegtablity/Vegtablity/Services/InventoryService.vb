@@ -70,5 +70,38 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure).AsList()
             End Using
         End Function
+
+#Region "Product Card Methods"
+        Public Function GetProductCardSummary(productID As Integer) As ProductCardSummary
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.QueryFirstOrDefault(Of ProductCardSummary)(
+                    Helpers.StoredProcedures.SP_PRODUCTCARD_GETSUMMARY,
+                    New With {.ProductID = productID},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Function
+
+        Public Function GetProductMovements(productID As Integer, filterType As String,
+                                            Optional pageNumber As Integer = 1,
+                                            Optional pageSize As Integer = 15) As List(Of ProductMovement)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of ProductMovement)(
+                    Helpers.StoredProcedures.SP_PRODUCTCARD_GETMOVEMENTS,
+                    New With {.ProductID = productID, .FilterType = filterType,
+                              .PageNumber = pageNumber, .PageSize = pageSize},
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+
+        Public Function GetProductChartData(productID As Integer,
+                                            Optional monthsBack As Integer = 12) As List(Of ChartDataPoint)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of ChartDataPoint)(
+                    Helpers.StoredProcedures.SP_PRODUCTCARD_GETCHARTDATA,
+                    New With {.ProductID = productID, .MonthsBack = monthsBack},
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+#End Region
     End Class
 End Namespace

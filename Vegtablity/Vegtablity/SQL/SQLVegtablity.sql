@@ -2735,6 +2735,190 @@ GO
 -- =============================================
 -- Invoices Stored Procedures (Sales & Purchases)
 -- =============================================
+
+-- =============================================
+-- Inventory Schema - Product Card Procedures
+-- بطاقة الصنف (التحليلات التفصيلية للصنف)
+-- =============================================
+
+-- =============================================
+-- 1. جلب ملخص بطاقة الصنف
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetSummary]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_ProductCard_GetSummary];
+GO
+CREATE PROCEDURE [Inventory].[sp_ProductCard_GetSummary]
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Balance           DECIMAL(18,2) = 0;
+    DECLARE @AvgCost           DECIMAL(18,2) = 0;
+    DECLARE @TotalInQty        DECIMAL(18,2) = 0;
+    DECLARE @TotalInValue      DECIMAL(18,2) = 0;
+    DECLARE @TotalOutQty       DECIMAL(18,2) = 0;
+    DECLARE @TotalOutValue     DECIMAL(18,2) = 0;
+    DECLARE @LastPurchasePrice DECIMAL(18,2) = 0;
+    DECLARE @ProfitRate        DECIMAL(18,2) = 0;
+
+    -- الرصيد الحالي
+    SELECT @Balance = ISNULL(SUM(CurrentQty), 0)
+    FROM [Inventory].[ProductStock]
+    WHERE ProductID = @ProductID;
+
+    -- إجمالي الوارد = فواتير الشراء (Purchase)
+    SELECT
+        @TotalInQty   = ISNULL(SUM(d.Quantity), 0),
+        @TotalInValue = ISNULL(SUM(d.TotalPrice), 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Purchase';
+
+    -- إجمالي الصادر = فواتير البيع (Sales)
+    SELECT
+        @TotalOutQty   = ISNULL(SUM(d.Quantity), 0),
+        @TotalOutValue = ISNULL(SUM(d.TotalPrice), 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Sales';
+
+    -- آخر سعر شراء
+    SELECT TOP 1 @LastPurchasePrice = ISNULL(d.UnitPrice, 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Purchase'
+    ORDER BY h.InvDate DESC, h.InvID DESC;
+
+    -- متوسط سعر التكلفة
+    IF @TotalInQty > 0
+        SET @AvgCost = @TotalInValue / @TotalInQty;
+
+    -- معدل الربح التقريبي
+    IF @TotalOutQty > 0 AND @AvgCost > 0
+    BEGIN
+        DECLARE @TotalCostOfSales DECIMAL(18,2) = @TotalOutQty * @AvgCost;
+        IF @TotalCostOfSales > 0
+            SET @ProfitRate = ((@TotalOutValue - @TotalCostOfSales) / @TotalCostOfSales) * 100;
+        ELSE
+            SET @ProfitRate = 100;
+    END
+
+    SELECT
+        @Balance            AS Balance,
+        @AvgCost            AS AvgCost,
+        @TotalInQty         AS TotalInQty,
+        @TotalInValue       AS TotalInValue,
+        @TotalOutQty        AS TotalOutQty,
+        @TotalOutValue      AS TotalOutValue,
+        @LastPurchasePrice  AS LastPurchasePrice,
+        @ProfitRate         AS ProfitRate;
+END
+GO
+
+-- =============================================
+-- 2. جلب حركة الصنف (Server-Side Pagination)
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetMovements]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_ProductCard_GetMovements];
+GO
+CREATE PROCEDURE [Inventory].[sp_ProductCard_GetMovements]
+    @ProductID   INT,
+    @FilterType  NVARCHAR(10) = 'ALL',  -- 'ALL' | 'IN' | 'OUT'
+    @PageNumber  INT          = 1,
+    @PageSize    INT          = 15
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        h.InvID,
+        h.ReferenceNo,
+        h.InvDate,
+        h.InvType,
+        CASE
+            WHEN h.InvType = 'Purchase' THEN 'IN'
+            WHEN h.InvType = 'Sales'    THEN 'OUT'
+            ELSE 'OTHER'
+        END AS MovementDirection,
+        CASE
+            WHEN h.InvType = 'Purchase' THEN N'فاتورة شراء'
+            WHEN h.InvType = 'Sales'    THEN N'فاتورة بيع'
+            ELSE h.InvType
+        END AS InvTypeName,
+        d.Quantity,
+        d.UnitPrice,
+        d.TotalPrice,
+        p.PartnerName,
+        -- إجمالي الصفوف المطابقة (بدون OFFSET) لحساب عدد الصفحات
+        COUNT(*) OVER () AS TotalCount
+    FROM [Sales].[InvoiceDetails]  d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID     = h.InvID
+    LEFT  JOIN [Sales].[Partners]      p ON h.PartnerID = p.PartnerID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND (
+            @FilterType = 'ALL'
+         OR (@FilterType = 'IN'  AND h.InvType = 'Purchase')
+         OR (@FilterType = 'OUT' AND h.InvType = 'Sales')
+          )
+    ORDER BY h.InvDate DESC, h.InvID DESC
+    OFFSET  (@PageNumber - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- =============================================
+-- 3. بيانات الرسم البياني (تجميع يومي مع فلتر الفترة)
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetChartData]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_ProductCard_GetChartData];
+GO
+create PROCEDURE [Inventory].[sp_ProductCard_GetChartData] 
+    @ProductID  INT,
+    @MonthsBack INT = 12
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @FromDate DATE = DATEADD(MONTH, -@MonthsBack, CAST(GETDATE() AS DATE));
+
+    IF @MonthsBack <= 1
+    BEGIN
+        -- عرض يومي إذا كان شهر أو أقل
+        SELECT
+            CAST(h.InvDate AS DATE) AS MovementDate,
+            SUM(CASE WHEN h.InvType = 'Purchase' THEN  d.Quantity ELSE 0           END) AS DailyInQty,
+            SUM(CASE WHEN h.InvType = 'Sales'    THEN  d.Quantity ELSE 0           END) AS DailyOutQty,
+            SUM(CASE WHEN h.InvType = 'Purchase' THEN  d.Quantity ELSE -d.Quantity END) AS NetDayMovement
+        FROM [Sales].[InvoiceDetails]  d
+        INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+        WHERE d.ProductID = @ProductID
+          AND h.IsPosted  = 1
+          AND CAST(h.InvDate AS DATE) >= @FromDate
+        GROUP BY CAST(h.InvDate AS DATE)
+        ORDER BY CAST(h.InvDate AS DATE) ASC;
+    END
+    ELSE
+    BEGIN
+        -- عرض شهري (مجمّع بآخر يوم في الشهر لتسهيل الفرز وعرض التاريخ) إذا كان أكثر من شهر
+        SELECT
+            EOMONTH(h.InvDate) AS MovementDate,
+            SUM(CASE WHEN h.InvType = 'Purchase' THEN  d.Quantity ELSE 0           END) AS DailyInQty,
+            SUM(CASE WHEN h.InvType = 'Sales'    THEN  d.Quantity ELSE 0           END) AS DailyOutQty,
+            SUM(CASE WHEN h.InvType = 'Purchase' THEN  d.Quantity ELSE -d.Quantity END) AS NetDayMovement
+        FROM [Sales].[InvoiceDetails]  d
+        INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+        WHERE d.ProductID = @ProductID
+          AND h.IsPosted  = 1
+          AND CAST(h.InvDate AS DATE) >= @FromDate
+        GROUP BY EOMONTH(h.InvDate)
+        ORDER BY EOMONTH(h.InvDate) ASC;
+    END
+END
+go
  
 
 -- =============================================
@@ -3357,3 +3541,254 @@ IF NOT EXISTS (
 CREATE INDEX IX_InvoiceHeader_PartnerID
     ON [Sales].[InvoiceHeader] (PartnerID);
 GO
+
+-- =============================================
+-- ⚡ PERFORMANCE INDEXES — Inventory.Products
+-- =============================================
+
+-- Index 1: GetAll - الأصناف النشطة (sp_Product_GetAll)
+-- يُغطّي WHERE IsActive = 1 ORDER BY ProductID
+-- يتجنّب Full Table Scan عند جلب كل الأصناف
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_Products_IsActive_ProductID'
+      AND object_id = OBJECT_ID('[Inventory].[Products]'))
+CREATE INDEX IX_Products_IsActive_ProductID
+    ON [Inventory].[Products] (IsActive, ProductID)
+    INCLUDE (ProductName, ProductNameEn, Barcode, CategoryID, UnitID, PurchasePrice, SalePrice, AlertQty);
+GO
+
+-- Index 2: GetByBarcode (sp_Product_GetByBarcode)
+-- بحث سريع بالباركود مع فلتر IsActive
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_Products_Barcode_IsActive'
+      AND object_id = OBJECT_ID('[Inventory].[Products]'))
+CREATE INDEX IX_Products_Barcode_IsActive
+    ON [Inventory].[Products] (Barcode, IsActive)
+    INCLUDE (ProductID, ProductName, ProductNameEn, CategoryID, UnitID, PurchasePrice, SalePrice, AlertQty);
+GO
+
+-- Index 3: Search by Name (sp_Product_Search)
+-- يُسرّع بحث LIKE '%...%' على اسم الصنف العربي
+-- ملاحظة: LIKE '%text%' يستفيد من Index Scan أكثر من Seek
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_Products_ProductName_IsActive'
+      AND object_id = OBJECT_ID('[Inventory].[Products]'))
+CREATE INDEX IX_Products_ProductName_IsActive
+    ON [Inventory].[Products] (ProductName, IsActive)
+    INCLUDE (ProductID, ProductNameEn, Barcode, CategoryID, UnitID, PurchasePrice, SalePrice, AlertQty);
+GO
+
+-- Index 4: JOIN مع Settings.Categories و Settings.Units
+-- يُسرّع عمليات LEFT JOIN في كل استعلامات الأصناف
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_Products_CategoryID_UnitID'
+      AND object_id = OBJECT_ID('[Inventory].[Products]'))
+CREATE INDEX IX_Products_CategoryID_UnitID
+    ON [Inventory].[Products] (CategoryID, UnitID)
+    INCLUDE (ProductID, IsActive);
+GO
+
+-- =============================================
+-- 15. Stored Procedures - Product Card Details (بطاقة الصنف)
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetSummary]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_ProductCard_GetSummary];
+GO
+CREATE PROCEDURE [Inventory].[sp_ProductCard_GetSummary]
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Balance           DECIMAL(18,2) = 0;
+    DECLARE @AvgCost           DECIMAL(18,2) = 0;
+    DECLARE @TotalInQty        DECIMAL(18,2) = 0;
+    DECLARE @TotalInValue      DECIMAL(18,2) = 0;
+    DECLARE @TotalOutQty       DECIMAL(18,2) = 0;
+    DECLARE @TotalOutValue     DECIMAL(18,2) = 0;
+    DECLARE @LastPurchasePrice DECIMAL(18,2) = 0;
+    DECLARE @ProfitRate        DECIMAL(18,2) = 0;
+
+    -- الرصيد الحالي
+    SELECT @Balance = ISNULL(SUM(CurrentQty), 0)
+    FROM [Inventory].[ProductStock]
+    WHERE ProductID = @ProductID;
+
+    -- إجمالي الوارد = فواتير الشراء (Purchase)
+    SELECT
+        @TotalInQty   = ISNULL(SUM(d.Quantity), 0),
+        @TotalInValue = ISNULL(SUM(d.TotalPrice), 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Purchase';
+
+    -- إجمالي الصادر = فواتير البيع (Sales)
+    SELECT
+        @TotalOutQty   = ISNULL(SUM(d.Quantity), 0),
+        @TotalOutValue = ISNULL(SUM(d.TotalPrice), 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Sales';
+
+    -- آخر سعر شراء
+    SELECT TOP 1 @LastPurchasePrice = ISNULL(d.UnitPrice, 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Purchase'
+    ORDER BY h.InvDate DESC, h.InvID DESC;
+
+    -- متوسط سعر التكلفة
+    IF @TotalInQty > 0
+        SET @AvgCost = @TotalInValue / @TotalInQty;
+
+    -- معدل الربح التقريبي
+    IF @TotalOutQty > 0 AND @AvgCost > 0
+    BEGIN
+        DECLARE @TotalCostOfSales DECIMAL(18,2) = @TotalOutQty * @AvgCost;
+        IF @TotalCostOfSales > 0
+            SET @ProfitRate = ((@TotalOutValue - @TotalCostOfSales) / @TotalCostOfSales) * 100;
+        ELSE
+            SET @ProfitRate = 100;
+    END
+
+    SELECT
+        @Balance            AS Balance,
+        @AvgCost            AS AvgCost,
+        @TotalInQty         AS TotalInQty,
+        @TotalInValue       AS TotalInValue,
+        @TotalOutQty        AS TotalOutQty,
+        @TotalOutValue      AS TotalOutValue,
+        @LastPurchasePrice  AS LastPurchasePrice,
+        @ProfitRate         AS ProfitRate;
+END
+GO
+
+-- =============================================
+-- 2. جلب حركة الصنف (Server-Side Pagination)
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetMovements]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_ProductCard_GetMovements];
+GO
+CREATE PROCEDURE [Inventory].[sp_ProductCard_GetMovements]
+    @ProductID   INT,
+    @FilterType  NVARCHAR(10) = 'ALL',  -- 'ALL' | 'IN' | 'OUT'
+    @PageNumber  INT          = 1,
+    @PageSize    INT          = 15
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        h.InvID,
+        h.ReferenceNo,
+        h.InvDate,
+        h.InvType,
+        CASE
+            WHEN h.InvType = 'Purchase' THEN 'IN'
+            WHEN h.InvType = 'Sales'    THEN 'OUT'
+            ELSE 'OTHER'
+        END AS MovementDirection,
+        CASE
+            WHEN h.InvType = 'Purchase' THEN N'فاتورة شراء'
+            WHEN h.InvType = 'Sales'    THEN N'فاتورة بيع'
+            ELSE h.InvType
+        END AS InvTypeName,
+        d.Quantity,
+        d.UnitPrice,
+        d.TotalPrice,
+        p.PartnerName,
+        COUNT(*) OVER () AS TotalCount
+    FROM [Sales].[InvoiceDetails]  d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID     = h.InvID
+    LEFT  JOIN [Sales].[Partners]      p ON h.PartnerID = p.PartnerID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND (
+            @FilterType = 'ALL'
+         OR (@FilterType = 'IN'  AND h.InvType = 'Purchase')
+         OR (@FilterType = 'OUT' AND h.InvType = 'Sales')
+          )
+    ORDER BY h.InvDate DESC, h.InvID DESC
+    OFFSET  (@PageNumber - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+
+-- =============================================
+-- ⚡ PERFORMANCE INDEXES — Product Card (بطاقة الصنف)
+-- =============================================
+-- تحليل الاستعلامات المستخدمة في:
+--   sp_ProductCard_GetSummary  /  sp_ProductCard_GetMovements  /  sp_ProductCard_GetChartData
+-- الجداول المستهدفة: Sales.InvoiceDetail, Sales.InvoiceHeader, Inventory.ProductStock
+
+-- ─── INDEX 1: InvoiceDetail → ProductID  (الأهم!) ─────────────────────────────
+-- جميع الـ SPs تفلتر بـ d.ProductID = @ProductID
+-- بدون هذا الـ Index → Full Table Scan على InvoiceDetail في كل مرة
+-- نُضمّن InvID لتفادي Key Lookup عند JOIN مع InvoiceHeader
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_InvoiceDetail_ProductID'
+      AND object_id = OBJECT_ID('[Sales].[InvoiceDetails]'))
+CREATE INDEX IX_InvoiceDetail_ProductID
+    ON [Sales].[InvoiceDetails] (ProductID)
+    INCLUDE (InvID, Quantity, UnitPrice, TotalPrice);
+GO
+
+-- ─── INDEX 2: InvoiceHeader → (IsPosted, InvType, InvDate DESC) ────────────────
+-- يُغطّي WHERE h.IsPosted = 1 AND h.InvType IN (...)
+-- يُسرّع ORDER BY h.InvDate DESC في GetSummary (آخر سعر شراء)
+-- يُسرّع GROUP BY CAST(h.InvDate AS DATE) في GetChartData
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_InvoiceHeader_IsPosted_InvType_InvDate'
+      AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+CREATE INDEX IX_InvoiceHeader_IsPosted_InvType_InvDate
+    ON [Sales].[InvoiceHeader] (IsPosted, InvType, InvDate DESC)
+    INCLUDE (InvID, PartnerID, ReferenceNo);
+GO
+
+-- ─── INDEX 3: ProductStock → ProductID ────────────────────────────────────────
+-- يُسرّع SELECT SUM(Quantity) في GetSummary (الرصيد الحالي)
+-- يمنع Full Scan على جدول الأرصدة عند تعدد المستودعات
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_ProductStock_ProductID'
+      AND object_id = OBJECT_ID('[Inventory].[ProductStock]'))
+CREATE INDEX IX_ProductStock_ProductID
+    ON [Inventory].[ProductStock] (ProductID)
+    INCLUDE (WarehouseID, CurrentQty, AvgCostPrice);
+GO
+
+-- ─── INDEX 4: InvoiceDetail → (InvID, ProductID) Composite ────────────────────
+-- يُحسّن الـ JOIN في الاتجاه العكسي: من InvoiceHeader → InvoiceDetail
+-- مفيد جداً عندما يبدأ Query Optimizer بجدول الهيدر بدل الديتيل
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_InvoiceDetail_InvID_ProductID'
+      AND object_id = OBJECT_ID('[Sales].[InvoiceDetails]'))
+CREATE INDEX IX_InvoiceDetail_InvID_ProductID
+    ON [Sales].[InvoiceDetails] (InvID, ProductID)
+    INCLUDE (Quantity, UnitPrice,  TotalPrice );
+GO
+
+-- ─── INDEX 5: Partners → PartnerID (Covering) ──────────────────────────────────
+-- يُسرّع LEFT JOIN مع Settings.Partners في GetMovements
+-- يتجنب Lookup على جدول الشركاء عند كثرة السجلات
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'IX_Partners_PartnerID_Name'
+      AND object_id = OBJECT_ID('[sales].[Partners]'))
+CREATE INDEX IX_Partners_PartnerID_Name
+    ON sales.[Partners] (PartnerID)
+    INCLUDE (PartnerName);
+GO
+

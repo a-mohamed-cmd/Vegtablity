@@ -163,6 +163,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="LiveCharts.Wpf" Version="0.9.7" />
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
@@ -300,6 +301,12 @@
     <Compile Include="Views\InvoiceDashboardPage.xaml.vb">
       <DependentUpon>InvoiceDashboardPage.xaml</DependentUpon>
     </Compile>
+    <!-- Product Card Feature -->
+    <Compile Include="Models\ProductCardModels.vb" />
+    <Compile Include="ViewModels\ProductCardViewModel.vb" />
+    <Compile Include="Views\ProductCardControl.xaml.vb">
+      <DependentUpon>ProductCardControl.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\LicenseWindow.xaml">
@@ -383,6 +390,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\InvoiceDashboardPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ProductCardControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

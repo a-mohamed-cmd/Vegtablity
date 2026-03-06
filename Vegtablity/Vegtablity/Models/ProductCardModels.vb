@@ -1,0 +1,132 @@
+Imports System.ComponentModel
+
+Namespace Models
+
+''' <summary>
+''' يمثل ملخص الرصيد والتكلفة وحركة الصنف
+''' </summary>
+Public Class ProductCardSummary
+    Implements INotifyPropertyChanged
+
+    Private _balance As Decimal
+    Public Property Balance As Decimal
+        Get
+            Return _balance
+        End Get
+        Set(value As Decimal)
+            _balance = value
+            OnPropertyChanged(NameOf(Balance))
+        End Set
+    End Property
+
+    Private _avgCost As Decimal
+    Public Property AvgCost As Decimal
+        Get
+            Return _avgCost
+        End Get
+        Set(value As Decimal)
+            _avgCost = value
+            OnPropertyChanged(NameOf(AvgCost))
+        End Set
+    End Property
+
+    Private _totalInQty As Decimal
+    Public Property TotalInQty As Decimal
+        Get
+            Return _totalInQty
+        End Get
+        Set(value As Decimal)
+            _totalInQty = value
+            OnPropertyChanged(NameOf(TotalInQty))
+        End Set
+    End Property
+
+    Private _totalInValue As Decimal
+    Public Property TotalInValue As Decimal
+        Get
+            Return _totalInValue
+        End Get
+        Set(value As Decimal)
+            _totalInValue = value
+            OnPropertyChanged(NameOf(TotalInValue))
+        End Set
+    End Property
+
+    Private _totalOutQty As Decimal
+    Public Property TotalOutQty As Decimal
+        Get
+            Return _totalOutQty
+        End Get
+        Set(value As Decimal)
+            _totalOutQty = value
+            OnPropertyChanged(NameOf(TotalOutQty))
+        End Set
+    End Property
+
+    Private _totalOutValue As Decimal
+    Public Property TotalOutValue As Decimal
+        Get
+            Return _totalOutValue
+        End Get
+        Set(value As Decimal)
+            _totalOutValue = value
+            OnPropertyChanged(NameOf(TotalOutValue))
+        End Set
+    End Property
+
+    Private _lastPurchasePrice As Decimal
+    Public Property LastPurchasePrice As Decimal
+        Get
+            Return _lastPurchasePrice
+        End Get
+        Set(value As Decimal)
+            _lastPurchasePrice = value
+            OnPropertyChanged(NameOf(LastPurchasePrice))
+        End Set
+    End Property
+
+    Private _profitRate As Decimal
+    Public Property ProfitRate As Decimal
+        Get
+            Return _profitRate
+        End Get
+        Set(value As Decimal)
+            _profitRate = value
+            OnPropertyChanged(NameOf(ProfitRate))
+        End Set
+    End Property
+
+    Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+    Protected Overridable Sub OnPropertyChanged(propertyName As String)
+        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+    End Sub
+End Class
+
+''' <summary>
+''' يمثل سطر حركة (فاتورة) للصنف المحدد
+''' </summary>
+Public Class ProductMovement
+    Public Property InvID As Integer
+    Public Property ReferenceNo As String
+    Public Property InvDate As DateTime
+    Public Property InvType As String        ' 'Purchase' | 'Sales' (NVARCHAR in DB)
+    Public Property InvTypeName As String    ' Arabic label from SQL
+    Public Property MovementDirection As String  ' 'IN' | 'OUT' from SQL
+    Public Property Quantity As Decimal
+    Public Property UnitPrice As Decimal
+    Public Property TotalPrice As Decimal
+    Public Property PartnerName As String
+    Public Property TotalCount As Integer    ' COUNT(*) OVER() - إجمالي الصفوف في الفلتر الحالي
+End Class
+
+''' <summary>
+''' يمثل نقطة بيانات واحدة على الرسم البياني
+''' </summary>
+Public Class ChartDataPoint
+    Public Property MovementDate As DateTime
+    Public Property DailyInQty As Decimal
+    Public Property DailyOutQty As Decimal
+    Public Property NetDayMovement As Decimal
+End Class
+
+End Namespace
