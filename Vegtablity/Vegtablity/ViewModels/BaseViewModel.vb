@@ -17,5 +17,23 @@ Namespace ViewModels
             OnPropertyChanged(propertyName)
             Return True
         End Function
+
+        ' --- Global Permissions ---
+        Private _currentPermissions As Models.RolePermission
+        Public Property CurrentPermissions As Models.RolePermission
+            Get
+                Return _currentPermissions
+            End Get
+            Set(value As Models.RolePermission)
+                SetProperty(_currentPermissions, value)
+            End Set
+        End Property
+
+        Public Sub LoadPermissions(formName As String)
+            Dim permService As New Services.PermissionService()
+            If Services.Session.CurrentUser IsNot Nothing Then
+                CurrentPermissions = permService.GetPermissionsForForm(Services.Session.CurrentUser.RoleID, formName)
+            End If
+        End Sub
     End Class
 End Namespace

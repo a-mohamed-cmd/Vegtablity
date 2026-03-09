@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Vegtablity.Views"
         xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+        xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         mc:Ignorable="d"
         Title="Vegtablity - Dashboard" Height="700" Width="1100"
         WindowStartupLocation="CenterScreen"
@@ -273,7 +274,8 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="1*"/>
+                                <RowDefinition Height="1*"/>
                             </Grid.RowDefinitions>
 
                             <!-- Quick Stats Cards -->
@@ -289,7 +291,7 @@
                                     <StackPanel>
                                         <TextBlock Text="🛒" FontSize="28"/>
                                         <TextBlock Text="المبيعات اليوم" Foreground="White" FontSize="13" Margin="0,8,0,3"/>
-                                        <TextBlock Text="0.00 د.ك" Foreground="White" FontSize="22" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TodaySales, StringFormat={}{0:N3} د.ك}" Foreground="White" FontSize="22" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
                                 <!-- Purchases Card -->
@@ -303,7 +305,7 @@
                                     <StackPanel>
                                         <TextBlock Text="📦" FontSize="28"/>
                                         <TextBlock Text="المشتريات اليوم" Foreground="White" FontSize="13" Margin="0,8,0,3"/>
-                                        <TextBlock Text="0.00 د.ك" Foreground="White" FontSize="22" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TodayPurchases, StringFormat={}{0:N3} د.ك}" Foreground="White" FontSize="22" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
                                 <!-- Products Card -->
@@ -317,7 +319,7 @@
                                     <StackPanel>
                                         <TextBlock Text="🏪" FontSize="28"/>
                                         <TextBlock Text="عدد الأصناف" Foreground="White" FontSize="13" Margin="0,8,0,3"/>
-                                        <TextBlock Text="0" Foreground="White" FontSize="22" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TotalProducts}" Foreground="White" FontSize="22" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
                                 <!-- Customers Card -->
@@ -330,18 +332,265 @@
                                     </Border.Background>
                                     <StackPanel>
                                         <TextBlock Text="👥" FontSize="28"/>
-                                        <TextBlock Text="العملاء" Foreground="White" FontSize="13" Margin="0,8,0,3"/>
-                                        <TextBlock Text="0" Foreground="White" FontSize="22" FontWeight="Bold"/>
+                                        <TextBlock Text="العملاء والموردين" Foreground="White" FontSize="13" Margin="0,8,0,3"/>
+                                        <TextBlock Text="{Binding TotalCustomers}" Foreground="White" FontSize="22" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
                             </UniformGrid>
 
-                            <!-- Welcome Message -->
-                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <TextBlock Text="🥬" FontSize="64" HorizontalAlignment="Center"/>
-                                <TextBlock Text="مرحباً بك في نظام Vegtablity" FontSize="28" FontWeight="Bold" Foreground="#2c3e50" HorizontalAlignment="Center" Margin="0,15,0,8"/>
-                                <TextBlock Text="اختر قسماً من القائمة الجانبية للبدء" FontSize="16" Foreground="#95a5a6" HorizontalAlignment="Center"/>
-                            </StackPanel>
+                            <!-- Main Content Grid for Charts and Alerts -->
+                            <Grid Grid.Row="1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Sales Chart -->
+                                <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" Background="#fafbfc" BorderBrush="#e1e4e8" BorderThickness="1" Padding="15">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="📈 حركة المبيعات (آخر 7 أيام)" FontSize="16" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+                                        <lvc:CartesianChart Grid.Row="1" Series="{Binding SalesSeries}">
+                                            <lvc:CartesianChart.AxisX>
+                                                <lvc:Axis Title="التاريخ" Labels="{Binding SalesLabels}" Foreground="#7f8c8d">
+                                                    <lvc:Axis.Separator>
+                                                        <lvc:Separator Step="1" IsEnabled="False"/>
+                                                    </lvc:Axis.Separator>
+                                                </lvc:Axis>
+                                            </lvc:CartesianChart.AxisX>
+                                            <lvc:CartesianChart.AxisY>
+                                                <lvc:Axis Title="القيمة" LabelFormatter="{Binding YFormatter}" Foreground="#7f8c8d"/>
+                                            </lvc:CartesianChart.AxisY>
+                                        </lvc:CartesianChart>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Low Stock Alerts -->
+                                <Border Grid.Column="1" Margin="10,0,0,0" CornerRadius="8" Background="#fafbfc" BorderBrush="#e1e4e8" BorderThickness="1" Padding="15">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="⚠️ تنبيهات نقص المخزون" FontSize="16" FontWeight="SemiBold" Foreground="#e74c3c" Margin="0,0,0,15"/>
+                                        
+                                        <DataGrid Grid.Row="1" ItemsSource="{Binding AlertProducts}" AutoGenerateColumns="False" 
+                                                  HeadersVisibility="Column" GridLinesVisibility="None" RowBackground="Transparent"
+                                                  BorderThickness="0" Background="Transparent" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            <DataGrid.Resources>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="#7f8c8d"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Setter Property="Padding" Value="5,0,5,10"/>
+                                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                                    <Setter Property="BorderBrush" Value="#ecf0f1"/>
+                                                </Style>
+                                                <Style TargetType="DataGridRow">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Margin" Value="0,2"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#f1f2f6"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                                <Style TargetType="DataGridCell">
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="5,8"/>
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter Property="Background" Value="Transparent"/>
+                                                            <Setter Property="Foreground" Value="Black"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGrid.Resources>
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="الصنف" Binding="{Binding ProductName}" Width="*" Foreground="#2c3e50" FontWeight="Medium"/>
+                                                <DataGridTemplateColumn Header="الرصيد" Width="Auto">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="6,2">
+                                                                <TextBlock Text="{Binding CurrentQty}" Foreground="White" FontWeight="Bold" FontSize="12" HorizontalAlignment="Center"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        
+                                        <!-- Empty State -->
+                                        <TextBlock Grid.Row="1" Text="لا توجد نواقص في المخزون 🎉" Foreground="#2ecc71" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding AlertProducts.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <!-- Debts Grid -->
+                            <Grid Grid.Row="2" Margin="0,15,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Customer Debts -->
+                                <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" Background="#fafbfc" BorderBrush="#e1e4e8" BorderThickness="1" Padding="15">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="👥 مديونيات العملاء" FontSize="16" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+                                        <DataGrid Grid.Row="1" ItemsSource="{Binding CustomerDebts}" AutoGenerateColumns="False" 
+                                                  HeadersVisibility="Column" GridLinesVisibility="None" RowBackground="Transparent"
+                                                  BorderThickness="0" Background="Transparent" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            <DataGrid.Resources>
+                                                <!-- Add same styles as above DataGrid -->
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="#7f8c8d"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Setter Property="Padding" Value="5,0,5,10"/>
+                                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                                    <Setter Property="BorderBrush" Value="#ecf0f1"/>
+                                                </Style>
+                                                <Style TargetType="DataGridRow">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Margin" Value="0,2"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#f1f2f6"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                                <Style TargetType="DataGridCell">
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="5,8"/>
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter Property="Background" Value="Transparent"/>
+                                                            <Setter Property="Foreground" Value="Black"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGrid.Resources>
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="العميل" Binding="{Binding PartnerName}" Width="*" Foreground="#2c3e50" FontWeight="Medium"/>
+                                                <DataGridTextColumn Header="المديونية" Binding="{Binding Balance, StringFormat={}{0:N3} د.ك}" Width="Auto" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                <DataGridTemplateColumn Header="إجراء" Width="Auto">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="سداد" Command="{Binding DataContext.PayCustomerDebtCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Background="#2ecc71" Foreground="White" BorderThickness="0" Padding="15,4" Margin="5,0,0,0" Cursor="Hand" FontWeight="Bold"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        <!-- Empty State -->
+                                        <TextBlock Grid.Row="1" Text="لا توجد مديونيات 🎉" Foreground="#2ecc71" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CustomerDebts.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Supplier Debts -->
+                                <Border Grid.Column="1" Margin="10,0,0,0" CornerRadius="8" Background="#fafbfc" BorderBrush="#e1e4e8" BorderThickness="1" Padding="15">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="*"/>
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="🏢 مديونيات الموردين" FontSize="16" FontWeight="SemiBold" Foreground="#2c3e50" Margin="0,0,0,15"/>
+                                        
+                                        <DataGrid Grid.Row="1" ItemsSource="{Binding SupplierDebts}" AutoGenerateColumns="False" 
+                                                  HeadersVisibility="Column" GridLinesVisibility="None" RowBackground="Transparent"
+                                                  BorderThickness="0" Background="Transparent" IsReadOnly="True" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            <DataGrid.Resources>
+                                                <Style TargetType="DataGridColumnHeader">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Foreground" Value="#7f8c8d"/>
+                                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    <Setter Property="Padding" Value="5,0,5,10"/>
+                                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                                    <Setter Property="BorderBrush" Value="#ecf0f1"/>
+                                                </Style>
+                                                <Style TargetType="DataGridRow">
+                                                    <Setter Property="Background" Value="Transparent"/>
+                                                    <Setter Property="Margin" Value="0,2"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="#f1f2f6"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                                <Style TargetType="DataGridCell">
+                                                    <Setter Property="BorderThickness" Value="0"/>
+                                                    <Setter Property="Padding" Value="5,8"/>
+                                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter Property="Background" Value="Transparent"/>
+                                                            <Setter Property="Foreground" Value="Black"/>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </DataGrid.Resources>
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn Header="المورد" Binding="{Binding PartnerName}" Width="*" Foreground="#2c3e50" FontWeight="Medium"/>
+                                                <DataGridTextColumn Header="المديونية" Binding="{Binding Balance, StringFormat={}{0:N3} د.ك}" Width="Auto" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                <DataGridTemplateColumn Header="إجراء" Width="Auto">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button Content="دفع" Command="{Binding DataContext.PaySupplierDebtCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Background="#e74c3c" Foreground="White" BorderThickness="0" Padding="15,4" Margin="5,0,0,0" Cursor="Hand" FontWeight="Bold"/>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                        <!-- Empty State -->
+                                        <TextBlock Grid.Row="1" Text="لا توجد مديونيات 🎉" Foreground="#2ecc71" 
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SupplierDebts.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </Grid>
                         </Grid>
                     </Border>
 

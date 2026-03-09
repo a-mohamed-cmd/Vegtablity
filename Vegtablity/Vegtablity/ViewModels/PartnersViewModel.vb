@@ -34,6 +34,7 @@ Namespace ViewModels
         Private _supplierStatusMessage As String
 
         Public Sub New()
+            LoadPermissions("Partners")
             LoadCustomers()
             LoadSuppliers()
         End Sub
@@ -245,7 +246,7 @@ Namespace ViewModels
 
         Public ReadOnly Property DeleteCustomerCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteCustomer, Function(o) SelectedCustomer IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteCustomer, Function(o) SelectedCustomer IsNot Nothing AndAlso CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete)
             End Get
         End Property
 #End Region
@@ -265,7 +266,7 @@ Namespace ViewModels
 
         Public ReadOnly Property DeleteSupplierCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteSupplier, Function(o) SelectedSupplier IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteSupplier, Function(o) SelectedSupplier IsNot Nothing AndAlso CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete)
             End Get
         End Property
 #End Region
@@ -297,6 +298,15 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteSaveCustomer(obj As Object)
+            If Not IsEditingCustomer AndAlso Not CurrentPermissions.CanAdd Then
+                CustomerStatusMessage = "ليس لديك صلاحية لإضافة عميل جديد."
+                Return
+            End If
+            If IsEditingCustomer AndAlso Not CurrentPermissions.CanEdit Then
+                CustomerStatusMessage = "ليس لديك صلاحية لتعديل هذا العميل."
+                Return
+            End If
+
             CustomerNameError = Helpers.ValidationHelper.IsRequired(EditCustomerName, "اسم العميل")
             If CustomerNameError IsNot Nothing Then Return
 
@@ -359,6 +369,15 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteSaveSupplier(obj As Object)
+            If Not IsEditingSupplier AndAlso Not CurrentPermissions.CanAdd Then
+                SupplierStatusMessage = "ليس لديك صلاحية لإضافة مورد جديد."
+                Return
+            End If
+            If IsEditingSupplier AndAlso Not CurrentPermissions.CanEdit Then
+                SupplierStatusMessage = "ليس لديك صلاحية لتعديل هذا المورد."
+                Return
+            End If
+
             SupplierNameError = Helpers.ValidationHelper.IsRequired(EditSupplierName, "اسم المورد")
             If SupplierNameError IsNot Nothing Then Return
 

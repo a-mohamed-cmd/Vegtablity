@@ -100,6 +100,7 @@ Namespace ViewModels
         Public Property PrintCommand As RelayCommand
 
         Public Sub New()
+            LoadPermissions("JournalEntries")
             LoadAccounts()
             LoadList()
             NewJournal()
@@ -196,7 +197,13 @@ Namespace ViewModels
         End Sub
 
         Private Function CanSave(obj As Object) As Boolean
-            Return CurrentJournal IsNot Nothing AndAlso Not CurrentJournal.IsPosted
+            If CurrentPermissions Is Nothing Then Return False
+            If CurrentJournal Is Nothing OrElse CurrentJournal.IsPosted Then Return False
+            
+            If CurrentJournal.JID = 0 AndAlso Not CurrentPermissions.CanAdd Then Return False
+            If CurrentJournal.JID > 0 AndAlso Not CurrentPermissions.CanEdit Then Return False
+
+            Return True
         End Function
 
         Private Sub ExecuteSave(obj As Object)
@@ -238,6 +245,8 @@ Namespace ViewModels
         End Sub
 
         Private Function CanPost(obj As Object) As Boolean
+            If CurrentPermissions Is Nothing OrElse Not CurrentPermissions.CanEdit Then Return False
+            
             Return CurrentJournal IsNot Nothing AndAlso
                    CurrentJournal.JID > 0 AndAlso
                    Not CurrentJournal.IsPosted

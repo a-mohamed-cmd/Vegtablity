@@ -157,7 +157,7 @@
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="💾 حفظ" Command="{Binding SaveCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                                <Button Content="🆕 جديد" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db" IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
                                 <Button Content="🚫 تعطيل" Command="{Binding DeleteCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
                             </StackPanel>
                         </StackPanel>
@@ -286,7 +286,7 @@
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="💾 حفظ" Command="{Binding SaveSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                                <Button Content="🆕 جديد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db" IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
                                 <Button Content="🚫 تعطيل" Command="{Binding DeleteSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
                             </StackPanel>
                         </StackPanel>

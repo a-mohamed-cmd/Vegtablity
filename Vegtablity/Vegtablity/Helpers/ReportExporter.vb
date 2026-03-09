@@ -968,5 +968,224 @@ Namespace Helpers
             currentY += 10
         End Sub
 
+        ' ===================================================
+        ' Export Product Movements to CSV
+        ' ===================================================
+        Public Shared Sub ExportProductMovementsToCsv(movements As List(Of ProductMovement), productName As String)
+            Try
+                If movements Is Nothing OrElse movements.Count = 0 Then
+                    MessageBox.Show("لا توجد حركات للتصدير", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير حركات الصنف إلى CSV"
+                dlg.Filter = "CSV Files (*.csv)|*.csv"
+
+                Dim safeName = productName
+                For Each c In Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = "حركات_الصنف_" & safeName & "_" & DateTime.Now.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                    sw.WriteLine("تقرير حركات الصنف: " & productName)
+                    sw.WriteLine("تاريخ الطباعة: " & DateTime.Now.ToString("yyyy/MM/dd HH:mm"))
+                    sw.WriteLine()
+
+                    ' --- Table Headers ---
+                    Dim headers = {"رقم الفاتورة", "التاريخ", "النوع", "الاتجاه", "الكمية", "السعر", "الإجمالي", "العميل/المورد"}
+                    sw.WriteLine(String.Join(",", headers))
+
+                    ' --- Data Rows ---
+                    For Each item In movements
+                        Dim row = {
+                            item.InvID.ToString(),
+                            item.InvDate.ToString("yyyy/MM/dd"),
+                            """" & If(item.InvTypeName, "").Replace("""", """""") & """",
+                            item.MovementDirection,
+                            item.Quantity.ToString("F2"),
+                            item.UnitPrice.ToString("F3"),
+                            item.TotalPrice.ToString("F3"),
+                            """" & If(item.PartnerName, "").Replace("""", """""") & """"
+                        }
+                        sw.WriteLine(String.Join(",", row))
+                    Next
+                End Using
+
+                If File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("حدث خطأ أثناء التصدير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Product Movements to PDF
+        ' ===================================================
+        Public Shared Sub ExportProductMovementsToPdf(movements As List(Of ProductMovement), productName As String, Optional summary As ProductCardSummary = Nothing, Optional warehouses As List(Of WarehouseStock) = Nothing)
+            Try
+                If movements Is Nothing OrElse movements.Count = 0 Then
+                    MessageBox.Show("لا توجد حركات لطباعتها", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير حركات الصنف إلى PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+
+                Dim safeName = productName
+                For Each c In Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = "حركات_الصنف_" & safeName & "_" & DateTime.Now.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                doc.Info.Title = "حركات الصنف - " & productName
+                
+                Dim pageCount = 0
+                Dim margin = 30.0
+
+                Dim drawHeaderFunc = Function(ByRef p As PdfPage) As XGraphics
+                                         Dim g = XGraphics.FromPdfPage(p)
+                                         Dim currentY = margin
+                                         Dim pWidth = p.Width.Point - margin * 2
+                                         pageCount += 1
+                                         DrawReportHeader(g, company, p, currentY, margin, pWidth, pageCount)
+                                         Return g
+                                     End Function
+
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                page.Orientation = PdfSharp.PageOrientation.Portrait
+                Dim gfx = drawHeaderFunc(page)
+                
+                Dim pageWidth = page.Width.Point - margin * 2
+                Dim y = margin + 80
+
+                ' Title
+                gfx.DrawString(ArabicTextHelper.Fix("تقرير حركات الصنف: " & productName), New XFont("Arial", 16, XFontStyle.Bold),
+                               XBrushes.Black, New XRect(margin, y, pageWidth, 25), XStringFormats.TopCenter)
+                y += 35
+
+                ' --- Product Summary Section ---
+                If summary IsNot Nothing Then
+                    Dim summaryFont = New XFont("Arial", 10, XFontStyle.Bold)
+                    Dim valueFont = New XFont("Arial", 10, XFontStyle.Regular)
+                    
+                    ' Row 1: Barcode & Avg Cost
+                    gfx.DrawString(ArabicTextHelper.Fix("الباركود:   " & If(summary.Barcode, "-")), summaryFont, XBrushes.DarkSlateGray, margin, y)
+                    gfx.DrawString(ArabicTextHelper.Fix("متوسط التكلفة: " & summary.AvgCost.ToString("N3")), summaryFont, XBrushes.DarkSlateGray, margin + 250, y)
+                    gfx.DrawString(ArabicTextHelper.Fix("إجمالي الرصيد: " & summary.Balance.ToString("N2")), summaryFont, XBrushes.DarkBlue, margin + 400, y)
+                    y += 20
+                    
+                    ' Row 2: In/Out Totals
+                    gfx.DrawString(ArabicTextHelper.Fix("إجمالي الإيرادات (وارد): " & summary.TotalInQty.ToString("N2") & " / " & summary.TotalInValue.ToString("N3")), summaryFont, XBrushes.DarkGreen, margin, y)
+                    gfx.DrawString(ArabicTextHelper.Fix("إجمالي الصادرات (صادر): " & summary.TotalOutQty.ToString("N2") & " / " & summary.TotalOutValue.ToString("N3")), summaryFont, XBrushes.DarkRed, margin + 250, y)
+                    y += 25
+                End If
+
+                ' --- Warehouse Stocks Section ---
+                If warehouses IsNot Nothing AndAlso warehouses.Count > 0 Then
+                    Dim whFont = New XFont("Arial", 9, XFontStyle.Bold)
+                    gfx.DrawString(ArabicTextHelper.Fix("رصيد المستودعات:"), whFont, XBrushes.Black, margin, y)
+                    y += 15
+                    
+                    Dim whX = margin
+                    For Each wh In warehouses
+                        Dim whText = wh.WarehouseName & ": " & wh.CurrentQty.ToString("N2")
+                        gfx.DrawString(ArabicTextHelper.Fix(whText), New XFont("Arial", 9, XFontStyle.Regular), XBrushes.DarkSlateGray, whX, y)
+                        whX += 130
+                        If whX > pageWidth - 100 Then
+                            whX = margin
+                            y += 15
+                        End If
+                    Next
+                    y += 25
+                Else 
+                    y += 10
+                End If
+
+                ' Table header
+                Dim cols() As Double = {50, 70, 70, 50, 60, 60, 150}
+                Dim headers() As String = {"الفاتورة", "التاريخ", "النوع", "الاتجاه", "الكمية", "الإجمالي", "الجهة"}
+                Dim headerBrush As New XSolidBrush(XColor.FromArgb(41, 128, 185))
+
+                Dim x = margin
+                For i = 0 To headers.Length - 1
+                    gfx.DrawRectangle(headerBrush, x, y, cols(i), 18)
+                    gfx.DrawString(ArabicTextHelper.Fix(headers(i)), fontBold, XBrushes.White, New XRect(x + 2, y + 2, cols(i) - 4, 16), XStringFormats.TopLeft)
+                    x += cols(i)
+                Next
+                y += 18
+
+                ' Table rows
+                Dim altBrush As New XSolidBrush(XColor.FromArgb(248, 249, 250))
+                Dim rowIndex = 0
+                For Each item In movements
+                    If y > page.Height.Point - margin - 40 Then
+                        page = doc.AddPage()
+                        page.Size = PdfSharp.PageSize.A4
+                        page.Orientation = PdfSharp.PageOrientation.Portrait
+                        gfx = drawHeaderFunc(page)
+                        y = margin + 80
+
+                        x = margin
+                        For i = 0 To headers.Length - 1
+                            gfx.DrawRectangle(headerBrush, x, y, cols(i), 18)
+                            gfx.DrawString(ArabicTextHelper.Fix(headers(i)), fontBold, XBrushes.White, New XRect(x + 2, y + 2, cols(i) - 4, 16), XStringFormats.TopLeft)
+                            x += cols(i)
+                        Next
+                        y += 18
+                    End If
+
+                    If rowIndex Mod 2 = 0 Then
+                        gfx.DrawRectangle(altBrush, margin, y, pageWidth, 16)
+                    End If
+
+                    x = margin
+                    Dim partner = If(item.PartnerName, "")
+                    Dim rowData() As String = {
+                        item.InvID.ToString(),
+                        item.InvDate.ToString("yyyy/MM/dd"),
+                        If(item.InvTypeName, ""),
+                        item.MovementDirection,
+                        item.Quantity.ToString("F2"),
+                        item.TotalPrice.ToString("N3"),
+                        If(partner.Length > 25, partner.Substring(0, 25) & "...", partner)
+                    }
+
+                    For i = 0 To rowData.Length - 1
+                        Dim brush = If(i = 3 AndAlso rowData(i) = "IN", New XSolidBrush(XColor.FromArgb(39, 174, 96)),
+                                    If(i = 3 AndAlso rowData(i) = "OUT", New XSolidBrush(XColor.FromArgb(192, 57, 43)), XBrushes.Black))
+                        
+                        gfx.DrawString(ArabicTextHelper.Fix(rowData(i)), fontSmall, brush, New XRect(x + 2, y + 2, cols(i) - 4, 14), XStringFormats.TopLeft)
+                        x += cols(i)
+                    Next
+
+                    gfx.DrawRectangle(XPens.LightGray, margin, y, pageWidth, 16)
+                    y += 16
+                    rowIndex += 1
+                Next
+
+                doc.Save(dlg.FileName)
+                If File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("حدث خطأ أثناء التصدير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
     End Class
 End Namespace

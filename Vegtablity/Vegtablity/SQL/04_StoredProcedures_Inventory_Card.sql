@@ -24,6 +24,17 @@ BEGIN
     DECLARE @TotalOutValue     DECIMAL(18,2) = 0;
     DECLARE @LastPurchasePrice DECIMAL(18,2) = 0;
     DECLARE @ProfitRate        DECIMAL(18,2) = 0;
+    DECLARE @AlertQty          DECIMAL(18,2) = 0;
+    DECLARE @Barcode           NVARCHAR(50) = '';
+    DECLARE @SalePrice         DECIMAL(18,2) = 0;
+
+    -- معلومات الصنف (حد الطلب، الباركود)
+    SELECT 
+        @AlertQty  = ISNULL(AlertQty, 0),
+        @Barcode   = ISNULL(Barcode, ''),
+        @SalePrice = ISNULL(SalePrice, 0)
+    FROM [Inventory].[Products]
+    WHERE ProductID = @ProductID;
 
     -- الرصيد الحالي
     SELECT @Balance = ISNULL(SUM(CurrentQty), 0)
@@ -81,8 +92,39 @@ BEGIN
         @TotalOutQty        AS TotalOutQty,
         @TotalOutValue      AS TotalOutValue,
         @LastPurchasePrice  AS LastPurchasePrice,
-        @ProfitRate         AS ProfitRate;
+        @ProfitRate         AS ProfitRate,
+        @AlertQty           AS AlertQty,
+        @Barcode            AS Barcode,
+        @SalePrice          AS SalePrice;
 END
+GO
+
+-- =============================================
+-- 1.5 جلب رصيد الصنف في المستودعات
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetStockByWarehouse]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_ProductCard_GetStockByWarehouse];
+GO
+CREATE PROCEDURE [Inventory].[sp_ProductCard_GetStockByWarehouse]
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @AlertQty DECIMAL(18,2) = 0;
+    SELECT @AlertQty = ISNULL(AlertQty, 0)
+    FROM [Inventory].[Products]
+    WHERE ProductID = @ProductID;
+
+    SELECT 
+        w.WarehouseName,
+        ISNULL(s.CurrentQty, 0) AS CurrentQty,
+        @AlertQty AS AlertQty
+    FROM [Inventory].[ProductStock] s
+    INNER JOIN [Settings].[Warehouses] w ON s.WarehouseID = w.WarehouseID
+    WHERE s.ProductID = @ProductID AND s.CurrentQty > 0
+    ORDER BY w.WarehouseName;
+END
+GO
 GO
 
 -- =============================================
@@ -182,5 +224,27 @@ BEGIN
         GROUP BY EOMONTH(h.InvDate)
         ORDER BY EOMONTH(h.InvDate) ASC;
     END
+END
+GO
+
+-- =============================================
+-- 4. تعديل بيانات الصنف السريعة مـن لوحة البطاقة
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_UpdateQuickDetails]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_ProductCard_UpdateQuickDetails];
+GO
+CREATE PROCEDURE [Inventory].[sp_ProductCard_UpdateQuickDetails]
+    @ProductID   INT,
+    @ProductName NVARCHAR(255),
+    @Barcode     NVARCHAR(50),
+    @SalePrice   DECIMAL(18,2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE [Inventory].[Products]
+    SET ProductName = ISNULL(@ProductName, ProductName),
+        Barcode     = ISNULL(@Barcode, Barcode),
+        SalePrice   = ISNULL(@SalePrice, SalePrice)
+    WHERE ProductID = @ProductID;
 END
 GO

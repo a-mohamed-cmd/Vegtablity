@@ -47,6 +47,7 @@ Namespace ViewModels
 
         Public Sub New()
             LoadLookups()
+            LoadPermissions("Inventory")
             LoadProducts()
         End Sub
 
@@ -304,7 +305,7 @@ Namespace ViewModels
 
         Public ReadOnly Property DeleteProductCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteProduct, Function(o) SelectedProduct IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteProduct, Function(o) SelectedProduct IsNot Nothing AndAlso CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete)
             End Get
         End Property
 
@@ -408,6 +409,16 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteSaveProduct(obj As Object)
+            ' Permission Check
+            If Not IsEditingProduct AndAlso Not CurrentPermissions.CanAdd Then
+                StatusMessage = "ليس لديك صلاحية لإضافة صنف جديد."
+                Return
+            End If
+            If IsEditingProduct AndAlso Not CurrentPermissions.CanEdit Then
+                StatusMessage = "ليس لديك صلاحية لتعديل هذا الصنف."
+                Return
+            End If
+
             If Not ValidateProduct() Then Return
 
             Try

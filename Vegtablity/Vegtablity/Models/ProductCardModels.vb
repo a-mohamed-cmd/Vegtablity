@@ -96,6 +96,39 @@ Public Class ProductCardSummary
         End Set
     End Property
 
+    Private _alertQty As Decimal
+    Public Property AlertQty As Decimal
+        Get
+            Return _alertQty
+        End Get
+        Set(value As Decimal)
+            _alertQty = value
+            OnPropertyChanged(NameOf(AlertQty))
+        End Set
+    End Property
+
+    Private _barcode As String
+    Public Property Barcode As String
+        Get
+            Return _barcode
+        End Get
+        Set(value As String)
+            _barcode = value
+            OnPropertyChanged(NameOf(Barcode))
+        End Set
+    End Property
+
+    Private _salePrice As Decimal
+    Public Property SalePrice As Decimal
+        Get
+            Return _salePrice
+        End Get
+        Set(value As Decimal)
+            _salePrice = value
+            OnPropertyChanged(NameOf(SalePrice))
+        End Set
+    End Property
+
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
     Protected Overridable Sub OnPropertyChanged(propertyName As String)
         RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
@@ -127,6 +160,62 @@ Public Class ChartDataPoint
     Public Property DailyInQty As Decimal
     Public Property DailyOutQty As Decimal
     Public Property NetDayMovement As Decimal
+End Class
+
+''' <summary>
+''' يمثل رصيد الصنف في مستودع معين
+''' </summary>
+Public Class WarehouseStock
+    Implements INotifyPropertyChanged
+
+    Private _warehouseName As String
+    Public Property WarehouseName As String
+        Get
+            Return _warehouseName
+        End Get
+        Set(value As String)
+            _warehouseName = value
+            OnPropertyChanged(NameOf(WarehouseName))
+        End Set
+    End Property
+
+    Private _currentQty As Decimal
+    Public Property CurrentQty As Decimal
+        Get
+            Return _currentQty
+        End Get
+        Set(value As Decimal)
+            _currentQty = value
+            OnPropertyChanged(NameOf(CurrentQty))
+        End Set
+    End Property
+
+    Private _alertQty As Decimal
+    Public Property AlertQty As Decimal
+        Get
+            Return _alertQty
+        End Get
+        Set(value As Decimal)
+            _alertQty = value
+            OnPropertyChanged(NameOf(AlertQty))
+        End Set
+    End Property
+
+    Private _isLowStock As Boolean
+    Public Property IsLowStock As Boolean
+        Get
+            Return _isLowStock
+        End Get
+        Set(value As Boolean)
+            _isLowStock = value
+            OnPropertyChanged(NameOf(IsLowStock))
+        End Set
+    End Property
+
+    Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
+    Protected Overridable Sub OnPropertyChanged(propertyName As String)
+        RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
+    End Sub
 End Class
 
 End Namespace

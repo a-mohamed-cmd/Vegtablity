@@ -192,7 +192,7 @@
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Content="{Binding SaveActionText}" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                        <Button Content="🆕 جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                        <Button Content="🆕 جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db" IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
                         <Button Content="🗑️ حذف" Command="{Binding DeleteCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
                     </StackPanel>
                 </StackPanel>

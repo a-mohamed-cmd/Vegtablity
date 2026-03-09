@@ -183,7 +183,7 @@
                                   BorderThickness="1" BorderBrush="#dcdde1"
                                   RowHeight="38" ColumnHeaderHeight="40">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="اسم النموذج" Binding="{Binding FormName}" Width="*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="اسم النموذج" Binding="{Binding DisplayName}" Width="*" IsReadOnly="True"/>
                                 <DataGridCheckBoxColumn Header="عرض" Binding="{Binding CanView}" Width="70"/>
                                 <DataGridCheckBoxColumn Header="إضافة" Binding="{Binding CanAdd}" Width="70"/>
                                 <DataGridCheckBoxColumn Header="تعديل" Binding="{Binding CanEdit}" Width="70"/>

@@ -71,7 +71,8 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Click="NewProductBtn_Click" Margin="0,0,10,0" Cursor="Hand" ToolTip="إضافة صنف جديد">
+                    <Button Click="NewProductBtn_Click" Margin="0,0,10,0" Cursor="Hand" ToolTip="إضافة صنف جديد"
+                            IsEnabled="{Binding CurrentPermissions.CanAdd}">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="bg" CornerRadius="10" Padding="16,10">
@@ -518,7 +519,8 @@
                                 </Button>
                                 <Button Content="تفـريـغ" Command="{Binding NewProductCommand}"
                                         Style="{DynamicResource ModernButtonStyle}" Background="#E2E8F0" 
-                                        Foreground="#475569" FontWeight="Bold" FontSize="14" Padding="16,12"/>
+                                        Foreground="#475569" FontWeight="Bold" FontSize="14" Padding="16,12"
+                                        IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
                             </StackPanel>
                             
                             <Button Grid.Column="1" Content="تعطيل الصنف" Command="{Binding DeleteProductCommand}" Click="ClosePopup_Click"

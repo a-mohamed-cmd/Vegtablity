@@ -14,17 +14,25 @@ Namespace ViewModels
         Public Sub New()
             _inventoryService = New InventoryService()
             PagedMovements = New ObservableCollection(Of ProductMovement)()
+            WarehouseStockList = New ObservableCollection(Of WarehouseStock)()
             
             LoadSummaryCommand     = New RelayCommand(AddressOf ExecuteLoadSummary)
+            OpenInvoiceCommand = New RelayCommand(AddressOf ExecuteOpenInvoice)
+            _SaveEditCommand = New RelayCommand(AddressOf ExecuteSaveEdit)
+            _CancelEditCommand = New RelayCommand(AddressOf ExecuteCancelEdit)
+            _ExportCsvCommand = New RelayCommand(AddressOf ExecuteExportCsv)
+            _ExportPdfCommand = New RelayCommand(AddressOf ExecuteExportPdf)
+            LoadMoreCommand = New RelayCommand(AddressOf ExecuteNextPage, Function(o) CurrentPage < TotalPages)
+            PrevPageCommand = New RelayCommand(AddressOf ExecutePrevPage, Function(o) CurrentPage > 1)
             FilterMovementsCommand = New RelayCommand(AddressOf ExecuteFilterMovements)
-            OpenInvoiceCommand     = New RelayCommand(AddressOf ExecuteOpenInvoice)
-            NextPageCommand        = New RelayCommand(AddressOf ExecuteNextPage, Function(o) CurrentPage < TotalPages)
-            PrevPageCommand        = New RelayCommand(AddressOf ExecutePrevPage, Function(o) CurrentPage > 1)
-            ChartPeriodCommand     = New RelayCommand(AddressOf ExecuteChartPeriod)
-            
+            ChartPeriodCommand = New RelayCommand(AddressOf ExecuteChartPeriod)
+
             ChartSeries = New SeriesCollection()
             ChartLabels = New List(Of String)()
             YFormatter = Function(value) value.ToString("N0")
+
+            ' Initialize FilterOptions
+            FilterOptions = New List(Of String) From {"ALL", "SALES", "PURCHASE", "ADJUSTMENT"}
         End Sub
 
         ' --- Properties ---
@@ -66,6 +74,61 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' --- Quick Edit Properties ---
+        Private _isQuickEditOpen As Boolean
+        Public Property IsQuickEditOpen As Boolean
+            Get
+                Return _isQuickEditOpen
+            End Get
+            Set(value As Boolean)
+                If _isQuickEditOpen <> value Then
+                    _isQuickEditOpen = value
+
+                    ' Populate edit fields when opening the panel
+                    If _isQuickEditOpen Then
+                        EditName = ProductName
+                        EditBarcode = Barcode
+                        EditPrice = If(Summary IsNot Nothing, Summary.SalePrice, 0)
+                    End If
+
+                    OnPropertyChanged(NameOf(IsQuickEditOpen))
+                End If
+            End Set
+        End Property
+
+        Private _editName As String
+        Public Property EditName As String
+            Get
+                Return _editName
+            End Get
+            Set(value As String)
+                _editName = value
+                OnPropertyChanged(NameOf(EditName))
+            End Set
+        End Property
+
+        Private _editBarcode As String
+        Public Property EditBarcode As String
+            Get
+                Return _editBarcode
+            End Get
+            Set(value As String)
+                _editBarcode = value
+                OnPropertyChanged(NameOf(EditBarcode))
+            End Set
+        End Property
+
+        Private _editPrice As Decimal
+        Public Property EditPrice As Decimal
+            Get
+                Return _editPrice
+            End Get
+            Set(value As Decimal)
+                _editPrice = value
+                OnPropertyChanged(NameOf(EditPrice))
+            End Set
+        End Property
+
         Private _summary As ProductCardSummary
         Public Property Summary As ProductCardSummary
             Get
@@ -74,6 +137,39 @@ Namespace ViewModels
             Set(value As ProductCardSummary)
                 _summary = value
                 OnPropertyChanged(NameOf(Summary))
+            End Set
+        End Property
+
+        Private _warehouseStockList As ObservableCollection(Of WarehouseStock)
+        Public Property WarehouseStockList As ObservableCollection(Of WarehouseStock)
+            Get
+                Return _warehouseStockList
+            End Get
+            Set(value As ObservableCollection(Of WarehouseStock))
+                _warehouseStockList = value
+                OnPropertyChanged(NameOf(WarehouseStockList))
+            End Set
+        End Property
+
+        Private _isLowStock As Boolean
+        Public Property IsLowStock As Boolean
+            Get
+                Return _isLowStock
+            End Get
+            Set(value As Boolean)
+                _isLowStock = value
+                OnPropertyChanged(NameOf(IsLowStock))
+            End Set
+        End Property
+
+        Private _stockProgress As Double
+        Public Property StockProgress As Double
+            Get
+                Return _stockProgress
+            End Get
+            Set(value As Double)
+                _stockProgress = value
+                OnPropertyChanged(NameOf(StockProgress))
             End Set
         End Property
 
@@ -180,11 +276,44 @@ Namespace ViewModels
 
 
         ' --- Commands ---
-        Public Property LoadSummaryCommand As RelayCommand
-        Public Property FilterMovementsCommand As RelayCommand
-        Public Property OpenInvoiceCommand As RelayCommand
-        Public Property NextPageCommand As RelayCommand
-        Public Property PrevPageCommand As RelayCommand
+        Public Property LoadSummaryCommand As RelayCommand ' Changed type to RelayCommand as per original
+        Public Property FilterMovementsCommand As RelayCommand ' Re-added based on context
+        Public ReadOnly Property FilterOptions As List(Of String) ' Added FilterOptions
+
+        ' Navigation & Actions
+        Public Property OpenInvoiceCommand As ICommand
+
+        Private _SaveEditCommand As ICommand
+        Public ReadOnly Property SaveEditCommand As ICommand
+            Get
+                Return _SaveEditCommand
+            End Get
+        End Property
+
+        Private _CancelEditCommand As ICommand
+        Public ReadOnly Property CancelEditCommand As ICommand
+            Get
+                Return _CancelEditCommand
+            End Get
+        End Property
+
+        Private _ExportCsvCommand As ICommand
+        Public ReadOnly Property ExportCsvCommand As ICommand
+            Get
+                Return _ExportCsvCommand
+            End Get
+        End Property
+
+        Private _ExportPdfCommand As ICommand
+        Public ReadOnly Property ExportPdfCommand As ICommand
+            Get
+                Return _ExportPdfCommand
+            End Get
+        End Property
+
+        ' Pagination
+        Public Property LoadMoreCommand As ICommand ' Renamed from NextPageCommand
+        Public Property PrevPageCommand As RelayCommand ' Re-added based on context
         Public Property ChartPeriodCommand As RelayCommand
 
         ' ── Chart Period ──────────────────────────────────────────────
@@ -211,10 +340,35 @@ Namespace ViewModels
             Try
                 ' Load Summary
                 Summary = _inventoryService.GetProductCardSummary(ProductID)
-                
+
+                ' Calculate stock alerts
+                If Summary IsNot Nothing Then
+                    IsLowStock = (Summary.Balance <= Summary.AlertQty AndAlso Summary.AlertQty > 0)
+                    If Summary.AlertQty > 0 Then
+                        ' Avoid exceeding 100% progress for the visual bar
+                        StockProgress = Math.Min((Summary.Balance / Summary.AlertQty) * 100, 100)
+                    Else
+                        StockProgress = 100
+                    End If
+                End If
+
+                ' Load Warehouse Stock Distribution
+                Dim whStock = _inventoryService.GetProductStockByWarehouse(ProductID).ToList()
+
+                For Each wh In whStock
+                    If wh.AlertQty > 0 Then
+                        wh.IsLowStock = (wh.CurrentQty <= wh.AlertQty)
+                    Else
+                        wh.IsLowStock = False
+                    End If
+                Next
+
+                ' Assigning a new instance forces the ItemsControl to completely re-render
+                WarehouseStockList = New ObservableCollection(Of WarehouseStock)(whStock)
+
                 ' Load Movements (Default ALL)
                 ExecuteFilterMovements("ALL")
-                
+
                 ' Load Chart Data
                 LoadChartData()
             Catch ex As Exception
@@ -258,7 +412,49 @@ Namespace ViewModels
             End Try
         End Sub
 
-        Private Sub ExecuteNextPage(obj As Object)
+        Private Sub ExecuteCancelEdit(obj As Object)
+            IsQuickEditOpen = False
+        End Sub
+
+        Private Sub ExecuteSaveEdit(obj As Object)
+            Try
+                If String.IsNullOrWhiteSpace(EditName) Then
+                    MessageBox.Show("الرجاء إدخال اسم الصنف", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+
+                _inventoryService.UpdateProductQuickDetails(ProductID, EditName, EditBarcode, EditPrice)
+
+                ' Update UI fields and collapse panel
+                ProductName = EditName
+                Barcode = EditBarcode
+                If Summary IsNot Nothing Then
+                    Summary.Barcode = EditBarcode
+                End If
+                IsQuickEditOpen = False
+
+                MessageBox.Show("تم حفظ التعديلات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء حفظ التعديلات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub ExecuteExportCsv(obj As Object)
+            If PagedMovements IsNot Nothing AndAlso PagedMovements.Count > 0 Then ' Changed Movements to PagedMovements
+                Dim prodName = If(Summary IsNot Nothing, _inventoryService.GetProductByID(ProductID)?.ProductName, "UnknownProduct")
+                Helpers.ReportExporter.ExportProductMovementsToCsv(PagedMovements.ToList(), prodName) ' Changed Movements to PagedMovements
+            End If
+        End Sub
+
+        Private Sub ExecuteExportPdf(obj As Object)
+            If PagedMovements IsNot Nothing AndAlso PagedMovements.Count > 0 Then
+                Dim prodName = If(Summary IsNot Nothing, _inventoryService.GetProductByID(ProductID)?.ProductName, "UnknownProduct")
+                Helpers.ReportExporter.ExportProductMovementsToPdf(PagedMovements.ToList(), prodName, Summary, WarehouseStockList?.ToList())
+            End If
+        End Sub
+
+#Region "Chart Data Loading"
+        Private Sub ExecuteNextPage(obj As Object) ' This is now LoadMoreCommand's execution method
             If CurrentPage < TotalPages Then
                 _currentPage += 1
                 FetchCurrentPage()
@@ -340,6 +536,6 @@ Namespace ViewModels
                 RequestNavigateToInvoiceAction.Invoke(movement.InvID, typeCode)
             End If
         End Sub
-
+#End Region
     End Class
 End Namespace

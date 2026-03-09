@@ -40,12 +40,31 @@ Namespace ViewModels
         ' ===== Permissions =====
         Private _permissions As ObservableCollection(Of RolePermission)
         Private _selectedPermissionRole As Role
-        Private _availableForms As List(Of String)
+        Private _availableForms As Dictionary(Of String, String)
 
         Public Sub New()
-            AvailableForms = New List(Of String) From {
-                "Dashboard", "Sales", "Purchases", "Inventory",
-                "Accounting", "Partners", "Reports", "Settings", "UserManagement"
+            AvailableForms = New Dictionary(Of String, String) From {
+                {"Dashboard", "لوحة المعلومات الرئيسية"},
+                {"Sales", "فاتورة مبيعات"},
+                {"Purchases", "فاتورة مشتريات"},
+                {"Inventory", "المخزون والمنتجات"},
+                {"InvoiceDashboard", "لوحة الفواتير"},
+                {"Accounting", "الحسابات (الرئيسية)"},
+                {"ChartOfAccounts", "شجرة الحسابات"},
+                {"ReceiptVoucher", "سند قبض"},
+                {"PaymentVoucher", "سند صرف"},
+                {"JournalEntries", "قيود اليومية"},
+                {"AccountStatement", "كشف حساب"},
+                {"TrialBalance", "ميزان المراجعة"},
+                {"BalanceSheet", "المركز المالي"},
+                {"ProfitLoss", "أرباح وخسائر"},
+                {"YearEndClose", "الإقفال السنوي"},
+                {"Partners", "العملاء والموردين"},
+                {"Reports", "التقارير"},
+                {"SettingsParent", "قسم الإعدادات"},
+                {"Settings", "إعدادات عامة"},
+                {"CompanySettings", "بيانات الشركة"},
+                {"UserManagement", "إدارة المستخدمين"}
             }
             LoadData()
         End Sub
@@ -269,11 +288,11 @@ Namespace ViewModels
             End Set
         End Property
 
-        Public Property AvailableForms As List(Of String)
+        Public Property AvailableForms As Dictionary(Of String, String)
             Get
                 Return _availableForms
             End Get
-            Set(value As List(Of String))
+            Set(value As Dictionary(Of String, String))
                 SetProperty(_availableForms, value)
             End Set
         End Property
@@ -319,6 +338,12 @@ Namespace ViewModels
         Public ReadOnly Property SavePermissionsCommand As ICommand
             Get
                 Return New Helpers.RelayCommand(AddressOf ExecuteSavePermissions)
+            End Get
+        End Property
+
+        Public ReadOnly Property SelectAllPermissionsCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteSelectAllPermissions)
             End Get
         End Property
 #End Region
@@ -429,14 +454,19 @@ Namespace ViewModels
                 Dim existingPerms = _roleService.GetPermissionsForRole(roleID)
                 Dim allPerms As New List(Of RolePermission)
 
-                For Each formName In AvailableForms
+                For Each kvp In AvailableForms
+                    Dim formName = kvp.Key
+                    Dim displayName = kvp.Value
+                    
                     Dim existing = existingPerms.FirstOrDefault(Function(p) p.FormName = formName)
                     If existing IsNot Nothing Then
+                        existing.DisplayName = displayName
                         allPerms.Add(existing)
                     Else
                         allPerms.Add(New RolePermission With {
                             .RoleID = roleID,
                             .FormName = formName,
+                            .DisplayName = displayName,
                             .CanView = False,
                             .CanAdd = False,
                             .CanEdit = False,
@@ -563,6 +593,19 @@ Namespace ViewModels
         End Sub
 
         ' --- Permissions ---
+        Private Sub ExecuteSelectAllPermissions(obj As Object)
+            If Permissions IsNot Nothing Then
+                For Each perm In Permissions
+                    perm.CanView = True
+                    perm.CanAdd = True
+                    perm.CanEdit = True
+                    perm.CanDelete = True
+                    perm.CanPrint = True
+                Next
+                UserStatusMessage = "تم تحديد جميع الصلاحيات. يرجى الحفظ."
+            End If
+        End Sub
+
         Private Sub ExecuteSavePermissions(obj As Object)
             If SelectedPermissionRole Is Nothing OrElse Permissions Is Nothing Then
                 UserStatusMessage = "يرجى اختيار الدور أولاً."

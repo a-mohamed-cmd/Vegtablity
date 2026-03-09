@@ -52,10 +52,39 @@ Namespace ViewModels
         Private _newPartnerType As String
         Private _partnerTypesList As ObservableCollection(Of String)
 
+        ' --- Permissions ---
+        Private _receiptPermissions As RolePermission
+        Public Property ReceiptPermissions As RolePermission
+            Get
+                Return _receiptPermissions
+            End Get
+            Set(value As RolePermission)
+                SetProperty(_receiptPermissions, value)
+            End Set
+        End Property
+
+        Private _paymentPermissions As RolePermission
+        Public Property PaymentPermissions As RolePermission
+            Get
+                Return _paymentPermissions
+            End Get
+            Set(value As RolePermission)
+                SetProperty(_paymentPermissions, value)
+            End Set
+        End Property
+
         Public Sub New()
             PartnerTypesList = New ObservableCollection(Of String)({"Customer", "Supplier", "Employee", "Delegate", "Other"})
             EditReceiptDate = DateTime.Now
             EditPaymentDate = DateTime.Now
+
+            Dim permService As New Services.PermissionService()
+            If Services.Session.CurrentUser IsNot Nothing Then
+                Dim roleID = Services.Session.CurrentUser.RoleID
+                ReceiptPermissions = permService.GetPermissionsForForm(roleID, "ReceiptVoucher")
+                PaymentPermissions = permService.GetPermissionsForForm(roleID, "PaymentVoucher")
+            End If
+
             LoadLookups()
             If PaymentMethods IsNot Nothing AndAlso PaymentMethods.Count > 0 Then
                 EditReceiptPaymentMethod = PaymentMethods.First().AccountID.ToString()
@@ -467,12 +496,12 @@ Namespace ViewModels
         End Property
         Public ReadOnly Property DeleteReceiptCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteReceipt, Function(o) SelectedReceipt IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecuteDeleteReceipt, Function(o) SelectedReceipt IsNot Nothing AndAlso ReceiptPermissions IsNot Nothing AndAlso ReceiptPermissions.CanDelete)
             End Get
         End Property
         Public ReadOnly Property PostReceiptCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecutePostReceipt, Function(o) SelectedReceipt IsNot Nothing AndAlso Not SelectedReceipt.IsPosted)
+                Return New Helpers.RelayCommand(AddressOf ExecutePostReceipt, Function(o) SelectedReceipt IsNot Nothing AndAlso Not SelectedReceipt.IsPosted AndAlso ReceiptPermissions IsNot Nothing AndAlso ReceiptPermissions.CanEdit)
             End Get
         End Property
         Public ReadOnly Property PrintReceiptCommand As ICommand
@@ -495,12 +524,12 @@ Namespace ViewModels
         End Property
         Public ReadOnly Property DeletePaymentCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteDeletePayment, Function(o) SelectedPayment IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecuteDeletePayment, Function(o) SelectedPayment IsNot Nothing AndAlso PaymentPermissions IsNot Nothing AndAlso PaymentPermissions.CanDelete)
             End Get
         End Property
         Public ReadOnly Property PostPaymentCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecutePostPayment, Function(o) SelectedPayment IsNot Nothing AndAlso Not SelectedPayment.IsPosted)
+                Return New Helpers.RelayCommand(AddressOf ExecutePostPayment, Function(o) SelectedPayment IsNot Nothing AndAlso Not SelectedPayment.IsPosted AndAlso PaymentPermissions IsNot Nothing AndAlso PaymentPermissions.CanEdit)
             End Get
         End Property
         Public ReadOnly Property PrintPaymentCommand As ICommand
@@ -544,6 +573,15 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteSaveReceipt(obj As Object)
+            If Not IsEditingReceipt AndAlso Not ReceiptPermissions.CanAdd Then
+                ReceiptStatusMessage = "ليس لديك صلاحية لإضافة سند قبض جديد."
+                Return
+            End If
+            If IsEditingReceipt AndAlso Not ReceiptPermissions.CanEdit Then
+                ReceiptStatusMessage = "ليس لديك صلاحية لتعديل سند القبض."
+                Return
+            End If
+
             If EditReceiptAmount <= 0 Then
                 ReceiptAmountError = "المبلغ يجب أن يكون أكبر من صفر"
                 Return
@@ -648,6 +686,15 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteSavePayment(obj As Object)
+            If Not IsEditingPayment AndAlso Not PaymentPermissions.CanAdd Then
+                PaymentStatusMessage = "ليس لديك صلاحية لإضافة سند صرف جديد."
+                Return
+            End If
+            If IsEditingPayment AndAlso Not PaymentPermissions.CanEdit Then
+                PaymentStatusMessage = "ليس لديك صلاحية لتعديل سند الصرف."
+                Return
+            End If
+
             If EditPaymentAmount <= 0 Then
                 PaymentAmountError = "المبلغ يجب أن يكون أكبر من صفر"
                 Return

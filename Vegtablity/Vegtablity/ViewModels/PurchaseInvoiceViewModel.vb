@@ -102,6 +102,7 @@ Namespace ViewModels
             RemoveItemCommand = New RelayCommand(AddressOf ExecuteRemoveItem, AddressOf CanExecuteRemoveItem)
 
             LoadLookups()
+            LoadPermissions("Purchases")
             ExecuteNew(Nothing)
         End Sub
 
@@ -180,6 +181,10 @@ Namespace ViewModels
 
         Private Function CanExecuteSave(parameter As Object) As Boolean
             If CurrentInvoice Is Nothing OrElse CurrentInvoice.IsPosted Then Return False
+            ' Permission Check
+            If CurrentInvoice.InvID = 0 AndAlso Not CurrentPermissions.CanAdd Then Return False
+            If CurrentInvoice.InvID > 0 AndAlso Not CurrentPermissions.CanEdit Then Return False
+
             If Not CurrentInvoice.PartnerID.HasValue Then Return False
             If Not CurrentInvoice.WarehouseID.HasValue Then Return False
             If CurrentInvoice.Details Is Nothing OrElse CurrentInvoice.Details.Count = 0 Then Return False
@@ -220,6 +225,7 @@ Namespace ViewModels
         End Sub
 
         Private Function CanExecutePost(parameter As Object) As Boolean
+            If Not CurrentPermissions.CanEdit Then Return False
             If CurrentInvoice Is Nothing OrElse CurrentInvoice.IsPosted Then Return False
             If CurrentInvoice.InvID = 0 Then Return False ' Must be saved first
             Return True

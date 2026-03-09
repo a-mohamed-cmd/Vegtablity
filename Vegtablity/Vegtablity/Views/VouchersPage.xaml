@@ -140,7 +140,7 @@
                                           SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"/>
                                 <Button Grid.Column="1" Content="➕" Command="{Binding OpenNewPartnerCommand}" CommandParameter="Receipt"
                                         Width="30" Padding="0" Margin="5,0,0,0" ToolTip="إضافة مستلم جديد"
-                                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
+                                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" IsEnabled="{Binding ReceiptPermissions.CanAdd}"/>
                             </Grid>
 
                             <!-- Quick Add Partner Form -->
@@ -187,7 +187,7 @@
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
                                 <Button Content="💾 حفظ" Command="{Binding SaveReceiptCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                                <Button Content="🆕 جديد" Command="{Binding NewReceiptCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewReceiptCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db" IsEnabled="{Binding ReceiptPermissions.CanAdd}"/>
                                 <Button Content="🗑️ حذف" Command="{Binding DeleteReceiptCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
                             </StackPanel>
                             
@@ -319,7 +319,7 @@
                                           SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"/>
                                 <Button Grid.Column="1" Content="➕" Command="{Binding OpenNewPartnerCommand}" CommandParameter="Payment"
                                         Width="30" Padding="0" Margin="5,0,0,0" ToolTip="إضافة مستلم جديد"
-                                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
+                                        Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" IsEnabled="{Binding PaymentPermissions.CanAdd}"/>
                             </Grid>
 
                             <!-- Quick Add Partner Form -->
@@ -366,7 +366,7 @@
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
                                 <Button Content="💾 حفظ" Command="{Binding SavePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                                <Button Content="🆕 جديد" Command="{Binding NewPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db" IsEnabled="{Binding PaymentPermissions.CanAdd}"/>
                                 <Button Content="🗑️ حذف" Command="{Binding DeletePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
                             </StackPanel>
                             

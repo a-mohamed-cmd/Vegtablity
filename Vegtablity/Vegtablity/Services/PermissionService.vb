@@ -22,12 +22,30 @@ Namespace Services
             End Try
         End Function
 
-        Public Function CanViewForm(roleID As Integer, formName As String) As Boolean
-            ' Admin always has access
-            If Session.CurrentUser IsNot Nothing AndAlso Session.CurrentUser.RoleName = "Admin" Then
-                Return True
-            End If
+        Public Function GetPermissionsForForm(roleID As Integer, formName As String) As Models.RolePermission
+            Try
+                Dim allPerms = GetPermissionsForRole(roleID)
+                Dim formPerm = allPerms.FirstOrDefault(Function(p) p.FormName = formName)
+                
+                If formPerm IsNot Nothing Then
+                    Return formPerm
+                Else
+                    Return New Models.RolePermission With {
+                        .RoleID = roleID,
+                        .FormName = formName,
+                        .CanView = False,
+                        .CanAdd = False,
+                        .CanEdit = False,
+                        .CanDelete = False,
+                        .CanPrint = False
+                    }
+                End If
+            Catch ex As Exception
+                Return New Models.RolePermission()
+            End Try
+        End Function
 
+        Public Function CanViewForm(roleID As Integer, formName As String) As Boolean
             Try
                 Using conn As IDbConnection = _dbHelper.GetConnection()
                     Dim result = conn.QueryFirstOrDefault(Of Boolean?)(

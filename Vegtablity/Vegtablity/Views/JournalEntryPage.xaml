@@ -50,7 +50,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="📝 القيود المحاسبية اليدوية" FontSize="18" FontWeight="Bold" Foreground="#8e44ad" VerticalAlignment="Center"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="🆕 قيد جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#3498db" Margin="5,0"/>
+                    <Button Content="🆕 قيد جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#3498db" Margin="5,0" IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
                     <Button Content="💾 حفظ" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#27ae60" Margin="5,0"/>
                     <Button Content="📌 ترحيل" Command="{Binding PostCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#8e44ad" Margin="5,0"/>
                     <Button Content="🖨️ طباعة" Command="{Binding PrintCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#7f8c8d" Margin="5,0"/>

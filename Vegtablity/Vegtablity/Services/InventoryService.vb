@@ -102,6 +102,29 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure).AsList()
             End Using
         End Function
+
+        Public Function GetProductStockByWarehouse(productID As Integer) As List(Of WarehouseStock)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of WarehouseStock)(
+                    Helpers.StoredProcedures.SP_PRODUCTCARD_GETSTOCKBYWAREHOUSE,
+                    New With {.ProductID = productID},
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+
+        Public Sub UpdateProductQuickDetails(productID As Integer, productName As String, barcode As String, salePrice As Decimal)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_PRODUCTCARD_UPDATEQUICKDETAILS,
+                    New With {
+                        .ProductID = productID,
+                        .ProductName = productName,
+                        .Barcode = barcode,
+                        .SalePrice = salePrice
+                    },
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
 #End Region
     End Class
 End Namespace

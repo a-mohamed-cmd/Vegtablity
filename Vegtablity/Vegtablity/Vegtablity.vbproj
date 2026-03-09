@@ -9,6 +9,7 @@
     <RootNamespace>Vegtablity</RootNamespace>
     <AssemblyName>Vegtablity</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <RuntimeIdentifiers>win</RuntimeIdentifiers>
     <MyType>Custom</MyType>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -63,6 +64,8 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="System.Printing" />
+    <Reference Include="ReachFramework" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Drawing" />
     <Reference Include="ClosedXML">
@@ -183,6 +186,7 @@
     <Compile Include="Models\InvoiceDetail.vb" />
     <Compile Include="Models\ProductStock.vb" />
     <Compile Include="Models\InvoiceListItem.vb" />
+    <Compile Include="Models\DashboardModels.vb" />
     <Compile Include="Services\DatabaseHelper.vb" />
     <Compile Include="Services\SettingsService.vb" />
     <Compile Include="Services\LicenseService.vb" />
@@ -197,6 +201,7 @@
     <Compile Include="Services\PermissionService.vb" />
     <Compile Include="Services\InvoiceService.vb" />
     <Compile Include="Services\ProductService.vb" />
+    <Compile Include="Services\DashboardService.vb" />
     <Compile Include="Services\WarehouseService.vb" />
     <Compile Include="ViewModels\BaseViewModel.vb" />
     <Compile Include="ViewModels\LicenseViewModel.vb" />
@@ -235,6 +240,7 @@
     <Compile Include="Helpers\NullToVisibilityConverter.vb" />
     <Compile Include="Helpers\UIValueConverters.vb" />
     <Compile Include="Helpers\StringToVisibilityConverter.vb" />
+    <Compile Include="Helpers\InvoicePrinter.vb" />
     <Compile Include="Views\LicenseWindow.xaml.vb">
       <DependentUpon>LicenseWindow.xaml</DependentUpon>
     </Compile>

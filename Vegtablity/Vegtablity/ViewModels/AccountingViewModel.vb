@@ -39,6 +39,7 @@ Namespace ViewModels
 
         Public Sub New()
             AccountTypes = New ObservableCollection(Of String)({"Assets", "Liabilities", "Equity", "Expenses", "Revenue"})
+            LoadPermissions("ChartOfAccounts")
             LoadAccounts()
             LoadParentAccounts()
             EditIsTransactional = True
@@ -322,7 +323,7 @@ Namespace ViewModels
 
         Public ReadOnly Property DeleteCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteDelete, Function(o) SelectedAccount IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecuteDelete, Function(o) SelectedAccount IsNot Nothing AndAlso CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete)
             End Get
         End Property
 #End Region
@@ -416,6 +417,15 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteSave(obj As Object)
+            If Not IsEditing AndAlso Not CurrentPermissions.CanAdd Then
+                StatusMessage = "ليس لديك صلاحية لإضافة حساب جديد."
+                Return
+            End If
+            If IsEditing AndAlso Not CurrentPermissions.CanEdit Then
+                StatusMessage = "ليس لديك صلاحية لتعديل هذا الحساب."
+                Return
+            End If
+
             If Not ValidateAccount() Then Return
 
             ' Confirmation for updates

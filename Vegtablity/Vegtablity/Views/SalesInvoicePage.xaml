@@ -64,15 +64,18 @@
                             ToolTip="العودة للصفحة السابقة"/>
 
                     <Button Content="➕ فاتورة جديدة" Command="{Binding NewCommand}" Click="NewInvoiceButton_Click"
-                            Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="0,0,10,0"/>
+                            Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="0,0,10,0"
+                            IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
 
                     <Button Content="💾 حـفـظ" Command="{Binding SaveCommand}" 
-                            Style="{DynamicResource ModernButtonStyle}" Background="#10B981" Margin="0,0,10,0"
-                            IsEnabled="{Binding IsEditAllowed}"/>
+                            Style="{DynamicResource ModernButtonStyle}" Background="#10B981" Margin="0,0,10,0"/>
+
+                    <Button Content="🖨 طـبـاعـة" Command="{Binding PrintCommand}" 
+                            Style="{DynamicResource ModernButtonStyle}" Background="#6366F1" Margin="0,0,10,0"
+                            IsEnabled="{Binding CurrentPermissions.CanPrint}"/>
 
                     <Button Content="🚀 ترحيل الفاتورة" Command="{Binding PostCommand}" 
-                            Style="{DynamicResource ModernButtonStyle}" Background="#F59E0B"
-                            IsEnabled="{Binding IsEditAllowed}"/>
+                            Style="{DynamicResource ModernButtonStyle}" Background="#F59E0B"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -159,9 +162,33 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                     <TextBlock Text="تفاصيل الأصناف" FontSize="18" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center"/>
                     <Button Content="➕ إضافة صنف" Command="{Binding AddItemCommand}" Click="AddItemButton_Click"
-                            Style="{DynamicResource ModernButtonStyle}" Background="#EEF2FF" Foreground="#4F46E5" BorderBrush="#4F46E5" 
-                            Margin="20,0,0,0" Padding="15,5" IsEnabled="{Binding IsEditAllowed}"/>
-                    <TextBlock Text="تحذير: لن يكتمل الترحيل إذا تجاوزت الكمية المباعة المخزون المتاح في المستودع المختار." 
+                            Background="#EEF2FF" Foreground="#4F46E5" BorderBrush="#4F46E5" 
+                            Margin="20,0,0,0" Padding="15,5">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                                <Setter Property="IsEnabled" Value="False"/>
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsEditAllowed}" Value="True"/>
+                                            <Condition Binding="{Binding CurrentPermissions.CanEdit}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                    </MultiDataTrigger>
+                                    <!-- allow if new invoice -->
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsEditAllowed}" Value="True"/>
+                                            <Condition Binding="{Binding CurrentInvoice.InvID}" Value="0"/>
+                                            <Condition Binding="{Binding CurrentPermissions.CanAdd}" Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <TextBlock Text="تحذير: لن يكتمل الترحيل إذا تجاوزت الكمية المباعة المخزون المتاح في المستودع المختار."  
                                Foreground="#EF4444" Margin="20,0,0,0" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" FontStyle="Italic"/>
                 </StackPanel>
 

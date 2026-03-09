@@ -1,13 +1,18 @@
 Imports System.Collections.ObjectModel
 Imports System.Windows
 Imports System.Windows.Input
+Imports LiveCharts
+Imports LiveCharts.Wpf
 Imports Vegtablity.Models
+Imports Vegtablity.Services
 
 Namespace ViewModels
     Public Class DashboardViewModel
         Inherits BaseViewModel
 
         Private ReadOnly _permissionService As New Services.PermissionService()
+        Private ReadOnly _dashboardService As New Services.DashboardService()
+
         Private _menuItems As ObservableCollection(Of MenuItem)
         Private _selectedMenuItem As MenuItem
         Private _currentUserName As String
@@ -17,12 +22,38 @@ Namespace ViewModels
         Private _currentPage As Object
         Private _isHomePage As Boolean = True
 
+        ' --- Dashboard Metrics ---
+        Private _todaySales As Decimal
+        Private _todayPurchases As Decimal
+        Private _totalProducts As Integer
+        Private _totalCustomers As Integer
+
+        ' --- Dashboard Collections ---
+        Private _alertProducts As ObservableCollection(Of DashboardAlertProduct)
+        Private _customerDebts As ObservableCollection(Of DashboardPartnerDebt)
+        Private _supplierDebts As ObservableCollection(Of DashboardPartnerDebt)
+        Private _salesSeries As SeriesCollection
+        Private _salesLabels As List(Of String)
+        Private _yFormatter As Func(Of Double, String)
+
         Public Sub New()
             If Services.Session.CurrentUser IsNot Nothing Then
                 CurrentUserName = Services.Session.CurrentUser.FullName
                 CurrentRoleName = Services.Session.CurrentUser.RoleName
             End If
-            LoadMenuItems()
+            
+            AlertProducts = New ObservableCollection(Of DashboardAlertProduct)()
+            CustomerDebts = New ObservableCollection(Of DashboardPartnerDebt)()
+            SupplierDebts = New ObservableCollection(Of DashboardPartnerDebt)()
+            SalesSeries = New SeriesCollection()
+            SalesLabels = New List(Of String)()
+            YFormatter = Function(value) value.ToString("N3") & " د.ك"
+
+            ' Avoid DB calls at design time
+            If Not System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then
+                LoadMenuItems()
+                LoadDashboardData()
+            End If
         End Sub
 
         Public Property MenuItems As ObservableCollection(Of MenuItem)
@@ -105,6 +136,100 @@ Namespace ViewModels
             End Get
             Set(value As Boolean)
                 SetProperty(_isHomePage, value)
+                If _isHomePage Then
+                    LoadDashboardData() ' Refresh dashboard when returning home
+                End If
+            End Set
+        End Property
+
+        ' --- Dashboard Properties ---
+        Public Property TodaySales As Decimal
+            Get
+                Return _todaySales
+            End Get
+            Set(value As Decimal)
+                SetProperty(_todaySales, value)
+            End Set
+        End Property
+
+        Public Property TodayPurchases As Decimal
+            Get
+                Return _todayPurchases
+            End Get
+            Set(value As Decimal)
+                SetProperty(_todayPurchases, value)
+            End Set
+        End Property
+
+        Public Property TotalProducts As Integer
+            Get
+                Return _totalProducts
+            End Get
+            Set(value As Integer)
+                SetProperty(_totalProducts, value)
+            End Set
+        End Property
+
+        Public Property TotalCustomers As Integer
+            Get
+                Return _totalCustomers
+            End Get
+            Set(value As Integer)
+                SetProperty(_totalCustomers, value)
+            End Set
+        End Property
+
+        Public Property AlertProducts As ObservableCollection(Of DashboardAlertProduct)
+            Get
+                Return _alertProducts
+            End Get
+            Set(value As ObservableCollection(Of DashboardAlertProduct))
+                SetProperty(_alertProducts, value)
+            End Set
+        End Property
+
+        Public Property CustomerDebts As ObservableCollection(Of DashboardPartnerDebt)
+            Get
+                Return _customerDebts
+            End Get
+            Set(value As ObservableCollection(Of DashboardPartnerDebt))
+                SetProperty(_customerDebts, value)
+            End Set
+        End Property
+
+        Public Property SupplierDebts As ObservableCollection(Of DashboardPartnerDebt)
+            Get
+                Return _supplierDebts
+            End Get
+            Set(value As ObservableCollection(Of DashboardPartnerDebt))
+                SetProperty(_supplierDebts, value)
+            End Set
+        End Property
+
+        Public Property SalesSeries As SeriesCollection
+            Get
+                Return _salesSeries
+            End Get
+            Set(value As SeriesCollection)
+                SetProperty(_salesSeries, value)
+            End Set
+        End Property
+
+        Public Property SalesLabels As List(Of String)
+            Get
+                Return _salesLabels
+            End Get
+            Set(value As List(Of String))
+                SetProperty(_salesLabels, value)
+            End Set
+        End Property
+
+        Public Property YFormatter As Func(Of Double, String)
+            Get
+                Return _yFormatter
+            End Get
+            Set(value As Func(Of Double, String))
+                SetProperty(_yFormatter, value)
             End Set
         End Property
 
@@ -129,6 +254,18 @@ Namespace ViewModels
         Public ReadOnly Property ToggleExpandCommand As ICommand
             Get
                 Return New Helpers.RelayCommand(AddressOf ExecuteToggleExpand)
+            End Get
+        End Property
+
+        Public ReadOnly Property PayCustomerDebtCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecutePayCustomerDebt)
+            End Get
+        End Property
+
+        Public ReadOnly Property PaySupplierDebtCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecutePaySupplierDebt)
             End Get
         End Property
 
@@ -185,27 +322,51 @@ Namespace ViewModels
             allItems.Add(New MenuItem With {.Title = "إدارة المستخدمين", .Icon = "🔐", .FormName = "UserManagement", .IsVisible = True})
 
             ' Filter by permissions
-            Dim isAdmin As Boolean = String.Equals(CurrentRoleName, "Admin", StringComparison.OrdinalIgnoreCase)
             Dim visibleItems As New ObservableCollection(Of MenuItem)()
 
+            Dim ProcessItem As Func(Of MenuItem, MenuItem) = Nothing
+            ProcessItem = Function(item As MenuItem) As MenuItem
+                              ' Dashboard is always visible
+                              If item.FormName = "Dashboard" Then Return item
+
+                              Dim canView As Boolean = False
+                              If Services.Session.CurrentUser IsNot Nothing Then
+                                  Try
+                                      canView = _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, item.FormName)
+                                  Catch
+                                      canView = True ' Fallback
+                                  End Try
+                              End If
+
+                              ' If it's a parent, we only keep it if it has at least one visible child
+                              If item.IsParent AndAlso item.Children IsNot Nothing Then
+                                  Dim visibleChildren As New ObservableCollection(Of MenuItem)()
+                                  For Each child In item.Children
+                                      Dim processedChild = ProcessItem(child)
+                                      If processedChild IsNot Nothing Then
+                                          visibleChildren.Add(processedChild)
+                                      End If
+                                  Next
+
+                                  If visibleChildren.Count > 0 Then
+                                      item.Children = visibleChildren
+                                      Return item
+                                  End If
+
+                                  ' If no children are visible, hide parent entirely unless parent itself has explicit permission setup
+                                  ' Wait, parents like 'Accounting' don't have their own forms, we just rely on children.
+                                  Return Nothing
+                              End If
+
+                              ' For normal items, return item if canView=True
+                              If canView Then Return item
+                              Return Nothing
+                          End Function
+
             For Each item In allItems
-                If isAdmin Then
-                    visibleItems.Add(item)
-                Else
-                    ' Check DB permissions
-                    If item.FormName = "Dashboard" Then
-                        visibleItems.Add(item) ' Dashboard always visible
-                    ElseIf Services.Session.CurrentUser IsNot Nothing Then
-                        Try
-                            Dim canView = _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, item.FormName)
-                            If canView Then
-                                visibleItems.Add(item)
-                            End If
-                        Catch
-                            ' If permission check fails, show the item (fallback)
-                            visibleItems.Add(item)
-                        End Try
-                    End If
+                Dim filtered = ProcessItem(item)
+                If filtered IsNot Nothing Then
+                    visibleItems.Add(filtered)
                 End If
             Next
 
@@ -215,6 +376,62 @@ Namespace ViewModels
             If MenuItems.Count > 0 Then
                 SelectedMenuItem = MenuItems(0)
             End If
+        End Sub
+
+        Private Sub LoadDashboardData()
+            Try
+                ' 1. Load Summary
+                Dim summary = _dashboardService.GetDashboardSummary()
+                If summary IsNot Nothing Then
+                    TodaySales = summary.TodaySales
+                    TodayPurchases = summary.TodayPurchases
+                    TotalProducts = summary.TotalProducts
+                    TotalCustomers = summary.TotalCustomers
+                End If
+
+                ' 2. Load Sales Chart (Last 7 Days)
+                Dim chartData = _dashboardService.GetSalesChartData(7).ToList()
+                Dim seriesValues As New ChartValues(Of Double)
+                Dim labels As New List(Of String)
+                
+                For Each dp In chartData
+                    seriesValues.Add(Convert.ToDouble(dp.TotalSales))
+                    labels.Add(dp.DateValue.ToString("dd MMM")) ' e.g., "15 Oct"
+                Next
+                
+                SalesSeries.Clear()
+                SalesSeries.Add(New LineSeries With {
+                    .Title = "المبيعات",
+                    .Values = seriesValues,
+                    .PointGeometry = DefaultGeometries.Circle,
+                    .PointGeometrySize = 10
+                })
+                SalesLabels = labels
+                
+                ' 3. Load Alert Products
+                Dim alerts = _dashboardService.GetAlertProducts()
+                AlertProducts.Clear()
+                For Each item In alerts
+                    AlertProducts.Add(item)
+                Next
+                
+                ' 4. Load Customer Debts
+                Dim custDebts = _dashboardService.GetCustomerDebts()
+                CustomerDebts.Clear()
+                For Each item In custDebts
+                    CustomerDebts.Add(item)
+                Next
+
+                ' 5. Load Supplier Debts
+                Dim suppDebts = _dashboardService.GetSupplierDebts()
+                SupplierDebts.Clear()
+                For Each item In suppDebts
+                    SupplierDebts.Add(item)
+                Next
+                
+            Catch ex As Exception
+                MessageBox.Show("خطأ في تحميل بيانات لوحة المعلومات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
         End Sub
 
         Private Sub ExecuteToggleExpand(parameter As Object)
@@ -234,6 +451,14 @@ Namespace ViewModels
                 End If
 
                 SelectedMenuItem = item
+
+                ' Check permissions right before navigation (in case they changed but menu wasn't refreshed)
+                If item.FormName <> "Dashboard" AndAlso Services.Session.CurrentUser IsNot Nothing Then
+                    If Not _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, item.FormName) Then
+                        MessageBox.Show("عفواً، ليس لديك صلاحية لعرض هذه الشاشة.", "رسالة نظام", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        Return
+                    End If
+                End If
 
                 ' Navigate to page based on FormName
                 Select Case item.FormName
@@ -314,6 +539,40 @@ Namespace ViewModels
                         CurrentPage = Nothing
                         IsHomePage = True
                 End Select
+            End If
+        End Sub
+
+        Private Sub ExecutePayCustomerDebt(parameter As Object)
+            Dim debt = TryCast(parameter, DashboardPartnerDebt)
+            If debt IsNot Nothing Then
+                If Services.Session.CurrentUser IsNot Nothing AndAlso Not _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, "ReceiptVoucher") Then
+                    MessageBox.Show("عفواً، لا توجد لديك صلاحية لفتح سندات القبض.", "صلاحيات الوصول", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+                Dim page As New Views.ReceiptVoucherPage()
+                Dim vm = TryCast(page.DataContext, ViewModels.VouchersViewModel)
+                If vm IsNot Nothing Then
+                    vm.EditReceiptPartnerID = debt.PartnerID
+                End If
+                CurrentPage = page
+                IsHomePage = False
+            End If
+        End Sub
+
+        Private Sub ExecutePaySupplierDebt(parameter As Object)
+            Dim debt = TryCast(parameter, DashboardPartnerDebt)
+            If debt IsNot Nothing Then
+                If Services.Session.CurrentUser IsNot Nothing AndAlso Not _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, "PaymentVoucher") Then
+                    MessageBox.Show("عفواً، لا توجد لديك صلاحية لفتح سندات الصرف.", "صلاحيات الوصول", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+                Dim page As New Views.PaymentVoucherPage()
+                Dim vm = TryCast(page.DataContext, ViewModels.VouchersViewModel)
+                If vm IsNot Nothing Then
+                    vm.EditPaymentPartnerID = debt.PartnerID
+                End If
+                CurrentPage = page
+                IsHomePage = False
             End If
         End Sub
 

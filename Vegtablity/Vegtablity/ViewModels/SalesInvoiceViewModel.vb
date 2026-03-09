@@ -72,6 +72,7 @@ Namespace ViewModels
         Public Property NewCommand As ICommand
         Public Property AddItemCommand As ICommand
         Public Property RemoveItemCommand As ICommand
+        Public Property PrintCommand As ICommand
 
         Public Sub New()
             If System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then
@@ -102,8 +103,10 @@ Namespace ViewModels
             NewCommand = New RelayCommand(AddressOf ExecuteNew)
             AddItemCommand = New RelayCommand(AddressOf ExecuteAddItem, AddressOf CanExecuteAddItem)
             RemoveItemCommand = New RelayCommand(AddressOf ExecuteRemoveItem, AddressOf CanExecuteRemoveItem)
+            PrintCommand = New RelayCommand(AddressOf ExecutePrint, AddressOf CanExecutePrint)
 
             LoadLookups()
+            LoadPermissions("Sales")
             ExecuteNew(Nothing)
         End Sub
 
@@ -185,6 +188,10 @@ Namespace ViewModels
 
         Private Function CanExecuteSave(parameter As Object) As Boolean
             If CurrentInvoice Is Nothing OrElse CurrentInvoice.IsPosted Then Return False
+            ' Permission Check
+            If CurrentInvoice.InvID = 0 AndAlso Not CurrentPermissions.CanAdd Then Return False
+            If CurrentInvoice.InvID > 0 AndAlso Not CurrentPermissions.CanEdit Then Return False
+
             If Not CurrentInvoice.PartnerID.HasValue Then Return False
             If Not CurrentInvoice.WarehouseID.HasValue Then Return False
             If CurrentInvoice.Details Is Nothing OrElse CurrentInvoice.Details.Count = 0 Then Return False
@@ -239,6 +246,7 @@ Namespace ViewModels
         End Sub
 
         Private Function CanExecutePost(parameter As Object) As Boolean
+            If Not CurrentPermissions.CanEdit Then Return False
             If CurrentInvoice Is Nothing OrElse CurrentInvoice.IsPosted Then Return False
             If CurrentInvoice.InvID = 0 Then Return False ' Must be saved first
             Return True
@@ -262,6 +270,25 @@ Namespace ViewModels
                     System.Windows.MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
                 End Try
             End If
+        End Sub
+
+        Private Function CanExecutePrint(parameter As Object) As Boolean
+            If Not CurrentPermissions.CanPrint Then Return False
+            If CurrentInvoice Is Nothing OrElse CurrentInvoice.InvID = 0 Then Return False
+            Return True
+        End Function
+
+        Private Sub ExecutePrint(parameter As Object)
+            Dim customerName As String = ""
+            If CurrentInvoice.PartnerID.HasValue Then
+                Dim partner = Customers.FirstOrDefault(Function(p) p.PartnerID = CurrentInvoice.PartnerID.Value)
+                If partner IsNot Nothing Then
+                    customerName = partner.PartnerName
+                End If
+            End If
+
+            Dim printer As New InvoicePrinter()
+            printer.PrintSalesInvoice(CurrentInvoice, customerName)
         End Sub
 
         Private Function ValidateStockForAllItems() As Boolean

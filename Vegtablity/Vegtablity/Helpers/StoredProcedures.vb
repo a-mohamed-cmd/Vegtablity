@@ -69,6 +69,7 @@ Namespace Helpers
         Public Const SP_PRODUCT_DELETE As String = "[Inventory].[sp_Product_Delete]"
         Public Const SP_PRODUCT_GETBYBARCODE As String = "[Inventory].[sp_Product_GetByBarcode]"
         Public Const SP_PRODUCT_SEARCH As String = "[Inventory].[sp_Product_Search]"
+        Public Const SP_PRODUCTCARD_UPDATEQUICKDETAILS As String = "[Inventory].[sp_ProductCard_UpdateQuickDetails]"
 
         ' =============================================
         ' Sales Schema - Partners
@@ -116,6 +117,12 @@ Namespace Helpers
         Public Const SP_REPORT_PROFITLOSS As String = "[Accounting].[sp_Report_ProfitLoss]"
         Public Const SP_REPORT_BALANCESHEET As String = "[Accounting].[sp_Report_BalanceSheet]"
         
+        Public Const SP_DASHBOARD_GETSUMMARY As String = "[Reports].[sp_Dashboard_GetSummary]"
+        Public Const SP_DASHBOARD_GETSALESCHART As String = "[Reports].[sp_Dashboard_GetSalesChart]"
+        Public Const SP_DASHBOARD_GETALERTPRODUCTS As String = "[Reports].[sp_Dashboard_GetAlertProducts]"
+        Public Const SP_DASHBOARD_GETCUSTOMERDEBTS As String = "[Reports].[sp_Dashboard_GetCustomerDebts]"
+        Public Const SP_DASHBOARD_GETSUPPLIERDEBTS As String = "[Reports].[sp_Dashboard_GetSupplierDebts]"
+        
         Public Const SP_ACCOUNTING_YEARENDCLOSE As String = "[Accounting].[sp_Accounting_YearEndClose]"
 
         ' =============================================
@@ -155,6 +162,7 @@ Namespace Helpers
         Public Const SP_PRODUCTCARD_GETSUMMARY As String = "[Inventory].[sp_ProductCard_GetSummary]"
         Public Const SP_PRODUCTCARD_GETMOVEMENTS As String = "[Inventory].[sp_ProductCard_GetMovements]"
         Public Const SP_PRODUCTCARD_GETCHARTDATA As String = "[Inventory].[sp_ProductCard_GetChartData]"
+        Public Const SP_PRODUCTCARD_GETSTOCKBYWAREHOUSE As String = "[Inventory].[sp_ProductCard_GetStockByWarehouse]"
 
     End Class
 End Namespace
