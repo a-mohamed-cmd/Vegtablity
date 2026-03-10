@@ -12,6 +12,7 @@
     <RuntimeIdentifiers>win</RuntimeIdentifiers>
     <MyType>Custom</MyType>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <ApplicationIcon>lettuce.ico</ApplicationIcon>
     <Deterministic>true</Deterministic>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
@@ -94,6 +95,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="lettuce.ico" />
     <ApplicationDefinition Include="Application.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

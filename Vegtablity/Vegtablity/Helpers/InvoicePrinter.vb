@@ -40,9 +40,10 @@ Public Class InvoicePrinter
 
             Dim pd As New PrintDocument()
             
-            ' Set Paper Size to A4
-            ' A4 size in hundredths of an inch is 827 x 1169
-            pd.DefaultPageSettings.PaperSize = New PaperSize("A4", 827, 1169)
+            ' Set Paper Size to Custom 21cm x 28cm (Width x Height)
+            ' 21cm = 8.27 inches = 827 hundredths
+            ' 28cm = 11.02 inches = 1102 hundredths
+            pd.DefaultPageSettings.PaperSize = New PaperSize("Custom", 827, 1102)
             
             AddHandler pd.PrintPage, AddressOf PrintPage_PrintSalesInvoice
 
@@ -71,49 +72,39 @@ Public Class InvoicePrinter
             ' ==========================================
             ' HEADER SECTION (Repeats on every page)
             ' ==========================================
-            ' 1. Customer Name (Left: X=20, Y=60)
-            ' Since it's Arabic, 'Right' alignment is technically standard, but X=20 from Left Margin means we draw at X=20.
-            ' However, WPF FlowDirection is RightToLeft. In WinForms GDI+ (PrintDocument), 0,0 is Top-Left.
-            ' If the user meant "Right" by the "Left" side due to Arabic physical paper orientation, we might need to adjust.
-            ' Let's assume standard GDI+ coordinates: 0,0 is Top-Left of the paper.
-            Dim xCustomer As Single = 20
-            Dim yHeader As Single = 60
-            g.DrawString(_customerName, _printFontBold, brush, xCustomer, yHeader, formatLeft)
-
-            ' 2. Invoice Date (Right side: X=150, Y=60)
-            Dim xDate As Single = 150
-            g.DrawString(_invoice.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, xDate, yHeader, formatLeft)
-
-            ' 3. Invoice Number (Center: X=105, Y=60) or specific X=60
-            ' User mentioned: "في منتصف الصفحه و x=60 طباعه رقم الفاتوره" 
-            ' If X=60 is the exact coordinate they want:
-            Dim xInvoiceNo As Single = 60
-            g.DrawString(_invoice.InvID.ToString(), _printFontBold, brush, xInvoiceNo, yHeader, formatLeft)
+            ' Coordinate Function: Left Margin (User Y in mm) -> GDI X
+            Dim getLeft As Func(Of Single, Single) = Function(leftCm) leftCm * 10.0F
+            ' Coordinate Function: Top Margin (User X in mm) -> GDI Y
+            Dim getTop As Func(Of Single, Single) = Function(topCm) topCm * 10.0F
 
             ' If this is a continued page, show a header marker
+            Dim topOffset As Single = 15.0F
             If _currentPageNumber > 1 Then
-                g.DrawString("(تابع فاتورة رقم " & _invoice.InvID & " - صفحة " & _currentPageNumber & ")", _printFontNormal, brush, 105, yHeader - 10, formatCenter)
+                g.DrawString("( مـلـحـق فـاتـورة )", _printFontBold, brush, getLeft(10.5F), topOffset, formatCenter)
             End If
+
+            ' 1. Customer Name (User Y=2cm to 7cm -> Width=50mm)
+            Dim rectCustomer As New RectangleF(getLeft(2.0F), getTop(3.0F), 50.0F, 20.0F)
+            g.DrawString(_customerName, _printFontBold, brush, rectCustomer, formatLeft)
+
+            ' 2. Invoice No (Text at Y=14.5, X=3.0 / Val at Y=18.0, X=3.0)
+            g.DrawString("Invoice No:", _printFontNormal, brush, getLeft(14.5F), getTop(3.0F), formatLeft)
+            g.DrawString(_invoice.InvID.ToString(), _printFontBold, brush, getLeft(18.0F), getTop(3.0F), formatLeft)
+
+            ' 3. Invoice Date (Text at Y=14.0, X=4.0 / Val at Y=18.0, X=4.0)
+            g.DrawString("Invoice Date:", _printFontNormal, brush, getLeft(14.0F), getTop(4.0F), formatLeft)
+            g.DrawString(_invoice.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, getLeft(18.0F), getTop(4.0F), formatLeft)
+
+            ' 4. Account No (Text at Y=14.0, X=5.0 / Val at Y=18.0, X=5.0)
+            g.DrawString("Account No:", _printFontNormal, brush, getLeft(14.0F), getTop(5.0F), formatLeft)
+            g.DrawString(If(_invoice.PartnerID > 0, _invoice.PartnerID.ToString(), ""), _printFontNormal, brush, getLeft(18.0F), getTop(5.0F), formatLeft)
 
             ' ==========================================
             ' ITEMS DESCRIPTIONS (Grid items)
             ' ==========================================
-            ' User requested: "طباعه في جدول اصناف الفاتوره علي بعد x=100"
-            ' "طباعه التسلسل للاصناف و كود الصنف barcode , اسم الصنف و الوحده و الكميه و سعر الوحده و المجموع"
-            ' Since A4 width is 210mm, X=100 is the middle of the page. They probably meant the table *starts* at Y=100.
-            
-            Dim currentY As Single = START_Y_ITEMS
-
-            ' Assume a standard distribution of columns across the 210mm width.
-            ' GDI+ 0 is left. Arabic reads Right to Left. 
-            ' We will draw the columns from Left (smaller X) to Right (larger X)
-            Dim colSeq As Single = 15
-            Dim colBarcode As Single = 30
-            Dim colName As Single = 70
-            Dim colUnit As Single = 130
-            Dim colQty As Single = 150
-            Dim colPrice As Single = 170
-            Dim colTotal As Single = 190
+            Dim currentY As Single = getTop(7.0F) ' User X=7cm
+            Dim endY As Single = getTop(22.0F) ' User X=22cm
+            Dim rowHeight As Single = 12.0F
 
             Dim hasMorePages As Boolean = False
 
@@ -121,56 +112,53 @@ Public Class InvoicePrinter
                 Dim item = _invoice.Details(_currentItemIndex)
                 
                 ' If we exceed the page printable area for items, stop and trigger next page
-                If currentY > END_Y_ITEMS Then
+                If currentY > endY Then
                     hasMorePages = True
                     Exit While
                 End If
 
-                ' Sequence
-                g.DrawString((_currentItemIndex + 1).ToString(), _printFontNormal, brush, colSeq, currentY, formatLeft)
+                ' Sequence (User Y = 1cm)
+                g.DrawString((_currentItemIndex + 1).ToString(), _printFontNormal, brush, getLeft(1.0F), currentY, formatLeft)
                 
-                ' Barcode
-                g.DrawString(If(item.Barcode, ""), _printFontNormal, brush, colBarcode, currentY, formatLeft)
+                ' Name & Barcode (Multi-line, User Y = 3cm to 10cm bounds -> Width=7cm)
+                Dim rectName As New RectangleF(getLeft(3.0F), currentY, 70.0F, rowHeight + 4)
+                Dim enNameStr As String = If(String.IsNullOrEmpty(item.ProductNameEn), "", item.ProductNameEn)
+                Dim combinedText As String = $"{item.Barcode}      {enNameStr}{vbCrLf}{item.ProductName}"
+                g.DrawString(combinedText, _printFontNormal, brush, rectName, formatLeft)
                 
-                ' Name
-                ' Safely assuming ProductName is populated or we need an abstraction
-                g.DrawString(item.ProductName, _printFontNormal, brush, colName, currentY, formatLeft)
+                ' Unit (User Y = 14cm)
+                g.DrawString(If(item.UnitName, "حبة"), _printFontNormal, brush, getLeft(14.0F), currentY, formatLeft)
                 
-                ' Unit (Static "حبه" for now or mapped if exist)
-                g.DrawString("حبة", _printFontNormal, brush, colUnit, currentY, formatLeft)
+                ' Qty (Interpolated between Unit and Price)
+                g.DrawString(item.Quantity.ToString("N2"), _printFontNormal, brush, getLeft(15.25F), currentY, formatLeft)
                 
-                ' Qty
-                g.DrawString(item.Quantity.ToString("N2"), _printFontNormal, brush, colQty, currentY, formatLeft)
+                ' Price (User Y = 16.5cm)
+                g.DrawString(item.UnitPrice.ToString("N3"), _printFontNormal, brush, getLeft(16.5F), currentY, formatLeft)
                 
-                ' Price
-                g.DrawString(item.UnitPrice.ToString("N2"), _printFontNormal, brush, colPrice, currentY, formatLeft)
-                
-                ' Total
-                g.DrawString(item.TotalPrice.ToString("N2"), _printFontNormal, brush, colTotal, currentY, formatLeft)
+                ' Total (User Y = 19cm)
+                g.DrawString(item.TotalPrice.ToString("N3"), _printFontNormal, brush, getLeft(19.0F), currentY, formatLeft)
 
-                currentY += ROW_HEIGHT
+                currentY += rowHeight
                 _currentItemIndex += 1
             End While
 
             ' ==========================================
             ' FOOTER SECTION
             ' ==========================================
-            ' If there are more pages, print "Continued..."
+            ' If there are more pages, skip total and carry over
             If hasMorePages Then
-                g.DrawString("... يتبع في الصفحة التالية ...", _printFontBold, brush, 105, END_Y_ITEMS + 10, formatCenter)
                 e.HasMorePages = True
                 _currentPageNumber += 1
             Else
                 ' If this is the final page, print the Totals
-                ' "علي بعد x= طول الصفحه -60"  (Y = 297 - 60 = 237)
-                Dim yTotal As Single = 237
+                Dim yTotal As Single = getTop(23.0F) ' User X=23cm
+
+                ' Total Amount Numeric (User Y=18cm)
+                g.DrawString(_invoice.TotalAmount.ToString("N3"), _printFontBold, brush, getLeft(18.0F), yTotal, formatLeft)
                 
-                ' Total Amount Numeric
-                g.DrawString(_invoice.TotalAmount.ToString("N3"), _printFontBold, brush, colTotal, yTotal, formatLeft)
-                
-                ' Arabic Text (Tafqeet)
+                ' Arabic Text (Tafqeet) (User Y=12cm)
                 Dim textAmount As String = CurrencyToLetters.Convert(_invoice.TotalAmount, "دينار كويتي", "فلس")
-                g.DrawString(textAmount, _printFontBold, brush, colName, yTotal, formatRight)
+                g.DrawString(textAmount, _printFontBold, brush, getLeft(12.0F), yTotal, formatLeft)
 
                 e.HasMorePages = False
             End If

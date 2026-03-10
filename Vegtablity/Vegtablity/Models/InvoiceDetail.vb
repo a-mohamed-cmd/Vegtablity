@@ -106,6 +106,28 @@ Namespace Models
             End Set
         End Property
 
+        Private _productNameEn As String
+        Public Property ProductNameEn As String
+            Get
+                Return _productNameEn
+            End Get
+            Set(value As String)
+                _productNameEn = value
+                OnPropertyChanged(NameOf(ProductNameEn))
+            End Set
+        End Property
+
+        Private _unitName As String
+        Public Property UnitName As String
+            Get
+                Return _unitName
+            End Get
+            Set(value As String)
+                _unitName = value
+                OnPropertyChanged(NameOf(UnitName))
+            End Set
+        End Property
+
         Private Sub CalculateTotal()
             TotalPrice = UnitPrice * Quantity
         End Sub
