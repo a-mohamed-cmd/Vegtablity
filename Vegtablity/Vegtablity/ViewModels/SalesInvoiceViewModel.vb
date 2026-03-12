@@ -74,6 +74,8 @@ Namespace ViewModels
         Public Property RemoveItemCommand As ICommand
         Public Property PrintCommand As ICommand
 
+        Private ReadOnly _quoteService As QuoteService
+
         Public Sub New()
             If System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then
                 Customers = New ObservableCollection(Of Partner)()
@@ -92,6 +94,7 @@ Namespace ViewModels
             _warehouseService = New WarehouseService()
             _inventoryService = New InventoryService()
             _accountingService = New AccountingService()
+            _quoteService = New QuoteService()
 
             Customers = New ObservableCollection(Of Partner)()
             Warehouses = New ObservableCollection(Of Warehouse)()
@@ -337,11 +340,28 @@ Namespace ViewModels
             Dim detail = CType(sender, InvoiceDetail)
             
             If e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
-                ' Auto-fill Price and reset Quantity based on Product Select for Sales (SalePrice)
+                ' Auto-fill Price and reset Quantity based on Product Select for Sales
                 Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
                 If prod IsNot Nothing Then
                     detail.Quantity = 1
-                    detail.UnitPrice = prod.SalePrice
+                    
+                    ' Check for Custom Quoted Price First
+                    Dim quotedPrice As Decimal? = Nothing
+                    If CurrentInvoice.PartnerID.HasValue Then
+                        quotedPrice = _quoteService.GetActiveQuotePrice(CurrentInvoice.PartnerID.Value, detail.ProductID)
+                    End If
+
+                    If quotedPrice.HasValue Then
+                        detail.UnitPrice = quotedPrice.Value
+                        RaiseEvent RequestSnackbar($"تم تطبيق سعر عرض خاص ({quotedPrice.Value:N3}) للصنف: {prod.ProductName}")
+                    Else
+                        detail.UnitPrice = prod.SalePrice
+                        ' Only warn if a customer is selected and no quote was found
+                        If CurrentInvoice.PartnerID.HasValue Then
+                            RaiseEvent RequestSnackbar($"تنبيه: لا يوجد سعر مخصص في عروض الأسعار للصنف {prod.ProductName}. تم إدراج السعر الافتراضي.")
+                        End If
+                    End If
+
                     ' Use weighted average cost from ProductStock for this warehouse;
                     ' fallback to static PurchasePrice if no stock record exists yet.
                     If CurrentInvoice.WarehouseID.HasValue AndAlso CurrentInvoice.WarehouseID.Value > 0 Then

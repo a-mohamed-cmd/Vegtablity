@@ -7,6 +7,7 @@ Imports System.Linq
 Imports Microsoft.Win32
 Imports Vegtablity.Models
 Imports Vegtablity.Services
+Imports ClosedXML.Excel
 
 Namespace Helpers
     Public Class ReportExporter
@@ -1186,6 +1187,427 @@ Namespace Helpers
                 MessageBox.Show("حدث خطأ أثناء التصدير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
+
+        ' ===================================================
+        ' Export Quote to CSV
+        ' ===================================================
+        Public Shared Sub ExportQuoteToCsv(quote As QuoteHeader, customerName As String)
+            Try
+                If quote Is Nothing OrElse quote.Details Is Nothing OrElse quote.Details.Count = 0 Then
+                    MessageBox.Show("لا يوجد بيانات لتصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير عرض الأسعار - CSV"
+                dlg.Filter = "CSV Files (*.csv)|*.csv"
+                Dim safeName = customerName
+                For Each c In Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = "عرض_اسعار_" & safeName & "_" & quote.QuoteDate.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                    ' Header
+                    sw.WriteLine("عرض أسعار")
+                    sw.WriteLine("العميل:," & customerName)
+                    sw.WriteLine("تاريخ العرض:," & quote.QuoteDate.ToString("yyyy/MM/dd"))
+                    Dim expiry As String = If(quote.ExpiryDate.HasValue, quote.ExpiryDate.Value.ToString("yyyy/MM/dd"), "غير محدد")
+                    sw.WriteLine("صالح حتى:," & expiry)
+                    sw.WriteLine("الحالة:," & If(quote.IsActive, "فعال", "غير فعال"))
+                    If Not String.IsNullOrWhiteSpace(quote.Notes) Then
+                        sw.WriteLine("ملاحظات:,""" & quote.Notes.Replace("""", """""") & """")
+                    End If
+                    sw.WriteLine()
+                    sw.WriteLine("م,كود الصنف,اسم الصنف,الوحدة,سعر العرض")
+
+                    For i As Integer = 0 To quote.Details.Count - 1
+                        Dim d = quote.Details(i)
+                        Dim name As String = """" & If(d.ProductName, "").Replace("""", """""") & """"
+                        sw.WriteLine($"{i + 1},{If(d.Barcode, "")},{name},{If(d.UnitName, "")},{d.QuotedPrice:N3}")
+                    Next
+                End Using
+
+                If File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء التصدير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Quote to PDF (PdfSharp)
+        ' ===================================================
+        Public Shared Sub ExportQuoteToPdf(quote As QuoteHeader, customerName As String)
+            Try
+                If quote Is Nothing OrElse quote.Details Is Nothing OrElse quote.Details.Count = 0 Then
+                    MessageBox.Show("لا يوجد بيانات لتصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير عرض الأسعار - PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                Dim safeName = customerName
+                For Each c In Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = "عرض_اسعار_" & safeName & "_" & quote.QuoteDate.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                doc.Info.Title = "عرض أسعار - " & customerName
+                doc.Info.Author = "Vegtablity ERP"
+
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                Dim margin As Double = 35
+                Dim pageCount As Integer = 0
+
+                ' ── Initial page ──
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim pageWidth = page.Width.Point - margin * 2
+                Dim currentY As Double = margin
+                pageCount += 1
+                DrawReportHeader(gfx, company, page, currentY, margin, pageWidth, pageCount)
+                Dim y As Double = currentY
+
+                ' ── Quote title ──
+                Dim titleFont = New XFont("Arial", 16, XFontStyle.Bold)
+                gfx.DrawString(ArabicTextHelper.Fix("عرض أسعار"), titleFont, XBrushes.Black,
+                               New XRect(margin, y, pageWidth, 25), XStringFormats.TopCenter)
+                y += 30
+
+                ' ── Info card (background box) ──
+                Dim infoH As Double = If(String.IsNullOrWhiteSpace(quote.Notes), 42, 56)
+                gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(241, 245, 249)), margin, y, pageWidth, infoH)
+                gfx.DrawRectangle(XPens.LightGray, margin, y, pageWidth, infoH)
+
+                Dim lbf = New XFont("Arial", 9, XFontStyle.Bold)
+                Dim lvf = New XFont("Arial", 9, XFontStyle.Regular)
+                Dim col1 As Double = margin + 5
+                Dim col2 As Double = margin + pageWidth / 2 + 5
+
+                ' Row 1
+                gfx.DrawString(ArabicTextHelper.Fix("العميل:"), lbf, XBrushes.DarkGray, col1, y + 8)
+                gfx.DrawString(ArabicTextHelper.Fix(customerName), New XFont("Arial", 9, XFontStyle.Bold), XBrushes.Black, col1 + 35, y + 8)
+
+                gfx.DrawString(ArabicTextHelper.Fix("تاريخ العرض:"), lbf, XBrushes.DarkGray, col2, y + 8)
+                gfx.DrawString(quote.QuoteDate.ToString("dd/MM/yyyy"), lvf, XBrushes.Black, col2 + 55, y + 8)
+
+                ' Row 2
+                Dim expiry As String = If(quote.ExpiryDate.HasValue, quote.ExpiryDate.Value.ToString("dd/MM/yyyy"), "غير محدد")
+                gfx.DrawString(ArabicTextHelper.Fix("صالح حتى:"), lbf, XBrushes.DarkGray, col1, y + 22)
+                gfx.DrawString(expiry, lvf, XBrushes.Black, col1 + 35, y + 22)
+
+                gfx.DrawString(ArabicTextHelper.Fix("الحالة:"), lbf, XBrushes.DarkGray, col2, y + 22)
+                Dim statusBrush = If(quote.IsActive, New XSolidBrush(XColor.FromArgb(22, 163, 74)), XBrushes.Gray)
+                gfx.DrawString(ArabicTextHelper.Fix(If(quote.IsActive, "فعال", "غير فعال")), New XFont("Arial", 9, XFontStyle.Bold), statusBrush, col2 + 35, y + 22)
+
+                ' Row 3 - notes
+                If Not String.IsNullOrWhiteSpace(quote.Notes) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("ملاحظات:"), lbf, XBrushes.DarkGray, col1, y + 36)
+                    gfx.DrawString(ArabicTextHelper.Fix(quote.Notes), lvf, XBrushes.Black, col1 + 35, y + 36)
+                End If
+                y += infoH + 10
+
+                ' ── Table header ──
+                Dim colW() As Double = {pageWidth * 0.05, pageWidth * 0.18, pageWidth * 0.45, pageWidth * 0.15, pageWidth * 0.17}
+                Dim colHdr() As String = {"م", "كود الصنف", "اسم الصنف", "الوحدة", "سعر العرض"}
+                Dim rowH As Double = 16
+                Dim headerBrush As New XSolidBrush(XColor.FromArgb(79, 70, 229))
+
+                Dim hx As Double = margin
+                gfx.DrawRectangle(headerBrush, margin, y, pageWidth, rowH)
+                For c = 0 To colHdr.Length - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(colHdr(c)), lbf, XBrushes.White,
+                                   New XRect(hx + 2, y + 2, colW(c) - 4, rowH - 4), XStringFormats.TopCenter)
+                    hx += colW(c)
+                Next
+                y += rowH
+
+                ' ── Table rows ──
+                Dim altBrush As New XSolidBrush(XColor.FromArgb(248, 250, 252))
+                For i = 0 To quote.Details.Count - 1
+                    ' New page if needed
+                    If y > page.Height.Point - margin - 30 Then
+                        page = doc.AddPage()
+                        page.Size = PdfSharp.PageSize.A4
+                        gfx = XGraphics.FromPdfPage(page)
+                        currentY = margin
+                        pageCount += 1
+                        DrawReportHeader(gfx, company, page, currentY, margin, pageWidth, pageCount)
+                        y = currentY
+                        ' Redraw header
+                        hx = margin
+                        gfx.DrawRectangle(headerBrush, margin, y, pageWidth, rowH)
+                        For c = 0 To colHdr.Length - 1
+                            gfx.DrawString(ArabicTextHelper.Fix(colHdr(c)), lbf, XBrushes.White,
+                                           New XRect(hx + 2, y + 2, colW(c) - 4, rowH - 4), XStringFormats.TopCenter)
+                            hx += colW(c)
+                        Next
+                        y += rowH
+                    End If
+
+                    Dim d = quote.Details(i)
+                    If i Mod 2 = 1 Then gfx.DrawRectangle(altBrush, margin, y, pageWidth, rowH)
+                    gfx.DrawLine(XPens.LightGray, margin, y + rowH, margin + pageWidth, y + rowH)
+
+                    Dim cells() As String = {
+                        (i + 1).ToString(),
+                        If(d.Barcode, ""),
+                        If(d.ProductName, ""),
+                        If(d.UnitName, ""),
+                        d.QuotedPrice.ToString("N3")
+                    }
+                    Dim cx As Double = margin
+                    For c = 0 To cells.Length - 1
+                        gfx.DrawString(ArabicTextHelper.Fix(cells(c)), lvf, XBrushes.Black,
+                                       New XRect(cx + 2, y + 2, colW(c) - 4, rowH - 4), XStringFormats.TopCenter)
+                        cx += colW(c)
+                    Next
+                    y += rowH
+                Next
+
+                ' ── Footer: total count ──
+                y += 8
+                gfx.DrawString(ArabicTextHelper.Fix($"إجمالي الأصناف: {quote.Details.Count} صنف"),
+                               lbf, XBrushes.Black, New XRect(margin, y, pageWidth, 16), XStringFormats.TopLeft)
+                gfx.DrawString($"صفحة {pageCount}",
+                               lvf, XBrushes.DarkGray, New XRect(margin, y, pageWidth, 16), XStringFormats.TopRight)
+
+                doc.Save(dlg.FileName)
+                If File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير PDF: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Generate Empty Excel Template for Quote Import
+        ' Uses DocumentFormat.OpenXml (no extra DLL deps)
+        ' ===================================================
+        Public Shared Sub ExportQuoteTemplate()
+            Try
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "حفظ قالب Excel"
+                dlg.Filter = "Excel Files (*.xlsx)|*.xlsx"
+                dlg.FileName = "قالب_استيراد_عرض_اسعار"
+
+                If dlg.ShowDialog() <> True Then Return
+
+                ' Build a minimal valid xlsx using Open XML SDK
+                Using doc = DocumentFormat.OpenXml.Packaging.SpreadsheetDocument.Create(
+                            dlg.FileName, DocumentFormat.OpenXml.SpreadsheetDocumentType.Workbook)
+
+                    Dim wbPart = doc.AddWorkbookPart()
+                    wbPart.Workbook = New DocumentFormat.OpenXml.Spreadsheet.Workbook()
+
+                    Dim wsPart = wbPart.AddNewPart(Of DocumentFormat.OpenXml.Packaging.WorksheetPart)()
+                    Dim sheetData As New DocumentFormat.OpenXml.Spreadsheet.SheetData()
+                    wsPart.Worksheet = New DocumentFormat.OpenXml.Spreadsheet.Worksheet(sheetData)
+
+                    Dim sheets = wbPart.Workbook.AppendChild(New DocumentFormat.OpenXml.Spreadsheet.Sheets())
+                    sheets.AppendChild(New DocumentFormat.OpenXml.Spreadsheet.Sheet() With {
+                        .Id = wbPart.GetIdOfPart(wsPart),
+                        .SheetId = 1,
+                        .Name = "عرض الأسعار"
+                    })
+
+                    ' Helper to create a text cell
+                    Dim makeCell As Func(Of String, String, DocumentFormat.OpenXml.Spreadsheet.Cell) =
+                        Function(cellRef As String, value As String)
+                            Dim c As New DocumentFormat.OpenXml.Spreadsheet.Cell()
+                            c.CellReference = cellRef
+                            c.DataType = DocumentFormat.OpenXml.Spreadsheet.CellValues.InlineString
+                            c.InlineString = New DocumentFormat.OpenXml.Spreadsheet.InlineString(
+                                New DocumentFormat.OpenXml.Spreadsheet.Text(value))
+                            Return c
+                        End Function
+
+                    ' Row 1 — headers
+                    Dim row1 As New DocumentFormat.OpenXml.Spreadsheet.Row() With {.RowIndex = 1}
+                    row1.AppendChild(makeCell("A1", "كود الصنف (Barcode)"))
+                    row1.AppendChild(makeCell("B1", "اسم الصنف"))
+                    row1.AppendChild(makeCell("C1", "سعر العرض"))
+                    sheetData.AppendChild(row1)
+
+                    ' Row 2 — sample
+                    Dim row2 As New DocumentFormat.OpenXml.Spreadsheet.Row() With {.RowIndex = 2}
+                    row2.AppendChild(makeCell("A2", "12345"))
+                    row2.AppendChild(makeCell("B2", "توماتة"))
+                    row2.AppendChild(makeCell("C2", "0.500"))
+                    sheetData.AppendChild(row2)
+
+                    ' Row 3 — sample
+                    Dim row3 As New DocumentFormat.OpenXml.Spreadsheet.Row() With {.RowIndex = 3}
+                    row3.AppendChild(makeCell("A3", "22222"))
+                    row3.AppendChild(makeCell("B3", "خيار"))
+                    row3.AppendChild(makeCell("C3", "0.350"))
+                    sheetData.AppendChild(row3)
+
+                    ' Row 5 — note
+                    Dim row5 As New DocumentFormat.OpenXml.Spreadsheet.Row() With {.RowIndex = 5}
+                    row5.AppendChild(makeCell("A5", "ملاحظة: عمود 'كود الصنف' إلزامي. 'سعر العرض' اختياري — إذا تُرك فارغاً يُستخدم السعر الافتراضي للصنف."))
+                    sheetData.AppendChild(row5)
+
+                    wbPart.Workbook.Save()
+                End Using
+
+                If File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء إنشاء القالب: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Import Quote Details from Excel (Open XML SDK)
+        ' Returns list of QuoteDetail rows (unmatched flagged)
+        ' ===================================================
+        Public Shared Function ImportQuoteFromExcel(products As IList(Of Product)) As List(Of QuoteDetail)
+            Dim result As New List(Of QuoteDetail)
+
+            Try
+                Dim dlg As New OpenFileDialog()
+                dlg.Title = "استيراد عرض أسعار من Excel"
+                dlg.Filter = "Excel Files (*.xlsx)|*.xlsx"
+
+                If dlg.ShowDialog() <> True Then Return Nothing
+
+                Using doc = DocumentFormat.OpenXml.Packaging.SpreadsheetDocument.Open(dlg.FileName, False)
+                    Dim wbPart = doc.WorkbookPart
+                    If wbPart Is Nothing Then Return Nothing
+
+                    ' Get first sheet
+                    Dim sheet = wbPart.Workbook.Descendants(Of DocumentFormat.OpenXml.Spreadsheet.Sheet).FirstOrDefault()
+                    If sheet Is Nothing Then Return Nothing
+
+                    Dim wsPart = TryCast(wbPart.GetPartById(sheet.Id), DocumentFormat.OpenXml.Packaging.WorksheetPart)
+                    If wsPart Is Nothing Then Return Nothing
+
+                    ' Shared strings table for string cells
+                    Dim sstPart = wbPart.SharedStringTablePart
+                    Dim sharedStrings As New List(Of String)
+                    If sstPart IsNot Nothing Then
+                        For Each item In sstPart.SharedStringTable.Elements(Of DocumentFormat.OpenXml.Spreadsheet.SharedStringItem)()
+                            sharedStrings.Add(item.InnerText)
+                        Next
+                    End If
+
+                    ' Helper to get cell text value
+                    Dim getCellValue As Func(Of DocumentFormat.OpenXml.Spreadsheet.Cell, String) =
+                        Function(c As DocumentFormat.OpenXml.Spreadsheet.Cell) As String
+                            If c Is Nothing OrElse c.CellValue Is Nothing Then Return ""
+                            Dim raw = c.CellValue.InnerText.Trim()
+                            If c.DataType IsNot Nothing AndAlso c.DataType.Value = DocumentFormat.OpenXml.Spreadsheet.CellValues.SharedString Then
+                                Dim idx As Integer
+                                If Integer.TryParse(raw, idx) AndAlso idx < sharedStrings.Count Then
+                                    Return sharedStrings(idx)
+                                End If
+                            ElseIf c.DataType IsNot Nothing AndAlso c.DataType.Value = DocumentFormat.OpenXml.Spreadsheet.CellValues.InlineString Then
+                                Return If(c.InlineString?.InnerText, raw)
+                            End If
+                            Return raw
+                        End Function
+
+                    ' Read all rows — skip row 1 (header)
+                    Dim rows = wsPart.Worksheet.Descendants(Of DocumentFormat.OpenXml.Spreadsheet.Row)().
+                                      Where(Function(r) r.RowIndex.HasValue AndAlso r.RowIndex.Value > CUInt(1)).ToList()
+
+                    If rows.Count = 0 Then
+                        MessageBox.Show("الملف لا يحتوي على بيانات بعد السطر الأول.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                        Return Nothing
+                    End If
+
+                    Dim addedBarcodes As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+
+                    For Each row In rows
+                        ' Get cells by column letter
+                        Dim cells = row.Elements(Of DocumentFormat.OpenXml.Spreadsheet.Cell)().ToList()
+
+                        Dim getCol As Func(Of String, String) =
+                            Function(col As String) As String
+                                Dim c = cells.FirstOrDefault(Function(x) x.CellReference.HasValue AndAlso
+                                                              x.CellReference.Value.StartsWith(col, StringComparison.OrdinalIgnoreCase))
+                                Return getCellValue(c)
+                            End Function
+
+                        Dim barcodeVal = getCol("A").Trim()
+                        Dim nameVal = getCol("B").Trim()
+                        Dim priceVal = getCol("C").Trim()
+
+                        If String.IsNullOrEmpty(barcodeVal) AndAlso String.IsNullOrEmpty(nameVal) Then Continue For
+
+                        Dim quotedPrice As Decimal = 0
+                        Decimal.TryParse(priceVal.Replace(",", "."), Globalization.NumberStyles.Any,
+                                         Globalization.CultureInfo.InvariantCulture, quotedPrice)
+
+                        ' ── Match product ──
+                        Dim matchedProduct As Product = Nothing
+
+                        If Not String.IsNullOrEmpty(barcodeVal) Then
+                            matchedProduct = products.FirstOrDefault(
+                                Function(p) p.Barcode IsNot Nothing AndAlso
+                                            p.Barcode.Trim().Equals(barcodeVal, StringComparison.OrdinalIgnoreCase))
+                        End If
+
+                        If matchedProduct Is Nothing AndAlso Not String.IsNullOrEmpty(nameVal) Then
+                            matchedProduct = products.FirstOrDefault(
+                                Function(p) p.SearchText IsNot Nothing AndAlso
+                                            p.SearchText.ToLower().Contains(nameVal.ToLower()))
+                        End If
+
+                        ' ── Duplicate guard ──
+                        If matchedProduct IsNot Nothing Then
+                            Dim key = matchedProduct.ProductID.ToString()
+                            If addedBarcodes.Contains(key) Then Continue For
+                            addedBarcodes.Add(key)
+                        End If
+
+                        ' ── Build row ──
+                        If matchedProduct IsNot Nothing Then
+                            result.Add(New QuoteDetail() With {
+                                .ProductID = matchedProduct.ProductID,
+                                .Barcode = matchedProduct.Barcode,
+                                .ProductName = matchedProduct.ProductName,
+                                .UnitName = matchedProduct.UnitName,
+                                .QuotedPrice = If(quotedPrice > 0, quotedPrice, matchedProduct.SalePrice),
+                                .IsUnmatched = False
+                            })
+                        Else
+                            result.Add(New QuoteDetail() With {
+                                .ProductID = 0,
+                                .Barcode = barcodeVal,
+                                .ProductName = If(Not String.IsNullOrEmpty(nameVal), nameVal, $"[غير معروف: {barcodeVal}]"),
+                                .UnitName = "",
+                                .QuotedPrice = quotedPrice,
+                                .IsUnmatched = True
+                            })
+                        End If
+                    Next
+                End Using
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء الاستيراد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Return Nothing
+            End Try
+
+            Return result
+        End Function
 
     End Class
 End Namespace

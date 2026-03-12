@@ -1,0 +1,259 @@
+Imports System.Windows
+Imports System.Windows.Controls
+Imports System.Windows.Input
+Imports System.Windows.Threading
+Imports Vegtablity.ViewModels
+
+Namespace Views
+    Public Class QuotePage
+        Inherits UserControl
+
+        Public Sub New()
+            InitializeComponent()
+
+            Dim vm = TryCast(DataContext, QuoteViewModel)
+            If vm IsNot Nothing Then
+                AddHandler vm.RequestSnackbar, AddressOf ShowSnackbar
+            End If
+        End Sub
+
+        Private Sub ShowSnackbar(message As String)
+            SnackbarText.Text = message
+            SnackbarBorder.Visibility = Visibility.Visible
+            
+            Dim timer As New DispatcherTimer()
+            timer.Interval = TimeSpan.FromSeconds(3)
+            AddHandler timer.Tick, Sub(sender, e)
+                                       SnackbarBorder.Visibility = Visibility.Collapsed
+                                       timer.Stop()
+                                   End Sub
+            timer.Start()
+        End Sub
+
+        Private Sub HistoryButton_Click(sender As Object, e As RoutedEventArgs)
+            HistoryModal.Visibility = Visibility.Visible
+        End Sub
+
+        Private Sub CloseHistoryButton_Click(sender As Object, e As RoutedEventArgs)
+            HistoryModal.Visibility = Visibility.Collapsed
+        End Sub
+
+        Private Sub EditFromHistory_Click(sender As Object, e As RoutedEventArgs)
+            HistoryModal.Visibility = Visibility.Collapsed
+        End Sub
+
+        ' --- Grid Interactions (Simulating SalesInvoicePage UX) ---
+        Private Sub TextBox_GotFocus(sender As Object, e As RoutedEventArgs)
+            Dim tb = TryCast(sender, TextBox)
+            If tb IsNot Nothing Then
+                tb.SelectAll()
+            End If
+        End Sub
+
+        Private Sub ProductComboBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            Dim cb = TryCast(sender, ComboBox)
+            If cb IsNot Nothing AndAlso e.Key = Key.Enter Then
+                e.Handled = True
+                MoveFocusToNextCell(cb)
+            End If
+        End Sub
+
+        Private Sub ProductComboBox_DropDownOpened(sender As Object, e As EventArgs)
+            Dim cb = TryCast(sender, ComboBox)
+            If cb IsNot Nothing Then
+                cb.IsEditable = True
+            End If
+        End Sub
+
+        Private Sub ProductComboBox_DropDownClosed(sender As Object, e As EventArgs)
+            Dim cb = TryCast(sender, ComboBox)
+            If cb IsNot Nothing Then
+                If cb.SelectedItem Is Nothing AndAlso Not String.IsNullOrWhiteSpace(cb.Text) Then
+                    Dim vm = TryCast(DataContext, QuoteViewModel)
+                    If vm IsNot Nothing Then
+                        Dim match = vm.Products.FirstOrDefault(Function(p) p.SearchText IsNot Nothing AndAlso p.SearchText.Contains(cb.Text))
+                        If match IsNot Nothing Then
+                            cb.SelectedItem = match
+                        Else
+                            cb.Text = ""
+                        End If
+                    End If
+                End If
+                ' Always clear the filter after selection so next open shows all products
+                Dim view = System.Windows.Data.CollectionViewSource.GetDefaultView(TryCast(cb.ItemsSource, System.Collections.IEnumerable))
+                If view IsNot Nothing Then
+                    view.Filter = Nothing
+                End If
+            End If
+        End Sub
+
+        Private Sub ProductComboBox_LostFocus(sender As Object, e As RoutedEventArgs)
+            Dim cb = TryCast(sender, ComboBox)
+            If cb IsNot Nothing Then
+                If cb.SelectedItem Is Nothing AndAlso Not String.IsNullOrWhiteSpace(cb.Text) Then
+                    cb.Text = ""
+                End If
+            End If
+        End Sub
+
+        Private Sub ProductComboBox_KeyUp(sender As Object, e As KeyEventArgs)
+            Dim cb = TryCast(sender, ComboBox)
+            If cb IsNot Nothing AndAlso cb.IsEditable AndAlso Not String.IsNullOrEmpty(cb.Text) Then
+                If e.Key = Key.Up OrElse e.Key = Key.Down OrElse e.Key = Key.Enter OrElse e.Key = Key.Escape OrElse e.Key = Key.Tab OrElse e.Key = Key.LeftShift OrElse e.Key = Key.RightShift Then
+                    Return
+                End If
+
+                Dim searchText = cb.Text.ToLower()
+                Dim vm = TryCast(DataContext, QuoteViewModel)
+                If vm IsNot Nothing Then
+                    Dim view = System.Windows.Data.CollectionViewSource.GetDefaultView(vm.Products)
+                    view.Filter = Function(obj As Object)
+                                      Dim prod = TryCast(obj, Models.Product)
+                                      If prod Is Nothing Then Return False
+                                      Dim match = prod.SearchText IsNot Nothing AndAlso prod.SearchText.ToLower().Contains(searchText)
+                                      Return match
+                                  End Function
+                    If Not cb.IsDropDownOpen Then cb.IsDropDownOpen = True
+                End If
+            End If
+        End Sub
+
+        Private Sub Price_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key = Key.Enter Then
+                e.Handled = True
+
+                ' Auto Add New Row
+                Dim vm = TryCast(DataContext, QuoteViewModel)
+                If vm IsNot Nothing AndAlso vm.AddItemCommand.CanExecute(Nothing) Then
+                    vm.AddItemCommand.Execute(Nothing)
+
+                    ' Navigate to Barcode column (index 0) of the new last row
+                    Dispatcher.BeginInvoke(New Action(Sub()
+                                                          Try
+                                                              Dim newItem = vm.CurrentQuote.Details.LastOrDefault()
+                                                              If newItem Is Nothing Then Return
+
+                                                              Dim barcodeColumn = dgQuoteDetails.Columns(0)
+                                                              dgQuoteDetails.CurrentCell = New DataGridCellInfo(newItem, barcodeColumn)
+                                                              dgQuoteDetails.ScrollIntoView(newItem)
+
+                                                              Dim row = TryCast(dgQuoteDetails.ItemContainerGenerator.ContainerFromItem(newItem), DataGridRow)
+                                                              If row IsNot Nothing Then
+                                                                  Dim presenter = FindVisualChild(Of Primitives.DataGridCellsPresenter)(row)
+                                                                  If presenter IsNot Nothing Then
+                                                                      Dim cell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(0), DataGridCell)
+                                                                      If cell IsNot Nothing Then
+                                                                          Dim barcodeTb = FindVisualChild(Of TextBox)(cell)
+                                                                          If barcodeTb IsNot Nothing Then
+                                                                              barcodeTb.Focus()
+                                                                              barcodeTb.SelectAll()
+                                                                          End If
+                                                                      End If
+                                                                  End If
+                                                              End If
+                                                          Catch
+                                                          End Try
+                                                      End Sub), System.Windows.Threading.DispatcherPriority.Render)
+                End If
+            End If
+        End Sub
+
+        Private Sub BarcodeSearchBox_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key = Key.Enter Then
+                Dim vm = TryCast(DataContext, QuoteViewModel)
+                If vm IsNot Nothing AndAlso vm.AddItemByBarcodeCommand.CanExecute(Nothing) Then
+                    vm.AddItemByBarcodeCommand.Execute(Nothing)
+                End If
+                e.Handled = True
+            End If
+        End Sub
+
+        Private Sub BarcodeCell_KeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter Then Return
+
+            Dim tb = TryCast(sender, TextBox)
+            If tb Is Nothing OrElse String.IsNullOrWhiteSpace(tb.Text) Then Return
+
+            Dim vm = TryCast(DataContext, QuoteViewModel)
+            If vm Is Nothing Then Return
+
+            ' Get the QuoteDetail bound to this row
+            Dim detail = TryCast(tb.DataContext, Models.QuoteDetail)
+            If detail Is Nothing Then Return
+
+            Dim searchLower = tb.Text.Trim().ToLower()
+
+            ' Find by exact barcode first, then partial name
+            Dim found = vm.Products.FirstOrDefault(Function(p)
+                                                       Return (p.Barcode IsNot Nothing AndAlso p.Barcode.ToLower() = searchLower) OrElse
+                                                              (p.SearchText IsNot Nothing AndAlso p.SearchText.ToLower().Contains(searchLower))
+                                                   End Function)
+
+            If found IsNot Nothing Then
+                detail.ProductID = found.ProductID
+                detail.Barcode = found.Barcode
+                detail.UnitName = found.UnitName
+                detail.QuotedPrice = found.SalePrice
+
+                ' Navigate to price column (index 3) and SelectAll after render
+                Dispatcher.BeginInvoke(New Action(Sub()
+                                                      Try
+                                                          ' Price column is at index 3 (Barcode=0, Product=1, Unit=2, Price=3)
+                                                          Dim priceColumn = dgQuoteDetails.Columns(3)
+                                                          dgQuoteDetails.CurrentCell = New DataGridCellInfo(detail, priceColumn)
+                                                          dgQuoteDetails.BeginEdit()
+
+                                                          ' Find the DataGridRow for this item
+                                                          Dim row = TryCast(dgQuoteDetails.ItemContainerGenerator.ContainerFromItem(detail), DataGridRow)
+                                                          If row IsNot Nothing Then
+                                                              Dim presenter = FindVisualChild(Of Primitives.DataGridCellsPresenter)(row)
+                                                              If presenter IsNot Nothing Then
+                                                                  Dim cell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(3), DataGridCell)
+                                                                  If cell IsNot Nothing Then
+                                                                      Dim priceTb = FindVisualChild(Of TextBox)(cell)
+                                                                      If priceTb IsNot Nothing Then
+                                                                          priceTb.Focus()
+                                                                          priceTb.SelectAll()
+                                                                      End If
+                                                                  End If
+                                                              End If
+                                                          End If
+                                                      Catch
+                                                      End Try
+                                                  End Sub), System.Windows.Threading.DispatcherPriority.Render)
+
+            Else
+                ' Flash the text red as a hint
+                tb.Foreground = New System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red)
+                Dim timer As New System.Windows.Threading.DispatcherTimer()
+                timer.Interval = TimeSpan.FromMilliseconds(800)
+                AddHandler timer.Tick, Sub(s, ev)
+                                           tb.Foreground = New System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(&H64, &H74, &H8B))
+                                           timer.Stop()
+                                       End Sub
+                timer.Start()
+            End If
+
+            e.Handled = True
+        End Sub
+
+        Private Sub MoveFocusToNextCell(currentControl As Control)
+            Dim request As New TraversalRequest(FocusNavigationDirection.Next)
+            currentControl.MoveFocus(request)
+        End Sub
+
+        ''' <summary>Walks the visual tree to find the first child of type T.</summary>
+        Private Shared Function FindVisualChild(Of T As DependencyObject)(parent As DependencyObject) As T
+            If parent Is Nothing Then Return Nothing
+            For i As Integer = 0 To Media.VisualTreeHelper.GetChildrenCount(parent) - 1
+                Dim child = Media.VisualTreeHelper.GetChild(parent, i)
+                Dim result = TryCast(child, T)
+                If result IsNot Nothing Then Return result
+                Dim deeper = FindVisualChild(Of T)(child)
+                If deeper IsNot Nothing Then Return deeper
+            Next
+            Return Nothing
+        End Function
+
+    End Class
+End Namespace

@@ -60,6 +60,7 @@ Namespace ViewModels
                 {"ProfitLoss", "أرباح وخسائر"},
                 {"YearEndClose", "الإقفال السنوي"},
                 {"Partners", "العملاء والموردين"},
+                {"Quotes", "عروض الأسعار"},
                 {"Reports", "التقارير"},
                 {"SettingsParent", "قسم الإعدادات"},
                 {"Settings", "إعدادات عامة"},

@@ -315,6 +315,14 @@
     <Compile Include="Views\ProductCardControl.xaml.vb">
       <DependentUpon>ProductCardControl.xaml</DependentUpon>
     </Compile>
+    <!-- Quotations Feature -->
+    <Compile Include="Models\QuoteHeader.vb" />
+    <Compile Include="Models\QuoteDetail.vb" />
+    <Compile Include="Services\QuoteService.vb" />
+    <Compile Include="ViewModels\QuoteViewModel.vb" />
+    <Compile Include="Views\QuotePage.xaml.vb">
+      <DependentUpon>QuotePage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\LicenseWindow.xaml">
@@ -402,6 +410,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ProductCardControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\QuotePage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

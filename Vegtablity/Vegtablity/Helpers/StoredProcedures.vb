@@ -144,6 +144,18 @@ Namespace Helpers
         Public Const SP_INVOICEDETAIL_DELETEBYINVID As String = "[Sales].[sp_InvoiceDetails_DeleteByInvID]"
 
         ' =============================================
+        ' Sales Schema - Quotations
+        ' =============================================
+        Public Const SP_QUOTATION_GETALL As String = "[Sales].[sp_Quotations_GetAll]"
+        Public Const SP_QUOTATION_GETBYPARTNER As String = "[Sales].[sp_Quotations_GetByPartner]"
+        Public Const SP_QUOTATION_UPSERT As String = "[Sales].[sp_Quotations_Upsert]"
+        Public Const SP_QUOTATION_DELETE As String = "[Sales].[sp_Quotations_Delete]"
+        Public Const SP_QUOTATIONDETAILS_GETBYQUOTEID As String = "[Sales].[sp_QuotationDetails_GetByQuoteID]"
+        Public Const SP_QUOTATIONDETAILS_INSERT As String = "[Sales].[sp_QuotationDetails_Insert]"
+        Public Const SP_QUOTATIONDETAILS_DELETEBYQUOTEID As String = "[Sales].[sp_QuotationDetails_DeleteByQuoteID]"
+        Public Const SP_QUOTATION_GETACTIVEPRICE As String = "[Sales].[sp_Quotations_GetActivePrice]"
+
+        ' =============================================
         ' Inventory Schema - Stock
         ' =============================================
         Public Const SP_STOCK_GETBYPRODUCT As String = "[Inventory].[sp_Stock_GetByProduct]"

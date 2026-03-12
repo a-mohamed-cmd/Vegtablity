@@ -8,6 +8,7 @@ Namespace ViewModels
         Inherits BaseViewModel
 
         Private ReadOnly _partnerService As New Services.PartnerService()
+        Private ReadOnly _quoteService As New Services.QuoteService()
 
         ' ===== Customers =====
         Private _customers As ObservableCollection(Of Partner)
@@ -32,6 +33,14 @@ Namespace ViewModels
         Private _editSupplierAddress As String
         Private _supplierNameError As String
         Private _supplierStatusMessage As String
+
+        ' ===== Customer Quotes Panel =====
+        Private _customerQuotes As ObservableCollection(Of QuoteHeader)
+        Private _isQuotesPanelOpen As Boolean
+        Private _quotePanelCustomerName As String
+
+        ''' <summary>Raised when the user clicks a quote — View navigates to QuotePage with that quote.</summary>
+        Public Event RequestNavigateToQuote As Action(Of QuoteHeader)
 
         Public Sub New()
             LoadPermissions("Partners")
@@ -61,6 +70,9 @@ Namespace ViewModels
                     EditCustomerAddress = value.Address
                     IsEditingCustomer = True
                     CustomerNameError = Nothing
+
+                    ' Auto-load quotes and open side panel
+                    LoadCustomerQuotes(value.PartnerID, value.PartnerName)
                 End If
             End Set
         End Property
@@ -131,6 +143,33 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 SetProperty(_customerStatusMessage, value)
+            End Set
+        End Property
+
+        Public Property CustomerQuotes As ObservableCollection(Of QuoteHeader)
+            Get
+                Return _customerQuotes
+            End Get
+            Set(value As ObservableCollection(Of QuoteHeader))
+                SetProperty(_customerQuotes, value)
+            End Set
+        End Property
+
+        Public Property IsQuotesPanelOpen As Boolean
+            Get
+                Return _isQuotesPanelOpen
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isQuotesPanelOpen, value)
+            End Set
+        End Property
+
+        Public Property QuotePanelCustomerName As String
+            Get
+                Return _quotePanelCustomerName
+            End Get
+            Set(value As String)
+                SetProperty(_quotePanelCustomerName, value)
             End Set
         End Property
 #End Region
@@ -249,6 +288,33 @@ Namespace ViewModels
                 Return New Helpers.RelayCommand(AddressOf ExecuteDeleteCustomer, Function(o) SelectedCustomer IsNot Nothing AndAlso CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete)
             End Get
         End Property
+
+        Public ReadOnly Property ShowQuotesPanelCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                                                    If SelectedCustomer IsNot Nothing Then
+                                                        LoadCustomerQuotes(SelectedCustomer.PartnerID, SelectedCustomer.PartnerName)
+                                                    End If
+                                                End Sub)
+            End Get
+        End Property
+
+        Public ReadOnly Property CloseQuotesPanelCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) IsQuotesPanelOpen = False)
+            End Get
+        End Property
+
+        Public ReadOnly Property ViewQuoteCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(
+                    Sub(o)
+                        Dim q = TryCast(o, QuoteHeader)
+                        If q IsNot Nothing Then RaiseEvent RequestNavigateToQuote(q)
+                    End Sub,
+                    Function(o) o IsNot Nothing)
+            End Get
+        End Property
 #End Region
 
 #Region "Commands - Suppliers"
@@ -277,6 +343,17 @@ Namespace ViewModels
                 Customers = New ObservableCollection(Of Partner)(_partnerService.GetAllPartners("Customer"))
             Catch ex As Exception
                 CustomerStatusMessage = "خطأ في تحميل العملاء: " & ex.Message
+            End Try
+        End Sub
+
+        Private Sub LoadCustomerQuotes(partnerID As Integer, customerName As String)
+            Try
+                QuotePanelCustomerName = customerName
+                Dim quotes = _quoteService.GetQuotesByPartner(partnerID)
+                CustomerQuotes = New ObservableCollection(Of QuoteHeader)(quotes)
+                IsQuotesPanelOpen = True
+            Catch ex As Exception
+                CustomerStatusMessage = "خطأ في تحميل عروض الأسعار: " & ex.Message
             End Try
         End Sub
 
