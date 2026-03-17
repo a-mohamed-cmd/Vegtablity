@@ -5268,3 +5268,164 @@ BEGIN
     ORDER BY q.QuoteDate DESC;
 END
 GO
+
+IF OBJECT_ID('[Inventory].[sp_Inventory_GetAvgCostByProduct]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Inventory_GetAvgCostByProduct];
+GO
+CREATE PROCEDURE [Inventory].[sp_Inventory_GetAvgCostByProduct]
+    @ProductID INT,
+    @WarehouseID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT ISNULL(AvgCostPrice, 0) 
+    FROM [Inventory].[ProductStock] 
+    WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID;
+END
+GO
+
+
+-- 3. Get All Quotations
+IF OBJECT_ID('[Sales].[sp_Quotations_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetAll];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT q.*, p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    ORDER BY q.QuoteDate DESC;
+END
+GO
+
+-- 4. Get Quotation Details
+IF OBJECT_ID('[Sales].[sp_QuotationDetails_GetByQuoteID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID];
+GO
+CREATE PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID]
+    @QuoteID INT,
+    @PageNumber INT = 1,
+    @PageSize INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- 1. Total Count
+    SELECT COUNT(*) FROM [Sales].[QuotationDetails] WHERE QuoteID = @QuoteID;
+
+    -- 2. Paginated Data
+    SELECT 
+        qd.QuoteDetailID,
+        qd.QuoteID,
+        qd.ProductID,
+        qd.QuotedPrice,
+        ISNULL(p.ProductName, N'صنف غير معروف') AS ProductName,
+        p.Barcode,
+        u.UnitName
+    FROM [Sales].[QuotationDetails] qd
+    LEFT JOIN [Inventory].[Products] p ON qd.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE qd.QuoteID = @QuoteID
+    ORDER BY qd.QuoteDetailID
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 5. Insert Quotation Detail
+IF OBJECT_ID('[Sales].[sp_QuotationDetails_Insert]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_Insert];
+GO
+CREATE PROCEDURE [Sales].[sp_QuotationDetails_Insert]
+    @QuoteID INT,
+    @ProductID INT,
+    @QuotedPrice DECIMAL(18, 3),
+    @Quantity DECIMAL(18, 3) = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO [Sales].[QuotationDetails] (QuoteID, ProductID, QuotedPrice)
+    VALUES (@QuoteID, @ProductID, @QuotedPrice);
+END
+GO
+
+-- 6. Delete Details By QuoteID (for full replacement during editing)
+IF OBJECT_ID('[Sales].[sp_QuotationDetails_DeleteByQuoteID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_DeleteByQuoteID];
+GO
+CREATE PROCEDURE [Sales].[sp_QuotationDetails_DeleteByQuoteID]
+    @QuoteID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [Sales].[QuotationDetails] WHERE QuoteID = @QuoteID;
+END
+GO
+
+-- 7. Get Active Quote Price directly for SalesInvoice auto-fetch
+IF OBJECT_ID('[Sales].[sp_Quotations_GetActivePrice]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetActivePrice];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetActivePrice]
+    @PartnerID INT,
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Select the lowest/latest active quoted price if multiple exist
+    SELECT TOP 1 qd.QuotedPrice
+    FROM [Sales].[QuotationDetails] qd
+    INNER JOIN [Sales].[Quotations] q ON qd.QuoteID = q.QuoteID
+    WHERE q.PartnerID = @PartnerID
+      AND qd.ProductID = @ProductID
+      AND q.IsActive = 1
+      AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= GETDATE())
+    ORDER BY q.QuoteDate DESC;
+END
+go
+-- 8. Get Quotations By Partner (for customer side panel)
+IF OBJECT_ID('[Sales].[sp_Quotations_GetByPartner]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetByPartner];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetByPartner]
+    @PartnerID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT q.QuoteID, q.PartnerID, q.QuoteDate, q.ExpiryDate, q.IsActive, q.Notes,
+           p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE q.PartnerID = @PartnerID
+    ORDER BY q.QuoteDate DESC;
+END
+GO
+
+IF OBJECT_ID('[Sales].[sp_QuotationDetails_GetByQuoteID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID];
+GO
+CREATE PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID]
+    @QuoteID INT,
+    @PageNumber INT = 1,
+    @PageSize INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- 1. Total Count
+    SELECT COUNT(*) AS TotalCount FROM [Sales].[QuotationDetails] WHERE QuoteID = @QuoteID;
+
+    -- 2. Paginated Data
+    SELECT 
+        qd.QuoteDetailID,
+        qd.QuoteID,
+        qd.ProductID,
+        qd.QuotedPrice,
+        ISNULL(p.ProductName, N'صنف غير معروف') AS ProductName,
+        p.Barcode,
+        u.UnitName
+    FROM [Sales].[QuotationDetails] qd
+    LEFT JOIN [Inventory].[Products] p ON qd.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE qd.QuoteID = @QuoteID
+    ORDER BY qd.QuoteDetailID
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
