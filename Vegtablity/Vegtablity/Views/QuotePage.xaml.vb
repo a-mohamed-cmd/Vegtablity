@@ -14,13 +14,33 @@ Namespace Views
             Dim vm = TryCast(DataContext, QuoteViewModel)
             If vm IsNot Nothing Then
                 AddHandler vm.RequestSnackbar, AddressOf ShowSnackbar
+                AddHandler vm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             End If
+        End Sub
+
+        Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
+            If e.PropertyName = "HistoryPage" Then
+                AnimateGrid(dgHistory)
+            ElseIf e.PropertyName = "DetailsPage" Then
+                AnimateGrid(dgQuoteDetails)
+            End If
+        End Sub
+
+        Private Sub AnimateGrid(grid As UIElement)
+            If grid Is Nothing Then Return
+            Dim fadeOut As New Media.Animation.DoubleAnimation(1, 0, New Duration(TimeSpan.FromMilliseconds(100)))
+            Dim fadeIn As New Media.Animation.DoubleAnimation(0, 1, New Duration(TimeSpan.FromMilliseconds(200)))
+            
+            AddHandler fadeOut.Completed, Sub()
+                                              grid.BeginAnimation(UIElement.OpacityProperty, fadeIn)
+                                          End Sub
+            grid.BeginAnimation(UIElement.OpacityProperty, fadeOut)
         End Sub
 
         Private Sub ShowSnackbar(message As String)
             SnackbarText.Text = message
             SnackbarBorder.Visibility = Visibility.Visible
-            
+
             Dim timer As New DispatcherTimer()
             timer.Interval = TimeSpan.FromSeconds(3)
             AddHandler timer.Tick, Sub(sender, e)
@@ -71,7 +91,7 @@ Namespace Views
                 If cb.SelectedItem Is Nothing AndAlso Not String.IsNullOrWhiteSpace(cb.Text) Then
                     Dim vm = TryCast(DataContext, QuoteViewModel)
                     If vm IsNot Nothing Then
-                        Dim match = vm.Products.FirstOrDefault(Function(p) p.SearchText IsNot Nothing AndAlso p.SearchText.Contains(cb.Text))
+                        Dim match = vm.GlobalFindProduct(cb.Text)
                         If match IsNot Nothing Then
                             cb.SelectedItem = match
                         Else
@@ -79,11 +99,9 @@ Namespace Views
                         End If
                     End If
                 End If
-                ' Always clear the filter after selection so next open shows all products
-                Dim view = System.Windows.Data.CollectionViewSource.GetDefaultView(TryCast(cb.ItemsSource, System.Collections.IEnumerable))
-                If view IsNot Nothing Then
-                    view.Filter = Nothing
-                End If
+                ' Reset filter in VM so next open shows first page
+                Dim qvm = TryCast(DataContext, QuoteViewModel)
+                If qvm IsNot Nothing Then qvm.ProductFilter = ""
             End If
         End Sub
 
@@ -106,13 +124,7 @@ Namespace Views
                 Dim searchText = cb.Text.ToLower()
                 Dim vm = TryCast(DataContext, QuoteViewModel)
                 If vm IsNot Nothing Then
-                    Dim view = System.Windows.Data.CollectionViewSource.GetDefaultView(vm.Products)
-                    view.Filter = Function(obj As Object)
-                                      Dim prod = TryCast(obj, Models.Product)
-                                      If prod Is Nothing Then Return False
-                                      Dim match = prod.SearchText IsNot Nothing AndAlso prod.SearchText.ToLower().Contains(searchText)
-                                      Return match
-                                  End Function
+                    vm.ProductFilter = searchText
                     If Not cb.IsDropDownOpen Then cb.IsDropDownOpen = True
                 End If
             End If
@@ -120,6 +132,14 @@ Namespace Views
 
         Private Sub Price_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
+                ' Force the binding to update before moving focus, 
+                ' so the typed price is committed to the ViewModel.
+                Dim tb = TryCast(sender, TextBox)
+                If tb IsNot Nothing Then
+                    Dim binding = tb.GetBindingExpression(TextBox.TextProperty)
+                    If binding IsNot Nothing Then binding.UpdateSource()
+                End If
+
                 e.Handled = True
 
                 ' Auto Add New Row
@@ -183,11 +203,8 @@ Namespace Views
 
             Dim searchLower = tb.Text.Trim().ToLower()
 
-            ' Find by exact barcode first, then partial name
-            Dim found = vm.Products.FirstOrDefault(Function(p)
-                                                       Return (p.Barcode IsNot Nothing AndAlso p.Barcode.ToLower() = searchLower) OrElse
-                                                              (p.SearchText IsNot Nothing AndAlso p.SearchText.ToLower().Contains(searchLower))
-                                                   End Function)
+            ' Find globally (database-wide search via ViewModel's local copy)
+            Dim found = vm.GlobalFindProduct(tb.Text)
 
             If found IsNot Nothing Then
                 detail.ProductID = found.ProductID
@@ -198,8 +215,8 @@ Namespace Views
                 ' Navigate to price column (index 3) and SelectAll after render
                 Dispatcher.BeginInvoke(New Action(Sub()
                                                       Try
-                                                          ' Price column is at index 3 (Barcode=0, Product=1, Unit=2, Price=3)
-                                                          Dim priceColumn = dgQuoteDetails.Columns(3)
+                                                          ' Price column is at index 4 (Barcode=0, Product=1, FallbackName=2, Unit=3, Price=4)
+                                                          Dim priceColumn = dgQuoteDetails.Columns(4)
                                                           dgQuoteDetails.CurrentCell = New DataGridCellInfo(detail, priceColumn)
                                                           dgQuoteDetails.BeginEdit()
 
@@ -208,7 +225,7 @@ Namespace Views
                                                           If row IsNot Nothing Then
                                                               Dim presenter = FindVisualChild(Of Primitives.DataGridCellsPresenter)(row)
                                                               If presenter IsNot Nothing Then
-                                                                  Dim cell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(3), DataGridCell)
+                                                                  Dim cell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(4), DataGridCell)
                                                                   If cell IsNot Nothing Then
                                                                       Dim priceTb = FindVisualChild(Of TextBox)(cell)
                                                                       If priceTb IsNot Nothing Then

@@ -185,6 +185,13 @@ Namespace Views
 
         Private Sub Price_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
+                ' Force the binding to commit the typed value BEFORE adding a new row
+                Dim tb = TryCast(sender, TextBox)
+                If tb IsNot Nothing Then
+                    Dim binding = tb.GetBindingExpression(TextBox.TextProperty)
+                    If binding IsNot Nothing Then binding.UpdateSource()
+                End If
+
                 e.Handled = True
 
                 ' Add new row and focus on its product combobox
@@ -217,9 +224,9 @@ Namespace Views
                                                                   Dim cell As DataGridCell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(0), DataGridCell)
                                                                   If cell IsNot Nothing Then
                                                                       ' 5. Finally, grab the TextBox inside and forcefully focus it
-                                                                      Dim tb As TextBox = FindVisualChild(Of TextBox)(cell)
-                                                                      If tb IsNot Nothing Then
-                                                                          Keyboard.Focus(tb)
+                                                                      Dim innerTb As TextBox = FindVisualChild(Of TextBox)(cell)
+                                                                      If innerTb IsNot Nothing Then
+                                                                          Keyboard.Focus(innerTb)
                                                                       Else
                                                                           cell.Focus()
                                                                       End If

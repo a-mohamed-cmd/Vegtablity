@@ -15,9 +15,250 @@ Namespace Helpers
         Private Shared ReadOnly fontReg As New XFont("Arial", 9, XFontStyle.Regular)
         Private Shared ReadOnly fontSmall As New XFont("Arial", 8, XFontStyle.Regular)
         Private Shared ReadOnly fontLarge As New XFont("Arial", 18, XFontStyle.Bold)
-        Private Shared ReadOnly fontTitle As New XFont("Arial", 16, XFontStyle.Bold)
+        Private Shared ReadOnly _fontTitle As New XFont("Arial", 16, XFontStyle.Bold)
         Private Shared ReadOnly headerFont As New XFont("Arial", 11, XFontStyle.Bold)
+        Private Shared ReadOnly fontTable As New XFont("Arial", 9, XFontStyle.Regular)
 
+        ''' <summary>Helper to resolve nested property paths (e.g. "Customer.Name")</summary>
+        Private Shared Function GetValueFromProperty(obj As Object, path As String) As Object
+            Try
+                If obj Is Nothing OrElse String.IsNullOrEmpty(path) Then Return Nothing
+                Dim parts = path.Split("."c)
+                Dim current = obj
+                For Each part In parts
+                    If current Is Nothing Then Return Nothing
+                    Dim prop = current.GetType().GetProperty(part)
+                    If prop Is Nothing Then Return Nothing
+                    current = prop.GetValue(current)
+                Next
+                Return current
+            Catch
+                Return Nothing
+            End Try
+        End Function
+
+        ' ===================================================
+        ' Generic Export for ANY WPF DataGrid to CSV (Standard for this system)
+        ' ===================================================
+        Public Shared Sub ExportDataGridToCsv(grid As System.Windows.Controls.DataGrid, reportTitle As String)
+            Try
+                If grid Is Nothing OrElse grid.ItemsSource Is Nothing OrElse grid.Items.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات ليتم تصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير إلى CSV (Excel)"
+                dlg.Filter = "ملفات CSV (*.csv)|*.csv"
+
+                ' Sanitize filename
+                Dim safeName As String = reportTitle.Replace(" ", "_")
+                for Each c In Global.System.IO.Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = safeName & "_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() = True Then
+                    Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                        ' Header info
+                        sw.WriteLine("التقرير: " & reportTitle)
+                        sw.WriteLine("تاريخ الاستخراج: " & DateTime.Now.ToString("yyyy/MM/dd HH:mm"))
+                        sw.WriteLine()
+
+                        ' Columns Header
+                        Dim visibleCols = grid.Columns.Where(Function(c) c.Visibility = System.Windows.Visibility.Visible).ToList()
+                        Dim headerRow = visibleCols.Select(Function(col) If(col.Header?.ToString(), "")).ToArray()
+                        sw.WriteLine(String.Join(",", headerRow))
+
+                        ' Data Rows
+                        For Each item In grid.ItemsSource
+                            If item Is Nothing Then Continue For
+
+                            Dim rowValues As New List(Of String)()
+                            For Each col In visibleCols
+                                Dim text As String = ""
+                                Dim boundCol = TryCast(col, System.Windows.Controls.DataGridBoundColumn)
+                                If boundCol IsNot Nothing AndAlso boundCol.Binding IsNot Nothing Then
+                                    Dim bindingPath = TryCast(boundCol.Binding, System.Windows.Data.Binding)?.Path?.Path
+                                    If Not String.IsNullOrEmpty(bindingPath) Then
+                                        Dim value = GetValueFromProperty(item, bindingPath)
+                                        If value IsNot Nothing Then
+                                            If TypeOf value Is Decimal OrElse TypeOf value Is Double Then
+                                                Dim fmt = TryCast(boundCol.Binding, System.Windows.Data.Binding)?.StringFormat
+                                                If Not String.IsNullOrEmpty(fmt) AndAlso fmt.Contains("N2") Then
+                                                    text = Convert.ToDecimal(value).ToString("F2") ' Standard 2 decimals
+                                                Else
+                                                    text = value.ToString()
+                                                End If
+                                            ElseIf TypeOf value Is DateTime Then
+                                                text = Convert.ToDateTime(value).ToString("yyyy/MM/dd")
+                                            Else
+                                                text = value.ToString()
+                                            End If
+                                        End If
+                                    End If
+                                End If
+
+                                ' Quote and escape CSV field
+                                If text.Contains(",") OrElse text.Contains("""") OrElse text.Contains(vbCr) OrElse text.Contains(vbLf) Then
+                                    text = """" & text.Replace("""", """""") & """"
+                                End If
+                                rowValues.Add(text)
+                            Next
+                            sw.WriteLine(String.Join(",", rowValues))
+                        Next
+                    End Using
+
+                    If Global.System.IO.File.Exists(dlg.FileName) Then
+                        System.Diagnostics.Process.Start(New System.Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                    End If
+                End If
+            Catch ex As Exception
+                MessageBox.Show("حدث خطأ أثناء تصدير ملف CSV: " & vbCrLf & ex.Message, "خطأ في التصدير", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Generic Export for ANY WPF DataGrid to PDF
+        ' ===================================================
+        Public Shared Sub ExportDataGridToPdf(grid As System.Windows.Controls.DataGrid, reportTitle As String)
+            Try
+                If grid Is Nothing OrElse grid.ItemsSource Is Nothing OrElse grid.Items.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات ليتم تصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير إلى PDF"
+                dlg.Filter = "ملفات PDF (*.pdf)|*.pdf"
+                Dim safeName As String = reportTitle.Replace(" ", "_")
+                for Each c In Global.System.IO.Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = safeName & "_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() = True Then
+                    ' Setup document
+                    Dim document As New PdfDocument()
+                    document.Info.Title = reportTitle
+                    
+                    ' Standard system margins & info
+                    Dim settingsSvc As New SettingsService()
+                    Dim company = settingsSvc.GetCompanyInfo()
+                    Dim pageIndex = 0
+                    Dim margin As Double = 25
+                    
+                    ' Helper to create page with standard header
+                    Dim createPageWithHeader = Function() As XGraphics
+                        Dim newPage = document.AddPage()
+                        newPage.Orientation = PageOrientation.Landscape
+                        Dim g = XGraphics.FromPdfPage(newPage)
+                        pageIndex += 1
+                        
+                        Dim currentH As Double = 30
+                        Dim pWidth = newPage.Width.Point - margin * 2
+                        DrawReportHeader(g, company, newPage, currentH, margin, pWidth, pageIndex)
+                        Return g
+                    End Function
+
+                    ' Initial Page
+                    Dim gfx = createPageWithHeader()
+                    Dim page = document.Pages(pageIndex - 1)
+                    Dim currentY As Double = 110 ' Start below standard header
+                    Dim pageWidth As Double = page.Width.Point - margin * 2
+
+                    ' Title centered below header
+                    gfx.DrawString(ArabicTextHelper.Fix(reportTitle), _fontTitle, XBrushes.DarkBlue, New XRect(margin, currentY, pageWidth, 30), XStringFormats.TopCenter)
+                    currentY += 40
+
+                    ' Get Visible Columns Info
+                    Dim visibleCols = grid.Columns.Where(Function(c) c.Visibility = System.Windows.Visibility.Visible).ToList()
+                    Dim colCount As Integer = visibleCols.Count
+                    Dim columnWidth As Double = pageWidth / If(colCount > 0, colCount, 1)
+
+                    ' Draw Headers Table (Standard Background)
+                    Dim headerBgBrush As New XSolidBrush(XColor.FromArgb(241, 245, 249))
+                    Dim currentX As Double = page.Width.Point - margin ' Start drawing from right for RTL
+                    
+                    For Each col In visibleCols
+                        Dim text = ArabicTextHelper.Fix(If(col.Header?.ToString(), ""))
+                        Dim rect As New XRect(currentX - columnWidth, currentY, columnWidth, 25)
+                        gfx.DrawRectangle(XPens.DarkGray, headerBgBrush, rect)
+                        gfx.DrawString(text, headerFont, XBrushes.Black, rect, XStringFormats.Center)
+                        currentX -= columnWidth
+                    Next
+                    currentY += 25
+
+                    ' Draw Data Rows
+                    For Each item In grid.ItemsSource
+                        If item Is Nothing Then Continue For
+
+                        ' Page break if needed
+                        If currentY > page.Height.Point - 60 Then
+                            gfx = createPageWithHeader()
+                            page = document.Pages(pageIndex - 1)
+                            currentY = 110 ' Reset Y below header
+                            
+                            ' Re-draw Headers Table
+                            currentX = page.Width.Point - margin
+                            for Each col In visibleCols
+                                Dim text = ArabicTextHelper.Fix(If(col.Header?.ToString(), ""))
+                                Dim rect As New XRect(currentX - columnWidth, currentY, columnWidth, 25)
+                                gfx.DrawRectangle(XPens.DarkGray, headerBgBrush, rect)
+                                gfx.DrawString(text, headerFont, XBrushes.Black, rect, XStringFormats.Center)
+                                currentX -= columnWidth
+                            Next
+                            currentY += 25
+                        End If
+
+                        currentX = page.Width.Point - margin
+                        For Each col In visibleCols
+                            Dim text As String = ""
+                            Dim boundCol = TryCast(col, System.Windows.Controls.DataGridBoundColumn)
+                            If boundCol IsNot Nothing AndAlso boundCol.Binding IsNot Nothing Then
+                                Dim bindingPath = TryCast(boundCol.Binding, System.Windows.Data.Binding)?.Path?.Path
+                                If Not String.IsNullOrEmpty(bindingPath) Then
+                                    Dim value = GetValueFromProperty(item, bindingPath)
+                                    If value IsNot Nothing Then
+                                        If TypeOf value Is Decimal OrElse TypeOf value Is Double Then
+                                            Dim fmt = TryCast(boundCol.Binding, System.Windows.Data.Binding)?.StringFormat
+                                            If Not String.IsNullOrEmpty(fmt) AndAlso fmt.Contains("N2") Then
+                                                text = Convert.ToDecimal(value).ToString("N2")
+                                            Else
+                                                text = value.ToString()
+                                            End If
+                                        ElseIf TypeOf value Is DateTime Then
+                                            text = Convert.ToDateTime(value).ToString("yyyy/MM/dd")
+                                        Else
+                                            text = value.ToString()
+                                        End If
+                                    End If
+                                End If
+                            End If
+
+                            ' Arabic Fix for PDF
+                            text = ArabicTextHelper.Fix(text)
+
+                            ' Cell Border and Text
+                            Dim rect As New XRect(currentX - columnWidth, currentY, columnWidth, 20)
+                            gfx.DrawRectangle(XPens.LightGray, rect)
+                            gfx.DrawString(text, fontReg, XBrushes.Black, rect, XStringFormats.Center)
+
+                            currentX -= columnWidth
+                        Next
+                        currentY += 20
+                    Next
+
+                    document.Save(dlg.FileName)
+
+                    If Global.System.IO.File.Exists(dlg.FileName) Then
+                        System.Diagnostics.Process.Start(New System.Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                    End If
+                End If
+            Catch ex As Exception
+                MessageBox.Show("حدث خطأ أثناء تصدير ملف PDF: " & vbCrLf & ex.Message, "خطأ في التصدير", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
         ' Helper to format financial amounts (parentheses for negative)
         Private Shared Function FormatAmount(amt As Decimal) As String
             If amt < 0 Then
@@ -28,7 +269,7 @@ Namespace Helpers
         End Function
 
         ' ===================================================
-        ' Export to CSV using StreamWriter (Arabic Support)
+        ' Export to CSV using Global.System.IO.StreamWriter (Arabic Support)
         ' ===================================================
         Public Shared Sub ExportToCsv(report As AccountStatementReport, accountName As String, startDate As Date, endDate As Date)
             Try
@@ -38,7 +279,7 @@ Namespace Helpers
 
                 ' Sanitize filename to avoid invalid characters
                 Dim safeName = accountName
-                For Each c In Path.GetInvalidFileNameChars()
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
                     safeName = safeName.Replace(c, "_"c)
                 Next
                 dlg.FileName = "كشف_حساب_" & safeName & "_" & startDate.ToString("yyyyMMdd")
@@ -46,7 +287,7 @@ Namespace Helpers
                 If dlg.ShowDialog() <> True Then Return
 
                 ' Use UTF8 with BOM to ensure Excel opens it correctly with Arabic characters
-                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
                     ' --- Header ---
                     Dim settingsSvc As New SettingsService()
                     Dim company = settingsSvc.GetCompanyInfo()
@@ -82,7 +323,7 @@ Namespace Helpers
                 End Using
 
                 ' Open the file after saving if it exists
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 Else
                     MessageBox.Show("عذراً، تعذر العثور على الملف بعد الحفظ.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Warning)
@@ -104,7 +345,7 @@ Namespace Helpers
 
                 ' Sanitize PDF filename
                 Dim safeName = accountName
-                For Each c In Path.GetInvalidFileNameChars()
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
                     safeName = safeName.Replace(c, "_"c)
                 Next
                 dlg.FileName = "كشف_حساب_" & safeName & "_" & startDate.ToString("yyyyMMdd")
@@ -242,7 +483,7 @@ Namespace Helpers
 
                 doc.Save(dlg.FileName)
 
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 Else
                     MessageBox.Show("عذراً، تعذر العثور على الملف بعد الحفظ.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Warning)
@@ -377,7 +618,7 @@ Namespace Helpers
 
                 If dlg.ShowDialog() <> True Then Return
 
-                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
                     sw.WriteLine("ميزان المراجعة")
                     sw.WriteLine("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd"))
                     sw.WriteLine()
@@ -419,7 +660,7 @@ Namespace Helpers
                     sw.WriteLine(String.Join(",", totals))
                 End Using
 
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 End If
 
@@ -448,7 +689,7 @@ Namespace Helpers
 
                 Dim fontBold = New XFont("Arial", 11, XFontStyle.Bold)
                 Dim fontReg = New XFont("Arial", 9, XFontStyle.Regular)
-                Dim fontTitle = New XFont("Arial", 16, XFontStyle.Bold)
+                Dim _fontTitle = New XFont("Arial", 16, XFontStyle.Bold)
 
                 Dim margin = 30.0
                 Dim width = page.Width.Point - margin * 2
@@ -463,7 +704,7 @@ Namespace Helpers
                 Dim y = currentY
 
                 ' --- Title ---
-                gfx.DrawString(ArabicTextHelper.Fix("ميزان المراجعة"), fontTitle, XBrushes.Black, New XRect(margin, y, width, 25), XStringFormats.TopCenter)
+                gfx.DrawString(ArabicTextHelper.Fix("ميزان المراجعة"), _fontTitle, XBrushes.Black, New XRect(margin, y, width, 25), XStringFormats.TopCenter)
                 y += 30
                 gfx.DrawString(ArabicTextHelper.Fix("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Black, margin, y)
                 y += 20
@@ -584,7 +825,7 @@ Namespace Helpers
                 ' 2. Voucher Title & Status
                 currentY += 10
                 Dim title = "سند صرف"
-                gfx.DrawString(ArabicTextHelper.Fix(title), fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+                gfx.DrawString(ArabicTextHelper.Fix(title), _fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
 
                 ' Status Badge
                 Dim statusText = If(voucher.IsPosted, "(Posted)", "(Draft)")
@@ -686,7 +927,7 @@ Namespace Helpers
                 ' 2. Voucher Title & Status
                 currentY += 10
                 Dim title = "سند قبض"
-                gfx.DrawString(ArabicTextHelper.Fix(title), fontTitle, XBrushes.DarkGreen, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+                gfx.DrawString(ArabicTextHelper.Fix(title), _fontTitle, XBrushes.DarkGreen, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
 
                 ' Status Badge
                 Dim statusText = If(voucher.IsPosted, "(Posted)", "(Draft)")
@@ -782,7 +1023,7 @@ Namespace Helpers
                 DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
 
                 ' Title
-                gfx.DrawString(ArabicTextHelper.Fix(report.Title), fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+                gfx.DrawString(ArabicTextHelper.Fix(report.Title), _fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
                 currentY += 35
                 gfx.DrawString(ArabicTextHelper.Fix("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 20), XStringFormats.TopCenter)
                 currentY += 35
@@ -833,7 +1074,7 @@ Namespace Helpers
                 DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
 
                 ' Title
-                gfx.DrawString(ArabicTextHelper.Fix(report.Title), fontTitle, XBrushes.DarkBlue, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
+                gfx.DrawString(ArabicTextHelper.Fix(report.Title), _fontTitle, XBrushes.DarkBlue, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
                 currentY += 35
                 gfx.DrawString(ArabicTextHelper.Fix("كما في تاريخ: " & asOfDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 20), XStringFormats.TopCenter)
                 currentY += 35
@@ -896,7 +1137,7 @@ Namespace Helpers
                 Dim dlg As New SaveFileDialog() With {.Filter = "CSV Files (*.csv)|*.csv", .FileName = report.Title & ".csv"}
                 If dlg.ShowDialog() <> True Then Return
 
-                Using sw As New StreamWriter(dlg.FileName, False, System.Text.Encoding.UTF8)
+                Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, System.Text.Encoding.UTF8)
                     ' Header
                     sw.WriteLine(report.Title)
                     If report.StartDate.HasValue Then
@@ -984,14 +1225,14 @@ Namespace Helpers
                 dlg.Filter = "CSV Files (*.csv)|*.csv"
 
                 Dim safeName = productName
-                For Each c In Path.GetInvalidFileNameChars()
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
                     safeName = safeName.Replace(c, "_"c)
                 Next
                 dlg.FileName = "حركات_الصنف_" & safeName & "_" & DateTime.Now.ToString("yyyyMMdd")
 
                 If dlg.ShowDialog() <> True Then Return
 
-                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
                     sw.WriteLine("تقرير حركات الصنف: " & productName)
                     sw.WriteLine("تاريخ الطباعة: " & DateTime.Now.ToString("yyyy/MM/dd HH:mm"))
                     sw.WriteLine()
@@ -1016,7 +1257,7 @@ Namespace Helpers
                     Next
                 End Using
 
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 End If
 
@@ -1040,7 +1281,7 @@ Namespace Helpers
                 dlg.Filter = "PDF Files (*.pdf)|*.pdf"
 
                 Dim safeName = productName
-                For Each c In Path.GetInvalidFileNameChars()
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
                     safeName = safeName.Replace(c, "_"c)
                 Next
                 dlg.FileName = "حركات_الصنف_" & safeName & "_" & DateTime.Now.ToString("yyyyMMdd")
@@ -1052,7 +1293,7 @@ Namespace Helpers
                 Dim company = settingsSvc.GetCompanyInfo()
 
                 doc.Info.Title = "حركات الصنف - " & productName
-                
+
                 Dim pageCount = 0
                 Dim margin = 30.0
 
@@ -1069,7 +1310,7 @@ Namespace Helpers
                 page.Size = PdfSharp.PageSize.A4
                 page.Orientation = PdfSharp.PageOrientation.Portrait
                 Dim gfx = drawHeaderFunc(page)
-                
+
                 Dim pageWidth = page.Width.Point - margin * 2
                 Dim y = margin + 80
 
@@ -1082,13 +1323,13 @@ Namespace Helpers
                 If summary IsNot Nothing Then
                     Dim summaryFont = New XFont("Arial", 10, XFontStyle.Bold)
                     Dim valueFont = New XFont("Arial", 10, XFontStyle.Regular)
-                    
+
                     ' Row 1: Barcode & Avg Cost
                     gfx.DrawString(ArabicTextHelper.Fix("الباركود:   " & If(summary.Barcode, "-")), summaryFont, XBrushes.DarkSlateGray, margin, y)
                     gfx.DrawString(ArabicTextHelper.Fix("متوسط التكلفة: " & summary.AvgCost.ToString("N3")), summaryFont, XBrushes.DarkSlateGray, margin + 250, y)
                     gfx.DrawString(ArabicTextHelper.Fix("إجمالي الرصيد: " & summary.Balance.ToString("N2")), summaryFont, XBrushes.DarkBlue, margin + 400, y)
                     y += 20
-                    
+
                     ' Row 2: In/Out Totals
                     gfx.DrawString(ArabicTextHelper.Fix("إجمالي الإيرادات (وارد): " & summary.TotalInQty.ToString("N2") & " / " & summary.TotalInValue.ToString("N3")), summaryFont, XBrushes.DarkGreen, margin, y)
                     gfx.DrawString(ArabicTextHelper.Fix("إجمالي الصادرات (صادر): " & summary.TotalOutQty.ToString("N2") & " / " & summary.TotalOutValue.ToString("N3")), summaryFont, XBrushes.DarkRed, margin + 250, y)
@@ -1100,7 +1341,7 @@ Namespace Helpers
                     Dim whFont = New XFont("Arial", 9, XFontStyle.Bold)
                     gfx.DrawString(ArabicTextHelper.Fix("رصيد المستودعات:"), whFont, XBrushes.Black, margin, y)
                     y += 15
-                    
+
                     Dim whX = margin
                     For Each wh In warehouses
                         Dim whText = wh.WarehouseName & ": " & wh.CurrentQty.ToString("N2")
@@ -1112,7 +1353,7 @@ Namespace Helpers
                         End If
                     Next
                     y += 25
-                Else 
+                Else
                     y += 10
                 End If
 
@@ -1168,7 +1409,7 @@ Namespace Helpers
                     For i = 0 To rowData.Length - 1
                         Dim brush = If(i = 3 AndAlso rowData(i) = "IN", New XSolidBrush(XColor.FromArgb(39, 174, 96)),
                                     If(i = 3 AndAlso rowData(i) = "OUT", New XSolidBrush(XColor.FromArgb(192, 57, 43)), XBrushes.Black))
-                        
+
                         gfx.DrawString(ArabicTextHelper.Fix(rowData(i)), fontSmall, brush, New XRect(x + 2, y + 2, cols(i) - 4, 14), XStringFormats.TopLeft)
                         x += cols(i)
                     Next
@@ -1179,7 +1420,7 @@ Namespace Helpers
                 Next
 
                 doc.Save(dlg.FileName)
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 End If
 
@@ -1202,14 +1443,14 @@ Namespace Helpers
                 dlg.Title = "تصدير عرض الأسعار - CSV"
                 dlg.Filter = "CSV Files (*.csv)|*.csv"
                 Dim safeName = customerName
-                For Each c In Path.GetInvalidFileNameChars()
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
                     safeName = safeName.Replace(c, "_"c)
                 Next
                 dlg.FileName = "عرض_اسعار_" & safeName & "_" & quote.QuoteDate.ToString("yyyyMMdd")
 
                 If dlg.ShowDialog() <> True Then Return
 
-                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
                     ' Header
                     sw.WriteLine("عرض أسعار")
                     sw.WriteLine("العميل:," & customerName)
@@ -1230,7 +1471,7 @@ Namespace Helpers
                     Next
                 End Using
 
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 End If
 
@@ -1253,7 +1494,7 @@ Namespace Helpers
                 dlg.Title = "تصدير عرض الأسعار - PDF"
                 dlg.Filter = "PDF Files (*.pdf)|*.pdf"
                 Dim safeName = customerName
-                For Each c In Path.GetInvalidFileNameChars()
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
                     safeName = safeName.Replace(c, "_"c)
                 Next
                 dlg.FileName = "عرض_اسعار_" & safeName & "_" & quote.QuoteDate.ToString("yyyyMMdd")
@@ -1385,7 +1626,7 @@ Namespace Helpers
                                lvf, XBrushes.DarkGray, New XRect(margin, y, pageWidth, 16), XStringFormats.TopRight)
 
                 doc.Save(dlg.FileName)
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 End If
 
@@ -1465,7 +1706,7 @@ Namespace Helpers
                     wbPart.Workbook.Save()
                 End Using
 
-                If File.Exists(dlg.FileName) Then
+                If Global.System.IO.File.Exists(dlg.FileName) Then
                     Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
                 End If
 

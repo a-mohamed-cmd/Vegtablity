@@ -22,8 +22,10 @@ Namespace Services
         ''' <summary>Returns the weighted average cost price for a product in a specific warehouse.</summary>
         Public Function GetAvgCostByProduct(productID As Integer, warehouseID As Integer) As Decimal
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Dim sql = "SELECT ISNULL(AvgCostPrice, 0) FROM [Inventory].[ProductStock] WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID"
-                Return conn.ExecuteScalar(Of Decimal)(sql, New With {.ProductID = productID, .WarehouseID = warehouseID})
+                Return conn.ExecuteScalar(Of Decimal)(
+                    Helpers.StoredProcedures.SP_INVENTORY_GETAVGCOSTByPRODUCT,
+                    New With {.ProductID = productID, .WarehouseID = warehouseID},
+                    commandType:=CommandType.StoredProcedure)
             End Using
         End Function
 
@@ -69,6 +71,26 @@ Namespace Services
                     New With {.SearchText = searchText},
                     commandType:=CommandType.StoredProcedure).AsList()
             End Using
+        End Function
+
+        Public Function GetProductsPaged(pageNumber As Integer, pageSize As Integer, Optional searchText As String = Nothing) As PagedResult(Of Product)
+            Dim result As New PagedResult(Of Product)()
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@PageNumber", pageNumber)
+                    p.Add("@PageSize", pageSize)
+                    p.Add("@SearchText", searchText)
+
+                    Using multi = conn.QueryMultiple(Helpers.StoredProcedures.SP_PRODUCT_GETPAGED, p, commandType:=CommandType.StoredProcedure)
+                        result.TotalCount = multi.Read(Of Integer)().FirstOrDefault()
+                        result.Data = multi.Read(Of Product)().ToList()
+                    End Using
+                End Using
+            Catch ex As Exception
+                ' Handle or log
+            End Try
+            Return result
         End Function
 
 #Region "Product Card Methods"

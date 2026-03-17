@@ -5,6 +5,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:Vegtablity"
       xmlns:viewmodels="clr-namespace:Vegtablity.ViewModels"
+      xmlns:helpers="clr-namespace:Vegtablity.Helpers"
       mc:Ignorable="d" 
       d:DesignHeight="750" d:DesignWidth="1050"
       FlowDirection="RightToLeft">
@@ -16,6 +17,7 @@
     <!-- Resources -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <helpers:IdToVisibilityConverter x:Key="IdToVisibilityConverter"/>
 
         <!-- Hover Scale Animation for Cards -->
         <Style x:Key="AnimatedCardStyle" TargetType="Border">
@@ -191,7 +193,7 @@
                 </Border>
 
                 <!-- 3. Invoice Details Grid -->
-                <Border x:Name="DetailsCard" Opacity="0" Style="{StaticResource AnimatedCardStyle}" Grid.Row="2" Background="White" Margin="20,10,20,20" CornerRadius="10" Padding="15">
+                <Border x:Name="DetailsCard" Opacity="0" Grid.Row="2" Background="White" Margin="20,10,20,20" CornerRadius="10" Padding="15">
                     <Border.Effect>
                         <DropShadowEffect Color="#000000" Opacity="0.04" BlurRadius="10" ShadowDepth="2"/>
                     </Border.Effect>
@@ -200,6 +202,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
@@ -208,6 +211,16 @@
                                     Style="{DynamicResource ModernButtonStyle}"
                                     Background="#EEF2FF" Foreground="#4F46E5" BorderBrush="#4F46E5" 
                                     Margin="20,0,0,0" Padding="15,5"/>
+
+                            <!-- Quotation Details Pagination (at the top for easy access) -->
+                            <StackPanel Orientation="Horizontal" Margin="40,0,0,0" VerticalAlignment="Center"
+                                        Visibility="{Binding CurrentQuote.QuoteID, Converter={StaticResource IdToVisibilityConverter}}">
+                                <Button Content="▶" Command="{Binding PrevDetailsPageCommand}" IsEnabled="{Binding CanGoPrevDetails}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#475569" Width="30" Padding="0"/>
+                                <TextBlock Text="{Binding DetailsPageLabel}" Margin="15,0" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#64748B"/>
+                                <Button Content="◀" Command="{Binding NextDetailsPageCommand}" IsEnabled="{Binding CanGoNextDetails}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#475569" Width="30" Padding="0"/>
+                            </StackPanel>
                         </StackPanel>
                         <!-- The DataGrid -->
                         <DataGrid x:Name="dgQuoteDetails" Grid.Row="1" ItemsSource="{Binding CurrentQuote.Details}" AutoGenerateColumns="False" 
@@ -266,7 +279,7 @@
                                 </DataGridTemplateColumn>
 
                                 <!-- Product Selection -->
-                                <DataGridTemplateColumn Header="اسم الصنف / الباركود" Width="3*" IsReadOnly="False">
+                                <DataGridTemplateColumn Header="اختيار الصنف" Width="3*" IsReadOnly="False">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <ComboBox ItemsSource="{Binding DataContext.Products, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -285,6 +298,9 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+
+                                <!-- Fallback Product Name (Read-Only) -->
+                                <DataGridTextColumn Header="اسم الصنف (تأكيدي)" Binding="{Binding ProductName}" Width="2*" IsReadOnly="True" Foreground="#334155"/>
 
                                 <!-- Unit Name -->
                                 <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName, Mode=OneWay}" Width="1*" IsReadOnly="True" Foreground="#64748B"/>
@@ -317,6 +333,23 @@
 
                             </DataGrid.Columns>
                         </DataGrid>
+
+                        <!-- Quotation Details Pagination (Bottom Bar) -->
+                        <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,1" CornerRadius="0,0,12,12" Padding="15,6"
+                                Visibility="{Binding CurrentQuote.QuoteID, Converter={StaticResource IdToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="→ الصفحة السابقة" Command="{Binding PrevDetailsPageCommand}" IsEnabled="{Binding CanGoPrevDetails}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#94A3B8" Padding="15,5"/>
+                                <TextBlock Grid.Column="1" Text="{Binding DetailsPageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="#475569"/>
+                                <Button Grid.Column="2" Content="الصفحة التالية ←" Command="{Binding NextDetailsPageCommand}" IsEnabled="{Binding CanGoNextDetails}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Padding="15,5"/>
+                            </Grid>
+                        </Border>
                     </Grid>
                 </Border>
             </Grid>
@@ -343,37 +376,102 @@
 
         <!-- History Modal Overlay -->
         <Grid x:Name="HistoryModal" Background="#80000000" Visibility="Collapsed" Panel.ZIndex="100">
-            <Border Background="White" CornerRadius="10" Margin="100" Padding="20">
+            <Border Background="White" CornerRadius="12" Margin="80" Padding="25" MaxWidth="900" 
+                    VerticalAlignment="Center" HorizontalAlignment="Stretch">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.4" Color="Black"/>
+                </Border.Effect>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <!-- Header -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Search Bar -->
                         <RowDefinition Height="*"/>
+                        <!-- Grid -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Footer/Pagination -->
                     </Grid.RowDefinitions>
-                    
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,15">
-                        <TextBlock Text="سجل عروض الأسعار" FontSize="20" FontWeight="SemiBold" Foreground="#1E293B"/>
-                        <Button Content="❌ إغلاق" Click="CloseHistoryButton_Click" Background="Transparent" BorderThickness="0" Foreground="#EF4444" HorizontalAlignment="Right" Margin="250,0,0,0"/>
-                    </StackPanel>
-                    
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding QuotesHistory}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" RowHeight="35">
+
+                    <Grid Grid.Row="0" Margin="0,0,0,20">
+                        <TextBlock Text="سجل عروض الأسعار" FontSize="22" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                        <Button HorizontalAlignment="Left" Click="CloseHistoryButton_Click" Background="Transparent" BorderThickness="0" Padding="5">
+                            <TextBlock Text="✕" FontSize="20" Foreground="#64748B"/>
+                        </Button>
+                    </Grid>
+
+                    <!-- Search Bar in History -->
+                    <Border Grid.Row="1" Background="#F8FAFC" CornerRadius="8" Padding="15,10" Margin="0,0,0,15" BorderBrush="#E2E8F0" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <TextBox Grid.Column="1" Text="{Binding HistorySearch, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{DynamicResource ModernTextBoxStyle}" BorderThickness="0" Background="Transparent"
+                                     helpers:WatermarkHelper.Watermark="ابحث برقم العرض، اسم العميل، أو الملاحظات..." />
+                        </Grid>
+                    </Border>
+
+                    <DataGrid x:Name="dgHistory" Grid.Row="2" ItemsSource="{Binding QuotesHistory}" AutoGenerateColumns="False" 
+                              CanUserAddRows="False" IsReadOnly="True" RowHeight="40"
+                              SelectionMode="Single" BorderThickness="1" BorderBrush="#E2E8F0"
+                              Background="White" helpers:DataGridHelper.AutoScroll="True">
+                        <DataGrid.Triggers>
+                            <!-- Potential for paged animations if using a behavior, but let's stick to styling for now -->
+                        </DataGrid.Triggers>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="White"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#F8FAFF"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="رقم العرض" Binding="{Binding QuoteID}" Width="100"/>
+                            <DataGridTextColumn Header="رقم العرض" Binding="{Binding QuoteID}" Width="80"/>
                             <DataGridTextColumn Header="العميل" Binding="{Binding PartnerName}" Width="*"/>
-                            <DataGridTextColumn Header="التاريخ" Binding="{Binding QuoteDate, StringFormat=dd/MM/yyyy}" Width="120"/>
-                            <DataGridCheckBoxColumn Header="فعال؟" Binding="{Binding IsActive}" Width="80"/>
-                            <DataGridTemplateColumn Header="تعديل" Width="80">
+                            <DataGridTextColumn Header="التاريخ" Binding="{Binding QuoteDate, StringFormat=dd/MM/yyyy}" Width="110"/>
+                            <DataGridTextColumn Header="صلاحية السعر" Binding="{Binding ExpiryDate, StringFormat=dd/MM/yyyy}" Width="110"/>
+                            <DataGridTemplateColumn Header="الحالة" Width="90">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="تعديل ✎" 
-                                                Command="{Binding DataContext.EditQuoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        <Border Padding="6,2" CornerRadius="10" Background="{Binding IsActiveColor}" HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding IsActiveText}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="إجراء" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="تعديل ✎" Command="{Binding DataContext.EditQuoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
-                                                Click="EditFromHistory_Click"
-                                                Background="#E0E7FF" Foreground="#4F46E5" BorderThickness="0" Padding="5,2"/>
+                                                Style="{DynamicResource ModernButtonStyle}" Background="#EEF2FF" Foreground="#4F46E5" Padding="8,2" Click="EditFromHistory_Click"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
+
+                    <!-- Modern Pagination Controls -->
+                    <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E1E7EF" BorderThickness="0,1,0,0" Padding="15,10" CornerRadius="0,0,12,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="→ الصفحة السابقة" Command="{Binding PrevHistoryPageCommand}" IsEnabled="{Binding CanGoPrevHistory}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#94A3B8" Padding="15,5"/>
+                            <TextBlock Grid.Column="1" Text="{Binding HistoryPageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="#475569"/>
+                            <Button Grid.Column="2" Content="الصفحة التالية ←" Command="{Binding NextHistoryPageCommand}" IsEnabled="{Binding CanGoNextHistory}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Padding="15,5"/>
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
         </Grid>

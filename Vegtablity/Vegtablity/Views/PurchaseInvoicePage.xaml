@@ -160,6 +160,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
@@ -190,6 +191,15 @@
                             </Style>
                         </Button.Style>
                     </Button>
+
+                    <!-- Invoice Details Pagination -->
+                    <StackPanel Orientation="Horizontal" Margin="40,0,0,0" VerticalAlignment="Center">
+                        <Button Content="▶" Command="{Binding PrevDetailsPageCommand}" IsEnabled="{Binding CanGoPrevDetails}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#475569" Width="30" Padding="0"/>
+                        <TextBlock Text="{Binding DetailsPageLabel}" Margin="15,0" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#64748B"/>
+                        <Button Content="◀" Command="{Binding NextDetailsPageCommand}" IsEnabled="{Binding CanGoNextDetails}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#475569" Width="30" Padding="0"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- The DataGrid -->
@@ -281,6 +291,22 @@
 
                     </DataGrid.Columns>
                 </DataGrid>
+
+                <!-- Invoice Details Pagination (Bottom Bar) -->
+                <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,1" CornerRadius="0,0,12,12" Padding="15,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="→ الصفحة السابقة" Command="{Binding PrevDetailsPageCommand}" IsEnabled="{Binding CanGoPrevDetails}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#94A3B8" Padding="15,5"/>
+                        <TextBlock Grid.Column="1" Text="{Binding DetailsPageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="#475569"/>
+                        <Button Grid.Column="2" Content="الصفحة التالية ←" Command="{Binding NextDetailsPageCommand}" IsEnabled="{Binding CanGoNextDetails}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Padding="15,5"/>
+                    </Grid>
+                </Border>
             </Grid>
         </Border>
 

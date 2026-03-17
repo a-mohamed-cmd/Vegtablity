@@ -185,6 +185,13 @@ Namespace Views
 
         Private Sub Price_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
+                ' Force the binding to commit the typed value BEFORE adding a new row
+                Dim tb = TryCast(sender, TextBox)
+                If tb IsNot Nothing Then
+                    Dim binding = tb.GetBindingExpression(TextBox.TextProperty)
+                    If binding IsNot Nothing Then binding.UpdateSource()
+                End If
+
                 e.Handled = True
                 
                 ' Add new row and focus on its product combobox
@@ -217,9 +224,9 @@ Namespace Views
                                 Dim cell As DataGridCell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(0), DataGridCell)
                                 If cell IsNot Nothing Then
                                     ' 5. Finally, grab the TextBox inside and forcefully focus it
-                                    Dim tb As TextBox = FindVisualChild(Of TextBox)(cell)
-                                    If tb IsNot Nothing Then
-                                        Keyboard.Focus(tb)
+                                    Dim tb2 As TextBox = FindVisualChild(Of TextBox)(cell)
+                                    If tb2 IsNot Nothing Then
+                                        Keyboard.Focus(tb2)
                                     Else
                                         cell.Focus()
                                     End If
@@ -407,6 +414,28 @@ Namespace Views
             Else
                 e.CancelCommand()
             End If
+        End Sub
+        Private Sub HistoryButton_Click(sender As Object, e As RoutedEventArgs)
+            HistoryModal.Visibility = Visibility.Visible
+        End Sub
+
+        Private Sub CloseHistoryButton_Click(sender As Object, e As RoutedEventArgs)
+            HistoryModal.Visibility = Visibility.Collapsed
+        End Sub
+
+        Private Sub EditFromHistory_Click(sender As Object, e As RoutedEventArgs)
+            Dim btn = TryCast(sender, Button)
+            If btn Is Nothing Then Return
+
+            Dim invoice = TryCast(btn.DataContext, Models.InvoiceHeader)
+            If invoice Is Nothing Then Return
+
+            Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
+            If vm IsNot Nothing Then
+                vm.LoadInvoice(invoice.InvID)
+            End If
+
+            HistoryModal.Visibility = Visibility.Collapsed
         End Sub
     End Class
 End Namespace

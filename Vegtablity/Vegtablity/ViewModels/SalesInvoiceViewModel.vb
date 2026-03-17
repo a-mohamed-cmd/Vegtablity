@@ -21,7 +21,24 @@ Namespace ViewModels
         Public Property Customers As ObservableCollection(Of Partner)
         Public Property Warehouses As ObservableCollection(Of Warehouse)
         Public Property Products As ObservableCollection(Of Product)
-        Public Property CashAccounts As ObservableCollection(Of Account)  ' حسابات النقدية (11xx)
+        Public Property CashAccounts As ObservableCollection(Of Account)
+
+        ' --- Pagination & Selection Caching ---
+        Private _selectedProductsMap As New Dictionary(Of Integer, Product)()
+        
+        ' --- Invoice Details: Memory-backed client-side pagination ---
+        Private _allInvoiceDetails As New List(Of InvoiceDetail)()
+        Private ReadOnly PAGE_SIZE As Integer = 10
+        Private _detailsPage As Integer = 0
+
+        Private _productPage As Integer = 1
+        Private ReadOnly _productPageSize As Integer = 20
+        Private _productTotalCount As Integer = 0
+        
+        Private _historyPage As Integer = 0
+        Private ReadOnly _historyPageSize As Integer = 20
+        Private _historyTotalCount As Integer = 0
+        Public Property InvoicesHistory As ObservableCollection(Of InvoiceHeader)
 
         ' Event raised to ask the View to show a Snackbar notification
         Public Event RequestSnackbar As Action(Of String)
@@ -73,6 +90,15 @@ Namespace ViewModels
         Public Property AddItemCommand As ICommand
         Public Property RemoveItemCommand As ICommand
         Public Property PrintCommand As ICommand
+        
+        ' Pagination Commands
+        Public Property NextProductPageCommand As ICommand
+        Public Property PrevProductPageCommand As ICommand
+        Public Property NextDetailsPageCommand As ICommand
+        Public Property PrevDetailsPageCommand As ICommand
+        Public Property LoadHistoryCommand As ICommand
+        Public Property NextHistoryPageCommand As ICommand
+        Public Property PrevHistoryPageCommand As ICommand
 
         Private ReadOnly _quoteService As QuoteService
 
@@ -108,35 +134,39 @@ Namespace ViewModels
             RemoveItemCommand = New RelayCommand(AddressOf ExecuteRemoveItem, AddressOf CanExecuteRemoveItem)
             PrintCommand = New RelayCommand(AddressOf ExecutePrint, AddressOf CanExecutePrint)
 
+            ' Pagination Commands
+            NextProductPageCommand = New RelayCommand(Sub() ProductPage += 1, Function() CanGoNextProduct)
+            PrevProductPageCommand = New RelayCommand(Sub() ProductPage -= 1, Function() CanGoPrevProduct)
+            NextDetailsPageCommand = New RelayCommand(Sub() DetailsPage += 1, Function() CanGoNextDetails)
+            PrevDetailsPageCommand = New RelayCommand(Sub() DetailsPage -= 1, Function() CanGoPrevDetails)
+            LoadHistoryCommand = New RelayCommand(AddressOf ExecuteLoadHistory)
+            NextHistoryPageCommand = New RelayCommand(Sub() HistoryPage += 1, Function() CanGoNextHistory)
+            PrevHistoryPageCommand = New RelayCommand(Sub() HistoryPage -= 1, Function() CanGoPrevHistory)
+
             LoadLookups()
             LoadPermissions("Sales")
             ExecuteNew(Nothing)
         End Sub
 
         Private Sub LoadLookups()
-            Dim customerList = _partnerService.GetAllPartners("Customer")
-            Customers.Clear()
-            For Each c In customerList
-                Customers.Add(c)
-            Next
+            Try
+                Dim customerList = _partnerService.GetAllPartners("Customer")
+                Customers = New ObservableCollection(Of Partner)(customerList)
+                OnPropertyChanged(NameOf(Customers))
 
-            Dim warehouseList = _warehouseService.GetAllWarehouses()
-            Warehouses.Clear()
-            For Each w In warehouseList
-                Warehouses.Add(w)
-            Next
+                Dim warehouseList = _warehouseService.GetAllWarehouses()
+                Warehouses = New ObservableCollection(Of Warehouse)(warehouseList)
+                OnPropertyChanged(NameOf(Warehouses))
 
-            Dim productList = _productService.GetAllProducts()
-            Products.Clear()
-            For Each p In productList
-                Products.Add(p)
-            Next
+                Dim cashList = _accountingService.GetCashAccounts()
+                CashAccounts = New ObservableCollection(Of Account)(cashList)
+                OnPropertyChanged(NameOf(CashAccounts))
 
-            Dim cashList = _accountingService.GetCashAccounts()
-            CashAccounts.Clear()
-            For Each a In cashList
-                CashAccounts.Add(a)
-            Next
+                ' Initial Page Load for Products
+                UpdateProductPagination()
+            Catch ex As Exception
+                ' Log
+            End Try
         End Sub
 
         Private Sub OnInvoicePropertyChanged(sender As Object, e As PropertyChangedEventArgs)
@@ -144,6 +174,7 @@ Namespace ViewModels
                 OnPropertyChanged(NameOf(IsInvoicePosted))
                 OnPropertyChanged(NameOf(IsEditAllowed))
                 OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
+                OnPropertyChanged(NameOf(IsCanChangeHistoryPage))
             End If
             If e.PropertyName = NameOf(InvoiceHeader.PaidAmount) Then
                 OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
@@ -160,7 +191,198 @@ Namespace ViewModels
             System.Windows.Input.CommandManager.InvalidateRequerySuggested()
         End Sub
 
+#Region "Pagination Logic"
+        
+        Public Property ProductPage As Integer
+            Get
+                Return _productPage
+            End Get
+            Set(value As Integer)
+                If value < 1 Then value = 1
+                SetProperty(_productPage, value)
+                UpdateProductPagination()
+            End Set
+        End Property
+
+        Public ReadOnly Property ProductPageLabel As String
+            Get
+                Dim totalPages = Math.Max(1, CInt(Math.Ceiling(_productTotalCount / _productPageSize)))
+                Return $"صفحة {ProductPage} من {totalPages} ({_productTotalCount} صنف)"
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoNextProduct As Boolean
+            Get
+                Dim totalPages = Math.Max(1, CInt(Math.Ceiling(_productTotalCount / _productPageSize)))
+                Return ProductPage < totalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoPrevProduct As Boolean
+            Get
+                Return ProductPage > 1
+            End Get
+        End Property
+
+        Private Sub UpdateProductPagination()
+            Try
+                ' Fetch only items for current page from DB
+                Dim paged = _productService.GetProductsPaged(ProductPage, _productPageSize)
+                _productTotalCount = paged.TotalCount
+
+                Dim combinedList = New List(Of Product)(paged.Data)
+
+                ' Crucial: Add currently selected products from the GRID that might not be in the current page
+                If CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.Details IsNot Nothing Then
+                    For Each detail In CurrentInvoice.Details
+                        If detail.ProductID > 0 AndAlso Not combinedList.Any(Function(p) p.ProductID = detail.ProductID) Then
+                            ' Check if we have the full product object in our map
+                            Dim cachedProd As Product = Nothing
+                            If _selectedProductsMap.TryGetValue(detail.ProductID, cachedProd) Then
+                                combinedList.Add(cachedProd)
+                            End If
+                        End If
+                    Next
+                End If
+
+                Products = New ObservableCollection(Of Product)(combinedList.OrderBy(Function(p) p.ProductName))
+                OnPropertyChanged(NameOf(Products))
+                OnPropertyChanged(NameOf(ProductPageLabel))
+                OnPropertyChanged(NameOf(CanGoNextProduct))
+                OnPropertyChanged(NameOf(CanGoPrevProduct))
+            Catch ex As Exception
+                ' Log
+            End Try
+        End Sub
+
+        Public Property HistoryPage As Integer
+            Get
+                Return _historyPage
+            End Get
+            Set(value As Integer)
+                If value < 1 Then value = 1
+                SetProperty(_historyPage, value)
+                UpdateHistoryPagination()
+            End Set
+        End Property
+
+        Public ReadOnly Property HistoryPageLabel As String
+            Get
+                Dim totalPages = Math.Max(1, CInt(Math.Ceiling(_historyTotalCount / _historyPageSize)))
+                Return $"صفحة {HistoryPage} من {totalPages}"
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoNextHistory As Boolean
+            Get
+                Dim totalPages = Math.Max(1, CInt(Math.Ceiling(_historyTotalCount / _historyPageSize)))
+                Return HistoryPage < totalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoPrevHistory As Boolean
+            Get
+                Return HistoryPage > 1
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCanChangeHistoryPage As Boolean
+            Get
+                Return True
+            End Get
+        End Property
+
+        Private Sub UpdateHistoryPagination()
+            Dim paged = _invoiceService.GetInvoicesPaged(HistoryPage, _historyPageSize, "Sales")
+            _historyTotalCount = paged.TotalCount
+            InvoicesHistory = New ObservableCollection(Of InvoiceHeader)(paged.Data)
+            OnPropertyChanged(NameOf(InvoicesHistory))
+            OnPropertyChanged(NameOf(HistoryPageLabel))
+            OnPropertyChanged(NameOf(CanGoNextHistory))
+            OnPropertyChanged(NameOf(CanGoPrevHistory))
+        End Sub
+
+        Public Sub GlobalFindProduct(term As String)
+            If String.IsNullOrWhiteSpace(term) Then Return
+            
+            ' Perform a quick paged search for 1 item (global search)
+            Dim result = _productService.GetProductsPaged(1, 1, term)
+            If result.Data.Any() Then
+                Dim prod = result.Data.First()
+                ' Ensure it's in the map and current list so the UI can binding it
+                If Not _selectedProductsMap.ContainsKey(prod.ProductID) Then 
+                    _selectedProductsMap.Add(prod.ProductID, prod)
+                End If
+                
+                If Not Products.Any(Function(p) p.ProductID = prod.ProductID) Then
+                    Products.Add(prod)
+                End If
+            End If
+        End Sub
+
+        ' ========================
+        ' Details Pagination
+        ' ========================
+        Public Property DetailsPage As Integer
+            Get
+                Return _detailsPage
+            End Get
+            Set(value As Integer)
+                If value < 0 Then value = 0
+                Dim maxPage = Math.Max(0, DetailsTotalPages - 1)
+                If value > maxPage Then value = maxPage
+                SetProperty(_detailsPage, value)
+                UpdateDetailsPagination()
+            End Set
+        End Property
+
+        Public ReadOnly Property DetailsTotalPages As Integer
+            Get
+                Return Math.Max(1, CInt(Math.Ceiling(_allInvoiceDetails.Count / PAGE_SIZE)))
+            End Get
+        End Property
+
+        Public ReadOnly Property DetailsPageLabel As String
+            Get
+                Return $"صفحة {DetailsPage + 1} من {DetailsTotalPages} ({_allInvoiceDetails.Count} صنف)"
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoNextDetails As Boolean
+            Get
+                Return DetailsPage < DetailsTotalPages - 1
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoPrevDetails As Boolean
+            Get
+                Return DetailsPage > 0
+            End Get
+        End Property
+
+        Private Sub UpdateDetailsPagination()
+            If CurrentInvoice Is Nothing Then Return
+            Try
+                Dim skip = DetailsPage * PAGE_SIZE
+                Dim pageItems = _allInvoiceDetails.Skip(skip).Take(PAGE_SIZE).ToList()
+                CurrentInvoice.Details.Clear()
+                For Each d In pageItems
+                    CurrentInvoice.Details.Add(d)
+                Next
+                OnPropertyChanged(NameOf(DetailsTotalPages))
+                OnPropertyChanged(NameOf(DetailsPageLabel))
+                OnPropertyChanged(NameOf(CanGoNextDetails))
+                OnPropertyChanged(NameOf(CanGoPrevDetails))
+                UpdateProductPagination()
+            Catch ex As Exception
+            End Try
+        End Sub
+
+#End Region
+
         Private Sub ExecuteNew(parameter As Object)
+            _allInvoiceDetails.Clear()
+            _detailsPage = 0
             CurrentInvoice = New InvoiceHeader() With {
                 .InvType = "Sales",
                 .InvDate = DateTime.Now,
@@ -182,9 +404,21 @@ Namespace ViewModels
         Public Sub LoadInvoice(invID As Integer)
             Dim loaded = _invoiceService.LoadInvoiceForEdit(invID)
             If loaded IsNot Nothing Then
+                _allInvoiceDetails.Clear()
+                _detailsPage = 0
+                ' Move all loaded details to in-memory list
+                For Each d In loaded.Details
+                    AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
+                    _allInvoiceDetails.Add(d)
+                Next
+                ' Replace Details with an empty observable (UpdateDetailsPagination will populate it)
+                loaded.Details = New ObservableCollection(Of InvoiceDetail)()
                 CurrentInvoice = loaded
-                If Not CurrentInvoice.IsPosted AndAlso CurrentInvoice.Details.Count = 0 Then
+                
+                If Not CurrentInvoice.IsPosted AndAlso _allInvoiceDetails.Count = 0 Then
                     ExecuteAddItem(Nothing)
+                Else
+                    UpdateDetailsPagination()
                 End If
             End If
         End Sub
@@ -206,23 +440,30 @@ Namespace ViewModels
 
         Private Sub ExecuteSave(parameter As Object)
             Try
-                RecalculateTotals()
-
-                ' Remove empty rows (no ProductID selected or zero quantity)
-                Dim emptyRows = CurrentInvoice.Details.Where(Function(d) d.ProductID = 0 OrElse d.Quantity = 0).ToList()
+                ' Remove empty rows from ALL details
+                Dim emptyRows = _allInvoiceDetails.Where(Function(d) d.ProductID = 0 OrElse d.Quantity = 0).ToList()
                 For Each row In emptyRows
-                    CurrentInvoice.Details.Remove(row)
+                    RemoveHandler row.PropertyChanged, AddressOf OnDetailPropertyChanged
+                    _allInvoiceDetails.Remove(row)
                 Next
 
-                If CurrentInvoice.Details.Count = 0 Then
+                If _allInvoiceDetails.Count = 0 Then
                     System.Windows.MessageBox.Show("يجب إضافة صنف واحد على الأقل لحفظ الفاتورة.", "تحذير", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
                     Return
                 End If
 
+                ' Build full list for saving
+                CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(_allInvoiceDetails)
+                RecalculateTotals()
+
                 ' Validate Stock before saving (Soft check to warn user)
                 If Not ValidateStockForAllItems() Then
                     Dim answer = System.Windows.MessageBox.Show("بعض الأصناف تتجاوز المخزون المتاح، هل تريد الحفظ كمسودة على أية حال؟ لا يمكنك الترحيل بهذا الشكل.", "تحذير المخزون", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
-                    If answer = System.Windows.MessageBoxResult.No Then Return
+                    If answer = System.Windows.MessageBoxResult.No Then
+                        ' Restore paginated view
+                        UpdateDetailsPagination()
+                        Return
+                    End If
                 End If
 
                 ' Attach the current user to the invoice header
@@ -234,14 +475,15 @@ Namespace ViewModels
 
                 If CurrentInvoice.InvID = 0 Then
                     CurrentInvoice.InvID = invId
-                    
-                    ' Fetch generated sequence and creation date
                     Dim freshInvoice = _invoiceService.GetInvoiceByID(invId)
                     If freshInvoice IsNot Nothing Then
                         CurrentInvoice.ReferenceNo = freshInvoice.ReferenceNo
                         CurrentInvoice.CreatedAt = freshInvoice.CreatedAt
                     End If
                 End If
+
+                ' Restore paginated view after save
+                UpdateDetailsPagination()
                 RaiseEvent RequestSnackbar("✅ تم حفظ الفاتورة بنجاح")
             Catch ex As Exception
                 System.Windows.MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
@@ -295,16 +537,15 @@ Namespace ViewModels
         End Sub
 
         Private Function ValidateStockForAllItems() As Boolean
-            If CurrentInvoice Is Nothing OrElse CurrentInvoice.Details Is Nothing Then Return True
+            If CurrentInvoice Is Nothing Then Return True
             If Not CurrentInvoice.WarehouseID.HasValue Then Return True
             
             Dim isAllValid As Boolean = True
-            For Each detail In CurrentInvoice.Details
+            For Each detail In _allInvoiceDetails
                 If detail.ProductID > 0 Then
                     Dim availableQty = _inventoryService.GetStockByProduct(detail.ProductID, CurrentInvoice.WarehouseID.Value)
                     If detail.Quantity > availableQty Then
                         isAllValid = False
-                        ' Here we could inject a notification property to the detail model itself
                     End If
                 End If
             Next
@@ -318,7 +559,14 @@ Namespace ViewModels
         Private Sub ExecuteAddItem(parameter As Object)
             Dim newItem = New InvoiceDetail() With {.Quantity = 1, .UnitPrice = 0}
             AddHandler newItem.PropertyChanged, AddressOf OnDetailPropertyChanged
-            CurrentInvoice.Details.Add(newItem)
+            _allInvoiceDetails.Add(newItem)
+
+            Dim newPage = Math.Max(0, DetailsTotalPages - 1)
+            If DetailsPage <> newPage Then
+                DetailsPage = newPage
+            Else
+                UpdateDetailsPagination()
+            End If
             RecalculateTotals()
         End Sub
 
@@ -331,7 +579,12 @@ Namespace ViewModels
             Dim item = TryCast(parameter, InvoiceDetail)
             If item IsNot Nothing Then
                 RemoveHandler item.PropertyChanged, AddressOf OnDetailPropertyChanged
-                CurrentInvoice.Details.Remove(item)
+                _allInvoiceDetails.Remove(item)
+                If DetailsPage >= DetailsTotalPages AndAlso DetailsPage > 0 Then
+                    DetailsPage -= 1
+                Else
+                    UpdateDetailsPagination()
+                End If
                 RecalculateTotals()
             End If
         End Sub
@@ -341,8 +594,18 @@ Namespace ViewModels
             
             If e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
                 ' Auto-fill Price and reset Quantity based on Product Select for Sales
+                ' Try to find product in current list OR in our global selection map
                 Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
+                If prod Is Nothing Then
+                    _selectedProductsMap.TryGetValue(detail.ProductID, prod)
+                End If
+
                 If prod IsNot Nothing Then
+                    ' Store in map if not already there
+                    If Not _selectedProductsMap.ContainsKey(prod.ProductID) Then
+                        _selectedProductsMap.Add(prod.ProductID, prod)
+                    End If
+
                     detail.Quantity = 1
                     
                     ' Check for Custom Quoted Price First
@@ -391,13 +654,17 @@ Namespace ViewModels
         End Sub
 
         Private Sub RecalculateTotals()
-            If CurrentInvoice Is Nothing OrElse CurrentInvoice.Details Is Nothing Then Return
+            If CurrentInvoice Is Nothing Then Return
             
             Dim total As Decimal = 0
-            For Each item In CurrentInvoice.Details
+            For Each item In _allInvoiceDetails
                 total += item.TotalPrice
             Next
             CurrentInvoice.TotalAmount = total
+        End Sub
+
+        Private Sub ExecuteLoadHistory(parameter As Object)
+            HistoryPage = 1 ' This triggers UpdateHistoryPagination
         End Sub
 
     End Class

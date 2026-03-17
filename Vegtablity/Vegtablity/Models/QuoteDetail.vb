@@ -48,6 +48,17 @@ Namespace Models
             End Set
         End Property
 
+        Private _quantity As Decimal = 1
+        Public Property Quantity As Decimal
+            Get
+                Return _quantity
+            End Get
+            Set(value As Decimal)
+                _quantity = value
+                OnPropertyChanged(NameOf(Quantity))
+            End Set
+        End Property
+
         ' Read-only properties for UI
         Private _productName As String
         Public Property ProductName As String

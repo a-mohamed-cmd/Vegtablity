@@ -1,0 +1,3 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\ViewModels\DashboardViewModel.vb(561,43): error BC30002: Type 'Views.DbUpdaterPage' is not defined. [D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity_5bmx4uow_wpftmp.vbproj]

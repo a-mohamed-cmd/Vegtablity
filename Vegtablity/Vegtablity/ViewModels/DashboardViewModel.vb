@@ -322,6 +322,7 @@ Namespace ViewModels
             Dim settingsChildren As New ObservableCollection(Of MenuItem)()
             settingsChildren.Add(New MenuItem With {.Title = "إعدادات عامة", .Icon = "⚙", .FormName = "Settings", .IsVisible = True})
             settingsChildren.Add(New MenuItem With {.Title = "بيانات الشركة", .Icon = "🏢", .FormName = "CompanySettings", .IsVisible = True})
+            settingsChildren.Add(New MenuItem With {.Title = "تحديث قاعدة البيانات", .Icon = "🛠️", .FormName = "DbUpdater", .IsVisible = True})
 
             allItems.Add(New MenuItem With {
                 .Title = "الإعدادات",
@@ -550,6 +551,14 @@ Namespace ViewModels
 
                     Case "InvoiceDashboard"
                         CurrentPage = New Views.InvoiceDashboardPage()
+                        IsHomePage = False
+
+                    Case "Reports"
+                        CurrentPage = New Views.ReportsPage()
+                        IsHomePage = False
+
+                    Case "DbUpdater"
+                        CurrentPage = New Views.DbUpdaterPage()
                         IsHomePage = False
 
                     Case Else

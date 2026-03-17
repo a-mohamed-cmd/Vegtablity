@@ -72,6 +72,15 @@ Namespace ViewModels
         Public Property AddItemCommand As ICommand
         Public Property RemoveItemCommand As ICommand
 
+        ' --- Invoice Details: Memory-backed client-side pagination ---
+        Private _allInvoiceDetails As New List(Of InvoiceDetail)()
+        Private ReadOnly PAGE_SIZE As Integer = 10
+        Private _detailsPage As Integer = 0
+
+        ' Pagination Commands
+        Public Property NextDetailsPageCommand As ICommand
+        Public Property PrevDetailsPageCommand As ICommand
+
         Public Sub New()
             If System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then
                 Vendors = New ObservableCollection(Of Partner)()
@@ -100,6 +109,9 @@ Namespace ViewModels
             NewCommand = New RelayCommand(AddressOf ExecuteNew)
             AddItemCommand = New RelayCommand(AddressOf ExecuteAddItem, AddressOf CanExecuteAddItem)
             RemoveItemCommand = New RelayCommand(AddressOf ExecuteRemoveItem, AddressOf CanExecuteRemoveItem)
+
+            NextDetailsPageCommand = New RelayCommand(Sub() DetailsPage += 1, Function() CanGoNextDetails)
+            PrevDetailsPageCommand = New RelayCommand(Sub() DetailsPage -= 1, Function() CanGoPrevDetails)
 
             LoadLookups()
             LoadPermissions("Purchases")
@@ -150,6 +162,8 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteNew(parameter As Object)
+            _allInvoiceDetails.Clear()
+            _detailsPage = 0
             CurrentInvoice = New InvoiceHeader() With {
                 .InvType = "Purchase",
                 .InvDate = DateTime.Now,
@@ -171,43 +185,107 @@ Namespace ViewModels
         Public Sub LoadInvoice(invID As Integer)
             Dim loaded = _invoiceService.LoadInvoiceForEdit(invID)
             If loaded IsNot Nothing Then
+                _allInvoiceDetails.Clear()
+                _detailsPage = 0
+                For Each d In loaded.Details
+                    AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
+                    _allInvoiceDetails.Add(d)
+                Next
+                loaded.Details = New ObservableCollection(Of InvoiceDetail)()
                 CurrentInvoice = loaded
-                ' If no details, add empty row for UX (read-only display needs no empty row)
-                If Not CurrentInvoice.IsPosted AndAlso CurrentInvoice.Details.Count = 0 Then
+                If Not CurrentInvoice.IsPosted AndAlso _allInvoiceDetails.Count = 0 Then
                     ExecuteAddItem(Nothing)
+                Else
+                    UpdateDetailsPagination()
                 End If
             End If
         End Sub
 
+        ' ========================
+        ' Details Pagination
+        ' ========================
+        Public Property DetailsPage As Integer
+            Get
+                Return _detailsPage
+            End Get
+            Set(value As Integer)
+                If value < 0 Then value = 0
+                Dim maxPage = Math.Max(0, DetailsTotalPages - 1)
+                If value > maxPage Then value = maxPage
+                SetProperty(_detailsPage, value)
+                UpdateDetailsPagination()
+            End Set
+        End Property
+
+        Public ReadOnly Property DetailsTotalPages As Integer
+            Get
+                Return Math.Max(1, CInt(Math.Ceiling(_allInvoiceDetails.Count / PAGE_SIZE)))
+            End Get
+        End Property
+
+        Public ReadOnly Property DetailsPageLabel As String
+            Get
+                Return $"صفحة {DetailsPage + 1} من {DetailsTotalPages} ({_allInvoiceDetails.Count} صنف)"
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoNextDetails As Boolean
+            Get
+                Return DetailsPage < DetailsTotalPages - 1
+            End Get
+        End Property
+
+        Public ReadOnly Property CanGoPrevDetails As Boolean
+            Get
+                Return DetailsPage > 0
+            End Get
+        End Property
+
+        Private Sub UpdateDetailsPagination()
+            If CurrentInvoice Is Nothing Then Return
+            Try
+                Dim skip = DetailsPage * PAGE_SIZE
+                Dim pageItems = _allInvoiceDetails.Skip(skip).Take(PAGE_SIZE).ToList()
+                CurrentInvoice.Details.Clear()
+                For Each d In pageItems
+                    CurrentInvoice.Details.Add(d)
+                Next
+                OnPropertyChanged(NameOf(DetailsTotalPages))
+                OnPropertyChanged(NameOf(DetailsPageLabel))
+                OnPropertyChanged(NameOf(CanGoNextDetails))
+                OnPropertyChanged(NameOf(CanGoPrevDetails))
+            Catch ex As Exception
+            End Try
+        End Sub
+
         Private Function CanExecuteSave(parameter As Object) As Boolean
             If CurrentInvoice Is Nothing OrElse CurrentInvoice.IsPosted Then Return False
-            ' Permission Check
             If CurrentInvoice.InvID = 0 AndAlso Not CurrentPermissions.CanAdd Then Return False
             If CurrentInvoice.InvID > 0 AndAlso Not CurrentPermissions.CanEdit Then Return False
-
             If Not CurrentInvoice.PartnerID.HasValue Then Return False
             If Not CurrentInvoice.WarehouseID.HasValue Then Return False
-            If CurrentInvoice.Details Is Nothing OrElse CurrentInvoice.Details.Count = 0 Then Return False
-            ' إذا أدخل مبلغاً مدفوعاً يجب اختيار طريقة الدفع
+            If _allInvoiceDetails.Count = 0 Then Return False
             If CurrentInvoice.PaidAmount > 0 AndAlso Not CurrentInvoice.PaymentAccountID.HasValue Then Return False
-
             Return True
         End Function
 
         Private Sub ExecuteSave(parameter As Object)
             Try
-                RecalculateTotals()
-
-                ' Remove empty rows (no ProductID selected or zero quantity)
-                Dim emptyRows = CurrentInvoice.Details.Where(Function(d) d.ProductID = 0 OrElse d.Quantity = 0).ToList()
+                ' Remove empty rows from ALL details
+                Dim emptyRows = _allInvoiceDetails.Where(Function(d) d.ProductID = 0 OrElse d.Quantity = 0).ToList()
                 For Each row In emptyRows
-                    CurrentInvoice.Details.Remove(row)
+                    RemoveHandler row.PropertyChanged, AddressOf OnDetailPropertyChanged
+                    _allInvoiceDetails.Remove(row)
                 Next
 
-                If CurrentInvoice.Details.Count = 0 Then
+                If _allInvoiceDetails.Count = 0 Then
                     System.Windows.MessageBox.Show("يجب إضافة صنف واحد على الأقل لحفظ الفاتورة.", "تحذير", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
                     Return
                 End If
+
+                ' Build full list for saving
+                CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(_allInvoiceDetails)
+                RecalculateTotals()
 
                 ' Attach the current user to the invoice header
                 If Services.Session.CurrentUser IsNot Nothing Then
@@ -218,6 +296,9 @@ Namespace ViewModels
                 If CurrentInvoice.InvID = 0 Then
                     CurrentInvoice.InvID = invId
                 End If
+
+                ' Restore paginated view after save
+                UpdateDetailsPagination()
                 RaiseEvent RequestSnackbar("✅ تم حفظ الفاتورة بنجاح")
             Catch ex As Exception
                 System.Windows.MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
@@ -252,7 +333,14 @@ Namespace ViewModels
         Private Sub ExecuteAddItem(parameter As Object)
             Dim newItem = New InvoiceDetail() With {.Quantity = 1, .UnitPrice = 0}
             AddHandler newItem.PropertyChanged, AddressOf OnDetailPropertyChanged
-            CurrentInvoice.Details.Add(newItem)
+            _allInvoiceDetails.Add(newItem)
+
+            Dim newPage = Math.Max(0, DetailsTotalPages - 1)
+            If DetailsPage <> newPage Then
+                DetailsPage = newPage
+            Else
+                UpdateDetailsPagination()
+            End If
             RecalculateTotals()
         End Sub
 
@@ -265,7 +353,12 @@ Namespace ViewModels
             Dim item = TryCast(parameter, InvoiceDetail)
             If item IsNot Nothing Then
                 RemoveHandler item.PropertyChanged, AddressOf OnDetailPropertyChanged
-                CurrentInvoice.Details.Remove(item)
+                _allInvoiceDetails.Remove(item)
+                If DetailsPage >= DetailsTotalPages AndAlso DetailsPage > 0 Then
+                    DetailsPage -= 1
+                Else
+                    UpdateDetailsPagination()
+                End If
                 RecalculateTotals()
             End If
         End Sub
@@ -298,10 +391,10 @@ Namespace ViewModels
         End Sub
 
         Private Sub RecalculateTotals()
-            If CurrentInvoice Is Nothing OrElse CurrentInvoice.Details Is Nothing Then Return
+            If CurrentInvoice Is Nothing Then Return
             
             Dim total As Decimal = 0
-            For Each item In CurrentInvoice.Details
+            For Each item In _allInvoiceDetails
                 total += item.TotalPrice
             Next
             CurrentInvoice.TotalAmount = total

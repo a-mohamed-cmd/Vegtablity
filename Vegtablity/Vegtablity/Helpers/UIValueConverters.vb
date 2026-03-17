@@ -128,5 +128,57 @@ Namespace Helpers
             Throw New NotImplementedException()
         End Function
     End Class
+    Public Class IntToVisConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            If value Is Nothing OrElse parameter Is Nothing Then Return Visibility.Collapsed
+
+            Dim selectedVal As Integer
+            Dim targetVal As Integer
+
+            If Integer.TryParse(value.ToString(), selectedVal) AndAlso Integer.TryParse(parameter.ToString(), targetVal) Then
+                If selectedVal = targetVal Then
+                    Return Visibility.Visible
+                End If
+            End If
+
+            Return Visibility.Collapsed
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
+
+    Public Class BooleanAndConverter
+        Implements IMultiValueConverter
+
+        Public Function Convert(values() As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IMultiValueConverter.Convert
+            If values Is Nothing Then Return False
+            For Each v In values
+                If Not (TypeOf v Is Boolean AndAlso DirectCast(v, Boolean)) Then
+                    Return False
+                End If
+            Next
+            Return True
+        End Function
+
+        Public Function ConvertBack(value As Object, targetTypes() As Type, parameter As Object, culture As CultureInfo) As Object() Implements IMultiValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
+    Public Class IdToVisibilityConverter
+        Implements IValueConverter
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            If value IsNot Nothing AndAlso IsNumeric(value) AndAlso System.Convert.ToInt32(value) > 0 Then
+                Return Visibility.Visible
+            End If
+            Return Visibility.Collapsed
+        End Function
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
 
 End Namespace

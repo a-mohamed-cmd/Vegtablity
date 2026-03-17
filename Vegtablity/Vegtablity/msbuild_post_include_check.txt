@@ -1,0 +1,3 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\ViewModels\ReportsViewModel.vb(12,48): error BC30002: Type 'ReportService' is not defined. [D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity_tvko30fv_wpftmp.vbproj]

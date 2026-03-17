@@ -92,6 +92,14 @@ Namespace Services
 
                     ' 2. Transactions
                     report.Transactions = multi.Read(Of AccountStatementItem)().ToList()
+
+                    ' 3. Calculate Totals & Ending Balance
+                    report.TotalDebit = report.Transactions.Sum(Function(t) t.DebitAmount)
+                    report.TotalCredit = report.Transactions.Sum(Function(t) t.CreditAmount)
+                    
+                    ' Ending Balance = Opening + Total Debit - Total Credit
+                    ' (Note: The SQL procedure already calculates running balance per line)
+                    report.EndingBalance = report.OpeningBalance + (report.TotalDebit - report.TotalCredit)
                 End Using
             End Using
             Return report

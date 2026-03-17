@@ -197,6 +197,26 @@ Namespace Services
                 Return header
             End Using
         End Function
+        Public Function GetInvoicesPaged(pageNumber As Integer, pageSize As Integer, Optional invType As String = "Sales", Optional searchText As String = Nothing) As PagedResult(Of InvoiceHeader)
+            Dim result As New PagedResult(Of InvoiceHeader)()
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@PageNumber", pageNumber)
+                    p.Add("@PageSize", pageSize)
+                    p.Add("@InvType", invType)
+                    p.Add("@SearchText", searchText)
+
+                    Using multi = conn.QueryMultiple(Helpers.StoredProcedures.SP_INVOICE_GETPAGED, p, commandType:=CommandType.StoredProcedure)
+                        result.TotalCount = multi.Read(Of Integer)().FirstOrDefault()
+                        result.Data = multi.Read(Of InvoiceHeader)().ToList()
+                    End Using
+                End Using
+            Catch ex As Exception
+                ' Handle or log
+            End Try
+            Return result
+        End Function
     End Class
 End Namespace
 

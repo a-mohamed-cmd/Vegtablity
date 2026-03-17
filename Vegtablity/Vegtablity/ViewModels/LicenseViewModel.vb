@@ -5,15 +5,15 @@ Namespace ViewModels
     Public Class LicenseViewModel
         Inherits BaseViewModel
 
-        Private _licenseService As New Services.LicenseService()
+        Private _licenseService As Services.LicenseService
         Private _hardwareID As String
         Private _statusMessage As String
         Private _isLicensed As Boolean
 
         Public Sub New()
             Try
+                _licenseService = New Services.LicenseService()
                 HardwareID = _licenseService.GetHardwareID()
-                CheckLicense()
             Catch ex As Exception
                 StatusMessage = "خطأ في الاتصال بقاعدة البيانات: " & ex.Message
                 _isLicensed = False
@@ -57,8 +57,12 @@ Namespace ViewModels
         End Property
 
         Private Sub CopyHardwareID(obj As Object)
-            Clipboard.SetText(HardwareID)
-            StatusMessage = "تم نسخ كود الجهاز إلى الحافظة."
+            If Not String.IsNullOrEmpty(HardwareID) Then
+                Clipboard.SetText(HardwareID)
+                StatusMessage = "تم نسخ كود الجهاز إلى الحافظة."
+            Else
+                StatusMessage = "لم يتم توليد كود الجهاز بعد."
+            End If
         End Sub
 
         Private Sub ExitApplication(obj As Object)
@@ -66,6 +70,7 @@ Namespace ViewModels
         End Sub
 
         Public Sub CheckLicense(Optional obj As Object = Nothing)
+            If _licenseService Is Nothing Then Return ' Safety check
             _isLicensed = _licenseService.IsLicensed(HardwareID)
 
             If _isLicensed Then
@@ -73,7 +78,9 @@ Namespace ViewModels
                 ' Navigate to Login Window
                 Dim loginWin As New Views.LoginWindow()
                 loginWin.Show()
-                Application.Current.MainWindow.Close()
+                If Application.Current.MainWindow IsNot Nothing AndAlso Application.Current.MainWindow IsNot loginWin Then
+                    Application.Current.MainWindow.Close()
+                End If
             Else
                 StatusMessage = "هذا الجهاز غير مرخص. يرجى تزويد المسؤول بكود الجهاز أعلاه."
             End If

@@ -12,8 +12,8 @@ Namespace ViewModels
         Private ReadOnly _settingsService As New Services.SettingsService()
 
         ' ===== Products =====
-        Private _allProducts As New List(Of Product)()
         Private _products As ObservableCollection(Of Product)
+        Private _productTotalCount As Integer = 0
         Private _selectedProduct As Product
         Private _isEditingProduct As Boolean
         Private _searchText As String
@@ -137,7 +137,7 @@ Namespace ViewModels
 
         Public ReadOnly Property PageLabel As String
             Get
-                Return $"صفحة {CurrentPage} من {TotalPages} ({_allProducts.Count} عنصر)"
+                Return $"صفحة {CurrentPage} من {TotalPages} ({_productTotalCount} عنصر)"
             End Get
         End Property
 
@@ -334,8 +334,9 @@ Namespace ViewModels
 
         Private Sub LoadProducts()
             Try
-                _allProducts = _inventoryService.GetAllProducts()
-                CalculatePagination()
+                ' Reset to page 1 for initial load
+                _currentPage = 1
+                UpdatePagination()
             Catch ex As Exception
                 StatusMessage = "خطأ في تحميل الأصناف: " & ex.Message
             End Try
@@ -343,29 +344,28 @@ Namespace ViewModels
 
         Private Sub SearchProducts()
             Try
-                _allProducts = _inventoryService.SearchProducts(SearchText)
-                CalculatePagination()
+                ' Reset to page 1 when searching
+                _currentPage = 1
+                UpdatePagination()
             Catch ex As Exception
                 StatusMessage = "خطأ في البحث: " & ex.Message
             End Try
         End Sub
 
-        Private Sub CalculatePagination()
-            TotalPages = Math.Max(1, CInt(Math.Ceiling(_allProducts.Count / _pageSize)))
-            _currentPage = 1 ' Use backing field to avoid triggering UpdatePagination twice
-            OnPropertyChanged(NameOf(CurrentPage))
-            OnPropertyChanged(NameOf(PageLabel))
-            OnPropertyChanged(NameOf(CanGoNext))
-            OnPropertyChanged(NameOf(CanGoPrev))
-            UpdatePagination()
-        End Sub
-
         Private Sub UpdatePagination()
-            If _allProducts Is Nothing Then Return
-
-            Dim skip = (CurrentPage - 1) * _pageSize
-            Dim pagedData = _allProducts.Skip(skip).Take(_pageSize).ToList()
-            Products = New ObservableCollection(Of Product)(pagedData)
+            Try
+                Dim paged = _inventoryService.GetProductsPaged(CurrentPage, _pageSize, SearchText)
+                _productTotalCount = paged.TotalCount
+                TotalPages = Math.Max(1, CInt(Math.Ceiling(_productTotalCount / _pageSize)))
+                
+                Products = New ObservableCollection(Of Product)(paged.Data)
+                
+                OnPropertyChanged(NameOf(PageLabel))
+                OnPropertyChanged(NameOf(CanGoNext))
+                OnPropertyChanged(NameOf(CanGoPrev))
+            Catch ex As Exception
+                StatusMessage = "خطأ في جلب البيانات: " & ex.Message
+            End Try
         End Sub
 
         Private Sub ClearErrors()

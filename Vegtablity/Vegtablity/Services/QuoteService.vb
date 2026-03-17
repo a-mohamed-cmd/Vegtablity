@@ -16,6 +16,27 @@ Namespace Services
             End Try
         End Function
 
+        Public Function GetQuotesPaged(pageNumber As Integer, pageSize As Integer, Optional searchText As String = Nothing, Optional partnerID As Integer? = Nothing) As PagedResult(Of QuoteHeader)
+            Dim result As New PagedResult(Of QuoteHeader)()
+            Try
+                Using conn = db.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@PageNumber", pageNumber)
+                    p.Add("@PageSize", pageSize)
+                    p.Add("@SearchText", searchText)
+                    p.Add("@PartnerID", partnerID)
+
+                    Using multi = conn.QueryMultiple(Helpers.StoredProcedures.SP_QUOTATION_GETPAGED, p, commandType:=CommandType.StoredProcedure)
+                        result.TotalCount = multi.Read(Of Integer)().FirstOrDefault()
+                        result.Data = multi.Read(Of QuoteHeader)().ToList()
+                    End Using
+                End Using
+            Catch ex As Exception
+                ' Log or handle
+            End Try
+            Return result
+        End Function
+
         Public Function GetQuotesByPartner(partnerID As Integer) As List(Of QuoteHeader)
             Try
                 Using conn = db.GetConnection()
@@ -28,16 +49,24 @@ Namespace Services
             End Try
         End Function
 
-        Public Function GetQuoteDetails(quoteId As Integer) As List(Of QuoteDetail)
+        Public Function GetQuoteDetails(quoteId As Integer, pageNumber As Integer, pageSize As Integer) As PagedResult(Of QuoteDetail)
+            Dim result As New PagedResult(Of QuoteDetail)()
             Try
                 Using conn = db.GetConnection()
                     Dim p As New DynamicParameters()
                     p.Add("@QuoteID", quoteId)
-                    Return conn.Query(Of QuoteDetail)(Helpers.StoredProcedures.SP_QUOTATIONDETAILS_GETBYQUOTEID, p, commandType:=CommandType.StoredProcedure).ToList()
+                    p.Add("@PageNumber", pageNumber)
+                    p.Add("@PageSize", pageSize)
+
+                    Using multi = conn.QueryMultiple(Helpers.StoredProcedures.SP_QUOTATIONDETAILS_GETBYQUOTEID, p, commandType:=CommandType.StoredProcedure)
+                        result.TotalCount = multi.Read(Of Integer)().FirstOrDefault()
+                        result.Data = multi.Read(Of QuoteDetail)().ToList()
+                    End Using
                 End Using
             Catch ex As Exception
                 Throw New Exception("Error retrieving quotation details: " & ex.Message)
             End Try
+            Return result
         End Function
 
         Public Function SaveQuote(quote As QuoteHeader) As Integer
@@ -69,6 +98,7 @@ Namespace Services
                             pDet.Add("@QuoteID", newId)
                             pDet.Add("@ProductID", detail.ProductID)
                             pDet.Add("@QuotedPrice", detail.QuotedPrice)
+                            pDet.Add("@Quantity", detail.Quantity)
                             conn.Execute(Helpers.StoredProcedures.SP_QUOTATIONDETAILS_INSERT, pDet, transaction:=trans, commandType:=CommandType.StoredProcedure)
                         Next
 

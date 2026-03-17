@@ -1,0 +1,38 @@
+Build started 14/03/2026 1:05:16 AM.
+     1>Project "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj" on node 1 (Restore target(s)).
+     1>_GetAllRestoreProjectPathItems:
+         Determining projects to restore...
+       Restore:
+         X.509 certificate chain validation will use the default trust store selected by .NET for code signing.
+         X.509 certificate chain validation will use the default trust store selected by .NET for timestamping.
+         Assets file has not changed. Skipping assets file writing. Path: D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\obj\project.assets.json
+         Restored D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj (in 463 ms).
+         
+         NuGet Config files used:
+             C:\Users\ACER\AppData\Roaming\NuGet\NuGet.Config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.FallbackLocation.config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config
+         
+         Feeds used:
+             https://api.nuget.org/v3/index.json
+             C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+         All projects are up-to-date for restore.
+     1>Done Building Project "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj" (Restore target(s)).
+   1:7>Project "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj" on node 1 (Build target(s)).
+     1>CoreResGen:
+         Task assembly was loaded from 'C:\Program Files\dotnet\sdk\9.0.308\Microsoft.Build.dll' while the desired location was 'C:\Program Files\dotnet\sdk\9.0.308\Microsoft.Build.Tasks.Core.dll'.
+     1>C:\Program Files\dotnet\sdk\9.0.308\Microsoft.Common.CurrentVersion.targets(3455,5): error MSB4216: Could not run the "GenerateResource" task because MSBuild could not create or connect to a task host with runtime "NET" and architecture "x86".  Please ensure that (1) the requested runtime and/or architecture are available on the machine, and (2) that the required executable "C:\Program Files\dotnet\sdk\9.0.308\MSBuild.dll" exists and can be run. [D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj]
+     1>C:\Program Files\dotnet\sdk\9.0.308\Microsoft.Common.CurrentVersion.targets(3479,7): error MSB4028: The "GenerateResource" task's outputs could not be retrieved from the "FilesWritten" parameter. Object type Microsoft.Build.Tasks.GenerateResource does not match target type Microsoft.Build.BackEnd.TaskHostTask. [D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj]
+     1>Done Building Project "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj" (Build target(s)) -- FAILED.
+
+Build FAILED.
+
+       "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj" (Build target) (1:7) ->
+       (CoreResGen target) -> 
+         C:\Program Files\dotnet\sdk\9.0.308\Microsoft.Common.CurrentVersion.targets(3455,5): error MSB4216: Could not run the "GenerateResource" task because MSBuild could not create or connect to a task host with runtime "NET" and architecture "x86".  Please ensure that (1) the requested runtime and/or architecture are available on the machine, and (2) that the required executable "C:\Program Files\dotnet\sdk\9.0.308\MSBuild.dll" exists and can be run. [D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj]
+         C:\Program Files\dotnet\sdk\9.0.308\Microsoft.Common.CurrentVersion.targets(3479,7): error MSB4028: The "GenerateResource" task's outputs could not be retrieved from the "FilesWritten" parameter. Object type Microsoft.Build.Tasks.GenerateResource does not match target type Microsoft.Build.BackEnd.TaskHostTask. [D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\Vegtablity.vbproj]
+
+    0 Warning(s)
+    2 Error(s)
+
+Time Elapsed 00:00:07.87

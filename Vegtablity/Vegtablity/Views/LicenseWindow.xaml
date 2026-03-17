@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:Vegtablity.Views"
         xmlns:vm="clr-namespace:Vegtablity.ViewModels"
         mc:Ignorable="d"
-        Title="License Check" Height="300" Width="400" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None">
+        Title="License Check" Height="300" Width="400" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None"
+        Loaded="LicenseWindow_Loaded">
     
     <Window.DataContext>
         <vm:LicenseViewModel/>

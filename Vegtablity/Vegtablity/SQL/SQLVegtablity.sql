@@ -4178,3 +4178,1093 @@ BEGIN
     ORDER BY q.QuoteDate DESC;
 END
 GO
+
+-- ======================================================================
+-- Vegtablity ERP - Comprehensive Reports & Indexes Update Script
+-- ======================================================================
+-- Execute this script in SQL Server Management Studio (SSMS)
+-- Target Database: [VegtablityDB]
+-- ======================================================================
+
+ 
+
+PRINT '====================================================='
+PRINT '1. CREATING MISSING INDEXES FOR PERFORMANCE OPTIMIZATION'
+PRINT '====================================================='
+
+-- 1. Inventory Schema Indexes
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Products_Barcode' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+    CREATE NONCLUSTERED INDEX [IX_Products_Barcode] ON [Inventory].[Products] ([Barcode]) INCLUDE ([ProductName], saleprice);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Products_IsActive' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+    CREATE NONCLUSTERED INDEX [IX_Products_IsActive] ON [Inventory].[Products] ([IsActive]) INCLUDE ([ProductID], [ProductName], saleprice);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Stock_Warehouse_Product' AND object_id = OBJECT_ID('[Inventory].[ProductStock]'))
+    CREATE NONCLUSTERED INDEX [IX_Stock_Warehouse_Product] ON [Inventory].[ProductStock] ([WarehouseID], [ProductID]) INCLUDE ([CurrentQty]);
+GO
+
+-- 2. Sales Schema Indexes (Invoices & Details)
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Invoices_InvDate' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+    CREATE NONCLUSTERED INDEX [IX_Invoices_InvDate] ON [Sales].[InvoiceHeader] ([InvDate]) INCLUDE ([TotalAmount], [Discount], [NetAmount], [PaidAmount], [Remainder]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Invoices_Partner_Date' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+    CREATE NONCLUSTERED INDEX [IX_Invoices_Partner_Date] ON [Sales].[InvoiceHeader] ([PartnerID], [InvDate]) INCLUDE ([NetAmount], [Remainder], [IsPosted]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_InvoiceDetails_InvID' AND object_id = OBJECT_ID('[Sales].[InvoiceDetails]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceDetails_InvID] ON [Sales].[InvoiceDetails] ([InvID]) INCLUDE ([ProductID], [Quantity], [UnitPrice], [TotalPrice], [CostPrice]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_InvoiceDetails_Product' AND object_id = OBJECT_ID('[Sales].[InvoiceDetails]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceDetails_Product] ON [Sales].[InvoiceDetails] ([ProductID]) INCLUDE ([InvID], [Quantity], [TotalPrice], [CostPrice]);
+GO
+
+-- 3. Quotations Indexes
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Quotations_Partner_IsActive' AND object_id = OBJECT_ID('[Sales].[Quotations]'))
+    CREATE NONCLUSTERED INDEX [IX_Quotations_Partner_IsActive] ON [Sales].[Quotations] ([PartnerID], [IsActive]) INCLUDE ([QuoteDate], [ExpiryDate]);
+GO
+
+-- 4. Accounting Schema Indexes
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_JournalEntries_Date' AND object_id = OBJECT_ID('[Accounting].[JournalEntries]'))
+    CREATE NONCLUSTERED INDEX [IX_JournalEntries_Date] ON [Accounting].[JournalEntries] ([EntryDate]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_JournalEntryDetails_EntryID' AND object_id = OBJECT_ID('[Accounting].[JournalEntries]'))
+    CREATE NONCLUSTERED INDEX [IX_JournalEntryDetails_EntryID] ON [Accounting].[JournalEntries] ([EntryID]) INCLUDE ([AccountID], [Debitamount], [Creditamount]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_JournalEntryDetails_Account' AND object_id = OBJECT_ID('[Accounting].[JournalEntries]'))
+    CREATE NONCLUSTERED INDEX [IX_JournalEntryDetails_Account] ON [Accounting].[JournalEntries] ([AccountID]) INCLUDE ([EntryID], [Debitamount], [Creditamount]);
+GO
+
+PRINT '✅ Indexes Created Successfully.'
+GO
+
+PRINT '====================================================='
+PRINT '2. CREATING COMPREHENSIVE REPORTS STORED PROCEDURES'
+PRINT '====================================================='
+
+-- ======================================================================
+-- REPORT 1: تقرير أرباح كل صنف خلال فترة معينة + الأصناف الأكثر ربحية
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_ProductProfits]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_ProductProfits]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_ProductProfits]
+    @StartDate DATE,
+    @EndDate DATE,
+    @OrderBy NVARCHAR(50) = 'ProfitDesc' -- 'ProfitDesc', 'QtyDesc', 'RevenueDesc'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        p.ProductID,
+        p.Barcode,
+        p.ProductName,
+        u.UnitName,
+        SUM(d.Quantity) AS TotalQtySold,
+        SUM(d.TotalPrice) AS TotalRevenue,
+        SUM(d.Quantity * ISNULL(d.CostPrice, p.PurchasePrice)) AS TotalCost,
+        SUM(d.TotalPrice) - SUM(d.Quantity * ISNULL(d.CostPrice, p.PurchasePrice)) AS NetProfit,
+        CASE WHEN SUM(d.TotalPrice) > 0 
+             THEN ((SUM(d.TotalPrice) - SUM(d.Quantity * ISNULL(d.CostPrice, p.PurchasePrice))) / SUM(d.TotalPrice)) * 100 
+             ELSE 0 END AS ProfitMarginPercent
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND i.IsPosted = 1
+    GROUP BY p.ProductID, p.Barcode, p.ProductName, u.UnitName
+    ORDER BY 
+        CASE WHEN @OrderBy = 'ProfitDesc' THEN SUM(d.TotalPrice) - SUM(d.Quantity * ISNULL(d.CostPrice, p.[PurchasePrice])) END DESC,
+        CASE WHEN @OrderBy = 'QtyDesc' THEN SUM(d.Quantity) END DESC,
+        CASE WHEN @OrderBy = 'RevenueDesc' THEN SUM(d.TotalPrice) END DESC;
+END
+GO
+
+-- ======================================================================
+-- REPORT 2: تقرير أرباح لكل فاتورة على حدة
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_InvoiceProfits]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_InvoiceProfits]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_InvoiceProfits]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        i.InvID,
+        i.InvDate,
+        p.PartnerName AS CustomerName,
+        i.TotalAmount AS GrossTotal,
+        i.Discount,
+        i.NetAmount,
+        -- Calculate Total Cost of items in this invoice
+        ISNULL((SELECT SUM(d.Quantity * ISNULL(d.CostPrice, pr.[PurchasePrice])) 
+                FROM [Sales].[InvoiceDetails] d 
+                INNER JOIN [Inventory].[Products] pr ON d.ProductID = pr.ProductID 
+                WHERE d.InvID = i.InvID), 0) AS TotalCost,
+        -- Profit = NetAmount - TotalCost
+        i.NetAmount - ISNULL((SELECT SUM(d.Quantity * ISNULL(d.CostPrice, pr.[PurchasePrice])) 
+                              FROM [Sales].[InvoiceDetails] d 
+                              INNER JOIN [Inventory].[Products] pr ON d.ProductID = pr.ProductID 
+                              WHERE d.InvID = i.InvID), 0) AS NetProfit,
+        i.IsPosted
+    FROM [Sales].[InvoiceHeader] i
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+    ORDER BY i.InvDate DESC, i.InvID DESC;
+END
+GO
+
+-- ======================================================================
+-- REPORT 3: تقرير المبيعات اليومية والشهرية التفصيلي
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_SalesSummaryByPeriod]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_SalesSummaryByPeriod]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_SalesSummaryByPeriod]
+    @StartDate DATE,
+    @EndDate DATE,
+    @PeriodType NVARCHAR(10) = 'Daily' -- 'Daily' or 'Monthly'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @PeriodType = 'Daily'
+    BEGIN
+        SELECT 
+            CAST(InvDate AS DATE) AS PeriodString,
+            COUNT(InvID) AS InvoiceCount,
+            SUM(TotalAmount) AS TotalGrossAmount,
+            SUM(Discount) AS TotalDiscount,
+            SUM(NetAmount) AS TotalNetAmount,
+            SUM(PaidAmount) AS TotalPaid,
+            SUM(Remainder) AS TotalCredit
+        FROM [Sales].[InvoiceHeader]
+        WHERE CAST(InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+          AND IsPosted = 1
+        GROUP BY CAST(InvDate AS DATE)
+        ORDER BY CAST(InvDate AS DATE) DESC;
+    END
+    ELSE IF @PeriodType = 'Monthly'
+    BEGIN
+        SELECT 
+            FORMAT(InvDate, 'yyyy-MM') AS PeriodString,
+            COUNT(InvID) AS InvoiceCount,
+            SUM(TotalAmount) AS TotalGrossAmount,
+            SUM(Discount) AS TotalDiscount,
+            SUM(NetAmount) AS TotalNetAmount,
+            SUM(PaidAmount) AS TotalPaid,
+            SUM(Remainder) AS TotalCredit
+        FROM [Sales].[InvoiceHeader]
+        WHERE CAST(InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+          AND IsPosted = 1
+        GROUP BY FORMAT(InvDate, 'yyyy-MM')
+        ORDER BY FORMAT(InvDate, 'yyyy-MM') DESC;
+    END
+END
+GO
+
+-- ======================================================================
+-- REPORT 4: تقرير مبيعات العملاء (أعلى العملاء شراءً)
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_TopCustomers]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_TopCustomers]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_TopCustomers]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        p.PartnerID,
+        p.PartnerName,
+        p.Phone,
+        COUNT(i.InvID) AS TotalInvoices,
+        SUM(i.NetAmount) AS TotalPurchases,
+        SUM(i.PaidAmount) AS TotalPaid,
+        SUM(i.Remainder) AS TotalCreditBalance
+    FROM [Sales].[Partners] p
+    INNER JOIN [Sales].[InvoiceHeader] i ON p.PartnerID = i.PartnerID
+    WHERE p.PartnerType = 'Customer'
+      AND CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND i.IsPosted = 1
+    GROUP BY p.PartnerID, p.PartnerName, p.Phone
+    ORDER BY SUM(i.NetAmount) DESC;
+END
+GO
+
+-- ======================================================================
+-- REPORT 5: تقرير فواتير المبيعات الآجلة (أعمار الديون)
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_UnpaidInvoicesAging]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_UnpaidInvoicesAging]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_UnpaidInvoicesAging]
+    @AsOfDate DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @AsOfDate IS NULL SET @AsOfDate = GETDATE();
+
+    SELECT 
+        i.InvID,
+        i.InvDate,
+        p.PartnerName AS CustomerName,
+        i.NetAmount AS InvoiceTotal,
+        i.PaidAmount,
+        i.Remainder AS UnpaidBalance,
+        DATEDIFF(DAY, i.InvDate, @AsOfDate) AS DaysOverdue,
+        CASE 
+            WHEN DATEDIFF(DAY, i.InvDate, @AsOfDate) <= 30 THEN '1_0_to_30_Days'
+            WHEN DATEDIFF(DAY, i.InvDate, @AsOfDate) <= 60 THEN '2_31_to_60_Days'
+            WHEN DATEDIFF(DAY, i.InvDate, @AsOfDate) <= 90 THEN '3_61_to_90_Days'
+            ELSE '4_Over_90_Days'
+        END AS AgingBucket
+    FROM [Sales].[InvoiceHeader] i
+    INNER JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    WHERE i.Remainder > 0 
+      AND i.IsPosted = 1
+      AND CAST(i.InvDate AS DATE) <= @AsOfDate
+    ORDER BY DaysOverdue DESC;
+END
+GO
+
+-- ======================================================================
+-- REPORT 6: تقرير تقييم المخزون (Inventory Valuation)
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_InventoryValuation]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_InventoryValuation]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_InventoryValuation]
+    @WarehouseID INT = 0 -- 0 means all warehouses
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        w.WarehouseName,
+        p.ProductID,
+        p.Barcode,
+        p.ProductName,
+        u.UnitName,
+        s.[CurrentQty] AS CurrentStock,
+        s.[AvgCostPrice] AS UnitCost,
+        p.[SalePrice] AS UnitSellingPrice,
+        (s.[CurrentQty] * s.[AvgCostPrice]) AS TotalCostValue,
+        (s.[CurrentQty] * p.[SalePrice]) AS TotalRetailValue
+    FROM [Inventory].[ProductStock] s
+    INNER JOIN [Inventory].[Products] p ON s.ProductID = p.ProductID
+    INNER JOIN [Settings].[Warehouses] w ON s.WarehouseID = w.WarehouseID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE (@WarehouseID = 0 OR s.WarehouseID = @WarehouseID)
+      AND s.[CurrentQty] > 0
+    ORDER BY w.WarehouseName, p.ProductName;
+END
+GO
+
+-- ======================================================================
+-- REPORT 7: تقرير الأصناف الراكدة (Dead/Slow-Moving Stock)
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_SlowMovingStock]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_SlowMovingStock]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_SlowMovingStock]
+    @MonthsInactive INT = 3 -- Default 3 months
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @CutoffDate DATE = DATEADD(MONTH, -@MonthsInactive, GETDATE());
+
+    SELECT 
+        p.ProductID,
+        p.Barcode,
+        p.ProductName,
+        c.[CatName],
+        u.UnitName,
+        ISNULL(SUM(s.[CurrentQty]), 0) AS CurrentTotalStock,
+        p.[PurchasePrice],
+        MAX(i.InvDate) AS LastSoldDate,
+        DATEDIFF(DAY, ISNULL(MAX(i.InvDate),GETDATE()), GETDATE()) AS DaysSinceLastSale
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.[CatID]
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    LEFT JOIN [Inventory].[ProductStock] s ON p.ProductID = s.ProductID
+    LEFT JOIN [Sales].[InvoiceDetails] d ON p.ProductID = d.ProductID
+    LEFT JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+    GROUP BY p.ProductID, p.Barcode, p.ProductName, c.[CatName], u.UnitName, p.[PurchasePrice]
+    HAVING ISNULL(SUM(s.[CurrentQty]), 0) > 0 
+       AND (MAX(i.InvDate) IS NULL OR MAX(i.InvDate) < @CutoffDate)
+    ORDER BY DaysSinceLastSale DESC;
+END
+GO
+
+-- ======================================================================
+-- REPORT 8: تقرير حركة المخزون لكل صنف على حدة (Stock Movement)
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_StockMovement]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_StockMovement]
+GO
+create PROCEDURE [Reports].[sp_Report_StockMovement]
+    @ProductID INT,
+    @WarehouseID INT = 0, -- 0 تعني الكل
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        Movement.TransactionDate,
+        Movement.TransactionType,
+        Movement.WarehouseName,
+        Movement.QtyIn,
+        Movement.QtyOut,
+        Movement.UnitPrice
+    FROM (
+        -- أولاً: المشتريات (الوارد QtyIn)
+        SELECT
+            i.InvDate AS TransactionDate,
+            N'فاتورة مشتريات رقم ' + CAST(i.InvID AS NVARCHAR) AS TransactionType,
+            w.WarehouseName,
+            d.Quantity AS QtyIn,
+            0 AS QtyOut,
+            d.UnitPrice
+        FROM [Sales].[InvoiceDetails] d
+        INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+        INNER JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
+        WHERE d.ProductID = @ProductID 
+          AND i.InvType = 'Purchase' 
+          AND (@WarehouseID = 0 OR i.WarehouseID = @WarehouseID)
+          AND i.IsPosted = 1
+
+        UNION ALL
+
+        -- ثانياً: المبيعات (الصادر QtyOut)
+        SELECT
+            i.InvDate AS TransactionDate,
+            N'فاتورة مبيعات رقم ' + CAST(i.InvID AS NVARCHAR) AS TransactionType,
+            w.WarehouseName,
+            0 AS QtyIn,
+            d.Quantity AS QtyOut,
+            d.UnitPrice
+        FROM [Sales].[InvoiceDetails] d
+        INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+        INNER JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
+        WHERE d.ProductID = @ProductID 
+          AND i.InvType = 'Sales' 
+          AND (@WarehouseID = 0 OR i.WarehouseID = @WarehouseID)
+          AND i.IsPosted = 1
+    ) AS Movement
+    WHERE CAST(Movement.TransactionDate AS DATE) BETWEEN @StartDate AND @EndDate
+    ORDER BY Movement.TransactionDate DESC;
+END
+GO
+
+
+-- ======================================================================
+-- REPORT 9: تقرير تحليل المصروفات (Expenses Analysis)
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_ExpensesAnalysis]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_ExpensesAnalysis]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_ExpensesAnalysis]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Expenses are accounts located in the P&L as Debit balances (usually starts with 3 or 5 depending on the chart)
+    -- We will query all transactions for Accounts marked as IncomeStatement where BalanceType = Debit
+    SELECT 
+        a.AccountCode,
+        a.AccountName,
+        SUM(d.DebitAmount) AS TotalExpense
+    FROM [Accounting].[JournalEntries] d
+    INNER JOIN [Accounting].[JournalEntries] j ON d.EntryID = j.EntryID
+    INNER JOIN [Accounting].[ChartOfAccounts] a ON d.AccountID = a.AccountID
+    WHERE CAST(j.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND a.AccountType = 'Expenses'
+    GROUP BY a.AccountCode, a.AccountName
+    HAVING SUM(d.DebitAmount) > 0
+    ORDER BY TotalExpense DESC;
+END
+GO
+
+
+-- ======================================================================
+-- REPORT 10: تقرير عروض الأسعار (المعلقة والفعالة)
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_QuotationsStatus]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_QuotationsStatus]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_QuotationsStatus]
+    @Status NVARCHAR(20) = 'All' -- 'All', 'Active', 'Expired'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        q.QuoteID,
+        p.PartnerName AS CustomerName,
+        q.QuoteDate,
+        q.ExpiryDate,
+        q.IsActive,
+        ISNULL((SELECT SUM(QuotedPrice) 
+                FROM [Sales].[QuotationDetails] 
+                WHERE QuoteID = q.QuoteID), 0) AS QuoteTotalValue,
+        CASE 
+            WHEN q.IsActive = 0 THEN 'مغلق'
+            WHEN q.ExpiryDate IS NOT NULL AND CAST(q.ExpiryDate AS DATE) < CAST(GETDATE() AS DATE) THEN 'منتهي الصلاحية'
+            ELSE 'فعال (قيد الانتظار)'
+        END AS QuoteStatus
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@Status = 'All')
+       OR (@Status = 'Active' AND q.IsActive = 1 AND (q.ExpiryDate IS NULL OR CAST(q.ExpiryDate AS DATE) >= CAST(GETDATE() AS DATE)))
+       OR (@Status = 'Expired' AND (q.IsActive = 0 OR CAST(q.ExpiryDate AS DATE) < CAST(GETDATE() AS DATE)))
+    ORDER BY q.QuoteDate DESC;
+END
+GO
+
+-- ======================================================================
+-- REPORT 11: تقرير الموردين (أعلى الموردين مشتريات)
+-- *Placeholder - Assuming Purchase module structure matches Sales*
+-- ======================================================================
+IF OBJECT_ID('[Reports].[sp_Report_TopSuppliers]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_TopSuppliers]
+GO
+CREATE PROCEDURE [Reports].[sp_Report_TopSuppliers]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Note: Since the Purchase Invoices tables are not fully clear yet, 
+    -- this relies on Journal Entries linking to supplier accounts if applicable,
+    -- or if a [Purchases].[Invoices] schema exists.
+    -- For now, this returns a scaffold. You will need to adjust table names if Purchases module is implemented.
+    
+    PRINT 'Top Suppliers Report created (Requires Purchase Invoices table to be active).'
+    
+    /* Example query if Purchase Invoices exist:
+    SELECT 
+        p.PartnerID, p.PartnerName, SUM(pi.NetAmount) AS TotalPurchases
+    FROM [Sales].[Partners] p
+    INNER JOIN [Purchases].[Invoices] pi ON p.PartnerID = pi.PartnerID
+    WHERE p.PartnerType = 'Supplier' AND CAST(pi.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+    GROUP BY p.PartnerID, p.PartnerName
+    ORDER BY TotalPurchases DESC;
+    */
+END
+GO
+
+PRINT '✅ All Report Stored Procedures Created Successfully.'
+GO
+
+
+
+
+
+-- 1.1 Users Table: Optimize login and active user lookups
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Users_Username' AND object_id = OBJECT_ID('[Security].[Users]'))
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_Users_Username] ON [Security].[Users] ([Username]) INCLUDE ([PasswordHash], [RoleID], [IsActive], [FullName]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Users_RoleID_IsActive' AND object_id = OBJECT_ID('[Security].[Users]'))
+    CREATE NONCLUSTERED INDEX [IX_Users_RoleID_IsActive] ON [Security].[Users] ([RoleID], [IsActive]) INCLUDE ([Username], [FullName]);
+GO
+
+-- 1.2 RolePermissions: Optimize permission checks (CanView, CanAdd, etc.)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_RolePermissions_RoleID_Form' AND object_id = OBJECT_ID('[Security].[RolePermissions]'))
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_RolePermissions_RoleID_Form] ON [Security].[RolePermissions] ([RoleID], [FormName]) INCLUDE ([CanView], [CanAdd], [CanEdit], [CanDelete], [CanPrint]);
+GO
+
+-- 1.3 DeviceLicenses: Optimize hardware ID validation
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_DeviceLicenses_MachineHWID' AND object_id = OBJECT_ID('[Security].[DeviceLicenses]'))
+    CREATE NONCLUSTERED INDEX [IX_DeviceLicenses_MachineHWID] ON [Security].[DeviceLicenses] ([MachineHWID]) INCLUDE ([IsActive], [ExpiryDate]);
+GO
+
+
+PRINT '====================================================='
+PRINT '2. SETTINGS SCHEMA INDEXES'
+PRINT '====================================================='
+
+-- 2.1 Warehouses: Optimize active warehouse lookups
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Warehouses_IsActive' AND object_id = OBJECT_ID('[Settings].[Warehouses]'))
+    CREATE NONCLUSTERED INDEX [IX_Warehouses_IsActive] ON [Settings].[Warehouses] ([IsActive]) INCLUDE ([WarehouseID], [WarehouseName]);
+GO
+
+-- 2.2 Categories: Optimize active category lookups
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Categories_IsActive' AND object_id = OBJECT_ID('[Settings].[Categories]'))
+    CREATE NONCLUSTERED INDEX [IX_Categories_IsActive] ON [Settings].[Categories] ([IsActive]) INCLUDE ([CatID], [CatName]);
+GO
+
+-- 2.3 Units: Optimize active unit lookups
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Units_IsActive' AND object_id = OBJECT_ID('[Settings].[Units]'))
+    CREATE NONCLUSTERED INDEX [IX_Units_IsActive] ON [Settings].[Units] ([IsActive]) INCLUDE ([UnitID], [UnitName]);
+GO
+
+
+PRINT '====================================================='
+PRINT '3. SALES SCHEMA INDEXES (Partners, Quotations, Invoices)'
+PRINT '====================================================='
+
+-- 3.1 Partners (Customers & Suppliers): Combine Type & Active status for dropdowns
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Partners_Type_IsActive' AND object_id = OBJECT_ID('[Sales].[Partners]'))
+    CREATE NONCLUSTERED INDEX [IX_Partners_Type_IsActive] ON [Sales].[Partners] ([PartnerType], [IsActive]) INCLUDE ([PartnerID], [PartnerName], [AccountID]);
+GO
+-- Partner Phone Lookup
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Partners_Phone' AND object_id = OBJECT_ID('[Sales].[Partners]'))
+    CREATE NONCLUSTERED INDEX [IX_Partners_Phone] ON [Sales].[Partners] ([Phone]) INCLUDE ([PartnerID], [PartnerName]);
+GO
+
+-- 3.2 Quotations: Header optimizations
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Quotations_Partner_Date' AND object_id = OBJECT_ID('[Sales].[Quotations]'))
+    CREATE NONCLUSTERED INDEX [IX_Quotations_Partner_Date] ON [Sales].[Quotations] ([PartnerID], [QuoteDate] DESC) INCLUDE ([IsActive], [ExpiryDate]);
+GO
+-- 3.3 Quotation Details: Product lookups
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_QuotationDetails_QuoteID_Product' AND object_id = OBJECT_ID('[Sales].[QuotationDetails]'))
+    CREATE NONCLUSTERED INDEX [IX_QuotationDetails_QuoteID_Product] ON [Sales].[QuotationDetails] ([QuoteID], [ProductID]) INCLUDE ([QuotedPrice]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_QuotationDetails_Product' AND object_id = OBJECT_ID('[Sales].[QuotationDetails]'))
+    CREATE NONCLUSTERED INDEX [IX_QuotationDetails_Product] ON [Sales].[QuotationDetails] ([ProductID]) INCLUDE ([QuoteID], [QuotedPrice]);
+GO
+
+-- 3.4 InvoiceHeader: Filtering & Reports (Type, Date, Posted Status)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InvoiceHeader_Type_Date_Posted' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceHeader_Type_Date_Posted] ON [Sales].[InvoiceHeader] ([InvType], [IsPosted], [InvDate] DESC) INCLUDE ([PartnerID], [WarehouseID], [NetAmount], [Remainder], [ReferenceNo]);
+GO
+-- Unpaid Invoices Lookup
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InvoiceHeader_Remainder_Posted' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceHeader_Remainder_Posted] ON [Sales].[InvoiceHeader] ([IsPosted], [Remainder]) INCLUDE ([InvID], [InvDate], [PartnerID], [InvType]);
+GO
+-- Foreign Keys
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InvoiceHeader_WarehouseID' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceHeader_WarehouseID] ON [Sales].[InvoiceHeader] ([WarehouseID]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InvoiceHeader_UserID' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceHeader_UserID] ON [Sales].[InvoiceHeader] ([UserID]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InvoiceHeader_PaymentAccountID' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceHeader_PaymentAccountID] ON [Sales].[InvoiceHeader] ([PaymentAccountID]);
+GO
+
+-- 3.5 InvoiceDetails: Reverse lookup (Product -> Invoice) for Card Movements
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_InvoiceDetails_ProductID_InvID' AND object_id = OBJECT_ID('[Sales].[InvoiceDetails]'))
+    CREATE NONCLUSTERED INDEX [IX_InvoiceDetails_ProductID_InvID] ON [Sales].[InvoiceDetails] ([ProductID], [InvID]) INCLUDE ([Quantity], [UnitPrice], [TotalPrice], [CostPrice]);
+GO
+
+
+PRINT '====================================================='
+PRINT '4. INVENTORY SCHEMA INDEXES'
+PRINT '====================================================='
+
+-- 4.1 Products: Name search and Foreign Keys
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Products_Name_En' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+    CREATE NONCLUSTERED INDEX [IX_Products_Name_En] ON [Inventory].[Products] ([ProductNameEn]) INCLUDE ([ProductName], [ProductID], [IsActive]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Products_Category' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+    CREATE NONCLUSTERED INDEX [IX_Products_Category] ON [Inventory].[Products] ([CategoryID]) INCLUDE ([ProductID], [ProductName], [IsActive]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Products_Unit' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+    CREATE NONCLUSTERED INDEX [IX_Products_Unit] ON [Inventory].[Products] ([UnitID]);
+GO
+
+-- 4.2 ProductStock: Low Stock Warnings
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ProductStock_Qty' AND object_id = OBJECT_ID('[Inventory].[ProductStock]'))
+    CREATE NONCLUSTERED INDEX [IX_ProductStock_Qty] ON [Inventory].[ProductStock] ([CurrentQty]) INCLUDE ([ProductID], [WarehouseID]);
+GO
+
+
+PRINT '====================================================='
+PRINT '5. ACCOUNTING SCHEMA INDEXES'
+PRINT '====================================================='
+
+-- 5.1 ChartOfAccounts: Code lookup & Parent Hierarchy
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ChartOfAccounts_AccountCode' AND object_id = OBJECT_ID('[Accounting].[ChartOfAccounts]'))
+    CREATE UNIQUE NONCLUSTERED INDEX [IX_ChartOfAccounts_AccountCode] ON [Accounting].[ChartOfAccounts] ([AccountCode]) INCLUDE ([AccountID], [AccountName], [IsTransactional]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ChartOfAccounts_ParentID' AND object_id = OBJECT_ID('[Accounting].[ChartOfAccounts]'))
+    CREATE NONCLUSTERED INDEX [IX_ChartOfAccounts_ParentID] ON [Accounting].[ChartOfAccounts] ([ParentAccountID]) INCLUDE ([AccountID], [AccountName], [AccountCode]);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_ChartOfAccounts_IsTransactional' AND object_id = OBJECT_ID('[Accounting].[ChartOfAccounts]'))
+    CREATE NONCLUSTERED INDEX [IX_ChartOfAccounts_IsTransactional] ON [Accounting].[ChartOfAccounts] ([IsTransactional]) INCLUDE ([AccountID], [AccountCode], [AccountName]);
+GO
+
+-- 5.2 JournalHeader (if exists as defined in Reports SP): Date and Reference
+IF OBJECT_ID('[Accounting].[JournalHeader]', 'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalHeader_EntryDate_Posted' AND object_id = OBJECT_ID('[Accounting].[JournalHeader]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalHeader_EntryDate_Posted] ON [Accounting].[JournalHeader] ([JDate] DESC, [IsPosted]) INCLUDE ([JID], [ReferenceType], [ReferenceID]);
+    
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalHeader_Reference' AND object_id = OBJECT_ID('[Accounting].[JournalHeader]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalHeader_Reference] ON [Accounting].[JournalHeader] ([ReferenceType], [ReferenceID]) INCLUDE ([JID], [IsPosted]);
+END
+GO
+
+-- 5.3 JournalDetails (if exists as defined in Reports SP): Account Lookups
+IF OBJECT_ID('[Accounting].[JournalDetails]', 'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalDetails_AccountID' AND object_id = OBJECT_ID('[Accounting].[JournalDetails]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalDetails_AccountID] ON [Accounting].[JournalDetails] ([AccountID]) INCLUDE ([JID], [Debit], [Credit]);
+        
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalDetails_JID' AND object_id = OBJECT_ID('[Accounting].[JournalDetails]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalDetails_JID] ON [Accounting].[JournalDetails] ([JID]) INCLUDE ([AccountID], [Debit], [Credit]);
+END
+GO
+
+-- 5.4 JournalEntries (Legacy flat table): Filtering and Foreign Keys
+IF OBJECT_ID('[Accounting].[JournalEntries]', 'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalEntries_Reference' AND object_id = OBJECT_ID('[Accounting].[JournalEntries]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalEntries_Reference] ON [Accounting].[JournalEntries] ([ReferenceType], [ReferenceID]) INCLUDE ([EntryID], [AccountID], [EntryDate]);
+        
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalEntries_Account_Date' AND object_id = OBJECT_ID('[Accounting].[JournalEntries]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalEntries_Account_Date] ON [Accounting].[JournalEntries] ([AccountID], [CreatedAt] DESC) INCLUDE ([DebitAmount], [CreditAmount]);
+        
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalEntries_VoucherID' AND object_id = OBJECT_ID('[Accounting].[JournalEntries]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalEntries_VoucherID] ON [Accounting].[JournalEntries] ([ReferenceID]);
+        
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_JournalEntries_UserID' AND object_id = OBJECT_ID('[Accounting].[JournalEntries]'))
+        CREATE NONCLUSTERED INDEX [IX_JournalEntries_UserID] ON [Accounting].[JournalEntries] ([UserID]);
+END
+GO
+
+-- 5.5 Vouchers: Date and Type
+IF OBJECT_ID('[Accounting].[Vouchers]', 'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Vouchers_Type_Date_Posted' AND object_id = OBJECT_ID('[Accounting].[Vouchers]'))
+        CREATE NONCLUSTERED INDEX [IX_Vouchers_Type_Date_Posted] ON [Accounting].[Vouchers] ([VoucherType], [IsPosted], [VoucherDate] DESC) INCLUDE ([VoucherID], [PartnerID], [Amount]);
+        
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Vouchers_PartnerID' AND object_id = OBJECT_ID('[Accounting].[Vouchers]'))
+        CREATE NONCLUSTERED INDEX [IX_Vouchers_PartnerID] ON [Accounting].[Vouchers] ([PartnerID]) INCLUDE ([VoucherID], [VoucherType], [Amount]);
+        
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Vouchers_AccountID' AND object_id = OBJECT_ID('[Accounting].[Vouchers]'))
+        CREATE NONCLUSTERED INDEX [IX_Vouchers_AccountID] ON [Accounting].[Vouchers] ([AccountID]);
+        
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Vouchers_UserID' AND object_id = OBJECT_ID('[Accounting].[Vouchers]'))
+        CREATE NONCLUSTERED INDEX [IX_Vouchers_UserID] ON [Accounting].[Vouchers] ([UserID]);
+END
+GO
+
+PRINT '====================================================='
+PRINT '✅ INDEX CREATION COMPLETED SUCCESSFULLY'
+PRINT '====================================================='
+GO
+
+
+-- 1. Paged Products with Search
+IF OBJECT_ID('[Inventory].[sp_Product_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetPaged];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20,
+    @SearchText NVARCHAR(150) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+    
+    -- Get Total count for UI
+    SELECT COUNT(*) AS TotalCount
+    FROM [Inventory].[Products] p
+    WHERE p.IsActive = 1 AND (
+        @SearchText IS NULL OR @SearchText = ''
+        OR p.ProductName LIKE '%' + @SearchText + '%' 
+        OR p.ProductNameEn LIKE '%' + @SearchText + '%' 
+        OR p.Barcode LIKE '%' + @SearchText + '%'
+    );
+
+    -- Get Page Data
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName,
+        p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.IsActive = 1 AND (
+        @SearchText IS NULL OR @SearchText = ''
+        OR p.ProductName LIKE '%' + @SearchText + '%' 
+        OR p.ProductNameEn LIKE '%' + @SearchText + '%' 
+        OR p.Barcode LIKE '%' + @SearchText + '%'
+    )
+    ORDER BY p.ProductName -- Logical sort for users
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 2. Paged Quotations History
+IF OBJECT_ID('[Sales].[sp_Quotations_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetPaged];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- Total Count
+    SELECT COUNT(*) AS TotalCount FROM [Sales].[Quotations];
+
+    -- Page Data
+    SELECT q.*, p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    ORDER BY q.QuoteDate DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+
+-- 1. Optimization for Product Search and Paging
+-- Helps with: WHERE IsActive=1 AND (Name LIKE ... OR Barcode LIKE ...) ORDER BY ProductName
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Products_Search_Paged' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Products_Search_Paged]
+    ON [Inventory].[Products] ([IsActive], [ProductName])
+    INCLUDE ([Barcode], [ProductNameEn], [CategoryID], [UnitID], [SalePrice]);
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Products_Barcode' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Products_Barcode]
+    ON [Inventory].[Products] ([Barcode])
+    WHERE [Barcode] IS NOT NULL;
+END
+GO
+
+-- 2. Optimization for Quotations History
+-- Helps with: ORDER BY QuoteDate DESC (Main history grid)
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Quotations_QuoteDate' AND object_id = OBJECT_ID('[Sales].[Quotations]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Quotations_QuoteDate]
+    ON [Sales].[Quotations] ([QuoteDate] DESC)
+    INCLUDE ([PartnerID], [IsActive]);
+END
+GO
+
+-- 3. Optimization for Lookups (Partners by Type)
+-- Helps with: SELECT * FROM Partners WHERE PartnerType = 'Customer'
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Partners_Type' AND object_id = OBJECT_ID('[Sales].[Partners]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_Partners_Type]
+    ON [Sales].[Partners] ([PartnerType])
+    INCLUDE ([PartnerName]);
+END
+GO
+
+-- 4. Optimization for Quotation Details
+-- Helps with Joins and fetching details for a specific quote
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_QuotationDetails_QuoteID' AND object_id = OBJECT_ID('[Sales].[QuotationDetails]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_QuotationDetails_QuoteID]
+    ON [Sales].[QuotationDetails] ([QuoteID])
+    INCLUDE ([ProductID], [QuotedPrice] );
+END
+GO
+
+
+IF OBJECT_ID('[Sales].[sp_Invoice_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetPaged];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20,
+    @InvType NVARCHAR(20) = 'Sales',
+    @SearchText NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- 1. Get Total Count
+    SELECT COUNT(*) 
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    WHERE h.InvType = @InvType
+      AND (@SearchText IS NULL OR 
+           p.PartnerName LIKE '%' + @SearchText + '%' OR 
+           h.ReferenceNo LIKE '%' + @SearchText + '%' OR
+           CAST(h.InvID AS NVARCHAR) = @SearchText);
+
+    -- 2. Get Paged Data
+    SELECT 
+        h.*,
+        p.PartnerName,
+        w.WarehouseName,
+        u.FullName AS UserName
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+    LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
+    WHERE h.InvType = @InvType
+      AND (@SearchText IS NULL OR 
+           p.PartnerName LIKE '%' + @SearchText + '%' OR 
+           h.ReferenceNo LIKE '%' + @SearchText + '%' OR 
+           CAST(h.InvID AS NVARCHAR) = @SearchText)
+    ORDER BY h.InvID DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_InvoiceHeader_Partner_Date' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+BEGIN
+    CREATE INDEX IX_InvoiceHeader_Partner_Date ON [Sales].[InvoiceHeader] (PartnerID, InvDate DESC);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_InvoiceHeader_Posted' AND object_id = OBJECT_ID('[Sales].[InvoiceHeader]'))
+BEGIN
+    CREATE INDEX IX_InvoiceHeader_Posted ON [Sales].[InvoiceHeader] (IsPosted) INCLUDE (InvDate, TotalAmount);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Products_Search' AND object_id = OBJECT_ID('[Inventory].[Products]'))
+BEGIN
+    CREATE INDEX IX_Products_Search ON [Inventory].[Products] (Barcode) INCLUDE (ProductName, SalePrice);
+END
+GO
+
+
+
+-- 2. Paged Quotations History
+IF OBJECT_ID('[Sales].[sp_Quotations_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetPaged];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20,
+    @SearchText NVARCHAR(150) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- Total Count
+    SELECT COUNT(*) AS TotalCount 
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText);
+
+    -- Page Data
+    SELECT q.*, p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText)
+    ORDER BY q.QuoteDate DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 1. Paged Products with Search
+IF OBJECT_ID('[Inventory].[sp_Product_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetPaged];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20,
+    @SearchText NVARCHAR(150) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+    
+    -- Get Total count for UI
+    SELECT COUNT(*) AS TotalCount
+    FROM [Inventory].[Products] p
+    WHERE p.IsActive = 1 AND (
+        @SearchText IS NULL OR @SearchText = ''
+        OR p.ProductName LIKE '%' + @SearchText + '%' 
+        OR p.ProductNameEn LIKE '%' + @SearchText + '%' 
+        OR p.Barcode LIKE '%' + @SearchText + '%'
+    );
+
+    -- Get Page Data
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName,
+        p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.IsActive = 1 AND (
+        @SearchText IS NULL OR @SearchText = ''
+        OR p.ProductName LIKE '%' + @SearchText + '%' 
+        OR p.ProductNameEn LIKE '%' + @SearchText + '%' 
+        OR p.Barcode LIKE '%' + @SearchText + '%'
+    )
+    ORDER BY p.ProductName -- Logical sort for users
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 2. Paged Quotations History
+IF OBJECT_ID('[Sales].[sp_Quotations_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetPaged];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20,
+    @SearchText NVARCHAR(150) = NULL,
+    @PartnerID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- Total Count
+    SELECT COUNT(*) AS TotalCount 
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+      AND (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText);
+
+    -- Page Data
+    SELECT q.*, p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+      AND (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText)
+    ORDER BY q.QuoteDate DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 3. Get All Quotations
+IF OBJECT_ID('[Sales].[sp_Quotations_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetAll];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT q.*, p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    ORDER BY q.QuoteDate DESC;
+END
+GO
+
+-- 4. Get Quotation Details
+IF OBJECT_ID('[Sales].[sp_QuotationDetails_GetByQuoteID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID];
+GO
+CREATE PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID]
+    @QuoteID INT,
+    @PageNumber INT = 1,
+    @PageSize INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- 1. Total Count
+    SELECT COUNT(*) FROM [Sales].[QuotationDetails] WHERE QuoteID = @QuoteID;
+
+    -- 2. Paginated Data
+    SELECT 
+         qd.QuoteDetailID,
+        qd.QuoteID,
+        qd.ProductID,
+        qd.QuotedPrice,
+        p.ProductName,
+        p.Barcode,
+        u.UnitName
+    FROM [Sales].[QuotationDetails] qd
+    INNER JOIN [Inventory].[Products] p ON qd.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE qd.QuoteID = @QuoteID
+    ORDER BY qd.QuoteDetailID
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 5. Insert Quotation Detail
+IF OBJECT_ID('[Sales].[sp_QuotationDetails_Insert]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_Insert];
+GO
+CREATE PROCEDURE [Sales].[sp_QuotationDetails_Insert]
+    @QuoteID INT,
+    @ProductID INT,
+    @QuotedPrice DECIMAL(18, 3),
+    @Quantity DECIMAL(18, 3) = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO [Sales].[QuotationDetails] (QuoteID, ProductID, QuotedPrice)
+    VALUES (@QuoteID, @ProductID, @QuotedPrice);
+END
+GO
+
+-- 6. Delete Details By QuoteID (for full replacement during editing)
+IF OBJECT_ID('[Sales].[sp_QuotationDetails_DeleteByQuoteID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_DeleteByQuoteID];
+GO
+CREATE PROCEDURE [Sales].[sp_QuotationDetails_DeleteByQuoteID]
+    @QuoteID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [Sales].[QuotationDetails] WHERE QuoteID = @QuoteID;
+END
+GO
+
+-- 7. Get Active Quote Price directly for SalesInvoice auto-fetch
+IF OBJECT_ID('[Sales].[sp_Quotations_GetActivePrice]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetActivePrice];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetActivePrice]
+    @PartnerID INT,
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Select the lowest/latest active quoted price if multiple exist
+    SELECT TOP 1 qd.QuotedPrice
+    FROM [Sales].[QuotationDetails] qd
+    INNER JOIN [Sales].[Quotations] q ON qd.QuoteID = q.QuoteID
+    WHERE q.PartnerID = @PartnerID
+      AND qd.ProductID = @ProductID
+      AND q.IsActive = 1
+      AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= GETDATE())
+    ORDER BY q.QuoteDate DESC;
+END
+go
+-- 8. Get Quotations By Partner (for customer side panel)
+IF OBJECT_ID('[Sales].[sp_Quotations_GetByPartner]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_GetByPartner];
+GO
+CREATE PROCEDURE [Sales].[sp_Quotations_GetByPartner]
+    @PartnerID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT q.QuoteID, q.PartnerID, q.QuoteDate, q.ExpiryDate, q.IsActive, q.Notes,
+           p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE q.PartnerID = @PartnerID
+    ORDER BY q.QuoteDate DESC;
+END
+GO

@@ -23,6 +23,7 @@ BEGIN
         [QuoteID] INT NOT NULL,
         [ProductID] INT NOT NULL,
         [QuotedPrice] DECIMAL(18, 3) NOT NULL,
+        [Quantity] DECIMAL(18, 3) NOT NULL DEFAULT 1,
         FOREIGN KEY ([QuoteID]) REFERENCES [Sales].[Quotations]([QuoteID]) ON DELETE CASCADE,
         FOREIGN KEY ([ProductID]) REFERENCES [Inventory].[Products]([ProductID])
     );
@@ -95,22 +96,33 @@ GO
 IF OBJECT_ID('[Sales].[sp_QuotationDetails_GetByQuoteID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID];
 GO
 CREATE PROCEDURE [Sales].[sp_QuotationDetails_GetByQuoteID]
-    @QuoteID INT
+    @QuoteID INT,
+    @PageNumber INT = 1,
+    @PageSize INT = 20
 AS
 BEGIN
     SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- 1. Total Count
+    SELECT COUNT(*) AS TotalCount FROM [Sales].[QuotationDetails] WHERE QuoteID = @QuoteID;
+
+    -- 2. Paginated Data
     SELECT 
         qd.QuoteDetailID,
         qd.QuoteID,
         qd.ProductID,
         qd.QuotedPrice,
-        p.ProductName,
+        ISNULL(p.ProductName, N'صنف غير معروف') AS ProductName,
         p.Barcode,
         u.UnitName
     FROM [Sales].[QuotationDetails] qd
-    INNER JOIN [Inventory].[Products] p ON qd.ProductID = p.ProductID
+    LEFT JOIN [Inventory].[Products] p ON qd.ProductID = p.ProductID
     LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
-    WHERE qd.QuoteID = @QuoteID;
+    WHERE qd.QuoteID = @QuoteID
+    ORDER BY qd.QuoteDetailID
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
 END
 GO
 
@@ -120,12 +132,13 @@ GO
 CREATE PROCEDURE [Sales].[sp_QuotationDetails_Insert]
     @QuoteID INT,
     @ProductID INT,
-    @QuotedPrice DECIMAL(18, 3)
+    @QuotedPrice DECIMAL(18, 3),
+    @Quantity DECIMAL(18, 3) = 1
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO [Sales].[QuotationDetails] (QuoteID, ProductID, QuotedPrice)
-    VALUES (@QuoteID, @ProductID, @QuotedPrice);
+    INSERT INTO [Sales].[QuotationDetails] (QuoteID, ProductID, QuotedPrice, Quantity)
+    VALUES (@QuoteID, @ProductID, @QuotedPrice, @Quantity);
 END
 GO
 

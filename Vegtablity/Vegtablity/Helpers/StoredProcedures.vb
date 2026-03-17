@@ -69,6 +69,7 @@ Namespace Helpers
         Public Const SP_PRODUCT_DELETE As String = "[Inventory].[sp_Product_Delete]"
         Public Const SP_PRODUCT_GETBYBARCODE As String = "[Inventory].[sp_Product_GetByBarcode]"
         Public Const SP_PRODUCT_SEARCH As String = "[Inventory].[sp_Product_Search]"
+        Public Const SP_PRODUCT_GETPAGED As String = "[Inventory].[sp_Product_GetPaged]"
         Public Const SP_PRODUCTCARD_UPDATEQUICKDETAILS As String = "[Inventory].[sp_ProductCard_UpdateQuickDetails]"
 
         ' =============================================
@@ -138,6 +139,7 @@ Namespace Helpers
         Public Const SP_INVOICE_GETBYID As String = "[Sales].[sp_Invoice_GetByID]"
         Public Const SP_INVOICE_SAVE As String = "[Sales].[sp_Invoice_Save]"
         Public Const SP_INVOICE_DELETE As String = "[Sales].[sp_Invoice_Delete]"
+        Public Const SP_INVOICE_GETPAGED As String = "[Sales].[sp_Invoice_GetPaged]"
         
         Public Const SP_INVOICEDETAIL_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"
         Public Const SP_INVOICEDETAIL_SAVE As String = "[Sales].[sp_InvoiceDetail_Save]"
@@ -154,11 +156,13 @@ Namespace Helpers
         Public Const SP_QUOTATIONDETAILS_INSERT As String = "[Sales].[sp_QuotationDetails_Insert]"
         Public Const SP_QUOTATIONDETAILS_DELETEBYQUOTEID As String = "[Sales].[sp_QuotationDetails_DeleteByQuoteID]"
         Public Const SP_QUOTATION_GETACTIVEPRICE As String = "[Sales].[sp_Quotations_GetActivePrice]"
+        Public Const SP_QUOTATION_GETPAGED As String = "[Sales].[sp_Quotations_GetPaged]"
 
         ' =============================================
-        ' Inventory Schema - Stock
+        ' Inventory Schema - Stock/Cost
         ' =============================================
         Public Const SP_STOCK_GETBYPRODUCT As String = "[Inventory].[sp_Stock_GetByProduct]"
+        Public Const SP_INVENTORY_GETAVGCOSTByPRODUCT As String = "[Inventory].[sp_Inventory_GetAvgCostByProduct]"
 
         ' =============================================
         ' Sales Schema - Invoice Dashboard
@@ -175,6 +179,20 @@ Namespace Helpers
         Public Const SP_PRODUCTCARD_GETMOVEMENTS As String = "[Inventory].[sp_ProductCard_GetMovements]"
         Public Const SP_PRODUCTCARD_GETCHARTDATA As String = "[Inventory].[sp_ProductCard_GetChartData]"
         Public Const SP_PRODUCTCARD_GETSTOCKBYWAREHOUSE As String = "[Inventory].[sp_ProductCard_GetStockByWarehouse]"
+        ' =============================================
+        ' New Comprehensive Reports System
+        ' =============================================
+        Public Const SP_REPORT_PRODUCTPROFITS As String = "[Reports].[sp_Report_ProductProfits]"
+        Public Const SP_REPORT_INVOICEPROFITS As String = "[Reports].[sp_Report_InvoiceProfits]"
+        Public Const SP_REPORT_SALESSUMMARYBYPERIOD As String = "[Reports].[sp_Report_SalesSummaryByPeriod]"
+        Public Const SP_REPORT_TOPCUSTOMERS As String = "[Reports].[sp_Report_TopCustomers]"
+        Public Const SP_REPORT_UNPAIDINVOICESAGING As String = "[Reports].[sp_Report_UnpaidInvoicesAging]"
+        Public Const SP_REPORT_INVENTORYVALUATION As String = "[Reports].[sp_Report_InventoryValuation]"
+        Public Const SP_REPORT_SLOWMOVINGSTOCK As String = "[Reports].[sp_Report_SlowMovingStock]"
+        Public Const SP_REPORT_STOCKMOVEMENT As String = "[Reports].[sp_Report_StockMovement]"
+        Public Const SP_REPORT_EXPENSESANALYSIS As String = "[Reports].[sp_Report_ExpensesAnalysis]"
+        Public Const SP_REPORT_QUOTATIONSSTATUS As String = "[Reports].[sp_Report_QuotationsStatus]"
+        Public Const SP_REPORT_TOPSUPPLIERS As String = "[Reports].[sp_Report_TopSuppliers]"
 
     End Class
 End Namespace
