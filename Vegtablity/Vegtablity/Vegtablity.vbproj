@@ -167,9 +167,11 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.102.3" />
     <PackageReference Include="Dapper" Version="2.1.35" />
     <PackageReference Include="LiveCharts.Wpf" Version="0.9.7" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -249,8 +251,12 @@
     <Compile Include="Helpers\StringToVisibilityConverter.vb" />
     <Compile Include="Helpers\ProfitColorConverter.vb" />
     <Compile Include="Helpers\InvoicePrinter.vb" />
+    <Compile Include="Helpers\ExcelImporter.vb" />
     <Compile Include="Views\LicenseWindow.xaml.vb">
       <DependentUpon>LicenseWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\UnknownProductsDialog.xaml.vb">
+      <DependentUpon>UnknownProductsDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\LoginWindow.xaml.vb">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
@@ -338,6 +344,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\LicenseWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\UnknownProductsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

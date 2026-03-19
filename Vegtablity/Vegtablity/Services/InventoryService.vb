@@ -64,6 +64,20 @@ Namespace Services
             End Using
         End Sub
 
+        Public Function QuickAddProduct(barcode As String, productName As String, purchasePrice As Decimal, salePrice As Decimal) As Integer
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.ExecuteScalar(Of Integer)(
+                    Helpers.StoredProcedures.SP_PRODUCT_QUICKADD,
+                    New With {
+                        .Barcode = barcode,
+                        .ProductName = productName,
+                        .PurchasePrice = purchasePrice,
+                        .SalePrice = salePrice
+                    },
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Function
+
         Public Function SearchProducts(searchText As String) As List(Of Product)
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Return conn.Query(Of Product)(

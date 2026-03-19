@@ -128,9 +128,20 @@ Namespace Models
             End Set
         End Property
 
-        Private Sub CalculateTotal()
+        Public Sub CalculateTotal()
             TotalPrice = UnitPrice * Quantity
         End Sub
+
+        Private _isUnknown As Boolean
+        Public Property IsUnknown As Boolean
+            Get
+                Return _isUnknown
+            End Get
+            Set(value As Boolean)
+                _isUnknown = value
+                OnPropertyChanged(NameOf(IsUnknown))
+            End Set
+        End Property
 
         Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
         Protected Overridable Sub OnPropertyChanged(propertyName As String)

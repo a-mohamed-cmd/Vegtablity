@@ -2429,8 +2429,7 @@ GO
 -- =============================================
 -- Invoices Triggers (Inventory & Accounting)
 -- =============================================
-USE VegtablityDB;
-GO
+
 
 -- =============================================
 -- Trigger: trg_Invoice_Post
@@ -5427,5 +5426,125 @@ BEGIN
     ORDER BY qd.QuoteDetailID
     OFFSET @Offset ROWS
     FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+
+IF OBJECT_ID('[Sales].[sp_Invoice_Unpost]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Invoice_Unpost];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_Unpost]
+    @InvID  INT,
+    @UserID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- 1. التحقق من وجود الفاتورة وأنها مرحّلة
+        IF NOT EXISTS (
+            SELECT 1 FROM [Sales].[InvoiceHeader]
+            WHERE InvID = @InvID AND IsPosted = 1
+        )
+        BEGIN
+            RAISERROR(N'الفاتورة غير موجودة أو غير مرحّلة.', 16, 1);
+            RETURN;
+        END
+
+        DECLARE @InvType     NVARCHAR(20);
+        DECLARE @WarehouseID INT;
+        SELECT @InvType = InvType, @WarehouseID = WarehouseID
+        FROM [Sales].[InvoiceHeader]
+        WHERE InvID = @InvID;
+
+        -- 2. عكس حركة المخزون
+        IF @InvType = 'Purchase'
+        BEGIN
+            -- مشتريات: ننقص الكميات التي تم إضافتها
+            -- ملاحظة: AvgCostPrice لا يُعاد بشكل مثالي عند الـ Unpost
+            -- (هذا مقبول — سيُحسب من جديد عند إعادة الترحيل)
+            UPDATE S
+            SET S.CurrentQty = S.CurrentQty - D.Quantity
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN [Sales].[InvoiceDetails] D
+                ON S.ProductID = D.ProductID AND S.WarehouseID = @WarehouseID
+            WHERE D.InvID = @InvID;
+        END
+        ELSE IF @InvType = 'Sales'
+        BEGIN
+            -- مبيعات: نُعيد الكميات التي تم خصمها
+            UPDATE S
+            SET S.CurrentQty = S.CurrentQty + D.Quantity
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN [Sales].[InvoiceDetails] D
+                ON S.ProductID = D.ProductID AND S.WarehouseID = @WarehouseID
+            WHERE D.InvID = @InvID;
+        END
+
+        -- 3. حذف جميع القيود المرتبطة (Invoice + Payment)
+        DELETE FROM [Accounting].[JournalEntries]
+        WHERE ReferenceID = @InvID
+          AND ReferenceType IN ('Invoice', 'Payment');
+
+        -- 4. إعادة الفاتورة لوضع المسودة
+        UPDATE [Sales].[InvoiceHeader]
+        SET IsPosted = 0
+        WHERE InvID = @InvID;
+
+        COMMIT TRANSACTION;
+        SELECT @InvID AS InvID, N'تم إلغاء ترحيل الفاتورة بنجاح' AS Message;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        DECLARE @ErrMsg NVARCHAR(500) = ERROR_MESSAGE();
+        RAISERROR(@ErrMsg, 16, 1);
+    END CATCH
+END
+GO
+
+PRINT N'✅ تم إنشاء sp_Invoice_Unpost بنجاح';
+GO
+
+
+IF OBJECT_ID('[Inventory].[sp_Product_QuickAdd]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Product_QuickAdd];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Product_QuickAdd]
+    @Barcode      NVARCHAR(50),
+    @ProductName  NVARCHAR(200),
+    @PurchasePrice DECIMAL(18,3) = 0,
+    @SalePrice     DECIMAL(18,3) = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @NewID INT;
+
+    INSERT INTO [Inventory].[Products] (
+        ProductName,
+        Barcode,
+        CategoryID, -- default 1 (غير محدد)
+        UnitID,     -- default 1 (حبة/قطعة)
+        PurchasePrice,
+        SalePrice,
+        AlertQty,
+        IsActive
+    )
+    VALUES (
+        @ProductName,
+        @Barcode,
+        1,
+        1,
+        @PurchasePrice,
+        @SalePrice,
+        3,
+        1
+    );
+
+    SET @NewID = SCOPE_IDENTITY();
+    SELECT @NewID;
 END
 GO

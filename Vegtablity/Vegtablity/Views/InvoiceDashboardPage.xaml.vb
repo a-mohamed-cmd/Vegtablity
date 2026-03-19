@@ -53,12 +53,12 @@ Namespace Views
                 Dim page = New SalesInvoicePage()
                 Dim vm = TryCast(page.DataContext, SalesInvoiceViewModel)
                 vm?.LoadInvoice(invID)
-                parent.NavigateTo(page)
+                parent.NavigateTo(page, keepCurrentInStack:=True)
             Else
                 Dim page = New PurchaseInvoicePage()
                 Dim vm = TryCast(page.DataContext, PurchaseInvoiceViewModel)
                 vm?.LoadInvoice(invID)
-                parent.NavigateTo(page)
+                parent.NavigateTo(page, keepCurrentInStack:=True)
             End If
         End Sub
 
@@ -97,14 +97,14 @@ Namespace Views
         Private Sub NewSalesInvoice_Click(sender As Object, e As RoutedEventArgs)
             Dim parent = FindParentWindow()
             If parent IsNot Nothing Then
-                parent.NavigateTo(New SalesInvoicePage())
+                parent.NavigateTo(New SalesInvoicePage(), keepCurrentInStack:=True)
             End If
         End Sub
 
         Private Sub NewPurchaseInvoice_Click(sender As Object, e As RoutedEventArgs)
             Dim parent = FindParentWindow()
             If parent IsNot Nothing Then
-                parent.NavigateTo(New PurchaseInvoicePage())
+                parent.NavigateTo(New PurchaseInvoicePage(), keepCurrentInStack:=True)
             End If
         End Sub
 

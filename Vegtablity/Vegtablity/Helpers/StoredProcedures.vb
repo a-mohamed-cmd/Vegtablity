@@ -71,6 +71,7 @@ Namespace Helpers
         Public Const SP_PRODUCT_SEARCH As String = "[Inventory].[sp_Product_Search]"
         Public Const SP_PRODUCT_GETPAGED As String = "[Inventory].[sp_Product_GetPaged]"
         Public Const SP_PRODUCTCARD_UPDATEQUICKDETAILS As String = "[Inventory].[sp_ProductCard_UpdateQuickDetails]"
+        Public Const SP_PRODUCT_QUICKADD As String = "[Inventory].[sp_Product_QuickAdd]"
 
         ' =============================================
         ' Sales Schema - Partners
@@ -144,6 +145,7 @@ Namespace Helpers
         Public Const SP_INVOICEDETAIL_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"
         Public Const SP_INVOICEDETAIL_SAVE As String = "[Sales].[sp_InvoiceDetail_Save]"
         Public Const SP_INVOICEDETAIL_DELETEBYINVID As String = "[Sales].[sp_InvoiceDetails_DeleteByInvID]"
+        Public Const SP_INVOICE_UNPOST As String = "[Sales].[sp_Invoice_Unpost]"
 
         ' =============================================
         ' Sales Schema - Quotations

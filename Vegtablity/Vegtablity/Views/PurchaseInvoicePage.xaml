@@ -63,15 +63,32 @@
                             Background="#64748B" Margin="0,0,10,0"
                             ToolTip="العودة للصفحة السابقة"/>
 
+                    <!-- Excel Buttons -->
+                    <Button Content="📥 استيراد Excel" Command="{Binding ImportExcelCommand}"
+                            Style="{DynamicResource ModernButtonStyle}" Background="#059669" Margin="0,0,6,0"
+                            Visibility="{Binding IsEditAllowed, Converter={StaticResource BoolToVis}}"
+                            ToolTip="استيراد أصناف الفاتورة من ملف Excel"/>
+                    <Button Content="📋 تنزيل القالب" Command="{Binding DownloadTemplateCommand}"
+                            Style="{DynamicResource ModernButtonStyle}" Background="#0891B2" Margin="0,0,10,0"
+                            ToolTip="تنزيل قالب Excel للتعبئة"/>
+
                     <Button Content="➕ فاتورة جديدة" Command="{Binding NewCommand}" Click="NewInvoiceButton_Click"
                             Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="0,0,10,0"
                             IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
 
                     <Button Content="💾 حـفـظ" Command="{Binding SaveCommand}" 
-                            Style="{DynamicResource ModernButtonStyle}" Background="#10B981" Margin="0,0,10,0"/>
+                            Style="{DynamicResource ModernButtonStyle}" Background="#10B981" Margin="0,0,10,0"
+                            Visibility="{Binding IsEditAllowed, Converter={StaticResource BoolToVis}}"/>
+
+                    <!-- Unpost Button -->
+                    <Button Content="↩️ إلغاء الترحيل" Command="{Binding UnpostInvoiceCommand}" 
+                            Style="{DynamicResource ModernButtonStyle}" Background="#EF4444" Margin="0,0,10,0"
+                            Visibility="{Binding IsInvoicePosted, Converter={StaticResource BoolToVis}}"
+                            ToolTip="إلغاء الترحيل وفتح الفاتورة للتعديل"/>
 
                     <Button Content="🚀 ترحيل الفاتورة" Command="{Binding PostCommand}" 
-                            Style="{DynamicResource ModernButtonStyle}" Background="#F59E0B"/>
+                            Style="{DynamicResource ModernButtonStyle}" Background="#F59E0B"
+                            Visibility="{Binding IsEditAllowed, Converter={StaticResource BoolToVis}}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -205,8 +222,19 @@
                 <!-- The DataGrid -->
                 <DataGrid x:Name="dgInvoiceDetails" Grid.Row="1" ItemsSource="{Binding CurrentInvoice.Details}" AutoGenerateColumns="False" 
                           CanUserAddRows="False" SelectionMode="Single"
-                          IsReadOnly="{Binding IsInvoicePosted}"
+                          IsReadOnly="{Binding IsDataGridReadOnly}"
                           MinHeight="300" RowHeight="35">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsUnknown}" Value="True">
+                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                    <Setter Property="Foreground" Value="#B91C1C"/>
+                                    <Setter Property="ToolTip" Value="هذا الصنف غير موجود في قاعدة البيانات ولم يتم إضافته بعد."/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         
                         <!-- Product Code (Barcode) -->

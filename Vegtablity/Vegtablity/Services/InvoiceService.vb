@@ -217,6 +217,22 @@ Namespace Services
             End Try
             Return result
         End Function
+
+        ''' <summary>
+        ''' إلغاء ترحيل فاتورة مرحّلة:
+        ''' → يعكس حركة المخزون
+        ''' → يحذف القيود المحاسبية
+        ''' → يُعيد IsPosted = 0
+        ''' بعدها المستخدم يعدّل ويُرحّل من جديد بالطريقة المعتادة.
+        ''' </summary>
+        Public Sub UnpostInvoice(invID As Integer, userID As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_INVOICE_UNPOST,
+                    New With {.InvID = invID, .UserID = userID},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
     End Class
 End Namespace
 

@@ -53,9 +53,17 @@ Namespace ViewModels
             End Get
         End Property
 
+        ''' <summary>True while invoice is not posted — controls field editability.</summary>
         Public ReadOnly Property IsEditAllowed As Boolean
             Get
                 Return Not IsInvoicePosted
+            End Get
+        End Property
+
+        ''' <summary>Used by DataGrid.IsReadOnly binding.</summary>
+        Public ReadOnly Property IsDataGridReadOnly As Boolean
+            Get
+                Return IsInvoicePosted
             End Get
         End Property
 
@@ -71,6 +79,9 @@ Namespace ViewModels
         Public Property NewCommand As ICommand
         Public Property AddItemCommand As ICommand
         Public Property RemoveItemCommand As ICommand
+        Public Property UnpostInvoiceCommand As ICommand
+        Public Property ImportExcelCommand As ICommand
+        Public Property DownloadTemplateCommand As ICommand
 
         ' --- Invoice Details: Memory-backed client-side pagination ---
         Private _allInvoiceDetails As New List(Of InvoiceDetail)()
@@ -109,6 +120,9 @@ Namespace ViewModels
             NewCommand = New RelayCommand(AddressOf ExecuteNew)
             AddItemCommand = New RelayCommand(AddressOf ExecuteAddItem, AddressOf CanExecuteAddItem)
             RemoveItemCommand = New RelayCommand(AddressOf ExecuteRemoveItem, AddressOf CanExecuteRemoveItem)
+            UnpostInvoiceCommand = New RelayCommand(AddressOf ExecuteUnpostInvoice, AddressOf CanExecuteUnpostInvoice)
+            ImportExcelCommand = New RelayCommand(AddressOf ExecuteImportExcel, AddressOf CanExecuteImportExcel)
+            DownloadTemplateCommand = New RelayCommand(Sub(p) ExcelImporter.DownloadTemplate())
 
             NextDetailsPageCommand = New RelayCommand(Sub() DetailsPage += 1, Function() CanGoNextDetails)
             PrevDetailsPageCommand = New RelayCommand(Sub() DetailsPage -= 1, Function() CanGoPrevDetails)
@@ -271,7 +285,6 @@ Namespace ViewModels
 
         Private Sub ExecuteSave(parameter As Object)
             Try
-                ' Remove empty rows from ALL details
                 Dim emptyRows = _allInvoiceDetails.Where(Function(d) d.ProductID = 0 OrElse d.Quantity = 0).ToList()
                 For Each row In emptyRows
                     RemoveHandler row.PropertyChanged, AddressOf OnDetailPropertyChanged
@@ -283,11 +296,9 @@ Namespace ViewModels
                     Return
                 End If
 
-                ' Build full list for saving
                 CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(_allInvoiceDetails)
                 RecalculateTotals()
 
-                ' Attach the current user to the invoice header
                 If Services.Session.CurrentUser IsNot Nothing Then
                     CurrentInvoice.UserID = Services.Session.CurrentUser.UserID
                 End If
@@ -297,7 +308,6 @@ Namespace ViewModels
                     CurrentInvoice.InvID = invId
                 End If
 
-                ' Restore paginated view after save
                 UpdateDetailsPagination()
                 RaiseEvent RequestSnackbar("✅ تم حفظ الفاتورة بنجاح")
             Catch ex As Exception
@@ -308,7 +318,7 @@ Namespace ViewModels
         Private Function CanExecutePost(parameter As Object) As Boolean
             If Not CurrentPermissions.CanEdit Then Return False
             If CurrentInvoice Is Nothing OrElse CurrentInvoice.IsPosted Then Return False
-            If CurrentInvoice.InvID = 0 Then Return False ' Must be saved first
+            If CurrentInvoice.InvID = 0 Then Return False
             Return True
         End Function
 
@@ -320,10 +330,33 @@ Namespace ViewModels
                     _invoiceService.SaveInvoice(CurrentInvoice)
                     RaiseEvent RequestSnackbar("✅ تم ترحيل الفاتورة بنجاح")
                 Catch ex As Exception
-                    CurrentInvoice.IsPosted = False ' Revert on failure
+                    CurrentInvoice.IsPosted = False
                     System.Windows.MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
                 End Try
             End If
+        End Sub
+
+        Private Function CanExecuteUnpostInvoice(parameter As Object) As Boolean
+            If Not CurrentPermissions.CanEdit Then Return False
+            Return CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.IsPosted AndAlso CurrentInvoice.InvID > 0
+        End Function
+
+        Private Sub ExecuteUnpostInvoice(parameter As Object)
+            Dim warn = System.Windows.MessageBox.Show(
+                "تحذير: إلغاء الترحيل سيعكس المخزون ويحذف القيود." & vbCrLf &
+                "ستعود الفاتورة لوضع مسودة حيث يمكنك تعديلها ثم إعادة الترحيل." & vbCrLf & vbCrLf &
+                "هل أنت متأكد؟",
+                "إلغاء الترحيل", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+            If warn <> System.Windows.MessageBoxResult.Yes Then Return
+
+            Try
+                Dim userID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
+                _invoiceService.UnpostInvoice(CurrentInvoice.InvID, userID)
+                LoadInvoice(CurrentInvoice.InvID)
+                RaiseEvent RequestSnackbar("✅ تم إلغاء الترحيل — الفاتورة مفتوحة للتعديل")
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ أثناء إلغاء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End Try
         End Sub
 
         Private Function CanExecuteAddItem(parameter As Object) As Boolean
@@ -398,6 +431,96 @@ Namespace ViewModels
                 total += item.TotalPrice
             Next
             CurrentInvoice.TotalAmount = total
+        End Sub
+
+        Private Function CanExecuteImportExcel(parameter As Object) As Boolean
+            Return IsEditAllowed AndAlso CurrentInvoice IsNot Nothing
+        End Function
+
+        Private Sub ExecuteImportExcel(parameter As Object)
+            Try
+                Dim importedRows = ExcelImporter.ReadExcelRows()
+                If importedRows Is Nothing OrElse importedRows.Count = 0 Then
+                    Return
+                End If
+
+                ' جلب كل الأصناف مباشرة من قاعدة البيانات لضمان عدم التأثر بنظام الـ Pagination
+                Dim productList = _productService.GetAllProducts()
+                Dim unknownRows As New List(Of ImportedRow)()
+                Dim newDetails As New List(Of InvoiceDetail)()
+
+                For Each row In importedRows
+                    Dim matched As Product = Nothing
+                    If Not String.IsNullOrWhiteSpace(row.Barcode) Then
+                        matched = productList.FirstOrDefault(Function(p) p.Barcode IsNot Nothing AndAlso p.Barcode.Trim().ToLower() = row.Barcode.ToLower())
+                    End If
+                    If matched Is Nothing AndAlso Not String.IsNullOrWhiteSpace(row.ProductName) Then
+                        matched = productList.FirstOrDefault(Function(p) p.ProductName IsNot Nothing AndAlso p.ProductName.Trim().ToLower() = row.ProductName.ToLower())
+                    End If
+
+                    Dim detail As New InvoiceDetail() With {
+                        .Barcode = row.Barcode,
+                        .Quantity = row.Quantity,
+                        .UnitPrice = row.UnitPrice,
+                        .TotalPrice = row.Quantity * row.UnitPrice
+                    }
+
+                    If matched IsNot Nothing Then
+                        detail.ProductID = matched.ProductID
+                        detail.ProductName = matched.ProductName
+                        detail.CostPrice = matched.PurchasePrice
+                        If detail.UnitPrice = 0 Then detail.UnitPrice = matched.PurchasePrice
+                        detail.CalculateTotal()
+                        detail.IsUnknown = False
+                    Else
+                        detail.ProductName = row.ProductName
+                        detail.IsUnknown = True
+                        unknownRows.Add(row)
+                    End If
+
+                    newDetails.Add(detail)
+                Next
+
+                ' Add all to grid
+                For Each d In newDetails
+                    AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
+                    _allInvoiceDetails.Add(d)
+                Next
+
+                If unknownRows.Count > 0 Then
+                    Dim dlg As New Views.UnknownProductsDialog(unknownRows)
+                    If dlg.ShowDialog() = True AndAlso dlg.Approved Then
+                        ' Auto-add
+                        Dim invService As New Services.InventoryService()
+                        For Each row In unknownRows
+                            Dim newId = invService.QuickAddProduct(row.Barcode, row.ProductName, row.UnitPrice, 0)
+                            
+                            ' Link in grid
+                            Dim matchingDetails = _allInvoiceDetails.Where(Function(d) d.IsUnknown AndAlso d.Barcode = row.Barcode AndAlso d.ProductName = row.ProductName).ToList()
+                            For Each d In matchingDetails
+                                d.ProductID = newId
+                                d.IsUnknown = False
+                            Next
+                        Next
+                        ' Refresh products
+                        LoadLookups()
+                    Else
+                        ' Remove unknown rows
+                        Dim rowsToRemove = _allInvoiceDetails.Where(Function(d) d.IsUnknown).ToList()
+                        For Each r In rowsToRemove
+                            RemoveHandler r.PropertyChanged, AddressOf OnDetailPropertyChanged
+                            _allInvoiceDetails.Remove(r)
+                        Next
+                    End If
+                End If
+
+                _detailsPage = Math.Max(0, DetailsTotalPages - 1)
+                UpdateDetailsPagination()
+                RecalculateTotals()
+
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ أثناء الاستيراد: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End Try
         End Sub
 
     End Class
