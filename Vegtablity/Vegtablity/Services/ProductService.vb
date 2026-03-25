@@ -58,5 +58,20 @@ Namespace Services
                 Return Nothing
             End Try
         End Function
+        Public Function GetProductPricingForInvoice(barcode As String, partnerID As Integer) As ProductPricingInfo
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@Barcode", barcode)
+                    p.Add("@PartnerID", partnerID)
+                    Return conn.Query(Of ProductPricingInfo)(
+                        Helpers.StoredProcedures.SP_SALES_GETPRODUCTPRICING_INVOICE,
+                        p,
+                        commandType:=CommandType.StoredProcedure).FirstOrDefault()
+                End Using
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
     End Class
 End Namespace

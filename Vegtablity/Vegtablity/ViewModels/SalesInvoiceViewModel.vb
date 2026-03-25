@@ -24,14 +24,15 @@ Namespace ViewModels
         Public Property CashAccounts As ObservableCollection(Of Account)
 
 
-        
+
         ' --- Invoice Details: Memory-backed client-side pagination ---
         Private _allInvoiceDetails As New List(Of InvoiceDetail)()
         Private ReadOnly PAGE_SIZE As Integer = 10
         Private _detailsPage As Integer = 0
 
 
-        
+
+
         Private _historyPage As Integer = 0
         Private ReadOnly _historyPageSize As Integer = 20
         Private _historyTotalCount As Integer = 0
@@ -114,7 +115,7 @@ Namespace ViewModels
                 Products = New ObservableCollection(Of Product)()
                 CurrentInvoice = New InvoiceHeader() With {
                     .InvDate = DateTime.Now,
-                    .Details = New ObservableCollection(Of InvoiceDetail)() 
+                    .Details = New ObservableCollection(Of InvoiceDetail)()
                 }
                 Return
             End If
@@ -343,7 +344,7 @@ Namespace ViewModels
                 ' Replace Details with an empty observable (UpdateDetailsPagination will populate it)
                 loaded.Details = New ObservableCollection(Of InvoiceDetail)()
                 CurrentInvoice = loaded
-                
+
                 If Not CurrentInvoice.IsPosted AndAlso _allInvoiceDetails.Count = 0 Then
                     ExecuteAddItem(Nothing)
                 Else
@@ -360,28 +361,27 @@ Namespace ViewModels
 
             If Not CurrentInvoice.PartnerID.HasValue Then Return False
             If Not CurrentInvoice.WarehouseID.HasValue Then Return False
-            If CurrentInvoice.Details Is Nothing OrElse CurrentInvoice.Details.Count = 0 Then Return False
+
+            ' Must have at least one valid product identified
+            If Not _allInvoiceDetails.Any(Function(d) d.ProductID > 0) Then Return False
+
             If CurrentInvoice.PaidAmount > 0 AndAlso Not CurrentInvoice.PaymentAccountID.HasValue Then Return False
 
             Return True
         End Function
-
         Private Sub ExecuteSave(parameter As Object)
             Try
-                ' Remove empty rows from ALL details
-                Dim emptyRows = _allInvoiceDetails.Where(Function(d) d.ProductID = 0 OrElse d.Quantity = 0).ToList()
-                For Each row In emptyRows
-                    RemoveHandler row.PropertyChanged, AddressOf OnDetailPropertyChanged
-                    _allInvoiceDetails.Remove(row)
-                Next
+                ' Identify valid rows (those with a ProductID) and empty rows to be ignored
+                Dim validDetails = _allInvoiceDetails.Where(Function(d) d.ProductID > 0).ToList()
+                Dim emptyRows = _allInvoiceDetails.Where(Function(d) d.ProductID = 0).ToList()
 
-                If _allInvoiceDetails.Count = 0 Then
-                    System.Windows.MessageBox.Show("يجب إضافة صنف واحد على الأقل لحفظ الفاتورة.", "تحذير", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
+                If validDetails.Count = 0 Then
+                    System.Windows.MessageBox.Show("يجب إضافة صنف واحد على الأقل (يحتوي على كود صنف) لحفظ الفاتورة.", "تحذير", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
                     Return
                 End If
 
-                ' Build full list for saving
-                CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(_allInvoiceDetails)
+                ' Build the details collection for the service with CURRENTLY VALID items only
+                CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(validDetails)
                 RecalculateTotals()
 
                 ' Validate Stock (soft warning)
@@ -397,7 +397,14 @@ Namespace ViewModels
                     CurrentInvoice.UserID = Services.Session.CurrentUser.UserID
                 End If
 
+                ' Execute Save
                 Dim invId = _invoiceService.SaveInvoice(CurrentInvoice)
+
+                ' Cleanup: Automatically remove ignored/empty rows from the grid AFTER successful save
+                For Each row In emptyRows
+                    RemoveHandler row.PropertyChanged, AddressOf OnDetailPropertyChanged
+                    _allInvoiceDetails.Remove(row)
+                Next
 
                 If CurrentInvoice.InvID = 0 Then
                     CurrentInvoice.InvID = invId
@@ -486,19 +493,16 @@ Namespace ViewModels
                     Return
                 End If
 
-                ' جلب كل الأصناف مباشرة من قاعدة البيانات لضمان عدم التأثر بنظام الـ Pagination
-                Dim productList = _productService.GetAllProducts()
                 Dim unknownRows As New List(Of ImportedRow)()
                 Dim newDetails As New List(Of InvoiceDetail)()
+                Dim partnerID = If(CurrentInvoice.PartnerID, 0)
 
                 For Each row In importedRows
-                    Dim matched As Product = Nothing
-                    If Not String.IsNullOrWhiteSpace(row.Barcode) Then
-                        matched = productList.FirstOrDefault(Function(p) p.Barcode IsNot Nothing AndAlso p.Barcode.Trim().ToLower() = row.Barcode.ToLower())
-                    End If
-                    If matched Is Nothing AndAlso Not String.IsNullOrWhiteSpace(row.ProductName) Then
-                        matched = productList.FirstOrDefault(Function(p) p.ProductName IsNot Nothing AndAlso p.ProductName.Trim().ToLower() = row.ProductName.ToLower())
-                    End If
+                    ' Skip rows without a barcode
+                    If String.IsNullOrWhiteSpace(row.Barcode) Then Continue For
+
+                    ' Optimized lookup including active quotations
+                    Dim pricing = _productService.GetProductPricingForInvoice(row.Barcode, partnerID)
 
                     Dim detail As New InvoiceDetail() With {
                         .Barcode = row.Barcode,
@@ -507,11 +511,16 @@ Namespace ViewModels
                         .TotalPrice = row.Quantity * row.UnitPrice
                     }
 
-                    If matched IsNot Nothing Then
-                        detail.ProductID = matched.ProductID
-                        detail.ProductName = matched.ProductName
-                        detail.CostPrice = matched.PurchasePrice
-                        If detail.UnitPrice = 0 Then detail.UnitPrice = matched.SalePrice
+                    If pricing IsNot Nothing AndAlso pricing.ProductID > 0 Then
+                        detail.ProductID = pricing.ProductID
+                        detail.ProductName = pricing.ProductName
+                        detail.CostPrice = pricing.CostPrice
+
+                        ' Pricing Logic: Excel > Quote > Default
+                        If detail.UnitPrice = 0 Then
+                            detail.UnitPrice = If(pricing.QuotedPrice.HasValue, pricing.QuotedPrice.Value, pricing.DefaultSalePrice)
+                        End If
+
                         detail.CalculateTotal()
                         detail.IsUnknown = False
                     Else
@@ -536,7 +545,7 @@ Namespace ViewModels
                         Dim invService As New Services.InventoryService()
                         For Each row In unknownRows
                             Dim newId = invService.QuickAddProduct(row.Barcode, row.ProductName, 0, row.UnitPrice)
-                            
+
                             ' Link in grid
                             Dim matchingDetails = _allInvoiceDetails.Where(Function(d) d.IsUnknown AndAlso d.Barcode = row.Barcode AndAlso d.ProductName = row.ProductName).ToList()
                             For Each d In matchingDetails
@@ -581,7 +590,7 @@ Namespace ViewModels
         Private Function ValidateStockForAllItems() As Boolean
             If CurrentInvoice Is Nothing Then Return True
             If Not CurrentInvoice.WarehouseID.HasValue Then Return True
-            
+
             Dim isAllValid As Boolean = True
             For Each detail In _allInvoiceDetails
                 If detail.ProductID > 0 Then
@@ -633,7 +642,7 @@ Namespace ViewModels
 
         Private Sub OnDetailPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             Dim detail = CType(sender, InvoiceDetail)
-            
+
             If e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
                 ' Auto-fill Price and reset Quantity based on Product Select for Sales
                 ' Try to find product in current list OR in our global selection map
@@ -678,22 +687,22 @@ Namespace ViewModels
             If e.PropertyName = NameOf(InvoiceDetail.Quantity) OrElse e.PropertyName = NameOf(InvoiceDetail.UnitPrice) OrElse e.PropertyName = NameOf(InvoiceDetail.TotalPrice) Then
                 RecalculateTotals()
             End If
-            
+
             If e.PropertyName = NameOf(InvoiceDetail.Quantity) OrElse e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
                 If CurrentInvoice.WarehouseID.HasValue AndAlso detail.ProductID > 0 Then
-                     Dim available = _inventoryService.GetStockByProduct(detail.ProductID, CurrentInvoice.WarehouseID.Value)
-                     If detail.Quantity > available Then
-                          ' Warning logic here (Could add a property to InvoiceDetail like "IsStockWarning")
-                     End If
+                    Dim available = _inventoryService.GetStockByProduct(detail.ProductID, CurrentInvoice.WarehouseID.Value)
+                    If detail.Quantity > available Then
+                        ' Warning logic here (Could add a property to InvoiceDetail like "IsStockWarning")
+                    End If
                 End If
             End If
-            
+
             System.Windows.Input.CommandManager.InvalidateRequerySuggested()
         End Sub
 
         Private Sub RecalculateTotals()
             If CurrentInvoice Is Nothing Then Return
-            
+
             Dim total As Decimal = 0
             For Each item In _allInvoiceDetails
                 total += item.TotalPrice

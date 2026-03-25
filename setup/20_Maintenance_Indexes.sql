@@ -196,6 +196,23 @@ GO
 PRINT '✅ Done: Performance Optimization Indexes Applied.';
 GO
 
+-- 1. Create Performance Indexes
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Quotations_PartnerID_Active' AND object_id = OBJECT_ID('Sales.Quotations'))
+BEGIN
+    CREATE INDEX [IX_Quotations_PartnerID_Active] 
+    ON [Sales].[Quotations] ([PartnerID], [IsActive]) 
+    INCLUDE ([QuoteID], [QuoteDate], [ExpiryDate]);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_QuotationDetails_ProductID' AND object_id = OBJECT_ID('Sales.QuotationDetails'))
+BEGIN
+    CREATE INDEX [IX_QuotationDetails_ProductID] 
+    ON [Sales].[QuotationDetails] ([ProductID]) 
+    INCLUDE ([QuotedPrice], [QuoteID]);
+END
+GO
+
 -- Clean up
 CLOSE partitions;
 DEALLOCATE partitions;

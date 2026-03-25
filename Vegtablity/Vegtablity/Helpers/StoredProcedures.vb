@@ -141,6 +141,7 @@ Namespace Helpers
         Public Const SP_INVOICE_SAVE As String = "[Sales].[sp_Invoice_Save]"
         Public Const SP_INVOICE_DELETE As String = "[Sales].[sp_Invoice_Delete]"
         Public Const SP_INVOICE_GETPAGED As String = "[Sales].[sp_Invoice_GetPaged]"
+        Public Const SP_SALES_GETPRODUCTPRICING_INVOICE As String = "[Sales].[sp_GetProductPricingForInvoice]"
         
         Public Const SP_INVOICEDETAIL_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"
         Public Const SP_INVOICEDETAIL_SAVE As String = "[Sales].[sp_InvoiceDetail_Save]"

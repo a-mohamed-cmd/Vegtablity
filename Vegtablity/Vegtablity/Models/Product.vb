@@ -20,4 +20,13 @@ Namespace Models
             End Get
         End Property
     End Class
+    Public Class ProductPricingInfo
+        Public Property ProductID        As Integer
+        Public Property Barcode          As String
+        Public Property ProductName      As String
+        Public Property UnitName         As String
+        Public Property DefaultSalePrice As Decimal
+        Public Property CostPrice        As Decimal
+        Public Property QuotedPrice      As Decimal?
+    End Class
 End Namespace
