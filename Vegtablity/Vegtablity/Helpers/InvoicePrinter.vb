@@ -60,7 +60,8 @@ Public Class InvoicePrinter
         End Sub
 
         Private Sub PrintPage_PrintSalesInvoice(sender As Object, e As PrintPageEventArgs)
-            ' Set Unit to Millimeter for exact positioning based on user specs
+            Try
+                ' Set Unit to Millimeter for exact positioning based on user specs
             e.Graphics.PageUnit = GraphicsUnit.Millimeter
 
             Dim g As Graphics = e.Graphics
@@ -85,7 +86,7 @@ Public Class InvoicePrinter
 
             ' 1. Customer Name (User Y=2cm to 7cm -> Width=50mm)
             Dim rectCustomer As New RectangleF(getLeft(2.0F), getTop(3.0F), 50.0F, 20.0F)
-            g.DrawString(_customerName, _printFontBold, brush, rectCustomer, formatLeft)
+            g.DrawString(If(_customerName, ""), _printFontBold, brush, rectCustomer, formatLeft)
 
             ' 2. Invoice No (Text at Y=14.5, X=3.0 / Val at Y=18.0, X=3.0)
             g.DrawString("Invoice No:", _printFontNormal, brush, getLeft(14.5F), getTop(3.0F), formatLeft)
@@ -97,7 +98,7 @@ Public Class InvoicePrinter
 
             ' 4. Account No (Text at Y=14.0, X=5.0 / Val at Y=18.0, X=5.0)
             g.DrawString("Account No:", _printFontNormal, brush, getLeft(14.0F), getTop(5.0F), formatLeft)
-            g.DrawString(If(_invoice.PartnerID > 0, _invoice.PartnerID.ToString(), ""), _printFontNormal, brush, getLeft(18.0F), getTop(5.0F), formatLeft)
+            g.DrawString(If(String.IsNullOrEmpty(_invoice.AccountCode), "", _invoice.AccountCode), _printFontNormal, brush, getLeft(18.0F), getTop(5.0F), formatLeft)
 
             ' ==========================================
             ' ITEMS DESCRIPTIONS (Grid items)
@@ -123,7 +124,15 @@ Public Class InvoicePrinter
                 ' Name & Barcode (Multi-line, User Y = 3cm to 10cm bounds -> Width=7cm)
                 Dim rectName As New RectangleF(getLeft(3.0F), currentY, 70.0F, rowHeight + 4)
                 Dim enNameStr As String = If(String.IsNullOrEmpty(item.ProductNameEn), "", item.ProductNameEn)
-                Dim combinedText As String = $"{item.Barcode}      {enNameStr}{vbCrLf}{item.ProductName}"
+                
+                Dim prdName As String = If(item.ProductName, "")
+                Dim combinedText As String
+                If String.IsNullOrEmpty(enNameStr) Then
+                    combinedText = prdName
+                Else
+                    combinedText = $"{enNameStr}{vbCrLf}{prdName}"
+                End If
+                
                 g.DrawString(combinedText, _printFontNormal, brush, rectName, formatLeft)
                 
                 ' Unit (User Y = 14cm)
@@ -162,5 +171,10 @@ Public Class InvoicePrinter
 
                 e.HasMorePages = False
             End If
+
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ تفصيلي أثناء إنشاء الفاتورة: " & ex.Message & vbCrLf & ex.StackTrace, "خطأ طباعة", MessageBoxButton.OK, MessageBoxImage.Error)
+                e.Cancel = True
+            End Try
         End Sub
     End Class

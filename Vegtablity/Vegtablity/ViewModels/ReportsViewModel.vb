@@ -12,6 +12,7 @@ Namespace ViewModels
         Private ReadOnly _reportService As New ReportService()
         Private ReadOnly _warehouseService As New WarehouseService()
         Private ReadOnly _productService As New ProductService()
+        Private ReadOnly _partnerService As New PartnerService()
 
         Public Sub New()
             ' Default Dates to current month
@@ -29,6 +30,11 @@ Namespace ViewModels
             StockMovement = New ObservableCollection(Of ReportStockMovement)()
             ExpenseAnalysis = New ObservableCollection(Of ReportExpenseAnalysis)()
             QuotationStatus = New ObservableCollection(Of ReportQuotationStatus)()
+            
+            ' New Customer Reports
+            CustomerSalesSummary = New ObservableCollection(Of ReportCustomerSalesSummary)()
+            CustomerInvoicesDetail = New ObservableCollection(Of ReportCustomerInvoiceDetail)()
+            CustomerProductSales = New ObservableCollection(Of ReportCustomerProductSale)()
 
             NextReportPageCommand = New RelayCommand(Sub() ReportPage += 1, Function() CanGoNextReport)
             PrevReportPageCommand = New RelayCommand(Sub() ReportPage -= 1, Function() CanGoPrevReport)
@@ -50,6 +56,17 @@ Namespace ViewModels
             Else
                 Products = New ObservableCollection(Of Product)()
             End If
+
+            ' Load Customers for Filters
+            Dim customerList = _partnerService.GetAllPartners("Customer")
+            Partners = New ObservableCollection(Of Partner)()
+            Partners.Add(New Partner() With {.PartnerID = 0, .PartnerName = "اختر عميل..."})
+            If customerList IsNot Nothing Then
+                For Each c In customerList
+                    Partners.Add(c)
+                Next
+            End If
+            SelectedPartnerID = 0
 
             ' By default, select the first report tab
             SelectedReportTab = 0
@@ -132,6 +149,27 @@ Namespace ViewModels
             End Get
             Set(value As Integer)
                 SetProperty(_selectedProductID, value)
+            End Set
+        End Property
+
+        ' For Customer Reports
+        Private _partners As ObservableCollection(Of Partner)
+        Public Property Partners As ObservableCollection(Of Partner)
+            Get
+                Return _partners
+            End Get
+            Set(value As ObservableCollection(Of Partner))
+                SetProperty(_partners, value)
+            End Set
+        End Property
+
+        Private _selectedPartnerID As Integer = 0
+        Public Property SelectedPartnerID As Integer
+            Get
+                Return _selectedPartnerID
+            End Get
+            Set(value As Integer)
+                SetProperty(_selectedPartnerID, value)
             End Set
         End Property
 
@@ -238,6 +276,36 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _customerSalesSummary As ObservableCollection(Of ReportCustomerSalesSummary)
+        Public Property CustomerSalesSummary As ObservableCollection(Of ReportCustomerSalesSummary)
+            Get
+                Return _customerSalesSummary
+            End Get
+            Set(value As ObservableCollection(Of ReportCustomerSalesSummary))
+                SetProperty(_customerSalesSummary, value)
+            End Set
+        End Property
+
+        Private _customerInvoicesDetail As ObservableCollection(Of ReportCustomerInvoiceDetail)
+        Public Property CustomerInvoicesDetail As ObservableCollection(Of ReportCustomerInvoiceDetail)
+            Get
+                Return _customerInvoicesDetail
+            End Get
+            Set(value As ObservableCollection(Of ReportCustomerInvoiceDetail))
+                SetProperty(_customerInvoicesDetail, value)
+            End Set
+        End Property
+
+        Private _customerProductSales As ObservableCollection(Of ReportCustomerProductSale)
+        Public Property CustomerProductSales As ObservableCollection(Of ReportCustomerProductSale)
+            Get
+                Return _customerProductSales
+            End Get
+            Set(value As ObservableCollection(Of ReportCustomerProductSale))
+                SetProperty(_customerProductSales, value)
+            End Set
+        End Property
+
         ' =======================================================
         ' Totals (Bound to UI summary cards)
         ' =======================================================
@@ -325,6 +393,9 @@ Namespace ViewModels
                 StockMovement.Clear()
                 ExpenseAnalysis.Clear()
                 QuotationStatus.Clear()
+                CustomerSalesSummary.Clear()
+                CustomerInvoicesDetail.Clear()
+                CustomerProductSales.Clear()
 
                 Select Case SelectedReportTab
                     Case 0
@@ -366,6 +437,18 @@ Namespace ViewModels
                     Case 9
                         For Each item In pageItems.Cast(Of ReportQuotationStatus)()
                             QuotationStatus.Add(item)
+                        Next
+                    Case 10
+                        For Each item In pageItems.Cast(Of ReportCustomerSalesSummary)()
+                            CustomerSalesSummary.Add(item)
+                        Next
+                    Case 11
+                        For Each item In pageItems.Cast(Of ReportCustomerInvoiceDetail)()
+                            CustomerInvoicesDetail.Add(item)
+                        Next
+                    Case 12
+                        For Each item In pageItems.Cast(Of ReportCustomerProductSale)()
+                            CustomerProductSales.Add(item)
                         Next
                 End Select
 
@@ -464,6 +547,33 @@ Namespace ViewModels
                             _allReportData.Add(item)
                         Next
 
+                    Case 10 ' ملخص ربحية العملاء
+                        Dim data = _reportService.GetCustomerSalesSummary(SelectedStartDate, SelectedEndDate)
+                        TotalNetProfit = 0
+                        For Each item In data
+                            _allReportData.Add(item)
+                            TotalNetProfit += item.TotalProfit
+                        Next
+
+                    Case 11 ' فواتير العميل
+                        If SelectedPartnerID = 0 Then
+                            MessageBox.Show("يرجى اختيار عميل أولاً لعرض مبيعاته.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                            Return
+                        End If
+                        Dim data = _reportService.GetCustomerInvoicesDetail(SelectedPartnerID, SelectedStartDate, SelectedEndDate)
+                        TotalNetProfit = 0
+                        For Each item In data
+                            _allReportData.Add(item)
+                            TotalNetProfit += item.Profit
+                        Next
+
+                    Case 12 ' مبيعات الأصناف (عميل معين أو الكل)
+                        Dim data = _reportService.GetCustomerProductSales(SelectedPartnerID, SelectedStartDate, SelectedEndDate)
+                        TotalNetProfit = 0
+                        For Each item In data
+                            _allReportData.Add(item)
+                            TotalNetProfit += item.NetProfit
+                        Next
                 End Select
 
                 UpdateReportPagination()

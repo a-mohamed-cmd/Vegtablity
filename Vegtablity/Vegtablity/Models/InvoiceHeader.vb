@@ -141,6 +141,17 @@ Namespace Models
             End Set
         End Property
 
+        Private _accountCode As String
+        Public Property AccountCode As String
+            Get
+                Return _accountCode
+            End Get
+            Set(value As String)
+                _accountCode = value
+                OnPropertyChanged(NameOf(AccountCode))
+            End Set
+        End Property
+
         Private _paymentAccountID As Integer?
         Public Property PaymentAccountID As Integer?  ' حساب طريقة الدفع (11xx)
             Get

@@ -194,48 +194,14 @@ Namespace Views
 
                 e.Handled = True
 
-                ' Add new row and focus on its product combobox
+                ' Add new row
                 Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
                 If vm IsNot Nothing AndAlso vm.AddItemCommand.CanExecute(Nothing) Then
-                    ' Trigger Add Item Command
                     vm.AddItemCommand.Execute(Nothing)
                 End If
 
-                ' Since a new row is added at the end, moving focus needs dispatcher to allow UI to render first
-                Dispatcher.BeginInvoke(New Action(Sub()
-                                                      Dim dg As DataGrid = FindVisualParent(Of DataGrid)(TryCast(sender, UIElement))
-                                                      If dg IsNot Nothing AndAlso dg.Items.Count > 0 Then
-                                                          dg.SelectedIndex = dg.Items.Count - 1
-                                                          Dim newItem = dg.Items(dg.Items.Count - 1)
-
-                                                          ' 1. Focus the cell (index 0 for Barcode column)
-                                                          dg.CurrentCell = New DataGridCellInfo(newItem, dg.Columns(0))
-
-                                                          ' 2. Scroll into view and update layout
-                                                          dg.ScrollIntoView(newItem, dg.Columns(0))
-                                                          dg.UpdateLayout()
-
-                                                          ' 3. Extract the physical row container
-                                                          Dim rowContainer As DataGridRow = TryCast(dg.ItemContainerGenerator.ContainerFromItem(newItem), DataGridRow)
-                                                          If rowContainer IsNot Nothing Then
-                                                              Dim presenter As System.Windows.Controls.Primitives.DataGridCellsPresenter = FindVisualChild(Of System.Windows.Controls.Primitives.DataGridCellsPresenter)(rowContainer)
-                                                              If presenter IsNot Nothing Then
-                                                                  ' 4. Extract the physical cell container at column 0
-                                                                  Dim cell As DataGridCell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(0), DataGridCell)
-                                                                  If cell IsNot Nothing Then
-                                                                      ' 5. Finally, grab the TextBox inside and forcefully focus it
-                                                                      Dim innerTb As TextBox = FindVisualChild(Of TextBox)(cell)
-                                                                      If innerTb IsNot Nothing Then
-                                                                          Keyboard.Focus(innerTb)
-                                                                      Else
-                                                                          cell.Focus()
-                                                                      End If
-                                                                  End If
-                                                              End If
-                                                          End If
-                                                      End If
-                                                  End Sub), System.Windows.Threading.DispatcherPriority.Input)
-
+                ' Focus the barcode cell of the newly added row
+                FocusLastRowBarcode()
             End If
         End Sub
 

@@ -23,17 +23,14 @@ Namespace ViewModels
         Public Property Products As ObservableCollection(Of Product)
         Public Property CashAccounts As ObservableCollection(Of Account)
 
-        ' --- Pagination & Selection Caching ---
-        Private _selectedProductsMap As New Dictionary(Of Integer, Product)()
+
         
         ' --- Invoice Details: Memory-backed client-side pagination ---
         Private _allInvoiceDetails As New List(Of InvoiceDetail)()
         Private ReadOnly PAGE_SIZE As Integer = 10
         Private _detailsPage As Integer = 0
 
-        Private _productPage As Integer = 1
-        Private ReadOnly _productPageSize As Integer = 20
-        Private _productTotalCount As Integer = 0
+
         
         Private _historyPage As Integer = 0
         Private ReadOnly _historyPageSize As Integer = 20
@@ -102,8 +99,6 @@ Namespace ViewModels
         Public Property DownloadTemplateCommand As ICommand
 
         ' Pagination Commands
-        Public Property NextProductPageCommand As ICommand
-        Public Property PrevProductPageCommand As ICommand
         Public Property NextDetailsPageCommand As ICommand
         Public Property PrevDetailsPageCommand As ICommand
         Public Property LoadHistoryCommand As ICommand
@@ -148,8 +143,7 @@ Namespace ViewModels
             DownloadTemplateCommand = New RelayCommand(Sub(p) ExcelImporter.DownloadTemplate())
 
             ' Pagination Commands
-            NextProductPageCommand = New RelayCommand(Sub() ProductPage += 1, Function() CanGoNextProduct)
-            PrevProductPageCommand = New RelayCommand(Sub() ProductPage -= 1, Function() CanGoPrevProduct)
+
             NextDetailsPageCommand = New RelayCommand(Sub() DetailsPage += 1, Function() CanGoNextDetails)
             PrevDetailsPageCommand = New RelayCommand(Sub() DetailsPage -= 1, Function() CanGoPrevDetails)
             LoadHistoryCommand = New RelayCommand(AddressOf ExecuteLoadHistory)
@@ -175,8 +169,11 @@ Namespace ViewModels
                 CashAccounts = New ObservableCollection(Of Account)(cashList)
                 OnPropertyChanged(NameOf(CashAccounts))
 
-                ' Initial Page Load for Products
-                UpdateProductPagination()
+                Dim productList = _productService.GetAllProducts()
+                Products.Clear()
+                For Each p In productList
+                    Products.Add(p)
+                Next
             Catch ex As Exception
                 ' Log
             End Try
@@ -204,69 +201,7 @@ Namespace ViewModels
             System.Windows.Input.CommandManager.InvalidateRequerySuggested()
         End Sub
 
-#Region "Pagination Logic"
-        
-        Public Property ProductPage As Integer
-            Get
-                Return _productPage
-            End Get
-            Set(value As Integer)
-                If value < 1 Then value = 1
-                SetProperty(_productPage, value)
-                UpdateProductPagination()
-            End Set
-        End Property
 
-        Public ReadOnly Property ProductPageLabel As String
-            Get
-                Dim totalPages = Math.Max(1, CInt(Math.Ceiling(_productTotalCount / _productPageSize)))
-                Return $"صفحة {ProductPage} من {totalPages} ({_productTotalCount} صنف)"
-            End Get
-        End Property
-
-        Public ReadOnly Property CanGoNextProduct As Boolean
-            Get
-                Dim totalPages = Math.Max(1, CInt(Math.Ceiling(_productTotalCount / _productPageSize)))
-                Return ProductPage < totalPages
-            End Get
-        End Property
-
-        Public ReadOnly Property CanGoPrevProduct As Boolean
-            Get
-                Return ProductPage > 1
-            End Get
-        End Property
-
-        Private Sub UpdateProductPagination()
-            Try
-                ' Fetch only items for current page from DB
-                Dim paged = _productService.GetProductsPaged(ProductPage, _productPageSize)
-                _productTotalCount = paged.TotalCount
-
-                Dim combinedList = New List(Of Product)(paged.Data)
-
-                ' Crucial: Add currently selected products from the GRID that might not be in the current page
-                If CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.Details IsNot Nothing Then
-                    For Each detail In CurrentInvoice.Details
-                        If detail.ProductID > 0 AndAlso Not combinedList.Any(Function(p) p.ProductID = detail.ProductID) Then
-                            ' Check if we have the full product object in our map
-                            Dim cachedProd As Product = Nothing
-                            If _selectedProductsMap.TryGetValue(detail.ProductID, cachedProd) Then
-                                combinedList.Add(cachedProd)
-                            End If
-                        End If
-                    Next
-                End If
-
-                Products = New ObservableCollection(Of Product)(combinedList.OrderBy(Function(p) p.ProductName))
-                OnPropertyChanged(NameOf(Products))
-                OnPropertyChanged(NameOf(ProductPageLabel))
-                OnPropertyChanged(NameOf(CanGoNextProduct))
-                OnPropertyChanged(NameOf(CanGoPrevProduct))
-            Catch ex As Exception
-                ' Log
-            End Try
-        End Sub
 
         Public Property HistoryPage As Integer
             Get
@@ -315,23 +250,7 @@ Namespace ViewModels
             OnPropertyChanged(NameOf(CanGoPrevHistory))
         End Sub
 
-        Public Sub GlobalFindProduct(term As String)
-            If String.IsNullOrWhiteSpace(term) Then Return
-            
-            ' Perform a quick paged search for 1 item (global search)
-            Dim result = _productService.GetProductsPaged(1, 1, term)
-            If result.Data.Any() Then
-                Dim prod = result.Data.First()
-                ' Ensure it's in the map and current list so the UI can binding it
-                If Not _selectedProductsMap.ContainsKey(prod.ProductID) Then 
-                    _selectedProductsMap.Add(prod.ProductID, prod)
-                End If
-                
-                If Not Products.Any(Function(p) p.ProductID = prod.ProductID) Then
-                    Products.Add(prod)
-                End If
-            End If
-        End Sub
+
 
         ' ========================
         ' Details Pagination
@@ -386,12 +305,9 @@ Namespace ViewModels
                 OnPropertyChanged(NameOf(DetailsPageLabel))
                 OnPropertyChanged(NameOf(CanGoNextDetails))
                 OnPropertyChanged(NameOf(CanGoPrevDetails))
-                UpdateProductPagination()
             Catch ex As Exception
             End Try
         End Sub
-
-#End Region
 
         Private Sub ExecuteNew(parameter As Object)
             _allInvoiceDetails.Clear()
@@ -408,7 +324,7 @@ Namespace ViewModels
             If Warehouses.Any() Then
                 CurrentInvoice.WarehouseID = Warehouses.First().WarehouseID
             End If
-            
+
             ' Automatically add an empty row for the new invoice
             ExecuteAddItem(Nothing)
         End Sub
@@ -516,11 +432,14 @@ Namespace ViewModels
             Dim result = System.Windows.MessageBox.Show("هل أنت متأكد من ترحيل فاتورة المبيعات؟ سيتم خصم المخزون وتوليد القيود بشكل نهائي.", "تأكيد الترحيل", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
             If result = System.Windows.MessageBoxResult.Yes Then
                 Try
-                    CurrentInvoice.IsPosted = True
-                    _invoiceService.SaveInvoice(CurrentInvoice)
+                    Dim userID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
+                    _invoiceService.PostInvoice(CurrentInvoice.InvID, userID)
+
+                    ' Reload To Refresh UI state (IsPosted, JournalEntries, etc.)
+                    LoadInvoice(CurrentInvoice.InvID)
+
                     RaiseEvent RequestSnackbar("✅ تم ترحيل الفاتورة بنجاح")
                 Catch ex As Exception
-                    CurrentInvoice.IsPosted = False ' Revert on failure
                     System.Windows.MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
                 End Try
             End If
@@ -719,18 +638,14 @@ Namespace ViewModels
                 ' Auto-fill Price and reset Quantity based on Product Select for Sales
                 ' Try to find product in current list OR in our global selection map
                 Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
-                If prod Is Nothing Then
-                    _selectedProductsMap.TryGetValue(detail.ProductID, prod)
-                End If
 
                 If prod IsNot Nothing Then
-                    ' Store in map if not already there
-                    If Not _selectedProductsMap.ContainsKey(prod.ProductID) Then
-                        _selectedProductsMap.Add(prod.ProductID, prod)
-                    End If
 
                     detail.Quantity = 1
-                    
+                    detail.ProductName = prod.ProductName
+                    detail.ProductNameEn = prod.ProductNameEn
+                    detail.UnitName = prod.UnitName
+
                     ' Check for Custom Quoted Price First
                     Dim quotedPrice As Decimal? = Nothing
                     If CurrentInvoice.PartnerID.HasValue Then

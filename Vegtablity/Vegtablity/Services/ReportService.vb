@@ -162,5 +162,50 @@ Namespace Services
             End Try
         End Function
 
+        ' 11. Customer Sales Summary
+        Public Function GetCustomerSalesSummary(startDate As DateTime, endDate As DateTime) As List(Of ReportCustomerSalesSummary)
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Return conn.Query(Of ReportCustomerSalesSummary)(
+                        StoredProcedures.SP_REPORT_CUSTOMERSALESSUMMARY,
+                        New With {.StartDate = startDate, .EndDate = endDate},
+                        commandType:=CommandType.StoredProcedure
+                    ).AsList()
+                End Using
+            Catch ex As Exception
+                Throw New Exception("Error loading customer sales summary report: " & ex.Message, ex)
+            End Try
+        End Function
+
+        ' 12. Customer Invoices Detail
+        Public Function GetCustomerInvoicesDetail(partnerID As Integer, startDate As DateTime, endDate As DateTime) As List(Of ReportCustomerInvoiceDetail)
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Return conn.Query(Of ReportCustomerInvoiceDetail)(
+                        StoredProcedures.SP_REPORT_CUSTOMERINVOICESDETAIL,
+                        New With {.PartnerID = partnerID, .StartDate = startDate, .EndDate = endDate},
+                        commandType:=CommandType.StoredProcedure
+                    ).AsList()
+                End Using
+            Catch ex As Exception
+                Throw New Exception("Error loading customer invoices detail report: " & ex.Message, ex)
+            End Try
+        End Function
+
+        ' 13. Customer Product Sales
+        Public Function GetCustomerProductSales(partnerID As Integer, startDate As DateTime, endDate As DateTime) As List(Of ReportCustomerProductSale)
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Return conn.Query(Of ReportCustomerProductSale)(
+                        StoredProcedures.SP_REPORT_CUSTOMERPRODUCTSALES,
+                        New With {.PartnerID = partnerID, .StartDate = startDate, .EndDate = endDate},
+                        commandType:=CommandType.StoredProcedure
+                    ).AsList()
+                End Using
+            Catch ex As Exception
+                Throw New Exception("Error loading customer product sales report: " & ex.Message, ex)
+            End Try
+        End Function
+
     End Class
 End Namespace

@@ -219,11 +219,23 @@ Namespace Services
         End Function
 
         ''' <summary>
+        ''' ترحيل فاتورة:
+        ''' → يقوم بتغيير الحالة إلى IsPosted = 1
+        ''' → الـ SQL Trigger يتكفل بتحديث المخزون والقيود المحاسبية آلياً
+        ''' </summary>
+        Public Sub PostInvoice(invID As Integer, userID As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_INVOICE_POST,
+                    New With {.InvID = invID, .UserID = userID},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
+
+        ''' <summary>
         ''' إلغاء ترحيل فاتورة مرحّلة:
-        ''' → يعكس حركة المخزون
-        ''' → يحذف القيود المحاسبية
-        ''' → يُعيد IsPosted = 0
-        ''' بعدها المستخدم يعدّل ويُرحّل من جديد بالطريقة المعتادة.
+        ''' → يقوم بتغيير الحالة إلى IsPosted = 0
+        ''' → الـ SQL Trigger يتكفل بعكس حركة المخزون وحذف القيود المحاسبية آلياً
         ''' </summary>
         Public Sub UnpostInvoice(invID As Integer, userID As Integer)
             Using conn As IDbConnection = _dbHelper.GetConnection()

@@ -75,35 +75,42 @@
                 
                 <TextBlock Text="التقارير الشاملة" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="10,10,0,20"/>
 
-                <TabControl x:Name="TabControl" Grid.Row="1" TabStripPlacement="Left" Background="Transparent" BorderThickness="0" 
-                            SelectedIndex="{Binding SelectedReportTab, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    
-                    <TabControl.Resources>
-                        <!-- Hide default content area background -->
-                        <Style TargetType="{x:Type TabPanel}">
-                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                        </Style>
-                    </TabControl.Resources>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <TabControl x:Name="TabControl" TabStripPlacement="Left" Background="Transparent" BorderThickness="0" 
+                                SelectedIndex="{Binding SelectedReportTab, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        
+                        <TabControl.Resources>
+                            <!-- Hide default content area background -->
+                            <Style TargetType="{x:Type TabPanel}">
+                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                            </Style>
+                        </TabControl.Resources>
 
-                    <!-- Sales Tab Group -->
-                    <TabItem Header="📊 أرباح الأصناف" Style="{StaticResource SideTabItemStyle}"/>
-                    <TabItem Header="🧾 أرباح الفواتير" Style="{StaticResource SideTabItemStyle}"/>
-                    <TabItem Header="📅 المبيعات اليومية/الشهرية" Style="{StaticResource SideTabItemStyle}"/>
-                    
-                    <!-- Partners Tab Group -->
-                    <TabItem Header="👤 مبيعات العملاء (أقوى شركاء)" Style="{StaticResource SideTabItemStyle}"/>
-                    <TabItem Header="⏳ أعمار الديون (فواتير متأخرة)" Style="{StaticResource SideTabItemStyle}"/>
-                    
-                    <!-- Inventory Tab Group -->
-                    <TabItem Header="📦 جرد وتقييم المخزون" Style="{StaticResource SideTabItemStyle}"/>
-                    <TabItem Header="💤 الأصناف الراكدة" Style="{StaticResource SideTabItemStyle}"/>
-                    <TabItem Header="🔄 حركة صنف في مستودع" Style="{StaticResource SideTabItemStyle}"/>
-                    
-                    <!-- Finance & Quota Tab Group -->
-                    <TabItem Header="💸 تحليل المصروفات" Style="{StaticResource SideTabItemStyle}"/>
-                    <TabItem Header="📝 عروض الأسعار" Style="{StaticResource SideTabItemStyle}"/>
+                        <!-- Sales Tab Group -->
+                        <TabItem Header="📊 أرباح الأصناف" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="🧾 أرباح الفواتير" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="📅 المبيعات اليومية/الشهرية" Style="{StaticResource SideTabItemStyle}"/>
+                        
+                        <!-- Partners Tab Group -->
+                        <TabItem Header="👤 مبيعات العملاء (أقوى شركاء)" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="⏳ أعمار الديون (فواتير متأخرة)" Style="{StaticResource SideTabItemStyle}"/>
+                        
+                        <!-- Inventory Tab Group -->
+                        <TabItem Header="📦 جرد وتقييم المخزون" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="💤 الأصناف الراكدة" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="🔄 حركة صنف في مستودع" Style="{StaticResource SideTabItemStyle}"/>
+                        
+                        <!-- Finance & Quota Tab Group -->
+                        <TabItem Header="💸 تحليل المصروفات" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="📝 عروض الأسعار" Style="{StaticResource SideTabItemStyle}"/>
 
-                </TabControl>
+                        <!-- Customer Profitability Tab Group -->
+                        <TabItem Header="👥 ملخص ربحية العملاء" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="📄 تفاصيل أرباح فواتير العميل" Style="{StaticResource SideTabItemStyle}"/>
+                        <TabItem Header="🍎 ربحية أصناف العميل" Style="{StaticResource SideTabItemStyle}"/>
+
+                    </TabControl>
+                </ScrollViewer>
             </Grid>
         </Border>
 
@@ -122,20 +129,21 @@
                 </Border.Effect>
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="15"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/> <!-- Dates & Refresh -->
+                        <RowDefinition Height="10"/>   <!-- Spacer -->
+                        <RowDefinition Height="Auto"/> <!-- Customer Filter -->
+                        <RowDefinition Height="15"/>   <!-- Spacer -->
+                        <RowDefinition Height="Auto"/> <!-- Pagination -->
                     </Grid.RowDefinitions>
                     
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Date Filters -->
+                    <!-- Row 0: Date Filters & Main Actions -->
                     <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,20,0">
                         <TextBlock Text="من تاريخ" Foreground="#64748B" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,5"/>
                         <DatePicker SelectedDate="{Binding SelectedStartDate, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
@@ -146,18 +154,25 @@
                         <DatePicker SelectedDate="{Binding SelectedEndDate, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
                     </StackPanel>
 
-                    <!-- Refresh Button -->
-                    <Button Grid.Row="0" Grid.Column="2" Content="تحديث البيانات 🔄" Command="{Binding LoadReportCommand}"
+                    <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Left" Content="تحديث البيانات 🔄" Command="{Binding LoadReportCommand}"
                             Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" VerticalAlignment="Bottom" Height="36"/>
 
-                    <!-- Action Buttons -->
-                    <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom">
                         <Button Content="تصدير PDF 📄" Style="{DynamicResource ModernButtonStyle}" Background="#EF4444" Margin="0,0,10,0" Height="36" Click="ExportPdf_Click"/>
                         <Button Content="تصدير CSV 📊" Style="{DynamicResource ModernButtonStyle}" Background="#10B981" Height="36" Click="ExportExcel_Click"/>
                     </StackPanel>
+
+                    <!-- Row 2: Customer Filter (Moved here) -->
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="4">
+                        <TextBlock Text="تصفية حسب العميل" Foreground="#64748B" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <ComboBox ItemsSource="{Binding Partners}" SelectedValue="{Binding SelectedPartnerID}" 
+                                  SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName" Width="300"
+                                  HorizontalAlignment="Left"
+                                  Style="{DynamicResource ModernComboBoxStyle}" IsEditable="True"/>
+                    </StackPanel>
                     
-                    <!-- Pagination Controls -->
-                    <Border Grid.Row="2" Grid.ColumnSpan="5" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="15,6">
+                    <!-- Row 4: Pagination Controls -->
+                    <Border Grid.Row="4" Grid.ColumnSpan="4" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="15,6">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -391,6 +406,74 @@
                             <DataGridTextColumn Header="اسم العميل" Binding="{Binding CustomerName}" Width="2.5*"/>
                             <DataGridTextColumn Header="القيمة الإجمالية" Binding="{Binding QuoteTotalValue, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold"/>
                             <DataGridTextColumn Header="حالة العرض" Binding="{Binding QuoteStatus}" Width="1.5*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- ============================================== -->
+                    <!-- REPORT 10: ملخص ربحية العملاء -->
+                    <!-- ============================================== -->
+                    <DataGrid ItemsSource="{Binding CustomerSalesSummary}" AutoGenerateColumns="False" IsReadOnly="True" 
+                               RowHeight="40" Background="Transparent" BorderThickness="0"
+                               Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=10}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="اسم العميل" Binding="{Binding PartnerName}" Width="2*"/>
+                            <DataGridTextColumn Header="عدد الفواتير" Binding="{Binding InvoiceCount}" Width="0.8*"/>
+                            <DataGridTextColumn Header="إجمالي المبيعات" Binding="{Binding TotalSales, StringFormat={}{0:N2}}" Width="1.2*"/>
+                            <DataGridTextColumn Header="تكلفة المبيعات (COGS)" Binding="{Binding TotalCOGS, StringFormat={}{0:N2}}" Width="1.2*"/>
+                            <DataGridTextColumn Header="صافي الربح" Binding="{Binding TotalProfit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{Binding TotalProfit, Converter={StaticResource ProfitColorConverter}}"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- ============================================== -->
+                    <!-- REPORT 11: تفاصيل أرباح فواتير العميل -->
+                    <!-- ============================================== -->
+                    <DataGrid ItemsSource="{Binding CustomerInvoicesDetail}" AutoGenerateColumns="False" IsReadOnly="True" 
+                               RowHeight="40" Background="Transparent" BorderThickness="0"
+                               Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=11}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="رقم الفاتورة" Binding="{Binding InvID}" Width="1*"/>
+                            <DataGridTextColumn Header="التاريخ" Binding="{Binding InvDate, StringFormat=dd/MM/yyyy}" Width="1.2*"/>
+                            <DataGridTextColumn Header="المرجع" Binding="{Binding ReferenceNo}" Width="1.2*"/>
+                            <DataGridTextColumn Header="إجمالي الفاتورة" Binding="{Binding NetAmount, StringFormat={}{0:N2}}" Width="1.2*"/>
+                            <DataGridTextColumn Header="التكلفة" Binding="{Binding TotalCOGS, StringFormat={}{0:N2}}" Width="1.2*"/>
+                            <DataGridTextColumn Header="الربح" Binding="{Binding Profit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{Binding Profit, Converter={StaticResource ProfitColorConverter}}"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- ============================================== -->
+                    <!-- REPORT 12: ربحية أصناف العميل -->
+                    <!-- ============================================== -->
+                    <DataGrid ItemsSource="{Binding CustomerProductSales}" AutoGenerateColumns="False" IsReadOnly="True" 
+                               RowHeight="40" Background="Transparent" BorderThickness="0"
+                               Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=12}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="العميل" Binding="{Binding PartnerName}" Width="1.5*"/>
+                            <DataGridTextColumn Header="الصنف" Binding="{Binding ProductName}" Width="2*"/>
+                            <DataGridTextColumn Header="الكمية المباعة" Binding="{Binding TotalQty, StringFormat={}{0:N2}}" Width="1*"/>
+                            <DataGridTextColumn Header="قيمة المبيعات" Binding="{Binding TotalSalesValue, StringFormat={}{0:N2}}" Width="1.2*"/>
+                            <DataGridTextColumn Header="قيمة التكلفة" Binding="{Binding TotalCostValue, StringFormat={}{0:N2}}" Width="1.2*"/>
+                            <DataGridTextColumn Header="صافي الربح" Binding="{Binding NetProfit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{Binding NetProfit, Converter={StaticResource ProfitColorConverter}}"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

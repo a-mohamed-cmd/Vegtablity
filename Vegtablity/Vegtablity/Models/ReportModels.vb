@@ -197,4 +197,43 @@ Namespace Models
         Public Property AccountType As String
     End Class
 
+    ' ==========================================================
+    ' Report 14: Customer Sales Summary (Profitability)
+    ' ==========================================================
+    Public Class ReportCustomerSalesSummary
+        Public Property PartnerID As Integer
+        Public Property PartnerName As String
+        Public Property AccountID As Integer?
+        Public Property InvoiceCount As Integer
+        Public Property TotalSales As Decimal
+        Public Property TotalCOGS As Decimal
+        Public Property TotalProfit As Decimal
+    End Class
+
+    ' ==========================================================
+    ' Report 15: Customer Invoices Detail (Profitability)
+    ' ==========================================================
+    Public Class ReportCustomerInvoiceDetail
+        Public Property InvID As Integer
+        Public Property InvDate As DateTime
+        Public Property ReferenceNo As String
+        Public Property TotalAmount As Decimal
+        Public Property Discount As Decimal
+        Public Property NetAmount As Decimal
+        Public Property TotalCOGS As Decimal
+        Public Property Profit As Decimal
+    End Class
+
+    ' ==========================================================
+    ' Report 16: Customer Product Sales (Profitability)
+    ' ==========================================================
+    Public Class ReportCustomerProductSale
+        Public Property PartnerName As String
+        Public Property ProductName As String
+        Public Property TotalQty As Decimal
+        Public Property TotalSalesValue As Decimal
+        Public Property TotalCostValue As Decimal
+        Public Property NetProfit As Decimal
+    End Class
+
 End Namespace

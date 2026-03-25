@@ -135,7 +135,11 @@ CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT * FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
+    SELECT inv.*, chart.AccountCode 
+    FROM [Sales].[InvoiceHeader] inv
+    LEFT JOIN [Sales].[Partners] par ON inv.[PartnerID] = par.[PartnerID]
+    LEFT JOIN [Accounting].[ChartOfAccounts] chart ON par.[AccountID] = chart.[AccountID]
+    WHERE inv.InvID = @InvID;
 END
 GO
 
@@ -152,9 +156,12 @@ BEGIN
     SELECT 
         d.*,
         p.ProductName,
+        p.ProductNameEn,
+        u.UnitName,
         p.Barcode
     FROM [Sales].[InvoiceDetails] d
     INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
     WHERE d.InvID = @InvID;
 END
 GO

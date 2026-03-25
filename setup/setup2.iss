@@ -3,9 +3,9 @@
 ; Non-commercial use only
 
 #define MyAppName "Vegtablity"
-#define MyAppVersion "4"
-#define MyAppPublisher "Mohamed Ragab"
-#define MyAppURL "https://www.mohamedRagab.com/"
+#define MyAppVersion "5"
+#define MyAppPublisher "MohamedRagab"
+#define MyAppURL "www.mohamedRagab.com"
 #define MyAppExeName "Vegtablity.exe"
 #define MyAppAssocName MyAppName + " File"
 #define MyAppAssocExt ".exe"
@@ -14,7 +14,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{6F1D9B0B-57EA-40CC-9E02-3AE83426D4B5}
+AppId={{FBF3B1A0-1EF9-4E68-9F3D-5A79FF7516D7}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -28,8 +28,9 @@ ChangesAssociations=yes
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
-OutputBaseFilename=Vegtablity
-SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\lettuce.ico
+OutputDir=D:\VB.NET\backup\Vegtablity\setup\Output
+OutputBaseFilename=Vegtablity_SetupV5
+SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\lettuce.ico
 SolidCompression=yes
 WizardStyle=modern dynamic
 
@@ -42,12 +43,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\ClosedXML.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\ClosedXML.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\Dapper.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\DocumentFormat.OpenXml.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\DocumentFormat.OpenXml.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\ExcelNumberFormat.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\ExcelNumberFormat.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\Irony.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\LiveCharts.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\LiveCharts.pdb"; DestDir: "{app}"; Flags: ignoreversion
@@ -56,10 +54,12 @@ Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\LiveChart
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\PdfSharp.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\PdfSharp.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\SixLabors.Fonts.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\SixLabors.Fonts.xml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\System.Buffers.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\System.CodeDom.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\System.IO.Packaging.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\System.IO.Packaging.xml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\System.Memory.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\System.Numerics.Vectors.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\System.Runtime.CompilerServices.Unsafe.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\Vegtablity.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\Vegtablity.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "D:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\bin\Release\Vegtablity.pdb"; DestDir: "{app}"; Flags: ignoreversion

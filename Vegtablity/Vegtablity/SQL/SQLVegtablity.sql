@@ -2435,6 +2435,7 @@ GO
 -- Trigger: trg_Invoice_Post
 -- Handles Both Inventory Stock Updates AND Accounting Journal Entries
 -- =============================================
+-- =============================================
 IF OBJECT_ID('[Sales].[trg_Invoice_Post]', 'TR') IS NOT NULL
     DROP TRIGGER [Sales].[trg_Invoice_Post];
 GO
@@ -2446,294 +2447,145 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Only proceed if IsPosted changed from 0 to 1
-    IF UPDATE(IsPosted)
+    -- الفلترة الأساسية: العمل فقط عند تغير حالة IsPosted
+    IF NOT UPDATE(IsPosted) RETURN;
+
+    -- 1. متغيرات الحسابات الافتراضية
+    DECLARE @InventoryAcc INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '13%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @SalesAcc     INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '41%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @COGSAcc      INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '51%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @CustomerAcc  INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '12%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @VendorAcc    INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '21%' AND IsTransactional = 1 ORDER BY AccountCode);
+
+    -- ==========================================================
+    -- أولاً: حالة الترحيل (POSTING: 0 -> 1)
+    -- ==========================================================
+    IF EXISTS (SELECT 1 FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 1 AND d.IsPosted = 0)
     BEGIN
-        -- ==========================================================
-        -- 1. INVENTORY UPDATES
-        -- ==========================================================
-
-        -- STEP A: Update AvgCostPrice BEFORE touching CurrentQty (weighted average formula)
-        --   NewAvgCost = (OldQty * OldAvgCost + NewQty * BuyPrice) / (OldQty + NewQty)
+        
+        -- أ. تحديث متوسط التكلفة (للمشتريات فقط)
         UPDATE S
-        SET S.AvgCostPrice =
-            CASE
-                WHEN (S.CurrentQty + D.Quantity) > 0
-                THEN (S.CurrentQty * ISNULL(S.AvgCostPrice, 0) + D.Quantity * D.UnitPrice)
-                     / (S.CurrentQty + D.Quantity)
-                ELSE D.UnitPrice
-            END
+        SET S.AvgCostPrice = CASE 
+            WHEN (S.CurrentQty + T.TotalQty) > 0 
+            THEN (S.CurrentQty * ISNULL(S.AvgCostPrice, 0) + T.TotalSum) / (S.CurrentQty + T.TotalQty)
+            ELSE T.WeightedPrice END
         FROM [Inventory].[ProductStock] S
-        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
-        INNER JOIN inserted i ON D.InvID = i.InvID
-        INNER JOIN deleted F ON i.InvID = F.InvID
-        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
-          AND i.InvType = 'Purchase' 
-          AND S.WarehouseID = i.WarehouseID;
+        INNER JOIN (
+            SELECT D.ProductID, i.WarehouseID, SUM(D.Quantity) as TotalQty, SUM(D.Quantity * D.UnitPrice) as TotalSum,
+                   SUM(D.Quantity * D.UnitPrice) / NULLIF(SUM(D.Quantity), 0) as WeightedPrice
+            FROM [Sales].[InvoiceDetails] D
+            JOIN inserted i ON D.InvID = i.InvID
+            JOIN deleted d_old ON i.InvID = d_old.InvID
+            WHERE i.IsPosted = 1 AND d_old.IsPosted = 0 AND i.InvType = 'Purchase'
+            GROUP BY D.ProductID, i.WarehouseID
+        ) T ON S.ProductID = T.ProductID AND S.WarehouseID = T.WarehouseID;
 
-        -- STEP B: Increase CurrentQty (after AvgCostPrice is already updated)
+        -- ب. تحديث الكميات (مشتريات تزيد / مبيعات تنقص)
         UPDATE S
-        SET S.CurrentQty = S.CurrentQty + D.Quantity
+        SET S.CurrentQty = S.CurrentQty + (CASE WHEN i.InvType = 'Purchase' THEN T.Qty ELSE -T.Qty END)
         FROM [Inventory].[ProductStock] S
-        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
-        INNER JOIN inserted i ON D.InvID = i.InvID
-        INNER JOIN deleted F ON i.InvID = F.InvID
-        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
-          AND i.InvType = 'Purchase' 
-          AND S.WarehouseID = i.WarehouseID;
+        INNER JOIN (
+            SELECT D.ProductID, D.InvID, SUM(D.Quantity) as Qty 
+            FROM [Sales].[InvoiceDetails] D GROUP BY D.ProductID, D.InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN inserted i ON T.InvID = i.InvID
+        INNER JOIN deleted d_old ON i.InvID = d_old.InvID
+        WHERE i.IsPosted = 1 AND d_old.IsPosted = 0 AND S.WarehouseID = i.WarehouseID;
 
-        -- Missing Stock Records for Purchases (Insert if not exists - AvgCostPrice = UnitPrice)
-        INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
-        SELECT D.ProductID, i.WarehouseID, SUM(D.Quantity),
-               SUM(D.Quantity * D.UnitPrice) / NULLIF(SUM(D.Quantity), 0) -- weighted avg for first purchase
+        -- ج. تسجيل التكلفة في تفاصيل الفاتورة (للمبيعات) لضبط الربحية
+        UPDATE D
+        SET D.CostPrice = ISNULL(S.AvgCostPrice, 0)
         FROM [Sales].[InvoiceDetails] D
-        INNER JOIN inserted i ON D.InvID = i.InvID
-        INNER JOIN deleted F ON i.InvID = F.InvID
-        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
-          AND i.InvType = 'Purchase'
-          AND NOT EXISTS (
-              SELECT 1 FROM [Inventory].[ProductStock] S2 
-              WHERE S2.ProductID = D.ProductID AND S2.WarehouseID = i.WarehouseID
-          )
-        GROUP BY D.ProductID, i.WarehouseID;
+        JOIN inserted i ON D.InvID = i.InvID
+        JOIN [Inventory].[ProductStock] S ON D.ProductID = S.ProductID AND S.WarehouseID = i.WarehouseID
+        WHERE i.IsPosted = 1 AND i.InvType = 'Sales';
 
-        -- Sales: Decrease Stock
+        -- د. القيود المحاسبية (Journals)
+        DECLARE @EntryMap TABLE (InvID INT, EntryNo INT);
+        INSERT INTO @EntryMap SELECT i.InvID, NEXT VALUE FOR [Accounting].[seq_EntryNo] 
+        FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 1 AND d.IsPosted = 0;
+
+        -- قيد الفاتورة (مشتريات/مبيعات)
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        -- المشتريات: مخزن (مدين) / مورد (دائن)
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(w.AccountID, @InventoryAcc), i.NetAmount, 0, N'مشتريات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID WHERE i.InvType = 'Purchase'
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(p.AccountID, @VendorAcc), 0, i.NetAmount, N'مشتريات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.InvType = 'Purchase'
+        -- المبيعات: عميل (مدين) / مبيعات (دائن) + تكلفة (مدين) / مخزن (دائن)
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(p.AccountID, @CustomerAcc), i.NetAmount, 0, N'مبيعات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.InvType = 'Sales'
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, @SalesAcc, 0, i.NetAmount, N'مبيعات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID WHERE i.InvType = 'Sales';
+
+		-- ----------------------------------------------------------------
+-- و. قيد تكلفة البضاعة المباعة (للمبيعات فقط)
+-- Dr COGS / Cr Inventory
+-- ----------------------------------------------------------------
+;WITH InvoiceCOGS AS (
+    SELECT d.InvID, SUM(d.CostPrice * d.Quantity) AS TotalCost
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN inserted i ON d.InvID = i.InvID
+    WHERE i.InvType = 'Sales'
+    GROUP BY d.InvID
+)
+INSERT INTO [Accounting].[JournalEntries] 
+    (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+-- الطرف المدين: حساب تكلفة البضاعة المباعة
+SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, @COGSAcc, cogs.TotalCost, 0, 
+       N'تكلفة البضاعة المباعة فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+FROM inserted i
+JOIN @EntryMap m ON i.InvID = m.InvID
+JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+WHERE i.InvType = 'Sales' AND cogs.TotalCost > 0
+
+UNION ALL
+
+-- الطرف الدائن: حساب المخزن (الخاص بالمستودع)
+SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(w.AccountID, @InventoryAcc), 0, cogs.TotalCost, 
+       N'تكلفة البضاعة المباعة فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+FROM inserted i
+JOIN @EntryMap m ON i.InvID = m.InvID
+JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
+WHERE i.InvType = 'Sales' AND cogs.TotalCost > 0;
+        -- هـ. قيود السداد (Payments)
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN ISNULL(p.AccountID, @VendorAcc) ELSE i.PaymentAccountID END, i.PaidAmount, 0, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN i.PaymentAccountID ELSE ISNULL(p.AccountID, @CustomerAcc) END, 0, i.PaidAmount, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+    END
+	
+    -- ==========================================================
+    -- ثانياً: حالة إلغاء الترحيل (UNPOSTING: 1 -> 0)
+    -- ==========================================================
+    IF EXISTS (SELECT 1 FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 0 AND d.IsPosted = 1)
+    BEGIN
+        -- عكس تأثير المخزن (المبيعات تعيد للمخزن / المشتريات تخصم من المخزن)
+        -- تم توحيد هذا الجزء لضمان عدم التكرار
         UPDATE S
-        SET S.CurrentQty = S.CurrentQty - D.Quantity
+        SET S.CurrentQty = S.CurrentQty + (CASE WHEN d_old.InvType = 'Sales' THEN T.Qty ELSE -T.Qty END)
         FROM [Inventory].[ProductStock] S
-        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
-        INNER JOIN inserted i ON D.InvID = i.InvID
-        INNER JOIN deleted F ON i.InvID = F.InvID
-        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
-          AND i.InvType = 'Sales'
-          AND S.WarehouseID = i.WarehouseID;
+        INNER JOIN (
+            SELECT D.ProductID, D.InvID, SUM(D.Quantity) as Qty 
+            FROM [Sales].[InvoiceDetails] D GROUP BY D.ProductID, D.InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN deleted d_old ON T.InvID = d_old.InvID
+        INNER JOIN inserted i ON d_old.InvID = i.InvID
+        WHERE i.IsPosted = 0 AND d_old.IsPosted = 1 AND S.WarehouseID = d_old.WarehouseID;
 
-        -- Missing Stock Records for Sales (Insert negative if completely missing, to prevent failure)
-        INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty)
-        SELECT D.ProductID, i.WarehouseID, -SUM(D.Quantity)
-        FROM [Sales].[InvoiceDetails] D
-        INNER JOIN inserted i ON D.InvID = i.InvID
-        INNER JOIN deleted F ON i.InvID = F.InvID
-        WHERE i.IsPosted = 1 AND F.IsPosted = 0 
-          AND i.InvType = 'Sales'
-          AND NOT EXISTS (
-              SELECT 1 FROM [Inventory].[ProductStock] S2 
-              WHERE S2.ProductID = D.ProductID AND S2.WarehouseID = i.WarehouseID
-          )
-        GROUP BY D.ProductID, i.WarehouseID;
-
-        -- ==========================================================
-        -- 2. ACCOUNTING UPDATES (JOURNAL ENTRIES)
-        -- ==========================================================
-        
-        -- Get generic Accounts for fallback
-        DECLARE @InventoryAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '13%' AND IsTransactional = 1), 
-                                           (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '13'));
-        
-        DECLARE @SalesAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '41%' AND IsTransactional = 1), 
-                                       (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '41'));
-                                       
-        DECLARE @COGSAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '5101'), 
-                                      ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '51%' AND IsTransactional = 1),
-                                             (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '51')));
-
-        DECLARE @CustomerAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '12%' AND IsTransactional = 1), 
-                                          (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12'));
-
-        DECLARE @VendorAcc INT = ISNULL((SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '21%' AND IsTransactional = 1), 
-                                        (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '21'));
-
-        -- Ensure fallback accounts exist (create dummy if absolutely nothing found - though Setup_InitialAccounts should prevent this)
-
-        DECLARE @InvoiceEntryMap TABLE (InvID INT, InvType NVARCHAR(20), EntryNo INT);
-
-        INSERT INTO @InvoiceEntryMap (InvID, InvType, EntryNo)
-        SELECT i.InvID, i.InvType, NEXT VALUE FOR [Accounting].[seq_EntryNo]
-        FROM inserted i
-        INNER JOIN deleted d ON i.InvID = d.InvID
-        WHERE i.IsPosted = 1 AND d.IsPosted = 0;
-
-        -- ----------------------------------------------------------------
-        -- A. PURCHASE INVOICE ENTRIES
-        -- ----------------------------------------------------------------
-        
-        -- Leg 1: Dr Inventory
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT
-            m.EntryNo,
-            i.InvDate,
-            'Invoice',
-            i.InvID,
-            ISNULL(w.AccountID, @InventoryAcc), -- Dynamically fetch Warehouse AccountID
-            i.NetAmount,  -- Debit Inventory
-            0,            
-            N'فاتورة مشتريات رقم ' + CAST(i.InvID AS NVARCHAR),
-            i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
-        WHERE i.InvType = 'Purchase';
-
-        -- Leg 2: Cr Vendor/Supplier
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT
-            m.EntryNo,
-            i.InvDate,
-            'Invoice',
-            i.InvID,
-            ISNULL(p.AccountID, @VendorAcc),  -- Dynamically fetch Partner's AccountID
-            0,
-            i.NetAmount, -- Credit Supplier
-            N'فاتورة مشتريات رقم ' + CAST(i.InvID AS NVARCHAR),
-            i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Purchase';
-
-        -- ----------------------------------------------------------------
-        -- B. SALES INVOICE ENTRIES
-        -- ----------------------------------------------------------------
-        
-        -- Sales Part 1: Revenue & Receivables
-        -- Leg 1: Dr Customer
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT
-            m.EntryNo,
-            i.InvDate,
-            'Invoice',
-            i.InvID,
-            ISNULL(p.AccountID, @CustomerAcc), -- Dynamically fetch Partner's AccountID
-            i.NetAmount,  -- Debit Customer
-            0,
-            N'فاتورة مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
-            i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Sales';
-
-        -- Leg 2: Cr Sales Revenue
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT
-            m.EntryNo,
-            i.InvDate,
-            'Invoice',
-            i.InvID,
-            @SalesAcc,
-            0,
-            i.NetAmount, -- Credit Sales
-            N'فاتورة مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
-            i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Sales';
-
-        -- Sales Part 2: COGS & Inventory
-        -- تحسب بمتوسط سعر التكلفة المرجح (الخاص بهذا المخزن) من ProductStock.AvgCostPrice
-        ;WITH InvoiceCOGS AS (
-            SELECT 
-                d.InvID,
-                SUM(s.AvgCostPrice * d.Quantity) AS TotalCOGS
-            FROM [Sales].[InvoiceDetails] d
-            INNER JOIN inserted i ON d.InvID = i.InvID
-            LEFT JOIN [Inventory].[ProductStock] s 
-                ON s.ProductID = d.ProductID 
-                AND s.WarehouseID = i.WarehouseID
-            GROUP BY d.InvID
-        )
-        -- Leg 3: Dr COGS - تكلفة البضاعة المباعة (يُجلب AccountID من حساب كود 5101)
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT
-            m.EntryNo,
-            i.InvDate,
-            'Invoice',
-            i.InvID,
-            @COGSAcc,        -- AccountID مجلوب من AccountCode = '5101' في ChartOfAccounts
-            cogs.TotalCOGS,  -- Debit COGS (متوسط التكلفة * الكمية)
-            0,
-            N'تكلفة بضاعة مباعة للفاتورة ' + CAST(i.InvID AS NVARCHAR),
-            i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
-        WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
-
-        -- Leg 4: Cr Inventory (المخزن - برقم الحساب الخاص بالمخزن)
-        ;WITH InvoiceCOGS AS (
-            SELECT 
-                d.InvID,
-                SUM(s.AvgCostPrice * d.Quantity) AS TotalCOGS
-            FROM [Sales].[InvoiceDetails] d
-            INNER JOIN inserted i ON d.InvID = i.InvID
-            LEFT JOIN [Inventory].[ProductStock] s 
-                ON s.ProductID = d.ProductID 
-                AND s.WarehouseID = i.WarehouseID
-            GROUP BY d.InvID
-        )
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT
-            m.EntryNo,
-            i.InvDate,
-            'Invoice',
-            i.InvID,
-            ISNULL(w.AccountID, @InventoryAcc), -- AccountID الخاص بالمخزن
-            0,
-            cogs.TotalCOGS, -- Credit Inventory/Warehouse
-            N'تكلفة بضاعة مباعة للفاتورة ' + CAST(i.InvID AS NVARCHAR),
-            i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
-        LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
-        WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
-
-        -- ==========================================================
-        -- C. PAYMENT JOURNAL ENTRIES
-        -- قيد السداد الجزئي عند الترحيل (إذا كان PaidAmount > 0 وتم اختيار حساب دفع)
-        -- ==========================================================
-
-        -- Purchase: Dr Vendor Account / Cr Cash Account (11xx)
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               ISNULL(p.AccountID, @VendorAcc),  -- Dr حساب المورد
-               i.PaidAmount, 0,
-               N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
-
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               i.PaymentAccountID, 0, i.PaidAmount,  -- Cr حساب الدفع المختار (نقدية)
-               N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
-
-        -- Sales: Dr Cash Account (11xx) / Cr Customer Account
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               i.PaymentAccountID, i.PaidAmount, 0,  -- Dr حساب الدفع المختار (نقدية)
-               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
-
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               ISNULL(p.AccountID, @CustomerAcc), 0, i.PaidAmount,  -- Cr حساب العميل
-               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
-
+        -- حذف القيود المحاسبية بالكامل
+        DELETE JE FROM [Accounting].[JournalEntries] JE
+        INNER JOIN deleted d_old ON JE.ReferenceID = d_old.InvID
+        WHERE JE.ReferenceType IN ('Invoice', 'Payment') AND d_old.IsPosted = 1;
     END
 END
 GO
-
 
 -- =============================================
 -- Invoices Stored Procedures (Sales & Purchases)
@@ -3054,42 +2906,6 @@ BEGIN
 END
 GO
 
--- =============================================
--- 6. sp_Invoice_GetByID 
--- =============================================
-IF OBJECT_ID('[Sales].[sp_Invoice_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetByID];
-GO
-CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]
-    @InvID INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT * FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
-END
-GO
-
--- =============================================
--- 7. sp_InvoiceDetails_GetByInvID
--- =============================================
-IF OBJECT_ID('[Sales].[sp_InvoiceDetails_GetByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID];
-GO
-create PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID]
-    @InvID INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT 
-        d.*,
-        p.ProductName,
-        p.ProductNameEn,
-        u.UnitName,
-        p.Barcode
-    FROM [Sales].[InvoiceDetails] d
-    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
-    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
-    WHERE d.InvID = @InvID;
-END
-GO
 
 
 -- =============================================
@@ -5548,3 +5364,184 @@ BEGIN
     SELECT @NewID;
 END
 GO
+
+
+-- =============================================
+-- 7. sp_InvoiceDetails_GetByInvID
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_GetByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID];
+GO
+create PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.*,
+        p.ProductName,
+        p.ProductNameEn,
+        u.UnitName,
+        p.Barcode
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE d.InvID = @InvID;
+END
+GO
+
+-- =============================================
+-- 6. sp_Invoice_GetByID 
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetByID];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]  
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT inv.*,chart.AccountCode  FROM [Sales].[InvoiceHeader] inv
+	join [Sales].[Partners] par on inv.[PartnerID] =par.[PartnerID]
+	join [Accounting].[ChartOfAccounts] chart on par.[AccountID] = chart.[AccountID]
+	 WHERE InvID = @InvID;
+END
+GO
+IF OBJECT_ID('[Sales].[sp_Invoice_Post]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Post];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_Post]
+    @InvID INT,
+    @UserID INT
+AS
+BEGIN
+    UPDATE [Sales].[InvoiceHeader]
+    SET IsPosted = 1, UserID = @UserID
+    WHERE InvID = @InvID;
+END;
+go
+IF OBJECT_ID('[Sales].[sp_Invoice_Unpost]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Unpost];
+GO
+create PROCEDURE [Sales].[sp_Invoice_Unpost]
+    @InvID INT,
+    @UserID INT
+AS
+BEGIN
+    UPDATE [Sales].[InvoiceHeader]
+    SET IsPosted = 0
+    WHERE InvID = @InvID;
+END;
+go
+
+-- 1. [Sales].[sp_Report_CustomerSalesSummary]
+-- ملخص مبيعات العملاء: يوضح إجمالي المبيعات، التكلفة، والربح لكل عميل
+IF OBJECT_ID('[Sales].[sp_Report_CustomerSalesSummary]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_CustomerSalesSummary];
+GO
+CREATE PROCEDURE [Sales].[sp_Report_CustomerSalesSummary]
+    @StartDate DATETIME,
+    @EndDate   DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.PartnerID,
+        p.PartnerName,
+        p.AccountID,
+        COUNT(h.InvID) AS InvoiceCount,
+        SUM(h.NetAmount) AS TotalSales,
+        SUM(ISNULL(Det.TotalCost, 0)) AS TotalCOGS,
+        SUM(h.NetAmount) - SUM(ISNULL(Det.TotalCost, 0)) AS TotalProfit
+    FROM [Sales].[Partners] p
+    INNER JOIN [Sales].[InvoiceHeader] h ON p.PartnerID = h.PartnerID
+    LEFT JOIN (
+        SELECT InvID, SUM(Quantity * CostPrice) AS TotalCost
+        FROM [Sales].[InvoiceDetails]
+        GROUP BY InvID
+    ) Det ON h.InvID = Det.InvID
+    WHERE h.InvType = 'Sales' AND h.IsPosted = 1
+      AND h.InvDate BETWEEN @StartDate AND @EndDate
+    GROUP BY p.PartnerID, p.PartnerName, p.AccountID
+    ORDER BY TotalSales DESC;
+END
+GO
+
+-- 2. [Sales].[sp_Report_CustomerInvoicesDetail]
+-- فواتير عميل معين: يسرد الفواتير مع توضيح ربحية كل فاتورة
+IF OBJECT_ID('[Sales].[sp_Report_CustomerInvoicesDetail]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_CustomerInvoicesDetail];
+GO
+CREATE PROCEDURE [Sales].[sp_Report_CustomerInvoicesDetail] 
+    @PartnerID INT,
+    @StartDate DATETIME,
+    @EndDate   DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        h.InvID,
+        h.InvDate,
+        h.ReferenceNo,
+        h.TotalAmount,
+        h.Discount,
+        h.NetAmount,
+        ISNULL(Det.TotalCost, 0) AS TotalCOGS,
+        h.NetAmount - ISNULL(Det.TotalCost, 0) AS Profit
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN (
+        SELECT InvID, SUM(Quantity * CostPrice) AS TotalCost
+        FROM [Sales].[InvoiceDetails]
+        GROUP BY InvID
+    ) Det ON h.InvID = Det.InvID
+    WHERE h.InvType = 'Sales' AND h.IsPosted = 1
+      AND h.PartnerID = @PartnerID
+      AND h.InvDate BETWEEN @StartDate AND @EndDate
+    ORDER BY h.InvDate DESC;
+END
+GO
+
+-- 3. [Sales].[sp_Report_CustomerProductSales]
+-- مبيعات الأصناف لكل عميل: مجمع حسب الصنف والعميل
+IF OBJECT_ID('[Sales].[sp_Report_CustomerProductSales]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_CustomerProductSales];
+GO
+CREATE PROCEDURE [Sales].[sp_Report_CustomerProductSales]  
+    @PartnerID INT, -- اختياري (إذا كان 0 يعرض للكل)
+    @StartDate DATETIME,
+    @EndDate   DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.PartnerName,
+        prod.ProductName,
+        SUM(d.Quantity) AS TotalQty,
+        SUM(d.TotalPrice) AS TotalSalesValue,
+        SUM(d.Quantity * d.CostPrice) AS TotalCostValue,
+        SUM(d.TotalPrice) - SUM(d.Quantity * d.CostPrice) AS NetProfit
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    INNER JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    INNER JOIN [Inventory].[Products] prod ON d.ProductID = prod.ProductID
+    WHERE h.InvType = 'Sales' AND h.IsPosted = 1
+      AND (@PartnerID = 0 OR h.PartnerID = @PartnerID)
+      AND h.InvDate BETWEEN @StartDate AND @EndDate
+    GROUP BY p.PartnerName, prod.ProductName
+    ORDER BY p.PartnerName, TotalSalesValue DESC;
+END
+GO
+
+PRINT N'✅ تم إنشاء تقارير ربحية العملاء بنجاح';
+GO
+IF OBJECT_ID('[Inventory].[sp_Product_GetByBarcode]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetByBarcode];
+GO
+create PROCEDURE [Inventory].[sp_Product_GetByBarcode]
+    @Barcode NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName,
+        p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.Barcode = @Barcode AND p.IsActive = 1;
+END
+go

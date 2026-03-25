@@ -1719,7 +1719,7 @@ Namespace Helpers
         ' Import Quote Details from Excel (Open XML SDK)
         ' Returns list of QuoteDetail rows (unmatched flagged)
         ' ===================================================
-        Public Shared Function ImportQuoteFromExcel(products As IList(Of Product)) As List(Of QuoteDetail)
+        Public Shared Function ImportQuoteFromExcel(products As IList(Of Product), Optional productService As ProductService = Nothing) As List(Of QuoteDetail)
             Dim result As New List(Of QuoteDetail)
 
             Try
@@ -1810,6 +1810,11 @@ Namespace Helpers
                             matchedProduct = products.FirstOrDefault(
                                 Function(p) p.SearchText IsNot Nothing AndAlso
                                             p.SearchText.ToLower().Contains(nameVal.ToLower()))
+                        End If
+
+                        ' ── Try global lookup if not found in the passed list ──
+                        If matchedProduct Is Nothing AndAlso productService IsNot Nothing AndAlso Not String.IsNullOrEmpty(barcodeVal) Then
+                            matchedProduct = productService.GetProductByBarcode(barcodeVal)
                         End If
 
                         ' ── Duplicate guard ──

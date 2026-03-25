@@ -28,18 +28,22 @@ BEGIN
         -- ==========================================================
 
         -- STEP A: Update AvgCostPrice BEFORE touching CurrentQty (weighted average formula)
-        --   NewAvgCost = (OldQty * OldAvgCost + NewQty * BuyPrice) / (OldQty + NewQty)
         UPDATE S
         SET S.AvgCostPrice =
             CASE
-                WHEN (S.CurrentQty + D.Quantity) > 0
-                THEN (S.CurrentQty * ISNULL(S.AvgCostPrice, 0) + D.Quantity * D.UnitPrice)
-                     / (S.CurrentQty + D.Quantity)
-                ELSE D.UnitPrice
+                WHEN (S.CurrentQty + T.TotalQty) > 0
+                THEN (S.CurrentQty * ISNULL(S.AvgCostPrice, 0) + T.TotalSum)
+                     / (S.CurrentQty + T.TotalQty)
+                ELSE T.WeightedPrice
             END
         FROM [Inventory].[ProductStock] S
-        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
-        INNER JOIN inserted i ON D.InvID = i.InvID
+        INNER JOIN (
+            SELECT ProductID, SUM(Quantity) as TotalQty, SUM(Quantity * UnitPrice) as TotalSum,
+                   SUM(Quantity * UnitPrice) / NULLIF(SUM(Quantity), 0) as WeightedPrice
+            FROM [Sales].[InvoiceDetails]
+            GROUP BY ProductID, InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN inserted i ON T.InvID = i.InvID
         INNER JOIN deleted F ON i.InvID = F.InvID
         WHERE i.IsPosted = 1 AND F.IsPosted = 0
           AND i.InvType = 'Purchase'
@@ -47,10 +51,14 @@ BEGIN
 
         -- STEP B: Increase CurrentQty (after AvgCostPrice is already updated)
         UPDATE S
-        SET S.CurrentQty = S.CurrentQty + D.Quantity
+        SET S.CurrentQty = S.CurrentQty + T.TotalQty
         FROM [Inventory].[ProductStock] S
-        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
-        INNER JOIN inserted i ON D.InvID = i.InvID
+        INNER JOIN (
+            SELECT ProductID, SUM(Quantity) as TotalQty
+            FROM [Sales].[InvoiceDetails]
+            GROUP BY ProductID, InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN inserted i ON T.InvID = i.InvID
         INNER JOIN deleted F ON i.InvID = F.InvID
         WHERE i.IsPosted = 1 AND F.IsPosted = 0
           AND i.InvType = 'Purchase'
@@ -72,9 +80,24 @@ BEGIN
 
         -- Sales: Decrease Stock
         UPDATE S
-        SET S.CurrentQty = S.CurrentQty - D.Quantity
+        SET S.CurrentQty = S.CurrentQty - T.TotalQty
         FROM [Inventory].[ProductStock] S
-        INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
+        INNER JOIN (
+            SELECT ProductID, SUM(Quantity) as TotalQty
+            FROM [Sales].[InvoiceDetails]
+            GROUP BY ProductID, InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN inserted i ON T.InvID = i.InvID
+        INNER JOIN deleted F ON i.InvID = F.InvID
+        WHERE i.IsPosted = 1 AND F.IsPosted = 0
+          AND i.InvType = 'Sales'
+          AND S.WarehouseID = i.WarehouseID;
+
+        -- STEP D: Update CostPrice in InvoiceDetails matching current AvgCostPrice (for Sales)
+        UPDATE D
+        SET D.CostPrice = ISNULL(S.AvgCostPrice, 0)
+        FROM [Sales].[InvoiceDetails] D
+        INNER JOIN [Inventory].[ProductStock] S ON D.ProductID = S.ProductID
         INNER JOIN inserted i ON D.InvID = i.InvID
         INNER JOIN deleted F ON i.InvID = F.InvID
         WHERE i.IsPosted = 1 AND F.IsPosted = 0
@@ -179,13 +202,11 @@ BEGIN
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
         WHERE i.InvType = 'Sales';
 
-        -- COGS: يستخدم AvgCostPrice المحسوب من ProductStock (أدق من PurchasePrice)
+        -- COGS: استخدام قيمة CostPrice التي تم تحديثها للتو لتسجيل تكلفة المبيعات
         ;WITH InvoiceCOGS AS (
-            SELECT d.InvID, SUM(s.AvgCostPrice * d.Quantity) AS TotalCOGS
+            SELECT d.InvID, SUM(d.CostPrice * d.Quantity) AS TotalCOGS
             FROM [Sales].[InvoiceDetails] d
             INNER JOIN inserted i ON d.InvID = i.InvID
-            LEFT JOIN [Inventory].[ProductStock] s
-                ON s.ProductID = d.ProductID AND s.WarehouseID = i.WarehouseID
             GROUP BY d.InvID
         )
         -- Leg 3: Dr COGS
@@ -200,11 +221,9 @@ BEGIN
         WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
 
         ;WITH InvoiceCOGS AS (
-            SELECT d.InvID, SUM(s.AvgCostPrice * d.Quantity) AS TotalCOGS
+            SELECT d.InvID, SUM(d.CostPrice * d.Quantity) AS TotalCOGS
             FROM [Sales].[InvoiceDetails] d
             INNER JOIN inserted i ON d.InvID = i.InvID
-            LEFT JOIN [Inventory].[ProductStock] s
-                ON s.ProductID = d.ProductID AND s.WarehouseID = i.WarehouseID
             GROUP BY d.InvID
         )
         -- Leg 4: Cr Inventory (Warehouse)
@@ -248,15 +267,6 @@ BEGIN
         INSERT INTO [Accounting].[JournalEntries]
             (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               i.PaymentAccountID, i.PaidAmount, 0,
-               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
-        FROM inserted i
-        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
-
-        INSERT INTO [Accounting].[JournalEntries]
-            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
                ISNULL(p.AccountID, @CustomerAcc), 0, i.PaidAmount,
                N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
@@ -264,6 +274,37 @@ BEGIN
         LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
         WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
 
+    END
+
+    -- 3. UNPOSTING (IsPosted 1 -> 0)
+    IF EXISTS (SELECT 1 FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 0 AND d.IsPosted = 1)
+    BEGIN
+        -- A. Purchases: Revert Stock Increase (Grouped)
+        UPDATE S
+        SET S.CurrentQty = S.CurrentQty - T.TotalQty
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN (
+            SELECT ProductID, SUM(Quantity) as TotalQty FROM [Sales].[InvoiceDetails] GROUP BY ProductID, InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN deleted d ON T.InvID = d.InvID
+        INNER JOIN inserted i ON d.InvID = i.InvID
+        WHERE i.IsPosted = 0 AND d.IsPosted = 1 AND d.InvType = 'Purchase' AND S.WarehouseID = d.WarehouseID;
+
+        -- B. Sales: Revert Stock Decrease (Grouped)
+        UPDATE S
+        SET S.CurrentQty = S.CurrentQty + T.TotalQty
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN (
+            SELECT ProductID, SUM(Quantity) as TotalQty FROM [Sales].[InvoiceDetails] GROUP BY ProductID, InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN deleted d ON T.InvID = d.InvID
+        INNER JOIN inserted i ON d.InvID = i.InvID
+        WHERE i.IsPosted = 0 AND d.IsPosted = 1 AND d.InvType = 'Sales' AND S.WarehouseID = d.WarehouseID;
+
+        -- C. Remove Journal Entries
+        DELETE JE FROM [Accounting].[JournalEntries] JE
+        INNER JOIN deleted d ON JE.ReferenceID = d.InvID AND JE.ReferenceType IN ('Invoice', 'Payment')
+        WHERE d.IsPosted = 1;
     END
 END
 GO
@@ -308,36 +349,7 @@ BEGIN
         FROM [Sales].[InvoiceHeader]
         WHERE InvID = @InvID;
 
-        -- 2. عكس حركة المخزون
-        IF @InvType = 'Purchase'
-        BEGIN
-            -- مشتريات: ننقص الكميات التي تم إضافتها
-            -- ملاحظة: AvgCostPrice لا يُعاد بشكل مثالي عند الـ Unpost
-            -- (هذا مقبول — سيُحسب من جديد عند إعادة الترحيل)
-            UPDATE S
-            SET S.CurrentQty = S.CurrentQty - D.Quantity
-            FROM [Inventory].[ProductStock] S
-            INNER JOIN [Sales].[InvoiceDetails] D
-                ON S.ProductID = D.ProductID AND S.WarehouseID = @WarehouseID
-            WHERE D.InvID = @InvID;
-        END
-        ELSE IF @InvType = 'Sales'
-        BEGIN
-            -- مبيعات: نُعيد الكميات التي تم خصمها
-            UPDATE S
-            SET S.CurrentQty = S.CurrentQty + D.Quantity
-            FROM [Inventory].[ProductStock] S
-            INNER JOIN [Sales].[InvoiceDetails] D
-                ON S.ProductID = D.ProductID AND S.WarehouseID = @WarehouseID
-            WHERE D.InvID = @InvID;
-        END
-
-        -- 3. حذف جميع القيود المرتبطة (Invoice + Payment)
-        DELETE FROM [Accounting].[JournalEntries]
-        WHERE ReferenceID = @InvID
-          AND ReferenceType IN ('Invoice', 'Payment');
-
-        -- 4. إعادة الفاتورة لوضع المسودة
+        -- 2. عكس حالة الترحيل (هذا سيشغل trg_Invoice_Post للتعامل مع المخزون والقيود تلقائياً)
         UPDATE [Sales].[InvoiceHeader]
         SET IsPosted = 0
         WHERE InvID = @InvID;

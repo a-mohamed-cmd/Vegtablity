@@ -145,6 +145,7 @@ Namespace Helpers
         Public Const SP_INVOICEDETAIL_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"
         Public Const SP_INVOICEDETAIL_SAVE As String = "[Sales].[sp_InvoiceDetail_Save]"
         Public Const SP_INVOICEDETAIL_DELETEBYINVID As String = "[Sales].[sp_InvoiceDetails_DeleteByInvID]"
+        Public Const SP_INVOICE_POST As String = "[Sales].[sp_Invoice_Post]"
         Public Const SP_INVOICE_UNPOST As String = "[Sales].[sp_Invoice_Unpost]"
 
         ' =============================================
@@ -194,7 +195,12 @@ Namespace Helpers
         Public Const SP_REPORT_STOCKMOVEMENT As String = "[Reports].[sp_Report_StockMovement]"
         Public Const SP_REPORT_EXPENSESANALYSIS As String = "[Reports].[sp_Report_ExpensesAnalysis]"
         Public Const SP_REPORT_QUOTATIONSSTATUS As String = "[Reports].[sp_Report_QuotationsStatus]"
-        Public Const SP_REPORT_TOPSUPPLIERS As String = "[Reports].[sp_Report_TopSuppliers]"
+        Public Const SP_REPORT_TOPSUPPLIERS As String = "[Reports].[topSuppliers]"
+
+        ' --- Customer Profitability Reports ---
+        Public Const SP_REPORT_CUSTOMERSALESSUMMARY As String = "[Sales].[sp_Report_CustomerSalesSummary]"
+        Public Const SP_REPORT_CUSTOMERINVOICESDETAIL As String = "[Sales].[sp_Report_CustomerInvoicesDetail]"
+        Public Const SP_REPORT_CUSTOMERPRODUCTSALES As String = "[Sales].[sp_Report_CustomerProductSales]"
 
     End Class
 End Namespace

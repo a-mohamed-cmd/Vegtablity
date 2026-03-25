@@ -46,5 +46,17 @@ Namespace Services
             End Try
             Return result
         End Function
+        Public Function GetProductByBarcode(barcode As String) As Product
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Return conn.Query(Of Product)(
+                        Helpers.StoredProcedures.SP_PRODUCT_GETBYBARCODE,
+                        New With {.Barcode = barcode},
+                        commandType:=CommandType.StoredProcedure).FirstOrDefault()
+                End Using
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
     End Class
 End Namespace

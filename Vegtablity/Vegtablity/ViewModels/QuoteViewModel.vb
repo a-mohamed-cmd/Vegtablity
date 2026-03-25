@@ -4,6 +4,7 @@ Imports Vegtablity.Models
 Imports Vegtablity.Services
 Imports System.Windows.Input
 Imports Vegtablity.Helpers
+Imports System.Linq
 
 Namespace ViewModels
     Public Class QuoteViewModel
@@ -12,6 +13,7 @@ Namespace ViewModels
         Private ReadOnly _quoteService As QuoteService
         Private ReadOnly _partnerService As PartnerService
         Private ReadOnly _productService As ProductService
+        Private _isUpdatingDetail As Boolean = False
 
         Public Property Customers As ObservableCollection(Of Partner)
         Public Property Products As ObservableCollection(Of Product)
@@ -98,6 +100,12 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property ProductTotalCount As Integer
+            Get
+                Return _productTotalCount
+            End Get
+        End Property
+
         Public ReadOnly Property CanGoNextProduct As Boolean
             Get
                 Return ProductPage < ProductTotalPages - 1
@@ -174,9 +182,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property DetailsTotalCount As Integer
+            Get
+                Return _detailsTotalCount
+            End Get
+        End Property
+
         Public ReadOnly Property CanGoNextDetails As Boolean
             Get
-                If CurrentQuote Is Nothing OrElse CurrentQuote.QuoteID = 0 Then Return False
+                If CurrentQuote Is Nothing Then Return False
                 Return DetailsPage < DetailsTotalPages - 1
             End Get
         End Property
@@ -274,9 +288,7 @@ Namespace ViewModels
 
         Public Function GlobalFindProduct(term As String) As Product
             If String.IsNullOrWhiteSpace(term) Then Return Nothing
-            ' Perform a specialized paged search for 1 item to find it globally
-            Dim paged = _productService.GetProductsPaged(1, 1, term)
-            Return paged.Data.FirstOrDefault()
+            Return _productService.GetProductByBarcode(term)
         End Function
 
         Public Sub SearchProducts(term As String)
@@ -284,11 +296,28 @@ Namespace ViewModels
         End Sub
 
         Private Sub UpdateProductPagination()
-            If Products Is Nothing Then Return
+            Dim allMatching As List(Of Product)
+            If Not String.IsNullOrWhiteSpace(ProductFilter) Then
+                ' Logic changed to strict Barcode lookup as requested
+                Dim found = _productService.GetProductByBarcode(ProductFilter)
+                allMatching = New List(Of Product)()
+                If found IsNot Nothing Then
+                    allMatching.Add(found)
+                End If
+            Else
+                ' Stop loading all products into memory for performance
+                ' Only show products that are already in the quote to ensure dropdown visibility
+                allMatching = New List(Of Product)()
+            End If
+
+            _productTotalCount = allMatching.Count
             
-            ' Fetch from DB
-            Dim paged = _productService.GetProductsPaged(ProductPage + 1, PAGE_SIZE, ProductFilter)
-            _productTotalCount = paged.TotalCount
+            ' Ensure we don't exceed page limits after a filter change
+            If ProductPage >= ProductTotalPages AndAlso ProductTotalPages > 0 Then
+                _productPage = ProductTotalPages - 1
+            End If
+
+            Dim pagedData = allMatching.Skip(ProductPage * PAGE_SIZE).Take(PAGE_SIZE).ToList()
             
             ' Which IDs are currently in use?
             Dim usedIds As New HashSet(Of Integer)()
@@ -302,7 +331,7 @@ Namespace ViewModels
             
             Products.Clear()
             ' 1. Add page items
-            For Each p In paged.Data
+            For Each p In pagedData
                 Products.Add(p)
                 usedIds.Remove(p.ProductID) ' Mark as added
                 ' Cache for detail lookup/preservation
@@ -319,8 +348,11 @@ Namespace ViewModels
             Next
             
             OnPropertyChanged(NameOf(Products))
+            OnPropertyChanged(NameOf(ProductTotalCount))
             OnPropertyChanged(NameOf(ProductTotalPages))
             OnPropertyChanged(NameOf(ProductPageLabel))
+            OnPropertyChanged(NameOf(CanGoNextProduct))
+            OnPropertyChanged(NameOf(CanGoPrevProduct))
         End Sub
 
         Private Sub UpdateHistoryPagination()
@@ -381,6 +413,7 @@ Namespace ViewModels
                 OnPropertyChanged(NameOf(DetailsPageLabel))
                 OnPropertyChanged(NameOf(CanGoNextDetails))
                 OnPropertyChanged(NameOf(CanGoPrevDetails))
+                OnPropertyChanged(NameOf(DetailsTotalCount))
                 UpdateProductPagination()
             Catch ex As Exception
                 System.Windows.MessageBox.Show("خطأ في تحديث صفحات العرض: " & ex.Message, "خطأ")
@@ -491,7 +524,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteImportFromExcel(parameter As Object)
-            Dim imported = Helpers.ReportExporter.ImportQuoteFromExcel(Products)
+            Dim imported = Helpers.ReportExporter.ImportQuoteFromExcel(Products, _productService)
             If imported Is Nothing Then Return ' user cancelled
 
             If imported.Count = 0 Then
@@ -516,10 +549,16 @@ Namespace ViewModels
 
             DetailsPage = Math.Max(0, DetailsTotalPages - 1)
 
-            Dim msg As String = $"✅ تم استيراد {imported.Count} صنف بنجاح."
+            Dim matchedCount As Integer = imported.Count - unmatchedCount
+            Dim msg As String = $"✅ تم استيراد {imported.Count} صنف من ملف Excel." & vbCrLf &
+                               $"🔹 الأصناف المعتمدة: {matchedCount}"
+            
             If unmatchedCount > 0 Then
-                msg &= $" ⚠️ {unmatchedCount} صنف غير معروف (مميز باللون الأحمر) — يرجى مراجعته وحذفه أو تصحيحه."
+                msg &= vbCrLf & $"⚠️ الأصناف غير المعروفة (باللون الأحمر): {unmatchedCount} — سيتم حذفها يدوياً أو تصحيحها."
             End If
+            
+            msg &= vbCrLf & $"📊 إجمالي الأصناف في الجدول حالياً: {_allQuoteDetails.Count}"
+            
             RaiseEvent RequestSnackbar(msg)
         End Sub
 
@@ -597,13 +636,43 @@ Namespace ViewModels
         Private Sub OnDetailPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             Dim detail = CType(sender, QuoteDetail)
             
+            If e.PropertyName = NameOf(QuoteDetail.Barcode) Then
+                If _isUpdatingDetail OrElse String.IsNullOrWhiteSpace(detail.Barcode) Then Return
+                
+                Dim found = _productService.GetProductByBarcode(detail.Barcode)
+                If found IsNot Nothing Then
+                    _isUpdatingDetail = True
+                    Try
+                        ' Map for ProductID lookup
+                        _selectedProductsMap(found.ProductID) = found
+                        
+                        detail.ProductName = found.ProductName
+                        detail.UnitName = found.UnitName
+                        detail.QuotedPrice = found.SalePrice
+                        detail.ProductID = found.ProductID
+                        detail.IsUnmatched = False
+                    Finally
+                        _isUpdatingDetail = False
+                    End Try
+                End If
+            End If
+
             If e.PropertyName = NameOf(QuoteDetail.ProductID) Then
                 ' Default the quote price to the global standard sale price on first select
                 Dim prod As Product = Nothing
                 If _selectedProductsMap.TryGetValue(detail.ProductID, prod) Then
-                    detail.QuotedPrice = prod.SalePrice
-                    detail.Barcode = prod.Barcode
-                    detail.UnitName = prod.UnitName
+                    ' Safeguard updates to avoid circular property changes
+                    If _isUpdatingDetail Then Return
+                    
+                    _isUpdatingDetail = True
+                    Try
+                        detail.QuotedPrice = prod.SalePrice
+                        detail.Barcode = prod.Barcode
+                        detail.UnitName = prod.UnitName
+                        detail.ProductName = prod.ProductName
+                    Finally
+                        _isUpdatingDetail = False
+                    End Try
                 End If
             End If
             

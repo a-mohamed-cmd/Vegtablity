@@ -207,20 +207,12 @@
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                             <TextBlock Text="الأصناف المدرجة والأسعار" FontSize="18" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding DetailsTotalCount, StringFormat='(إجمالي الأصناف: {0})'}" FontSize="14" Foreground="#94A3B8" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            
                             <Button Content="➕ إضافة صنف" Command="{Binding AddItemCommand}"
                                     Style="{DynamicResource ModernButtonStyle}"
                                     Background="#EEF2FF" Foreground="#4F46E5" BorderBrush="#4F46E5" 
                                     Margin="20,0,0,0" Padding="15,5"/>
-
-                            <!-- Quotation Details Pagination (at the top for easy access) -->
-                            <StackPanel Orientation="Horizontal" Margin="40,0,0,0" VerticalAlignment="Center"
-                                        Visibility="{Binding CurrentQuote.QuoteID, Converter={StaticResource IdToVisibilityConverter}}">
-                                <Button Content="▶" Command="{Binding PrevDetailsPageCommand}" IsEnabled="{Binding CanGoPrevDetails}"
-                                        Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#475569" Width="30" Padding="0"/>
-                                <TextBlock Text="{Binding DetailsPageLabel}" Margin="15,0" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#64748B"/>
-                                <Button Content="◀" Command="{Binding NextDetailsPageCommand}" IsEnabled="{Binding CanGoNextDetails}"
-                                        Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#475569" Width="30" Padding="0"/>
-                            </StackPanel>
                         </StackPanel>
                         <!-- The DataGrid -->
                         <DataGrid x:Name="dgQuoteDetails" Grid.Row="1" ItemsSource="{Binding CurrentQuote.Details}" AutoGenerateColumns="False" 
@@ -335,8 +327,7 @@
                         </DataGrid>
 
                         <!-- Quotation Details Pagination (Bottom Bar) -->
-                        <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,1" CornerRadius="0,0,12,12" Padding="15,6"
-                                Visibility="{Binding CurrentQuote.QuoteID, Converter={StaticResource IdToVisibilityConverter}}">
+                        <Border Grid.Row="2" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,1" CornerRadius="0,0,12,12" Padding="15,6">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>

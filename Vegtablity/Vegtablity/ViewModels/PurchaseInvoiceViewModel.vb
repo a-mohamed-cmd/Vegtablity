@@ -326,11 +326,14 @@ Namespace ViewModels
             Dim result = System.Windows.MessageBox.Show("هل أنت متأكد من ترحيل الفاتورة؟ لن يمكنك التعديل عليها أو حذفها بعد الترحيل، وسيتم تحديث المخزون وتوليد القيود المحاسبية الآلية.", "تأكيد الترحيل", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
             If result = System.Windows.MessageBoxResult.Yes Then
                 Try
-                    CurrentInvoice.IsPosted = True
-                    _invoiceService.SaveInvoice(CurrentInvoice)
+                    Dim userID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
+                    _invoiceService.PostInvoice(CurrentInvoice.InvID, userID)
+                    
+                    ' Reload To Refresh UI state (IsPosted, JournalEntries, etc.)
+                    LoadInvoice(CurrentInvoice.InvID)
+                    
                     RaiseEvent RequestSnackbar("✅ تم ترحيل الفاتورة بنجاح")
                 Catch ex As Exception
-                    CurrentInvoice.IsPosted = False
                     System.Windows.MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
                 End Try
             End If
@@ -416,6 +419,9 @@ Namespace ViewModels
                         detail.Quantity = 1
                         detail.UnitPrice = prod.PurchasePrice ' Use PurchasePrice for Purchases
                         detail.Barcode = prod.Barcode ' Sync Barcode
+                        detail.ProductName = prod.ProductName
+                        detail.ProductNameEn = prod.ProductNameEn
+                        detail.UnitName = prod.UnitName
                     End If
                 End If
             End If
