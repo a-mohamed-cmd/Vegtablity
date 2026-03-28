@@ -3,8 +3,8 @@
 ; Non-commercial use only
 
 #define MyAppName "Vegtablity"
-#define MyAppVersion "5"
-#define MyAppPublisher "MohamedRagab"
+#define MyAppVersion "7"
+#define MyAppPublisher "Mohamed Ragab"
 #define MyAppURL "www.mohamedRagab.com"
 #define MyAppExeName "Vegtablity.exe"
 #define MyAppAssocName MyAppName + " File"
@@ -14,7 +14,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{FBF3B1A0-1EF9-4E68-9F3D-5A79FF7516D7}
+AppId={{54828CDB-0437-4673-8078-DC05961B3078}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -29,7 +29,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=D:\VB.NET\backup\Vegtablity\setup\Output
-OutputBaseFilename=Vegtablity_SetupV5
+OutputBaseFilename=Vegtablity_SetupV7
 SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\lettuce.ico
 SolidCompression=yes
 WizardStyle=modern dynamic

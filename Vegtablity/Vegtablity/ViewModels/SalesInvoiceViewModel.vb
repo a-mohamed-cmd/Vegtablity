@@ -575,16 +575,20 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecutePrint(parameter As Object)
-            Dim customerName As String = ""
-            If CurrentInvoice.PartnerID.HasValue Then
-                Dim partner = Customers.FirstOrDefault(Function(p) p.PartnerID = CurrentInvoice.PartnerID.Value)
-                If partner IsNot Nothing Then
-                    customerName = partner.PartnerName
+            Try
+                ' جلب البيانات "الطازجة" من قاعدة البيانات باستخدام الإجراء المخزن المخصص للطباعة
+                Dim reportData = _invoiceService.GetInvoiceForReport(CurrentInvoice.InvID)
+                
+                If reportData Is Nothing OrElse reportData.Header Is Nothing Then
+                    System.Windows.MessageBox.Show("فشل جلب بيانات الفاتورة من القاعدة للطباعة.", "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                    Return
                 End If
-            End If
 
-            Dim printer As New InvoicePrinter()
-            printer.PrintSalesInvoice(CurrentInvoice, customerName)
+                Dim printer As New InvoicePrinter()
+                printer.PrintSalesInvoice(reportData)
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ أثناء التحضير للطباعة: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End Try
         End Sub
 
         Private Function ValidateStockForAllItems() As Boolean

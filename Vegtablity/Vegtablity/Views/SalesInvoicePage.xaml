@@ -342,7 +342,18 @@
                                 </DataGridTemplateColumn>
 
                                 <!-- Total Price -->
-                                <DataGridTextColumn Header="الإجمالي" Binding="{Binding TotalPrice, Mode=OneWay, StringFormat={}{0:N2}}" Width="1*" IsReadOnly="True" Foreground="#0F172A" FontWeight="Bold"/>
+                                <DataGridTemplateColumn Header="الإجمالي" Width="1*" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding TotalPrice, Mode=OneWay, StringFormat={}{0:N2}}"
+                                                     PreviewKeyDown="Total_PreviewKeyDown"
+                                                     GotFocus="TextBox_GotFocus"
+                                                     IsReadOnly="True"
+                                                     BorderThickness="0" Background="Transparent"
+                                                     TextAlignment="Center" FontWeight="Bold" Foreground="#0F172A"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
 
                                 <!-- Delete -->
                                 <DataGridTemplateColumn Header="حذف" Width="60">

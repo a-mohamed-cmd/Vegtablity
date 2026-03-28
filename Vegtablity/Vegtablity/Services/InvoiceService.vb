@@ -245,6 +245,19 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure)
             End Using
         End Sub
+        ''' <summary>
+        ''' يجلب بيانات الفاتورة المخصصة للطباعة من الإجراء المخزن sp_Report_InvoicePrint
+        ''' </summary>
+        Public Function GetInvoiceForReport(invID As Integer) As Models.InvoiceReportData
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Using multi = conn.QueryMultiple(Helpers.StoredProcedures.SP_REPORT_INVOICE_PRINT, New With {.InvID = invID}, commandType:=CommandType.StoredProcedure)
+                    Dim result As New Models.InvoiceReportData()
+                    result.Header = multi.Read(Of Models.InvoiceReportHeader)().FirstOrDefault()
+                    result.Details = multi.Read(Of Models.InvoiceReportItem)().ToList()
+                    Return result
+                End Using
+            End Using
+        End Function
     End Class
 End Namespace
 

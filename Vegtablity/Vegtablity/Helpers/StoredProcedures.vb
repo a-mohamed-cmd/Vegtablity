@@ -203,5 +203,6 @@ Namespace Helpers
         Public Const SP_REPORT_CUSTOMERINVOICESDETAIL As String = "[Sales].[sp_Report_CustomerInvoicesDetail]"
         Public Const SP_REPORT_CUSTOMERPRODUCTSALES As String = "[Sales].[sp_Report_CustomerProductSales]"
 
+        Public Const SP_REPORT_INVOICE_PRINT As String = "[Sales].[sp_Report_InvoicePrint]"
     End Class
 End Namespace

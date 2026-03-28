@@ -185,7 +185,7 @@ Namespace Views
 
         Private Sub Price_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
-                ' Force the binding to commit the typed value BEFORE adding a new row
+                ' تحديث قيمة الـ Binding أولاً
                 Dim tb = TryCast(sender, TextBox)
                 If tb IsNot Nothing Then
                     Dim binding = tb.GetBindingExpression(TextBox.TextProperty)
@@ -193,14 +193,23 @@ Namespace Views
                 End If
 
                 e.Handled = True
-                
-                ' Add new row
+
+                ' الانتقال لعمود الإجمالي (العمود التالي رقم 4)
+                MoveFocusToNextColumn(TryCast(sender, TextBox), 1)
+            End If
+        End Sub
+
+        Private Sub Total_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key = Key.Enter Then
+                e.Handled = True
+
+                ' إضافة صف جديد
                 Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
                 If vm IsNot Nothing AndAlso vm.AddItemCommand.CanExecute(Nothing) Then
                     vm.AddItemCommand.Execute(Nothing)
                 End If
-                
-                ' Focus the barcode cell of the newly added row
+
+                ' الانتقال لخانة كود الصنف (Barcode) في الصف الجديد
                 FocusLastRowBarcode()
             End If
         End Sub
