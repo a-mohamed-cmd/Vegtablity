@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "Vegtablity"
-#define MyAppVersion "7"
+#define MyAppVersion "11"
 #define MyAppPublisher "Mohamed Ragab"
 #define MyAppURL "www.mohamedRagab.com"
 #define MyAppExeName "Vegtablity.exe"
@@ -29,7 +29,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=D:\VB.NET\backup\Vegtablity\setup\Output
-OutputBaseFilename=Vegtablity_SetupV7
+OutputBaseFilename=Vegtablity_SetupV11
 SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\lettuce.ico
 SolidCompression=yes
 WizardStyle=modern dynamic

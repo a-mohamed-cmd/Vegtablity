@@ -384,14 +384,6 @@ Namespace ViewModels
                 CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(validDetails)
                 RecalculateTotals()
 
-                ' Validate Stock (soft warning)
-                If Not ValidateStockForAllItems() Then
-                    Dim answer = System.Windows.MessageBox.Show("بعض الأصناف تتجاوز المخزون المتاح، هل تريد الحفظ كمسودة؟", "تحذير المخزون", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
-                    If answer = System.Windows.MessageBoxResult.No Then
-                        UpdateDetailsPagination()
-                        Return
-                    End If
-                End If
 
                 If Services.Session.CurrentUser IsNot Nothing Then
                     CurrentInvoice.UserID = Services.Session.CurrentUser.UserID
@@ -430,11 +422,6 @@ Namespace ViewModels
         End Function
 
         Private Sub ExecutePost(parameter As Object)
-            ' Hard Validation: Prevent Posting if Stock is Insufficient
-            If Not ValidateStockForAllItems() Then
-                System.Windows.MessageBox.Show("لا يمكن ترحيل الفاتورة! توجد أصناف تتجاوز المخزون المتاح في المستودع المختار. يرجى تعديل الكميات.", "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
-                Return
-            End If
 
             Dim result = System.Windows.MessageBox.Show("هل أنت متأكد من ترحيل فاتورة المبيعات؟ سيتم خصم المخزون وتوليد القيود بشكل نهائي.", "تأكيد الترحيل", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
             If result = System.Windows.MessageBoxResult.Yes Then

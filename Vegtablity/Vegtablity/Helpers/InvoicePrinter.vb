@@ -9,6 +9,7 @@ Public Class InvoicePrinter
     Private _reportData As Vegtablity.Models.InvoiceReportData
     Private _printFontNormal As Font
     Private _printFontBold As Font
+    Private _printfontname As Font
 
     ' ─── حالة الترقيم عبر الصفحات ───────────────────
     Private _currentItemIndex As Integer
@@ -18,7 +19,7 @@ Public Class InvoicePrinter
     ' ─── ثوابت التخطيط (سنتيمتر → مم بضربها × 10) ──
     Private Const ITEM_START_CM As Single = 7.0F   ' بداية جدول الأصناف
     Private Const ITEM_END_CM As Single = 22.0F  ' نهاية جدول الأصناف
-    Private Const ROW_H_MM As Single = 7.0F  ' ارتفاع الصف
+    Private Const ROW_H_MM As Single = 5.0F  ' ارتفاع الصف (تم تقليص المسافة)
     Private Const PAGE_W_MM As Single = 210.0F ' عرض الصفحة (21 سم)
 
     ' عدد الأصناف في الصفحة = (22-7)*10 / 7 = ~21
@@ -40,9 +41,9 @@ Public Class InvoicePrinter
         _currentPageNumber = 1
         _totalPages = Math.Max(1, CInt(Math.Ceiling(reportData.Details.Count / CDbl(ITEMS_PER_PAGE))))
 
-        _printFontNormal = New Font("Arial", 10, System.Drawing.FontStyle.Regular)
+        _printFontNormal = New Font("Arial", 10, System.Drawing.FontStyle.Bold)
         _printFontBold = New Font("Arial", 10, System.Drawing.FontStyle.Bold)
-
+        _printfontname = New Font("Arial", 12, System.Drawing.FontStyle.Bold)
         Dim pd As New PrintDocument()
         pd.DefaultPageSettings.PaperSize = New PaperSize("Custom", 827, 1102)  ' 21×28 سم
         AddHandler pd.PrintPage, AddressOf OnPrintPage
@@ -67,7 +68,7 @@ Public Class InvoicePrinter
             e.Graphics.PageUnit = GraphicsUnit.Millimeter
 
             Dim g As Graphics = e.Graphics
-            Dim brush As New SolidBrush(Color.Black)
+            Dim brush As Brush = Brushes.Black
             Dim fLeft As New StringFormat() With {.Alignment = StringAlignment.Near}
             Dim fCtr As New StringFormat() With {.Alignment = StringAlignment.Center,
                                                     .LineAlignment = StringAlignment.Center}
@@ -97,7 +98,7 @@ Public Class InvoicePrinter
             End While
 
             ' ─── تذييل الصفحة (25 سم) ────────────────────────
-            Dim footerY As Single = gt(23.5F)
+            Dim footerY As Single = gt(22.5F)
 
             ' المجموع فقط في الصفحة الأخيرة
             If Not hasMore Then
@@ -105,12 +106,12 @@ Public Class InvoicePrinter
                              _printFontBold, brush, gl(18.0F), footerY, fLeft)
                 Dim tafqeet As String = CurrencyToLetters.Convert(
                     _reportData.Header.TotalAmount, "دينار كويتي", "فلس")
-                g.DrawString(tafqeet, _printFontBold, brush, gl(1.5F), footerY, fLeft)
+                g.DrawString(tafqeet, _printFontBold, brush, gl(2.5F), footerY, fLeft)
             End If
 
             ' ─── رقم الصفحة + رقم الفاتورة في المنتصف ────────
             Dim pageText As String = $"Invoice No: {_reportData.Header.InvID}    |    صفحة {_currentPageNumber} من {_totalPages}"
-            Dim pageRect As New RectangleF(0, gt(25.0F), PAGE_W_MM, 8.0F)
+            Dim pageRect As New RectangleF(0, gt(24.7F), PAGE_W_MM, 8.0F)
             g.DrawString(pageText, _printFontNormal, brush, pageRect, fCtr)
 
             ' ─── هل هناك صفحات أخرى؟ ─────────────────────────
@@ -134,7 +135,7 @@ Public Class InvoicePrinter
                            gl As Func(Of Single, Single), gt As Func(Of Single, Single))
         ' اسم العميل
         Dim rectCust As New RectangleF(gl(2.0F), gt(3.0F), 50.0F, 20.0F)
-        g.DrawString(If(_reportData.Header.PartnerName, ""), _printFontBold, brush, rectCust, fLeft)
+        g.DrawString(If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fLeft)
 
         ' رقم الفاتورة
         g.DrawString("Invoice No:", _printFontNormal, brush, gl(14.5F), gt(3.0F), fLeft)
@@ -156,29 +157,29 @@ Public Class InvoicePrinter
                             gl As Func(Of Single, Single), y As Single,
                             item As Vegtablity.Models.InvoiceReportItem, seq As Integer)
         ' التسلسل
-        g.DrawString(seq.ToString(), _printFontNormal, brush, gl(1.0F), y, fLeft)
+        g.DrawString(seq.ToString(), _printFontNormal, brush, gl(0.8F), y, fLeft)
 
         ' ─── عمود الاسم الإنجليزي (3سم → 8.5سم, عرض 55مم) ───
         Dim enName As String = If(item.ProductNameEn, "")
-        Dim rectEN As New RectangleF(gl(3.0F), y, 55.0F, ROW_H_MM)
+        Dim rectEN As New RectangleF(gl(1.7F), y, 55.0F, ROW_H_MM)
         g.DrawString(enName, _printFontNormal, brush, rectEN, fLeft)
 
         ' ─── عمود الاسم العربي (8.5سم → 13.5سم, عرض 50مم) ───
         Dim arName As String = If(item.ProductName, "")
-        Dim rectAR As New RectangleF(gl(8.5F), y, 50.0F, ROW_H_MM)
+        Dim rectAR As New RectangleF(gl(6.7F), y, 50.0F, ROW_H_MM)
         g.DrawString(arName, _printFontNormal, brush, rectAR, fLeft)
 
         ' الوحدة
-        g.DrawString(If(item.UnitName, "حبة"), _printFontNormal, brush, gl(14.0F), y, fLeft)
+        g.DrawString(If(item.UnitName, ""), _printFontNormal, brush, gl(10.7F), y, fLeft)
 
         ' الكمية
-        g.DrawString(item.Quantity.ToString("N2"), _printFontNormal, brush, gl(15.25F), y, fLeft)
+        g.DrawString(item.Quantity.ToString("N2"), _printFontNormal, brush, gl(13.2F), y, fLeft)
 
         ' السعر
-        g.DrawString(item.UnitPrice.ToString("N3"), _printFontNormal, brush, gl(16.5F), y, fLeft)
+        g.DrawString(item.UnitPrice.ToString("N3"), _printFontNormal, brush, gl(15.4F), y, fLeft)
 
         ' الإجمالي
-        g.DrawString(item.TotalPrice.ToString("N3"), _printFontNormal, brush, gl(19.0F), y, fLeft)
+        g.DrawString(item.TotalPrice.ToString("N3"), _printFontNormal, brush, gl(18.5F), y, fLeft)
     End Sub
 
 End Class
