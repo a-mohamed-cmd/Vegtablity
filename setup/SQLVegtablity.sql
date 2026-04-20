@@ -284,12 +284,19 @@ CREATE PROCEDURE [Sales].[sp_Partner_GetAll]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
-    FROM [Sales].[Partners]
+    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, 
+	  ISNULL((
+            SELECT SUM(JE.DebitAmount - JE.CreditAmount) 
+            FROM [Accounting].[JournalEntries] JE 
+            WHERE JE.AccountID = P.AccountID
+        ), 0) AS CurrentBalance,
+		 IsActive, AccountID
+    FROM [Sales].[Partners] p
     WHERE IsActive = 1 AND (@PartnerType = 'All' OR PartnerType = @PartnerType)
     ORDER BY PartnerID;
 END
 GO
+
 
 -- =============================================
 -- 2. جلب شريك بالـ ID
@@ -3088,7 +3095,8 @@ BEGIN
     FROM [Sales].[InvoiceDetails] d
     INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
     LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
-    WHERE d.InvID = @InvID;
+    WHERE d.InvID = @InvID
+	order by [DetID];
 END
 GO
 
@@ -4404,6 +4412,7 @@ GO
 -- ======================================================================
 -- REPORT 5: تقرير فواتير المبيعات الآجلة (أعمار الديون)
 -- ======================================================================
+
 IF OBJECT_ID('[Reports].[sp_Report_UnpaidInvoicesAging]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_UnpaidInvoicesAging]
 GO
 CREATE PROCEDURE [Reports].[sp_Report_UnpaidInvoicesAging]
@@ -5429,3 +5438,61 @@ BEGIN
     FETCH NEXT @PageSize ROWS ONLY;
 END
 GO
+
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_GetByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID];
+GO
+create PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.*,
+        p.ProductName,
+        p.ProductNameEn,
+        u.UnitName,
+        p.Barcode
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE d.InvID = @InvID
+	order by [DetID];
+END
+GO
+
+
+IF OBJECT_ID('[Sales].[sp_Report_InvoicePrint]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_InvoicePrint];
+GO
+create  PROCEDURE [Sales].[sp_Report_InvoicePrint]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. بيانات رأس الفاتورة الضرورية فقط للطباعة
+    SELECT 
+        H.InvID, 
+        H.InvDate, 
+        H.TotalAmount, -- مستخدم للأرقام وللتفقيط (الكتابة بالحروف)
+        P.PartnerName, 
+        CH.AccountCode,
+		h.Notes
+    FROM [Sales].[InvoiceHeader] H
+    LEFT JOIN [Sales].[Partners] P ON H.PartnerID = P.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] CH ON P.[AccountID] = CH.[AccountID]
+    WHERE H.InvID = @InvID;
+
+    -- 2. بيانات الأصناف المطلوبة فقط للجدول
+    SELECT 
+        PR.ProductName, 
+        PR.ProductNameEn,
+        UN.UnitName,
+        D.Quantity, 
+        D.UnitPrice, 
+        D.TotalPrice
+    FROM [Sales].[InvoiceDetails] D
+    JOIN [Inventory].[Products] PR ON D.ProductID = PR.ProductID
+    LEFT JOIN [Settings].[Units] UN ON PR.UnitID = UN.UnitID
+    WHERE D.InvID = @InvID
+	order by d.DetID;
+END

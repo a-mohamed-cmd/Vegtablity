@@ -137,6 +137,12 @@ Public Class InvoicePrinter
         Dim rectCust As New RectangleF(gl(2.0F), gt(3.0F), 50.0F, 20.0F)
         g.DrawString(If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fLeft)
 
+        ' الملاحظات
+        If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
+            Dim rectNotes As New RectangleF(gl(2.0F), gt(4.0F), 100.0F, 15.0F)
+            g.DrawString("ملاحظات: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes, fLeft)
+        End If
+
         ' رقم الفاتورة
         g.DrawString("Invoice No:", _printFontNormal, brush, gl(14.5F), gt(3.0F), fLeft)
         g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(18.0F), gt(3.0F), fLeft)

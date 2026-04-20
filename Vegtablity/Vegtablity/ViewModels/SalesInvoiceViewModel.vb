@@ -637,12 +637,15 @@ Namespace ViewModels
             If e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
                 ' Auto-fill Price and reset Quantity based on Product Select for Sales
                 ' Try to find product in current list OR in our global selection map
+
                 Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
 
-                If prod IsNot Nothing Then
+                'If prod IsNot Nothing Then
+                '    If Not prod.ProductID = detail.ProductID Then
+                '        detail.Quantity = 1
+                '    End If
 
-                    detail.Quantity = 1
-                    detail.ProductName = prod.ProductName
+                detail.ProductName = prod.ProductName
                     detail.ProductNameEn = prod.ProductNameEn
                     detail.UnitName = prod.UnitName
 
@@ -673,7 +676,7 @@ Namespace ViewModels
                     End If
                     detail.Barcode = prod.Barcode ' Sync Barcode
                 End If
-            End If
+
 
             If e.PropertyName = NameOf(InvoiceDetail.Quantity) OrElse e.PropertyName = NameOf(InvoiceDetail.UnitPrice) OrElse e.PropertyName = NameOf(InvoiceDetail.TotalPrice) Then
                 RecalculateTotals()

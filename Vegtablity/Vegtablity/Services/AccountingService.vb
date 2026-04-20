@@ -172,6 +172,12 @@ Namespace Services
                     New With {.StartDate = startDate, .EndDate = endDate, .ReportLevel = reportLevel},
                     commandType:=CommandType.StoredProcedure)
                 report.Items = results.ToList()
+
+                ' Calculate totals
+                report.TotalOpeningBalance = report.Items.Sum(Function(i) i.OpeningBalance)
+                report.TotalPeriodDebit = report.Items.Sum(Function(i) i.PeriodDebit)
+                report.TotalPeriodCredit = report.Items.Sum(Function(i) i.PeriodCredit)
+                report.TotalEndingBalance = report.Items.Sum(Function(i) i.EndingBalance)
             End Using
             Return report
         End Function

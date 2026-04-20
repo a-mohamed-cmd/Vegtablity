@@ -13,6 +13,7 @@ Namespace Models
         Public Property TotalAmount As Decimal
         Public Property PartnerName As String
         Public Property AccountCode As String
+        Public Property Notes As String
     End Class
 
     Public Class InvoiceReportItem
