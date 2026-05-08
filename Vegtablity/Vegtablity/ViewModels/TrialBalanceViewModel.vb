@@ -22,6 +22,17 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _startDateText As String = New Date(Now.Year, Now.Month, 1).ToString("dd/MM/yyyy")
+        Public Property StartDateText As String
+            Get
+                Return _startDateText
+            End Get
+            Set(value As String)
+                _startDateText = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
         Private _endDate As Date = Now
         Public Property EndDate As Date
             Get
@@ -29,6 +40,17 @@ Namespace ViewModels
             End Get
             Set(value As Date)
                 _endDate = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
+        Private _endDateText As String = Now.ToString("dd/MM/yyyy")
+        Public Property EndDateText As String
+            Get
+                Return _endDateText
+            End Get
+            Set(value As String)
+                _endDateText = value
                 OnPropertyChanged()
             End Set
         End Property

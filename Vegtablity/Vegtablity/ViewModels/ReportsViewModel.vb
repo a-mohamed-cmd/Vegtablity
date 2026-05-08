@@ -88,6 +88,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _selectedStartDateText As String = New DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).ToString("dd/MM/yyyy")
+        Public Property SelectedStartDateText As String
+            Get
+                Return _selectedStartDateText
+            End Get
+            Set(value As String)
+                SetProperty(_selectedStartDateText, value)
+            End Set
+        End Property
+
         Private _selectedEndDate As DateTime
         Public Property SelectedEndDate As DateTime
             Get
@@ -95,6 +105,16 @@ Namespace ViewModels
             End Get
             Set(value As DateTime)
                 SetProperty(_selectedEndDate, value)
+            End Set
+        End Property
+
+        Private _selectedEndDateText As String = DateTime.Now.ToString("dd/MM/yyyy")
+        Public Property SelectedEndDateText As String
+            Get
+                Return _selectedEndDateText
+            End Get
+            Set(value As String)
+                SetProperty(_selectedEndDateText, value)
             End Set
         End Property
 

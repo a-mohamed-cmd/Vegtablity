@@ -25,7 +25,8 @@ Namespace Services
                         .Address = info.Address,
                         .Phone = info.Phone,
                         .Email = info.Email,
-                        .Logo = info.Logo
+                        .Logo = info.Logo,
+                        .UnifiedPartnerSearch = info.UnifiedPartnerSearch
                     },
                     commandType:=CommandType.StoredProcedure
                 )

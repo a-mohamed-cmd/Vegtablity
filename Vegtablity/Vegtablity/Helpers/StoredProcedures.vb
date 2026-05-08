@@ -81,6 +81,7 @@ Namespace Helpers
         Public Const SP_PARTNER_SAVE As String = "[Sales].[sp_Partner_Save]"
         Public Const SP_PARTNER_DELETE As String = "[Sales].[sp_Partner_Delete]"
         Public Const SP_PARTNER_SEARCH As String = "[Sales].[sp_Partner_Search]"
+        Public Const SP_PARTNER_SEARCH_ALL As String = "[Sales].[sp_Partner_SearchAll]"   ' بحث موحد (عملاء + موردون)
 
         ' =============================================
         ' Accounting Schema - Chart of Accounts

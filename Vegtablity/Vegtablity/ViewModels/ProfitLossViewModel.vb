@@ -19,6 +19,19 @@ Namespace ViewModels
             Set(value As Date)
                 _startDate = value
                 OnPropertyChanged()
+                _startDateText = value.ToString("dd/MM/yyyy")
+                OnPropertyChanged(NameOf(StartDateText))
+            End Set
+        End Property
+
+        Private _startDateText As String = New Date(Now.Year, Now.Month, 1).ToString("dd/MM/yyyy")
+        Public Property StartDateText As String
+            Get
+                Return _startDateText
+            End Get
+            Set(value As String)
+                _startDateText = If(value, "")
+                OnPropertyChanged(NameOf(StartDateText))
             End Set
         End Property
 
@@ -30,6 +43,19 @@ Namespace ViewModels
             Set(value As Date)
                 _endDate = value
                 OnPropertyChanged()
+                _endDateText = value.ToString("dd/MM/yyyy")
+                OnPropertyChanged(NameOf(EndDateText))
+            End Set
+        End Property
+
+        Private _endDateText As String = Now.ToString("dd/MM/yyyy")
+        Public Property EndDateText As String
+            Get
+                Return _endDateText
+            End Get
+            Set(value As String)
+                _endDateText = If(value, "")
+                OnPropertyChanged(NameOf(EndDateText))
             End Set
         End Property
 

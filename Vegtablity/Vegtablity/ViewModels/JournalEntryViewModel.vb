@@ -1,4 +1,4 @@
-Imports System.Collections.ObjectModel
+﻿Imports System.Collections.ObjectModel
 Imports System.ComponentModel
 Imports Vegtablity.Models
 Imports Vegtablity.Services
@@ -32,6 +32,23 @@ Namespace ViewModels
                 _currentJournal = value
                 OnPropertyChanged()
                 UpdateTotals()
+                ' مزامنة نص التاريخ
+                If value IsNot Nothing Then
+                    _jDateText = value.JDate.ToString("dd/MM/yyyy")
+                    OnPropertyChanged(NameOf(JDateText))
+                End If
+            End Set
+        End Property
+
+        ''' <summary>نص تاريخ القيد للإدخال اليدوي — يُزامن مع CurrentJournal.JDate</summary>
+        Private _jDateText As String = DateTime.Now.ToString("dd/MM/yyyy")
+        Public Property JDateText As String
+            Get
+                Return _jDateText
+            End Get
+            Set(value As String)
+                _jDateText = If(value, "")
+                OnPropertyChanged(NameOf(JDateText))
             End Set
         End Property
 
@@ -50,6 +67,30 @@ Namespace ViewModels
         End Property
 
         Private _accounts As ObservableCollection(Of Account)
+        
+        Private _filteredAccounts As ObservableCollection(Of Account)
+        Public Property FilteredAccounts As ObservableCollection(Of Account)
+            Get
+                Return _filteredAccounts
+            End Get
+            Set(value As ObservableCollection(Of Account))
+                _filteredAccounts = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
+        Public Sub FilterAccounts(searchText As String)
+            If String.IsNullOrWhiteSpace(searchText) Then
+                FilteredAccounts = Accounts
+            Else
+                Dim lower = searchText.ToLower()
+                FilteredAccounts = New ObservableCollection(Of Account)(
+                    System.Linq.Enumerable.Where(Accounts, Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower().Contains(lower)) OrElse 
+                                               (a.AccountCode IsNot Nothing AndAlso a.AccountCode.Contains(searchText)))
+                )
+            End If
+        End Sub
+
         Public Property Accounts As ObservableCollection(Of Account)
             Get
                 Return _accounts

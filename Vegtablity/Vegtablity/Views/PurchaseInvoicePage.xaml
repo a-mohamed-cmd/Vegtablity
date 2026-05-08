@@ -119,16 +119,29 @@
                 <!-- Date -->
                 <StackPanel Grid.Row="0" Grid.Column="0">
                     <TextBlock Text="تاريخ الفاتورة *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <DatePicker SelectedDate="{Binding CurrentInvoice.InvDate, UpdateSourceTrigger=PropertyChanged}" 
-                                IsEnabled="{Binding IsEditAllowed}"/>
+                    <TextBox x:Name="TxtInvDate"
+                             Text="{Binding InvDateText, UpdateSourceTrigger=PropertyChanged}"
+                             LostFocus="InvDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                             GotFocus="TextBox_GotFocus"
+                             IsEnabled="{Binding IsEditAllowed}"
+                             Style="{DynamicResource ModernTextBoxStyle}"
+                             ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
                 </StackPanel>
 
-                <!-- Supplier -->
+                <!-- Partner Search (عملاء + موردون) -->
                 <StackPanel Grid.Row="0" Grid.Column="2">
-                    <TextBlock Text="المورد *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <ComboBox ItemsSource="{Binding Vendors}" 
-                              SelectedValue="{Binding CurrentInvoice.PartnerID, UpdateSourceTrigger=PropertyChanged}" 
-                              SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"
+                    <TextBlock Text="المورد / العميل *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                    <ComboBox x:Name="CmbPartner"
+                              ItemsSource="{Binding FilteredPartners}"
+                              SelectedValue="{Binding CurrentInvoice.PartnerID, UpdateSourceTrigger=PropertyChanged}"
+                              SelectedValuePath="PartnerID"
+                              DisplayMemberPath="SearchText"
+                              IsEditable="True"
+                              IsTextSearchEnabled="False"
+                              StaysOpenOnEdit="True"
+                              TextBoxBase.TextChanged="PartnerSearch_TextChanged"
+                              PreviewKeyDown="PartnerComboBox_PreviewKeyDown"
+                              LostFocus="PartnerComboBox_LostFocus"
                               IsEnabled="{Binding IsEditAllowed}"/>
                 </StackPanel>
 
@@ -223,7 +236,8 @@
                 <DataGrid x:Name="dgInvoiceDetails" Grid.Row="1" ItemsSource="{Binding CurrentInvoice.Details}" AutoGenerateColumns="False" 
                           CanUserAddRows="False" SelectionMode="Single"
                           IsReadOnly="{Binding IsDataGridReadOnly}"
-                          MinHeight="300" RowHeight="35">
+                          MinHeight="300" RowHeight="35"
+                          PreviewKeyDown="dgInvoiceDetails_ArrowNav_PreviewKeyDown">
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow">
                             <Style.Triggers>

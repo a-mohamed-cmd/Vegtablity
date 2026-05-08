@@ -20,7 +20,20 @@ Namespace ViewModels
             Set(value As Date)
                 _closingDate = value
                 OnPropertyChanged()
+                _closingDateText = value.ToString("dd/MM/yyyy")
+                OnPropertyChanged(NameOf(ClosingDateText))
                 PreviewNetProfit()
+            End Set
+        End Property
+
+        Private _closingDateText As String = New Date(Now.Year, 12, 31).ToString("dd/MM/yyyy")
+        Public Property ClosingDateText As String
+            Get
+                Return _closingDateText
+            End Get
+            Set(value As String)
+                _closingDateText = If(value, "")
+                OnPropertyChanged(NameOf(ClosingDateText))
             End Set
         End Property
 

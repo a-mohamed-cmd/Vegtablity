@@ -17,9 +17,58 @@ Namespace ViewModels
         Private ReadOnly _accountingService As AccountingService
 
         ' --- Collections for UI Dropdowns ---
-        Public Property Vendors As ObservableCollection(Of Partner)
+        Public Property AllPartners As List(Of Partner)          ' المصدر الكامل (لا يتغير)
+        Public Property FilteredPartners As ObservableCollection(Of Partner)  ' المعروض في القائمة
         Public Property Warehouses As ObservableCollection(Of Warehouse)
         Public Property CashAccounts As ObservableCollection(Of Account)  ' حسابات النقدية (11xx)
+
+        ' --- Partner Search Text ---
+        Private _partnerSearchText As String = ""
+        Public Property PartnerSearchText As String
+            Get
+                Return _partnerSearchText
+            End Get
+            Set(value As String)
+                _partnerSearchText = If(value, "")
+                OnPropertyChanged(NameOf(PartnerSearchText))
+            End Set
+        End Property
+
+        ' --- Invoice Date Text (إدخال يدوي مرن) ---
+        Private _invDateText As String = ""
+        Public Property InvDateText As String
+            Get
+                Return _invDateText
+            End Get
+            Set(value As String)
+                _invDateText = If(value, "")
+                OnPropertyChanged(NameOf(InvDateText))
+            End Set
+        End Property
+
+        Public Sub SyncDateText()
+            If CurrentInvoice IsNot Nothing Then
+                InvDateText = CurrentInvoice.InvDate.ToString("dd/MM/yyyy")
+            End If
+        End Sub
+
+        Private Sub ApplyPartnerFilter()
+            Dim txt = _partnerSearchText.Trim()
+            
+            Dim settingsSvc As New Vegtablity.Services.SettingsService()
+            Dim compInfo = settingsSvc.GetCompanyInfo()
+            Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
+
+            Dim partnerList As System.Collections.Generic.List(Of Partner)
+            If isUnified Then
+                partnerList = _partnerService.SearchAllPartners(txt)
+            Else
+                partnerList = _partnerService.SearchPartners("Supplier", txt)
+            End If
+
+            FilteredPartners = New ObservableCollection(Of Partner)(partnerList)
+            OnPropertyChanged(NameOf(FilteredPartners))
+        End Sub
 
         ' Event raised to ask the View to show a Snackbar notification
         Public Event RequestSnackbar As Action(Of String)
@@ -94,7 +143,8 @@ Namespace ViewModels
 
         Public Sub New()
             If System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then
-                Vendors = New ObservableCollection(Of Partner)()
+                AllPartners = New List(Of Partner)()
+                FilteredPartners = New ObservableCollection(Of Partner)()
                 Warehouses = New ObservableCollection(Of Warehouse)()
                 Products = New ObservableCollection(Of Product)()
                 CurrentInvoice = New InvoiceHeader() With {
@@ -110,7 +160,8 @@ Namespace ViewModels
             _warehouseService = New WarehouseService()
             _accountingService = New AccountingService()
 
-            Vendors = New ObservableCollection(Of Partner)()
+            AllPartners = New List(Of Partner)()
+            FilteredPartners = New ObservableCollection(Of Partner)()
             Warehouses = New ObservableCollection(Of Warehouse)()
             Products = New ObservableCollection(Of Product)()
             CashAccounts = New ObservableCollection(Of Account)()
@@ -133,11 +184,20 @@ Namespace ViewModels
         End Sub
 
         Private Sub LoadLookups()
-            Dim vendorsList = _partnerService.GetAllPartners("Supplier")
-            Vendors.Clear()
-            For Each v In vendorsList
-                Vendors.Add(v)
-            Next
+            Dim settingsSvc As New Vegtablity.Services.SettingsService()
+            Dim compInfo = settingsSvc.GetCompanyInfo()
+            Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
+
+            Dim partnerList As System.Collections.Generic.List(Of Partner)
+            If isUnified Then
+                partnerList = _partnerService.SearchAllPartners()
+            Else
+                partnerList = _partnerService.GetAllPartners("Supplier")
+            End If
+            
+            AllPartners = partnerList
+            FilteredPartners = New ObservableCollection(Of Partner)(partnerList)
+            OnPropertyChanged(NameOf(FilteredPartners))
 
             Dim warehouseList = _warehouseService.GetAllWarehouses()
             Warehouses.Clear()

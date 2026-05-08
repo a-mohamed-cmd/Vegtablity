@@ -1,4 +1,4 @@
-<UserControl x:Class="Views.ReportsPage"
+﻿<UserControl x:Class="Views.ReportsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -146,12 +146,22 @@
                     <!-- Row 0: Date Filters & Main Actions -->
                     <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,20,0">
                         <TextBlock Text="من تاريخ" Foreground="#64748B" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                        <DatePicker SelectedDate="{Binding SelectedStartDate, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
+                        <TextBox Text="{Binding SelectedStartDateText, UpdateSourceTrigger=PropertyChanged}" 
+                                 Width="140"
+                                 LostFocus="StartDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                                 GotFocus="Date_GotFocus"
+                                 Style="{DynamicResource ModernTextBoxStyle}"
+                                 helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,20,0">
                         <TextBlock Text="إلى تاريخ" Foreground="#64748B" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                        <DatePicker SelectedDate="{Binding SelectedEndDate, UpdateSourceTrigger=PropertyChanged}" Width="140"/>
+                        <TextBox Text="{Binding SelectedEndDateText, UpdateSourceTrigger=PropertyChanged}" 
+                                 Width="140"
+                                 LostFocus="EndDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                                 GotFocus="Date_GotFocus"
+                                 Style="{DynamicResource ModernTextBoxStyle}"
+                                 helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
                     </StackPanel>
 
                     <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Left" Content="تحديث البيانات 🔄" Command="{Binding LoadReportCommand}"

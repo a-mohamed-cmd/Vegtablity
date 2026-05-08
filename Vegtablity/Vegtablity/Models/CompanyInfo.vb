@@ -5,5 +5,6 @@ Namespace Models
         Public Property Phone As String
         Public Property Email As String
         Public Property Logo As Byte()
+        Public Property UnifiedPartnerSearch As Boolean = True
     End Class
 End Namespace

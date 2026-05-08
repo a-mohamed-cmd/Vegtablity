@@ -55,6 +55,12 @@
                                 <!-- Email -->
                                 <TextBlock Text="البريد الإلكتروني" FontSize="16" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,10"/>
                                 <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" Height="45" Padding="12,10" FontSize="16" Margin="0,0,0,25" VerticalContentAlignment="Center"/>
+
+                                <!-- System Preferences: Partner Mode -->
+                                <TextBlock Text="تفضيلات النظام" FontSize="16" FontWeight="SemiBold" Foreground="#34495e" Margin="0,15,0,10"/>
+                                <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15">
+                                    <CheckBox IsChecked="{Binding UnifiedPartnerSearch}" Content="تفعيل البحث الموحد (دمج العملاء والموردين معاً في شاشات الفواتير)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
+                                </Border>
                             </StackPanel>
 
                             <!-- Logo Section -->

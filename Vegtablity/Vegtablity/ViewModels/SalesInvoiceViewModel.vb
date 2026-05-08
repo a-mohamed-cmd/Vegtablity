@@ -18,10 +18,61 @@ Namespace ViewModels
         Private ReadOnly _accountingService As AccountingService
 
         ' --- Collections for UI Dropdowns ---
-        Public Property Customers As ObservableCollection(Of Partner)
+        Public Property AllPartners As List(Of Partner)          ' المصدر الكامل (لا يتغير)
+        Public Property FilteredPartners As ObservableCollection(Of Partner)  ' المعروض في القائمة
         Public Property Warehouses As ObservableCollection(Of Warehouse)
         Public Property Products As ObservableCollection(Of Product)
         Public Property CashAccounts As ObservableCollection(Of Account)
+
+        ' --- Partner Search Text (binding من الـ ComboBox) ---
+        Private _partnerSearchText As String = ""
+        Public Property PartnerSearchText As String
+            Get
+                Return _partnerSearchText
+            End Get
+            Set(value As String)
+                _partnerSearchText = If(value, "")
+                OnPropertyChanged(NameOf(PartnerSearchText))
+            End Set
+        End Property
+
+        ' --- Invoice Date Text (إدخال يدوي مرن) ---
+        Private _invDateText As String = ""
+        Public Property InvDateText As String
+            Get
+                Return _invDateText
+            End Get
+            Set(value As String)
+                _invDateText = If(value, "")
+                OnPropertyChanged(NameOf(InvDateText))
+            End Set
+        End Property
+
+        ''' <summary>تزامن نص التاريخ من CurrentInvoice.InvDate</summary>
+        Public Sub SyncDateText()
+            If CurrentInvoice IsNot Nothing Then
+                InvDateText = CurrentInvoice.InvDate.ToString("dd/MM/yyyy")
+            End If
+        End Sub
+
+        ''' <summary>فلترة قائمة الشركاء بحسب نص البحث عبر الـ Database</summary>
+        Private Sub ApplyPartnerFilter()
+            Dim txt = _partnerSearchText.Trim()
+
+            Dim settingsSvc As New Vegtablity.Services.SettingsService()
+            Dim compInfo = settingsSvc.GetCompanyInfo()
+            Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
+
+            Dim partnerList As System.Collections.Generic.List(Of Partner)
+            If isUnified Then
+                partnerList = _partnerService.SearchAllPartners(txt)
+            Else
+                partnerList = _partnerService.SearchPartners("Customer", txt)
+            End If
+
+            FilteredPartners = New ObservableCollection(Of Partner)(partnerList)
+            OnPropertyChanged(NameOf(FilteredPartners))
+        End Sub
 
 
 
@@ -110,7 +161,8 @@ Namespace ViewModels
 
         Public Sub New()
             If System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then
-                Customers = New ObservableCollection(Of Partner)()
+                AllPartners = New List(Of Partner)()
+                FilteredPartners = New ObservableCollection(Of Partner)()
                 Warehouses = New ObservableCollection(Of Warehouse)()
                 Products = New ObservableCollection(Of Product)()
                 CurrentInvoice = New InvoiceHeader() With {
@@ -128,7 +180,8 @@ Namespace ViewModels
             _accountingService = New AccountingService()
             _quoteService = New QuoteService()
 
-            Customers = New ObservableCollection(Of Partner)()
+            AllPartners = New List(Of Partner)()
+            FilteredPartners = New ObservableCollection(Of Partner)()
             Warehouses = New ObservableCollection(Of Warehouse)()
             Products = New ObservableCollection(Of Product)()
             CashAccounts = New ObservableCollection(Of Account)()
@@ -158,9 +211,20 @@ Namespace ViewModels
 
         Private Sub LoadLookups()
             Try
-                Dim customerList = _partnerService.GetAllPartners("Customer")
-                Customers = New ObservableCollection(Of Partner)(customerList)
-                OnPropertyChanged(NameOf(Customers))
+                Dim settingsSvc As New Vegtablity.Services.SettingsService()
+                Dim compInfo = settingsSvc.GetCompanyInfo()
+                Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
+
+                Dim partnerList As System.Collections.Generic.List(Of Partner)
+                If isUnified Then
+                    partnerList = _partnerService.SearchAllPartners("")
+                Else
+                    partnerList = _partnerService.GetAllPartners("Customer")
+                End If
+
+                AllPartners = New List(Of Partner)(partnerList)
+                FilteredPartners = New ObservableCollection(Of Partner)(partnerList)
+                OnPropertyChanged(NameOf(FilteredPartners))
 
                 Dim warehouseList = _warehouseService.GetAllWarehouses()
                 Warehouses = New ObservableCollection(Of Warehouse)(warehouseList)
@@ -384,6 +448,14 @@ Namespace ViewModels
                 CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(validDetails)
                 RecalculateTotals()
 
+                ' Validate Stock (soft warning)
+                If Not ValidateStockForAllItems() Then
+                    Dim answer = System.Windows.MessageBox.Show("بعض الأصناف تتجاوز المخزون المتاح، هل تريد الحفظ كمسودة؟", "تحذير المخزون", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+                    If answer = System.Windows.MessageBoxResult.No Then
+                        UpdateDetailsPagination()
+                        Return
+                    End If
+                End If
 
                 If Services.Session.CurrentUser IsNot Nothing Then
                     CurrentInvoice.UserID = Services.Session.CurrentUser.UserID
@@ -422,6 +494,10 @@ Namespace ViewModels
         End Function
 
         Private Sub ExecutePost(parameter As Object)
+            ' Stock Warning: Notify user but allow posting to continue
+            If Not ValidateStockForAllItems() Then
+                RaiseEvent RequestSnackbar("⚠️ تنبيه: توجد أصناف تتجاوز المخزون المتاح، سيتم الترحيل مع الفارق")
+            End If
 
             Dim result = System.Windows.MessageBox.Show("هل أنت متأكد من ترحيل فاتورة المبيعات؟ سيتم خصم المخزون وتوليد القيود بشكل نهائي.", "تأكيد الترحيل", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
             If result = System.Windows.MessageBoxResult.Yes Then
@@ -562,20 +638,41 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecutePrint(parameter As Object)
-            Try
-                ' جلب البيانات "الطازجة" من قاعدة البيانات باستخدام الإجراء المخزن المخصص للطباعة
-                Dim reportData = _invoiceService.GetInvoiceForReport(CurrentInvoice.InvID)
-                
-                If reportData Is Nothing OrElse reportData.Header Is Nothing Then
-                    System.Windows.MessageBox.Show("فشل جلب بيانات الفاتورة من القاعدة للطباعة.", "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
-                    Return
+            Dim customerName As String = ""
+            Dim accountCode As String = ""
+            If CurrentInvoice.PartnerID.HasValue Then
+                Dim partner = AllPartners.FirstOrDefault(Function(p) p.PartnerID = CurrentInvoice.PartnerID.Value)
+                If partner IsNot Nothing Then
+                    customerName = partner.PartnerName
+                    accountCode = partner.AccountCode
                 End If
+            End If
 
-                Dim printer As New InvoicePrinter()
-                printer.PrintSalesInvoice(reportData)
-            Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء التحضير للطباعة: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
-            End Try
+            Dim reportData As New Models.InvoiceReportData() With {
+                .Header = New Models.InvoiceReportHeader() With {
+                    .InvID = CurrentInvoice.InvID,
+                    .InvDate = CurrentInvoice.InvDate,
+                    .TotalAmount = CurrentInvoice.NetAmount,
+                    .PartnerName = customerName,
+                    .AccountCode = accountCode,
+                    .Notes = CurrentInvoice.Notes
+                },
+                .Details = New System.Collections.Generic.List(Of Models.InvoiceReportItem)()
+            }
+
+            If CurrentInvoice.Details IsNot Nothing Then
+                For Each d In CurrentInvoice.Details
+                    reportData.Details.Add(New Models.InvoiceReportItem() With {
+                        .ProductName = d.ProductName,
+                        .Quantity = d.Quantity,
+                        .UnitPrice = d.UnitPrice,
+                        .TotalPrice = d.TotalPrice
+                    })
+                Next
+            End If
+
+            Dim printer As New InvoicePrinter()
+            printer.PrintSalesInvoice(reportData)
         End Sub
 
         Private Function ValidateStockForAllItems() As Boolean
@@ -637,15 +734,12 @@ Namespace ViewModels
             If e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
                 ' Auto-fill Price and reset Quantity based on Product Select for Sales
                 ' Try to find product in current list OR in our global selection map
-
                 Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
 
-                'If prod IsNot Nothing Then
-                '    If Not prod.ProductID = detail.ProductID Then
-                '        detail.Quantity = 1
-                '    End If
+                If prod IsNot Nothing Then
 
-                detail.ProductName = prod.ProductName
+                    detail.Quantity = 1
+                    detail.ProductName = prod.ProductName
                     detail.ProductNameEn = prod.ProductNameEn
                     detail.UnitName = prod.UnitName
 
@@ -676,7 +770,7 @@ Namespace ViewModels
                     End If
                     detail.Barcode = prod.Barcode ' Sync Barcode
                 End If
-
+            End If
 
             If e.PropertyName = NameOf(InvoiceDetail.Quantity) OrElse e.PropertyName = NameOf(InvoiceDetail.UnitPrice) OrElse e.PropertyName = NameOf(InvoiceDetail.TotalPrice) Then
                 RecalculateTotals()

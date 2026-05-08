@@ -67,6 +67,17 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _unifiedPartnerSearch As Boolean = True
+        Public Property UnifiedPartnerSearch As Boolean
+            Get
+                Return _unifiedPartnerSearch
+            End Get
+            Set(value As Boolean)
+                _unifiedPartnerSearch = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
         ' === Commands ===
         Public Property SaveCommand As RelayCommand
         Public Property SelectLogoCommand As RelayCommand
@@ -86,6 +97,7 @@ Namespace ViewModels
                     Phone = info.Phone
                     Email = info.Email
                     Logo = info.Logo
+                    UnifiedPartnerSearch = info.UnifiedPartnerSearch
                 End If
             Catch ex As Exception
                 ' Error handling
@@ -107,7 +119,8 @@ Namespace ViewModels
                     .Address = Address,
                     .Phone = Phone,
                     .Email = Email,
-                    .Logo = Logo
+                    .Logo = Logo,
+                    .UnifiedPartnerSearch = UnifiedPartnerSearch
                 }
                 _settingsService.SaveCompanyInfo(info)
                 MessageBox.Show("تم حفظ الإعدادات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)

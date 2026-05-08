@@ -5496,3 +5496,105 @@ BEGIN
     WHERE D.InvID = @InvID
 	order by d.DetID;
 END
+go 
+IF OBJECT_ID('[Sales].[sp_Partner_SearchAll]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Partner_SearchAll];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_SearchAll]
+    @SearchText NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        p.PartnerID,
+        p.PartnerName,
+        p.PartnerType,
+        p.Phone,
+        p.IsActive,
+        p.AccountID,
+        c.AccountCode
+    FROM [Sales].[Partners] p
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON p.AccountID = c.AccountID
+    WHERE p.IsActive = 1
+      AND (
+           @SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR c.AccountCode LIKE '%' + @SearchText + '%'
+      )
+    ORDER BY p.PartnerType, p.PartnerName;
+END
+GO
+
+
+ 
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'UnifiedPartnerSearch')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD UnifiedPartnerSearch BIT NOT NULL DEFAULT 1;
+END
+GO
+ 
+ 
+ IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_CompanySettings_Save];
+GO
+create PROCEDURE [Settings].[sp_CompanySettings_Save]
+    @CompanyName NVARCHAR(200),
+    @Address NVARCHAR(255) = NULL,
+    @Phone NVARCHAR(50) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Logo VARBINARY(MAX) = NULL,
+    @UnifiedPartnerSearch BIT = 1
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
+    BEGIN
+        UPDATE [Settings].[CompanySettings]
+        SET CompanyName = @CompanyName,
+            Address = @Address,
+            Phone = @Phone,
+            Email = @Email,
+            Logo = @Logo,
+            UnifiedPartnerSearch = @UnifiedPartnerSearch
+        WHERE SettingID = 1;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch);
+    END
+END
+GO
+ 
+
+ IF OBJECT_ID('[Sales].[sp_Partner_Search]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Partner_Search];
+GO
+create PROCEDURE [Sales].[sp_Partner_Search]
+    @PartnerType NVARCHAR(20),
+    @SearchText NVARCHAR(150)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.PartnerID, 
+        p.PartnerName, 
+        p.PartnerType, 
+        p.Phone, 
+        p.Address, 
+        p.CurrentBalance, 
+        p.IsActive, 
+        p.AccountID,
+        c.AccountCode
+    FROM [Sales].[Partners] p
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON p.AccountID = c.AccountID
+    WHERE p.IsActive = 1 AND p.PartnerType = @PartnerType
+      AND (
+           @SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%' 
+           OR p.Phone LIKE '%' + @SearchText + '%'
+           OR c.AccountCode LIKE '%' + @SearchText + '%'
+      )
+    ORDER BY p.PartnerID;
+END
+GO
+ 

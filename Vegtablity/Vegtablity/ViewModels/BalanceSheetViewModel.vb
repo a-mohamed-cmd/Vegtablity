@@ -19,6 +19,21 @@ Namespace ViewModels
             Set(value As Date)
                 _asOfDate = value
                 OnPropertyChanged()
+                ' مزامنة نص التاريخ تلقائياً
+                _asOfDateText = value.ToString("dd/MM/yyyy")
+                OnPropertyChanged(NameOf(AsOfDateText))
+            End Set
+        End Property
+
+        ''' <summary>نص التاريخ للإدخال اليدوي — يُزامن مع AsOfDate</summary>
+        Private _asOfDateText As String = Now.ToString("dd/MM/yyyy")
+        Public Property AsOfDateText As String
+            Get
+                Return _asOfDateText
+            End Get
+            Set(value As String)
+                _asOfDateText = If(value, "")
+                OnPropertyChanged(NameOf(AsOfDateText))
             End Set
         End Property
 

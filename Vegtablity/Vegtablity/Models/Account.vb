@@ -1,4 +1,4 @@
-Namespace Models
+﻿Namespace Models
     Public Class Account
         Public Property AccountID As Integer
         Public Property AccountCode As String
@@ -8,5 +8,9 @@ Namespace Models
         Public Property AccountType As String            ' Assets, Liabilities, Expenses, Revenue
         Public Property AccountLevel As Integer
         Public Property IsTransactional As Boolean       ' هل يقبل قيود مباشرة
-    End Class
+    
+        Public Overrides Function ToString() As String
+            Return $"{AccountCode} - {AccountName}"
+        End Function
+End Class
 End Namespace

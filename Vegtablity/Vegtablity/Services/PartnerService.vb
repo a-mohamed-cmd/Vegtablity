@@ -54,5 +54,17 @@ Namespace Services
                     commandType:=CommandType.StoredProcedure).AsList()
             End Using
         End Function
+
+        ''' <summary>
+        ''' جلب جميع الشركاء (عملاء + موردون) مع دعم البحث بالاسم أو رقم الحساب.
+        ''' </summary>
+        Public Function SearchAllPartners(Optional searchText As String = "") As List(Of Partner)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of Partner)(
+                    Helpers.StoredProcedures.SP_PARTNER_SEARCH_ALL,
+                    New With {.SearchText = searchText},
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
     End Class
 End Namespace

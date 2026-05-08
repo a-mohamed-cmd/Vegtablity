@@ -161,21 +161,37 @@
                         <!-- Date -->
                         <StackPanel Grid.Row="0" Grid.Column="0">
                             <TextBlock Text="تاريخ العرض *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                            <DatePicker SelectedDate="{Binding CurrentQuote.QuoteDate, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Text="{Binding QuoteDateText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     GotFocus="TextBox_GotFocus"
+                                     LostFocus="QuoteDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                                     helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
                         </StackPanel>
 
                         <!-- Customer -->
                         <StackPanel Grid.Row="0" Grid.Column="2">
-                            <TextBlock Text="العميل الموجه له السعر *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                            <ComboBox ItemsSource="{Binding Customers}" 
-                                      SelectedValue="{Binding CurrentQuote.PartnerID, UpdateSourceTrigger=PropertyChanged}" 
-                                      SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"/>
+                            <TextBlock Text="العميل / المورد الموجه له السعر *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                            <ComboBox x:Name="CmbPartner"
+                                      ItemsSource="{Binding FilteredPartners}"
+                                      SelectedValue="{Binding CurrentQuote.PartnerID, UpdateSourceTrigger=PropertyChanged}"
+                                      SelectedValuePath="PartnerID"
+                                      DisplayMemberPath="SearchText"
+                                      IsEditable="True"
+                                      IsTextSearchEnabled="False"
+                                      StaysOpenOnEdit="True"
+                                      TextBoxBase.TextChanged="PartnerSearch_TextChanged"
+                                      PreviewKeyDown="PartnerComboBox_PreviewKeyDown"
+                                      LostFocus="PartnerComboBox_LostFocus"/>
                         </StackPanel>
 
                         <!-- Expiry Date -->
                         <StackPanel Grid.Row="0" Grid.Column="4">
                             <TextBlock Text="صالح حتى (تاريخ انتهاء)" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                            <DatePicker SelectedDate="{Binding CurrentQuote.ExpiryDate, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBox Text="{Binding ExpiryDateText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     GotFocus="TextBox_GotFocus"
+                                     LostFocus="ExpiryDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                                     helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
                         </StackPanel>
 
                         <StackPanel Grid.Row="0" Grid.Column="6" VerticalAlignment="Center">

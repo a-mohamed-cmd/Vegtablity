@@ -71,9 +71,12 @@
 
                         <StackPanel Margin="0,0,0,24">
                             <TextBlock Text="تاريخ الإقفال (حتى)" Foreground="#7f8c8d" FontSize="12" Margin="0,0,0,4"/>
-                            <DatePicker SelectedDate="{Binding ClosingDate, UpdateSourceTrigger=PropertyChanged}" 
-                                        Style="{DynamicResource ModernDatePickerStyle}"
-                                        Width="300" HorizontalAlignment="Left" FontSize="16"/>
+                            <TextBox Text="{Binding ClosingDateText, UpdateSourceTrigger=PropertyChanged}"
+                                     LostFocus="Date_LostFocus"
+                                     GotFocus="Date_GotFocus"
+                                     Width="300" HorizontalAlignment="Left" FontSize="16"
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
                         </StackPanel>
 
                         <Separator Margin="0,0,0,24"/>

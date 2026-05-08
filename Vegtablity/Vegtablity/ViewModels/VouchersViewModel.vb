@@ -1,4 +1,4 @@
-Imports System.Collections.ObjectModel
+﻿Imports System.Collections.ObjectModel
 Imports System.Windows
 Imports System.Windows.Input
 Imports Vegtablity.Models
@@ -203,6 +203,30 @@ Namespace ViewModels
             End Set
         End Property
 
+        
+        Private _filteredAccounts As ObservableCollection(Of Account)
+        Public Property FilteredAccounts As ObservableCollection(Of Account)
+            Get
+                Return _filteredAccounts
+            End Get
+            Set(value As ObservableCollection(Of Account))
+                _filteredAccounts = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
+        Public Sub FilterAccounts(searchText As String)
+            If String.IsNullOrWhiteSpace(searchText) Then
+                FilteredAccounts = Accounts
+            Else
+                Dim lower = searchText.ToLower()
+                FilteredAccounts = New ObservableCollection(Of Account)(
+                    System.Linq.Enumerable.Where(Accounts, Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower().Contains(lower)) OrElse 
+                                               (a.AccountCode IsNot Nothing AndAlso a.AccountCode.Contains(searchText)))
+                )
+            End If
+        End Sub
+
         Public Property Accounts As ObservableCollection(Of Account)
             Get
                 Return _accounts
@@ -293,6 +317,19 @@ Namespace ViewModels
             End Get
             Set(value As DateTime)
                 SetProperty(_editReceiptDate, value)
+                _editReceiptDateText = value.ToString("dd/MM/yyyy")
+                OnPropertyChanged(NameOf(EditReceiptDateText))
+            End Set
+        End Property
+
+        Private _editReceiptDateText As String = DateTime.Now.ToString("dd/MM/yyyy")
+        Public Property EditReceiptDateText As String
+            Get
+                Return _editReceiptDateText
+            End Get
+            Set(value As String)
+                _editReceiptDateText = If(value, "")
+                OnPropertyChanged(NameOf(EditReceiptDateText))
             End Set
         End Property
 
@@ -415,6 +452,19 @@ Namespace ViewModels
             End Get
             Set(value As DateTime)
                 SetProperty(_editPaymentDate, value)
+                _editPaymentDateText = value.ToString("dd/MM/yyyy")
+                OnPropertyChanged(NameOf(EditPaymentDateText))
+            End Set
+        End Property
+
+        Private _editPaymentDateText As String = DateTime.Now.ToString("dd/MM/yyyy")
+        Public Property EditPaymentDateText As String
+            Get
+                Return _editPaymentDateText
+            End Get
+            Set(value As String)
+                _editPaymentDateText = If(value, "")
+                OnPropertyChanged(NameOf(EditPaymentDateText))
             End Set
         End Property
 

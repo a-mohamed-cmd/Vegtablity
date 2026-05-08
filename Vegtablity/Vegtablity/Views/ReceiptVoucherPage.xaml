@@ -1,4 +1,4 @@
-<UserControl x:Class="Views.ReceiptVoucherPage"
+﻿<UserControl x:Class="Views.ReceiptVoucherPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
@@ -124,7 +124,14 @@
                         <TextBlock Text="بيانات سند القبض" FontSize="16" FontWeight="Bold" Foreground="#27ae60" Margin="0,0,0,15"/>
 
                         <TextBlock Text="التاريخ" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <DatePicker SelectedDate="{Binding EditReceiptDate}" Margin="0,0,0,10"/>
+                        <TextBox Text="{Binding EditReceiptDateText, UpdateSourceTrigger=PropertyChanged}"
+                                 LostFocus="Date_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                                 GotFocus="Date_GotFocus"
+                                 Style="{DynamicResource ModernTextBoxStyle}"
+                                 helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"
+                                 Margin="0,0,0,10"
+                                 Tag="Receipt"
+                                 ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
 
                         <TextBlock Text="المستلم منه" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,10">
@@ -157,7 +164,7 @@
                         </Border>
 
                         <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <ComboBox ItemsSource="{Binding Accounts}" SelectedValue="{Binding EditReceiptAccountID}"
+                        <ComboBox ItemsSource="{Binding FilteredAccounts}" IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="False" TextBoxBase.TextChanged="AccountComboBox_TextChanged" PreviewKeyDown="AccountComboBox_PreviewKeyDown" LostFocus="AccountComboBox_LostFocus" SelectedValue="{Binding EditReceiptAccountID}"
                                   SelectedValuePath="AccountID" Margin="0,0,0,10">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate>
@@ -201,6 +208,15 @@
         <!-- Status Bar -->
         <Border Grid.Row="2" CornerRadius="0,0,12,12" Background="#ecf0f1" Padding="12,6" Margin="0,5,0,0">
             <TextBlock Text="{Binding ReceiptStatusMessage}" Foreground="#2c3e50" FontSize="13"/>
+        </Border>
+    
+        <!-- Snackbar Notification -->
+        <Border x:Name="SnackbarBorder" Grid.RowSpan="3" VerticalAlignment="Bottom" HorizontalAlignment="Center" Background="#1E293B" CornerRadius="12" Padding="20,12" Margin="0,0,0,30" Visibility="Collapsed" Panel.ZIndex="105">
+            <Border.Effect><DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3" Color="#000000"/></Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="SnackbarIcon" Text="⚠️" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock x:Name="SnackbarText" Text="رسالة" Foreground="White" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

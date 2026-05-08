@@ -15,7 +15,8 @@ Namespace ViewModels
         Private ReadOnly _productService As ProductService
         Private _isUpdatingDetail As Boolean = False
 
-        Public Property Customers As ObservableCollection(Of Partner)
+        Public Property AllPartners As List(Of Partner)                         ' المصدر الكامل
+        Public Property FilteredPartners As ObservableCollection(Of Partner)     ' المعروض في الـ ComboBox
         Public Property Products As ObservableCollection(Of Product)
         Public Property QuotesHistory As ObservableCollection(Of QuoteHeader)
 
@@ -36,6 +37,37 @@ Namespace ViewModels
                 End If
             End Set
         End Property
+
+        Private _quoteDateText As String
+        Public Property QuoteDateText As String
+            Get
+                Return _quoteDateText
+            End Get
+            Set(value As String)
+                SetProperty(_quoteDateText, value)
+            End Set
+        End Property
+
+        Private _expiryDateText As String
+        Public Property ExpiryDateText As String
+            Get
+                Return _expiryDateText
+            End Get
+            Set(value As String)
+                SetProperty(_expiryDateText, value)
+            End Set
+        End Property
+
+        Public Sub SyncDateText()
+            If CurrentQuote IsNot Nothing Then
+                QuoteDateText = CurrentQuote.QuoteDate.ToString("dd/MM/yyyy")
+                If CurrentQuote.ExpiryDate.HasValue Then
+                    ExpiryDateText = CurrentQuote.ExpiryDate.Value.ToString("dd/MM/yyyy")
+                Else
+                    ExpiryDateText = ""
+                End If
+            End If
+        End Sub
 
         Public Property SaveCommand As ICommand
         Public Property NewCommand As ICommand
@@ -233,7 +265,8 @@ Namespace ViewModels
             _partnerService = New PartnerService()
             _productService = New ProductService()
 
-            Customers = New ObservableCollection(Of Partner)()
+            AllPartners = New List(Of Partner)()
+            FilteredPartners = New ObservableCollection(Of Partner)()
             Products = New ObservableCollection(Of Product)()
             QuotesHistory = New ObservableCollection(Of QuoteHeader)()
 
@@ -263,11 +296,20 @@ Namespace ViewModels
         End Sub
 
         Private Sub LoadLookups()
-            Dim customerList = _partnerService.GetAllPartners("Customer")
-            Customers.Clear()
-            For Each c In customerList
-                Customers.Add(c)
-            Next
+            Dim settingsSvc As New SettingsService()
+            Dim compInfo = settingsSvc.GetCompanyInfo()
+            Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
+
+            Dim partnerList As List(Of Partner)
+            If isUnified Then
+                partnerList = _partnerService.SearchAllPartners("")
+            Else
+                partnerList = _partnerService.GetAllPartners("Customer")
+            End If
+
+            AllPartners = New List(Of Partner)(partnerList)
+            FilteredPartners = New ObservableCollection(Of Partner)(partnerList)
+            OnPropertyChanged(NameOf(FilteredPartners))
 
             ProductPage = 0
             UpdateProductPagination()
@@ -392,6 +434,7 @@ Namespace ViewModels
                 .IsActive = True,
                 .Details = New ObservableCollection(Of QuoteDetail)()
             }
+            SyncDateText()
             _allQuoteDetails.Clear()
         End Sub
 
@@ -442,6 +485,7 @@ Namespace ViewModels
                     Next
                     
                     CurrentQuote = q
+                    SyncDateText()
                     UpdateDetailsPagination()
                     
                     OnPropertyChanged(NameOf(DetailsPage))
@@ -507,7 +551,8 @@ Namespace ViewModels
         End Function
 
         Private Function GetCurrentCustomerName() As String
-            Dim partner = Customers.FirstOrDefault(Function(c) c.PartnerID = CurrentQuote.PartnerID)
+            Dim partner = FilteredPartners.FirstOrDefault(Function(c) c.PartnerID = CurrentQuote.PartnerID)
+            If partner Is Nothing Then partner = AllPartners.FirstOrDefault(Function(c) c.PartnerID = CurrentQuote.PartnerID)
             Return If(partner IsNot Nothing, partner.PartnerName, "عميل")
         End Function
 
