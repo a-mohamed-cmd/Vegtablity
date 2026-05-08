@@ -638,41 +638,19 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecutePrint(parameter As Object)
-            Dim customerName As String = ""
-            Dim accountCode As String = ""
-            If CurrentInvoice.PartnerID.HasValue Then
-                Dim partner = AllPartners.FirstOrDefault(Function(p) p.PartnerID = CurrentInvoice.PartnerID.Value)
-                If partner IsNot Nothing Then
-                    customerName = partner.PartnerName
-                    accountCode = partner.AccountCode
+            Try
+                ' قراءة بيانات الطباعة مباشرة من الـ SP لضمان صحة اسم المورد والاسم الإنجليزي وكل البيانات
+                Dim reportData = _invoiceService.GetInvoiceForReport(CurrentInvoice.InvID)
+                If reportData Is Nothing OrElse reportData.Header Is Nothing Then
+                    RaiseEvent RequestSnackbar("⚠️ لا يمكن تحميل بيانات الطباعة، تأكد من حفظ الفاتورة أولاً")
+                    Return
                 End If
-            End If
-
-            Dim reportData As New Models.InvoiceReportData() With {
-                .Header = New Models.InvoiceReportHeader() With {
-                    .InvID = CurrentInvoice.InvID,
-                    .InvDate = CurrentInvoice.InvDate,
-                    .TotalAmount = CurrentInvoice.NetAmount,
-                    .PartnerName = customerName,
-                    .AccountCode = accountCode,
-                    .Notes = CurrentInvoice.Notes
-                },
-                .Details = New System.Collections.Generic.List(Of Models.InvoiceReportItem)()
-            }
-
-            If CurrentInvoice.Details IsNot Nothing Then
-                For Each d In CurrentInvoice.Details
-                    reportData.Details.Add(New Models.InvoiceReportItem() With {
-                        .ProductName = d.ProductName,
-                        .Quantity = d.Quantity,
-                        .UnitPrice = d.UnitPrice,
-                        .TotalPrice = d.TotalPrice
-                    })
-                Next
-            End If
-
-            Dim printer As New InvoicePrinter()
-            printer.PrintSalesInvoice(reportData)
+                Dim printer As New InvoicePrinter()
+                printer.PrintSalesInvoice(reportData)
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ أثناء تحضير الطباعة: " & ex.Message, "خطأ",
+                                               System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End Try
         End Sub
 
         Private Function ValidateStockForAllItems() As Boolean

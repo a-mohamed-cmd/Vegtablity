@@ -278,6 +278,8 @@ Namespace Views
         Private _isFilteringPartner As Boolean = False
 
         Private Sub PartnerSearch_TextChanged(sender As Object, e As System.Windows.Controls.TextChangedEventArgs)
+            Dim _cbCheck = TryCast(sender, System.Windows.Controls.ComboBox)
+            If _cbCheck IsNot Nothing AndAlso Not _cbCheck.IsEnabled Then Return
             If _isFilteringPartner Then Return
 
             ' sender = ComboBox | e.OriginalSource = TextBox الداخلي
@@ -316,7 +318,7 @@ Namespace Views
                     tb.Text = searchText
                     tb.CaretIndex = searchText.Length
                     _isFilteringPartner = False
-                    If Not String.IsNullOrEmpty(searchText) Then
+                    If Not String.IsNullOrEmpty(searchText) AndAlso cmb.IsEnabled Then
                         cmb.IsDropDownOpen = True
                     End If
                 End Sub), System.Windows.Threading.DispatcherPriority.Input)
