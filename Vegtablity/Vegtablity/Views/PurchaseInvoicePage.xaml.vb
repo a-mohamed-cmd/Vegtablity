@@ -8,12 +8,23 @@ Namespace Views
     Public Class PurchaseInvoicePage
         Public Sub New()
             InitializeComponent()
-            ' Subscribe to ViewModel's Snackbar event
+            ' Subscribe to ViewModel's events
             Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
             If vm IsNot Nothing Then
                 AddHandler vm.RequestSnackbar, AddressOf ShowSnackbar
-                vm.SyncDateText()   ' تهيئة نص التاريخ عند الفتح
+                AddHandler vm.InvoiceLoaded, AddressOf OnInvoiceLoaded
             End If
+            ' نضبط الواجهة بعد اكتمال تحميل كل عناصر الـ UI
+            AddHandler Me.Loaded, AddressOf Page_Loaded
+        End Sub
+
+        Private Sub Page_Loaded(sender As Object, e As RoutedEventArgs)
+            ' يُستدعى مرة واحدة بعد اكتمال تحميل الصفحة — يضبط التاريخ للفاتورة الجديدة
+            RemoveHandler Me.Loaded, AddressOf Page_Loaded
+            Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
+            If vm Is Nothing Then Return
+            TxtInvDate.Text = vm.InvDateText
+            PartnerDropdown.ClearSelection()  ' فاتورة جديدة — بدون شريك
         End Sub
 
         Private Sub ShowSnackbar(message As String)
@@ -411,20 +422,57 @@ Namespace Views
             If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
         End Sub
 
+        ''' <summary>
+        ''' يُستدعى تلقائياً بعد تحميل فاتورة موجودة أو إنشاء جديدة.
+        ''' يضبط حقل التاريخ واسم الشريك في الأداة.
+        ''' </summary>
+        Private Sub OnInvoiceLoaded(partnerID As Integer?, partnerName As String)
+            Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
+            If vm Is Nothing Then Return
+
+            ' تحديث حقل التاريخ
+            TxtInvDate.Text = vm.InvDateText
+            TxtInvDate.Foreground = System.Windows.Media.Brushes.Black
+
+            ' تحديث اسم الشريك بعد اكتمال كل تحديثات الـ UI
+            Dim capturedName = partnerName
+            Dim capturedID = partnerID
+            Dispatcher.BeginInvoke(New Action(Sub()
+                If capturedID.HasValue AndAlso Not String.IsNullOrEmpty(capturedName) Then
+                    PartnerDropdown.SetDisplayText(capturedName)
+                Else
+                    PartnerDropdown.ClearSelection()
+                End If
+            End Sub), System.Windows.Threading.DispatcherPriority.Loaded)
+        End Sub
+
 
         Private Sub InvDate_LostFocus(sender As Object, e As RoutedEventArgs)
             Dim tb = TryCast(sender, TextBox)
             If tb Is Nothing Then Return
-            Dim raw = tb.Text.Trim()
+
+            Dim raw = tb.Text.Trim().Replace("-", "/").Replace(".", "/")
             If String.IsNullOrWhiteSpace(raw) Then Return
+
+            ' قبول صيغة بدون فواصل: 01052026 → 01/05/2026
+            If raw.Length = 8 AndAlso Not raw.Contains("/") Then
+                raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
+            End If
+
             Dim parsed As DateTime
             If DateTime.TryParseExact(raw, New String() {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
                                       System.Globalization.CultureInfo.InvariantCulture,
                                       System.Globalization.DateTimeStyles.None, parsed) Then
+                ' ✅ تحديث التاريخ الفعلي في الـ ViewModel حتى يُرسَل للـ SP عند الحفظ
+                Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
+                If vm IsNot Nothing AndAlso vm.CurrentInvoice IsNot Nothing Then
+                    vm.CurrentInvoice.InvDate = parsed
+                End If
                 tb.Text = parsed.ToString("dd/MM/yyyy")
                 tb.Foreground = System.Windows.Media.Brushes.Black
             Else
                 tb.Foreground = System.Windows.Media.Brushes.Red
+                tb.ToolTip = "صيغة تاريخ غير صحيحة — استخدم: dd/MM/yyyy"
             End If
         End Sub
 

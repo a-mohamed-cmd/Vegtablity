@@ -21,6 +21,7 @@ Namespace ViewModels
         Public Property QuotesHistory As ObservableCollection(Of QuoteHeader)
 
         Public Event RequestSnackbar As Action(Of String)
+        Public Event InvoiceLoaded(partnerID As Integer?, partnerName As String)
 
         Private _currentQuote As QuoteHeader
         Public Property CurrentQuote As QuoteHeader
@@ -457,6 +458,7 @@ Namespace ViewModels
             }
             SyncDateText()
             _allQuoteDetails.Clear()
+            RaiseEvent InvoiceLoaded(Nothing, Nothing)
         End Sub
 
         Private Sub UpdateDetailsPagination()
@@ -513,6 +515,9 @@ Namespace ViewModels
                     OnPropertyChanged(NameOf(DetailsPageLabel))
                     OnPropertyChanged(NameOf(CanGoNextDetails))
                     OnPropertyChanged(NameOf(CanGoPrevDetails))
+
+                    ' أبلغ الواجهة بتحميل البيانات
+                    RaiseEvent InvoiceLoaded(CurrentQuote.PartnerID, CurrentQuote.PartnerName)
                 Catch ex As Exception
                     System.Windows.MessageBox.Show(ex.Message, "Error loading details")
                 End Try

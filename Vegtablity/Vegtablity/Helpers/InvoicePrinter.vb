@@ -140,7 +140,7 @@ Public Class InvoicePrinter
         ' Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª
         If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
             Dim rectNotes As New RectangleF(gl(2.0F), gt(4.0F), 100.0F, 15.0F)
-            g.DrawString("Ù…Ù„Ø§Ø­Ø¸Ø§Øª: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes, fLeft)
+            g.DrawString("ملحوظاتª: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes, fLeft)
         End If
 
         ' Ø±Ù‚Ù… Ø§Ù„ÙØ§ØªÙˆØ±Ø©

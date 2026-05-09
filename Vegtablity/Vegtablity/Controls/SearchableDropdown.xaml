@@ -74,21 +74,35 @@
                         </Style>
                     </ListBox.ItemContainerStyle>
 
-                    <!-- Empty state -->
+                    <!-- Items Panel for Virtualization -->
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+
+                    <!-- ListBox Template with ScrollViewer -->
                     <ListBox.Template>
                         <ControlTemplate TargetType="ListBox">
-                            <Border Background="White" BorderThickness="0">
-                                <StackPanel>
-                                    <ItemsPresenter/>
+                            <Border x:Name="listBorder" Background="White" BorderThickness="0">
+                                <Grid>
+                                    <ScrollViewer x:Name="listScroll" Focusable="False" Padding="{TemplateBinding Padding}">
+                                        <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                    </ScrollViewer>
+                                    
                                     <TextBlock x:Name="EmptyMsg" Text="لا توجد نتائج"
                                                Padding="12,8" Foreground="#94A3B8"
                                                FontStyle="Italic" FontSize="13"
-                                               Visibility="Collapsed"/>
-                                </StackPanel>
+                                               Visibility="Collapsed"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Top"
+                                               Margin="0,10"/>
+                                </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="HasItems" Value="False">
                                     <Setter TargetName="EmptyMsg" Property="Visibility" Value="Visible"/>
+                                    <Setter TargetName="listScroll" Property="Visibility" Value="Collapsed"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

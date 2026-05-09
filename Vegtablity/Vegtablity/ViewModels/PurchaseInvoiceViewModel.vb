@@ -72,6 +72,9 @@ Namespace ViewModels
 
         ' Event raised to ask the View to show a Snackbar notification
         Public Event RequestSnackbar As Action(Of String)
+
+        ''' <summary>يُطلَق بعد تحميل فاتورة أو إنشاء جديدة لتحديث الـ View (التاريخ + الشريك)</summary>
+        Public Event InvoiceLoaded As Action(Of Integer?, String)
         Public Property Products As ObservableCollection(Of Product)
 
         ' --- Current Invoice Data ---
@@ -253,6 +256,10 @@ Namespace ViewModels
             
             ' Automatically add an empty row for the new invoice
             ExecuteAddItem(Nothing)
+
+            ' أبلغ الـ View بمسح الشريك وتحديث التاريخ
+            SyncDateText()
+            RaiseEvent InvoiceLoaded(Nothing, Nothing)
         End Sub
 
         ''' <summary>Load an existing invoice by ID (called from Invoice Dashboard)</summary>
@@ -272,6 +279,10 @@ Namespace ViewModels
                 Else
                     UpdateDetailsPagination()
                 End If
+
+                ' أبلغ الـ View بتحديث التاريخ واسم الشريك
+                SyncDateText()
+                RaiseEvent InvoiceLoaded(CurrentInvoice.PartnerID, CurrentInvoice.PartnerName)
             End If
         End Sub
 

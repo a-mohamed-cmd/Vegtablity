@@ -89,5 +89,32 @@ Namespace Views
             If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
         End Sub
 
+        ' ══════════════════════════════════════════════════════
+        '  Voucher Synchronization
+        ' ══════════════════════════════════════════════════════
+
+        Private Sub ReceiptVoucherPage_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+            Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
+            If vm IsNot Nothing Then
+                RemoveHandler vm.ReceiptLoaded, AddressOf OnReceiptLoaded
+                AddHandler vm.ReceiptLoaded, AddressOf OnReceiptLoaded
+                
+                ' تهيئة الحالة الأولية
+                If Not vm.IsEditingReceipt Then
+                    AccountDropdown.ClearSelection()
+                End If
+            End If
+        End Sub
+
+        Private Sub OnReceiptLoaded(accountID As Integer?, accountName As String)
+            Dispatcher.BeginInvoke(Sub()
+                If accountID.HasValue AndAlso Not String.IsNullOrEmpty(accountName) Then
+                    AccountDropdown.SetDisplayText(accountName)
+                Else
+                    AccountDropdown.ClearSelection()
+                End If
+            End Sub, System.Windows.Threading.DispatcherPriority.Loaded)
+        End Sub
+
     End Class
 End Namespace

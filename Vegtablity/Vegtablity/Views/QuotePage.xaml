@@ -162,7 +162,7 @@
                         <!-- Date -->
                         <StackPanel Grid.Row="0" Grid.Column="0">
                             <TextBlock Text="تاريخ العرض *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                            <TextBox Text="{Binding QuoteDateText, UpdateSourceTrigger=PropertyChanged}" 
+                            <TextBox x:Name="TxtQuoteDate" Text="{Binding QuoteDateText, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{DynamicResource ModernTextBoxStyle}"
                                      GotFocus="TextBox_GotFocus"
                                      LostFocus="QuoteDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
@@ -186,7 +186,7 @@
                         <!-- Expiry Date -->
                         <StackPanel Grid.Row="0" Grid.Column="4">
                             <TextBlock Text="صالح حتى (تاريخ انتهاء)" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                            <TextBox Text="{Binding ExpiryDateText, UpdateSourceTrigger=PropertyChanged}" 
+                            <TextBox x:Name="TxtExpiryDate" Text="{Binding ExpiryDateText, UpdateSourceTrigger=PropertyChanged}" 
                                      Style="{DynamicResource ModernTextBoxStyle}"
                                      GotFocus="TextBox_GotFocus"
                                      LostFocus="ExpiryDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"

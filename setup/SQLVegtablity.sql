@@ -3076,6 +3076,20 @@ BEGIN
 END
 GO
 
+
+IF OBJECT_ID('[Sales].[sp_Invoice_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetByID];
+GO
+create PROCEDURE [Sales].[sp_Invoice_GetByID]  
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+   SELECT inv.*,par.PartnerName,chart.AccountCode  FROM [Sales].[InvoiceHeader] inv
+	join [Sales].[Partners] par on inv.[PartnerID] =par.[PartnerID]
+	join [Accounting].[ChartOfAccounts] chart on par.[AccountID] = chart.[AccountID]
+	 WHERE InvID = @InvID;
+END
+go
 -- =============================================
 -- 7. sp_InvoiceDetails_GetByInvID
 -- =============================================
@@ -5597,4 +5611,42 @@ BEGIN
     ORDER BY p.PartnerID;
 END
 GO
- 
+
+ IF OBJECT_ID('[Sales].[sp_Quotations_GetPaged]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Quotations_GetPaged];
+GO
+ create PROCEDURE [Sales].[sp_Quotations_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20,
+    @SearchText NVARCHAR(150) = NULL,
+    @PartnerID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- Total Count
+    SELECT COUNT(*) AS TotalCount 
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+      AND (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText);
+
+    -- Page Data
+    SELECT q.*, p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+      AND (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText)
+    ORDER BY q.QuoteDate DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO

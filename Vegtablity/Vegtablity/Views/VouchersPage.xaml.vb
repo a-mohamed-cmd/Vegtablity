@@ -1,4 +1,4 @@
-﻿Imports System.Windows.Controls
+Imports System.Windows.Controls
 
 Namespace Views
     Partial Public Class VouchersPage
@@ -84,5 +84,79 @@ Namespace Views
                 End If
             End If
         End Sub
-End Class
+
+        ' ══════════════════════════════════════════════════════
+        '  Account SearchableDropdown — سندات القبض والصرف
+        ' ══════════════════════════════════════════════════════
+
+        Private Sub ReceiptAccountDropdown_SearchChanged(sender As Object, e As String)
+            Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
+            If vm IsNot Nothing Then vm.FilterAccounts(e)
+        End Sub
+
+        Private Sub ReceiptAccountDropdown_ItemSelected(sender As Object, e As Object)
+            Dim selected = TryCast(e, Models.Account)
+            If selected Is Nothing Then Return
+            Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
+            If vm IsNot Nothing Then vm.EditReceiptAccountID = selected.AccountID
+        End Sub
+
+        Private Sub PaymentAccountDropdown_SearchChanged(sender As Object, e As String)
+            Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
+            If vm IsNot Nothing Then vm.FilterAccounts(e)
+        End Sub
+
+        Private Sub PaymentAccountDropdown_ItemSelected(sender As Object, e As Object)
+            Dim selected = TryCast(e, Models.Account)
+            If selected Is Nothing Then Return
+            Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
+            If vm IsNot Nothing Then vm.EditPaymentAccountID = selected.AccountID
+        End Sub
+
+        Private Sub AccountDropdown_MoveNext(sender As Object, e As EventArgs)
+            Dim req As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
+            Dim ctrl = TryCast(sender, Vegtablity.Controls.SearchableDropdown)
+            If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
+        End Sub
+
+        ' ══════════════════════════════════════════════════════
+        '  Voucher Synchronization
+        ' ══════════════════════════════════════════════════════
+
+        Private Sub VouchersPage_Loaded(sender As Object, e As System.Windows.RoutedEventArgs) Handles Me.Loaded
+            Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
+            If vm IsNot Nothing Then
+                RemoveHandler vm.ReceiptLoaded, AddressOf OnReceiptLoaded
+                AddHandler vm.ReceiptLoaded, AddressOf OnReceiptLoaded
+                
+                RemoveHandler vm.PaymentLoaded, AddressOf OnPaymentLoaded
+                AddHandler vm.PaymentLoaded, AddressOf OnPaymentLoaded
+
+                ' تهيئة الحالة الأولية
+                If Not vm.IsEditingReceipt Then ReceiptAccountDropdown.ClearSelection()
+                If Not vm.IsEditingPayment Then PaymentAccountDropdown.ClearSelection()
+            End If
+        End Sub
+
+        Private Sub OnReceiptLoaded(accountID As Integer?, accountName As String)
+            Dispatcher.BeginInvoke(Sub()
+                If accountID.HasValue AndAlso Not String.IsNullOrEmpty(accountName) Then
+                    ReceiptAccountDropdown.SetDisplayText(accountName)
+                Else
+                    ReceiptAccountDropdown.ClearSelection()
+                End If
+            End Sub, System.Windows.Threading.DispatcherPriority.Loaded)
+        End Sub
+
+        Private Sub OnPaymentLoaded(accountID As Integer?, accountName As String)
+            Dispatcher.BeginInvoke(Sub()
+                If accountID.HasValue AndAlso Not String.IsNullOrEmpty(accountName) Then
+                    PaymentAccountDropdown.SetDisplayText(accountName)
+                Else
+                    PaymentAccountDropdown.ClearSelection()
+                End If
+            End Sub, System.Windows.Threading.DispatcherPriority.Loaded)
+        End Sub
+
+    End Class
 End Namespace

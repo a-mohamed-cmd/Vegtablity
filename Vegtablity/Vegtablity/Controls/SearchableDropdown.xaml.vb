@@ -103,6 +103,7 @@ Namespace Controls
 
         Private _busy As Boolean = False      ' يمنع أي معالجة أثناء التحديثات البرمجية
         Private _isInitialized As Boolean = False
+        Private _pendingText As String = Nothing  ' نص ينتظر التطبيق بعد التحميل
 
         ' ══════════════════════════════════════════════════════
         '  Initialization
@@ -118,6 +119,13 @@ Namespace Controls
             UpdateListBox()
             If Not String.IsNullOrEmpty(Watermark) Then
                 Helpers.WatermarkHelper.SetWatermark(SearchBox, Watermark)
+            End If
+            ' تطبيق أي نص معلق كان مقترحاً قبل التحميل
+            If _pendingText IsNot Nothing Then
+                _busy = True
+                SearchBox.Text = _pendingText
+                _busy = False
+                _pendingText = Nothing
             End If
         End Sub
 
@@ -137,16 +145,23 @@ Namespace Controls
 
         Private Shared Sub OnSelectedItemChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
             Dim ctrl = TryCast(d, SearchableDropdown)
-            If ctrl Is Nothing OrElse ctrl._busy OrElse Not ctrl._isInitialized Then Return
-            ' تم تعيين SelectedItem من الخارج (مثلاً عند تحميل فاتورة) → حدِّث النص
+            If ctrl Is Nothing OrElse ctrl._busy Then Return
+
+            Dim displayText As String
             If e.NewValue IsNot Nothing Then
+                displayText = ctrl.GetDisplayText(e.NewValue)
+            Else
+                displayText = String.Empty
+            End If
+
+            If ctrl._isInitialized Then
+                ' الـ Control جاهز — حدّث فوراً
                 ctrl._busy = True
-                ctrl.SearchBox.Text = ctrl.GetDisplayText(e.NewValue)
+                ctrl.SearchBox.Text = displayText
                 ctrl._busy = False
             Else
-                ctrl._busy = True
-                ctrl.SearchBox.Text = String.Empty
-                ctrl._busy = False
+                ' الـ Control لم يتحمّل بعد — احفظ النص لتطبيقه في OnLoaded
+                ctrl._pendingText = displayText
             End If
         End Sub
 
@@ -359,7 +374,24 @@ Namespace Controls
         Public Sub ClearSelection()
             _busy = True
             SelectedItem = Nothing
-            SearchBox.Text = String.Empty
+            If _isInitialized Then
+                SearchBox.Text = String.Empty
+            End If
+            _pendingText = Nothing
+            _busy = False
+        End Sub
+
+        ''' <summary>
+        ''' تعيين نص محدد مباشرة دون الحاجة لكائن Partner.
+        ''' مفيد عند تحميل فاتورة وعرض اسم الشريك فوراً بغض النظر عن حالة التهيئة.
+        ''' </summary>
+        Public Sub SetDisplayText(text As String)
+            _busy = True
+            If _isInitialized Then
+                SearchBox.Text = If(text, String.Empty)
+            Else
+                _pendingText = If(text, String.Empty)
+            End If
             _busy = False
         End Sub
 

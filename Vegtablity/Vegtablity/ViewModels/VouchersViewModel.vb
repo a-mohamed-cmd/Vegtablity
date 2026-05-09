@@ -1,4 +1,4 @@
-﻿Imports System.Collections.ObjectModel
+Imports System.Collections.ObjectModel
 Imports System.Windows
 Imports System.Windows.Input
 Imports Vegtablity.Models
@@ -10,6 +10,9 @@ Namespace ViewModels
         Private ReadOnly _voucherService As New Services.VoucherService()
         Private ReadOnly _partnerService As New Services.PartnerService()
         Private ReadOnly _accountingService As New Services.AccountingService()
+
+        Public Event ReceiptLoaded(accountID As Integer?, accountName As String)
+        Public Event PaymentLoaded(accountID As Integer?, accountName As String)
 
         ' ===== سندات القبض =====
         Private _receipts As ObservableCollection(Of Voucher)
@@ -288,6 +291,7 @@ Namespace ViewModels
                     EditReceiptPaymentMethod = value.PaymentMethod
                     IsEditingReceipt = True
                     ReceiptAmountError = Nothing
+                    RaiseEvent ReceiptLoaded(value.AccountID, value.AccountName)
                 End If
             End Set
         End Property
@@ -423,6 +427,7 @@ Namespace ViewModels
                     EditPaymentPaymentMethod = value.PaymentMethod
                     IsEditingPayment = True
                     PaymentAmountError = Nothing
+                    RaiseEvent PaymentLoaded(value.AccountID, value.AccountName)
                 End If
             End Set
         End Property
@@ -620,6 +625,7 @@ Namespace ViewModels
             End If
             IsEditingReceipt = False
             ReceiptAmountError = Nothing
+            RaiseEvent ReceiptLoaded(Nothing, Nothing)
         End Sub
 
         Private Sub ExecuteSaveReceipt(obj As Object)
@@ -733,6 +739,7 @@ Namespace ViewModels
             End If
             IsEditingPayment = False
             PaymentAmountError = Nothing
+            RaiseEvent PaymentLoaded(Nothing, Nothing)
         End Sub
 
         Private Sub ExecuteSavePayment(obj As Object)

@@ -135,7 +135,7 @@ CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT inv.*, chart.AccountCode 
+    SELECT inv.*, chart.AccountCode, par.PartnerName
     FROM [Sales].[InvoiceHeader] inv
     LEFT JOIN [Sales].[Partners] par ON inv.[PartnerID] = par.[PartnerID]
     LEFT JOIN [Accounting].[ChartOfAccounts] chart ON par.[AccountID] = chart.[AccountID]

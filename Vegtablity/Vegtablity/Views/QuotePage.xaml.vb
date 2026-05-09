@@ -10,12 +10,24 @@ Namespace Views
 
         Public Sub New()
             InitializeComponent()
-
-            Dim vm = TryCast(DataContext, QuoteViewModel)
+            Dim vm = TryCast(Me.DataContext, QuoteViewModel)
             If vm IsNot Nothing Then
                 AddHandler vm.RequestSnackbar, AddressOf ShowSnackbar
                 AddHandler vm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+                AddHandler vm.InvoiceLoaded, AddressOf OnInvoiceLoaded
             End If
+            ' نضبط الواجهة بعد اكتمال تحميل كل عناصر الـ UI
+            AddHandler Me.Loaded, AddressOf Page_Loaded
+        End Sub
+
+        Private Sub Page_Loaded(sender As Object, e As RoutedEventArgs)
+            ' يُستدعى مرة واحدة بعد اكتمال تحميل الصفحة — يضبط التاريخ للفاتورة الجديدة
+            RemoveHandler Me.Loaded, AddressOf Page_Loaded
+            Dim vm = TryCast(Me.DataContext, QuoteViewModel)
+            If vm Is Nothing Then Return
+            TxtQuoteDate.Text = vm.QuoteDateText
+            TxtExpiryDate.Text = vm.ExpiryDateText
+            PartnerDropdown.ClearSelection()  ' عرض سعر جديد — بدون شريك
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
@@ -296,6 +308,32 @@ Namespace Views
             Dim req As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
             Dim ctrl = TryCast(sender, Vegtablity.Controls.SearchableDropdown)
             If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
+        End Sub
+
+        ''' <summary>
+        ''' يُستدعى تلقائياً بعد تحميل عرض سعر موجود أو إنشاء جديد.
+        ''' يضبط حقل التاريخ واسم الشريك في الأداة.
+        ''' </summary>
+        Private Sub OnInvoiceLoaded(partnerID As Integer?, partnerName As String)
+            Dim vm = TryCast(Me.DataContext, QuoteViewModel)
+            If vm Is Nothing Then Return
+
+            ' تحديث حقول التاريخ
+            TxtQuoteDate.Text = vm.QuoteDateText
+            TxtQuoteDate.Foreground = System.Windows.Media.Brushes.Black
+            TxtExpiryDate.Text = vm.ExpiryDateText
+            TxtExpiryDate.Foreground = System.Windows.Media.Brushes.Black
+
+            ' تحديث اسم الشريك بعد اكتمال كل تحديثات الـ UI
+            Dim capturedName = partnerName
+            Dim capturedID = partnerID
+            Dispatcher.BeginInvoke(New Action(Sub()
+                If capturedID.HasValue AndAlso Not String.IsNullOrEmpty(capturedName) Then
+                    PartnerDropdown.SetDisplayText(capturedName)
+                Else
+                    PartnerDropdown.ClearSelection()
+                End If
+            End Sub), System.Windows.Threading.DispatcherPriority.Loaded)
         End Sub
 
 

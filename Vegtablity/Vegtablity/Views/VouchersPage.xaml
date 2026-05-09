@@ -1,8 +1,9 @@
-﻿<UserControl x:Class="Views.VouchersPage"
+<UserControl x:Class="Views.VouchersPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
-             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             xmlns:controls="clr-namespace:Vegtablity.Controls">
 
     <UserControl.DataContext>
         <vm:VouchersViewModel/>
@@ -165,18 +166,15 @@
                             </Border>
 
                             <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding Accounts}" SelectedValue="{Binding EditReceiptAccountID}"
-                                      SelectedValuePath="AccountID" Margin="0,0,0,10">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock>
-                                            <Run Text="{Binding AccountCode}"/>
-                                            <Run Text=" - "/>
-                                            <Run Text="{Binding AccountName}"/>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <controls:SearchableDropdown
+                                x:Name="ReceiptAccountDropdown"
+                                ItemsSource="{Binding FilteredAccounts}"
+                                DisplayMemberPath="DisplayText"
+                                Watermark="ابحث برقم أو اسم الحساب..."
+                                Height="35" Margin="0,0,0,10"
+                                SearchChanged="ReceiptAccountDropdown_SearchChanged"
+                                ItemSelected="ReceiptAccountDropdown_ItemSelected"
+                                ConfirmedAndMoveNext="AccountDropdown_MoveNext"/>
 
                             <TextBlock Text="المبلغ *" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditReceiptAmount, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
@@ -348,18 +346,15 @@
                             </Border>
 
                             <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding Accounts}" SelectedValue="{Binding EditPaymentAccountID}"
-                                      SelectedValuePath="AccountID" Margin="0,0,0,10">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock>
-                                            <Run Text="{Binding AccountCode}"/>
-                                            <Run Text=" - "/>
-                                            <Run Text="{Binding AccountName}"/>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <controls:SearchableDropdown
+                                x:Name="PaymentAccountDropdown"
+                                ItemsSource="{Binding FilteredAccounts}"
+                                DisplayMemberPath="DisplayText"
+                                Watermark="ابحث برقم أو اسم الحساب..."
+                                Height="35" Margin="0,0,0,10"
+                                SearchChanged="PaymentAccountDropdown_SearchChanged"
+                                ItemSelected="PaymentAccountDropdown_ItemSelected"
+                                ConfirmedAndMoveNext="AccountDropdown_MoveNext"/>
 
                             <TextBlock Text="المبلغ *" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
