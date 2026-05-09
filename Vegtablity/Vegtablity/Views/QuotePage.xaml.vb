@@ -1,4 +1,4 @@
-﻿Imports System.Windows
+Imports System.Windows
 Imports System.Windows.Controls
 Imports System.Windows.Input
 Imports System.Windows.Threading
@@ -273,220 +273,84 @@ Namespace Views
         End Function
 
         ' ══════════════════════════════════════════════════
-        '  Partner Search ComboBox Handlers
-        ' ══════════════════════════════════════════════════
-        Private _isFilteringPartner As Boolean = False
 
-        Private Sub PartnerSearch_TextChanged(sender As Object, e As System.Windows.Controls.TextChangedEventArgs)
-            Dim _cbCheck = TryCast(sender, System.Windows.Controls.ComboBox)
-            If _cbCheck IsNot Nothing AndAlso Not _cbCheck.IsEnabled Then Return
-            If _isFilteringPartner Then Return
+        ' ══════════════════════════════════════════════════════
+        '  Partner SearchableDropdown — عروض الأسعار
+        ' ══════════════════════════════════════════════════════
 
-            ' sender = ComboBox | e.OriginalSource = TextBox الداخلي
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb Is Nothing Then Return
-            Dim tb = TryCast(e.OriginalSource, TextBox)
-            If tb Is Nothing Then Return
-
+        Private Sub PartnerDropdown_SearchChanged(sender As Object, e As String)
             Dim vm = TryCast(Me.DataContext, QuoteViewModel)
-            If vm Is Nothing Then Return
-
-            Dim searchText = tb.Text
-
-            _isFilteringPartner = True
-            Try
-                Dim settingsSvc As New Services.SettingsService()
-                Dim partnerSvc As New Services.PartnerService()
-                Dim compInfo = settingsSvc.GetCompanyInfo()
-                Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
-
-                Dim results As System.Collections.Generic.List(Of Models.Partner)
-                If isUnified Then
-                    results = partnerSvc.SearchAllPartners(searchText.Trim())
-                Else
-                    results = partnerSvc.SearchPartners("Customer", searchText.Trim())
-                End If
-
-                vm.FilteredPartners.Clear()
-                For Each p In results
-                    vm.FilteredPartners.Add(p)
-                Next
-
-                ' WPF يمسح النص بعد CollectionChanged — نُعيده بعد انتهاء معالجته
-                Dispatcher.BeginInvoke(New Action(Sub()
-                    _isFilteringPartner = True
-                    tb.Text = searchText
-                    tb.CaretIndex = searchText.Length
-                    _isFilteringPartner = False
-                    If Not String.IsNullOrEmpty(searchText) AndAlso cmb.IsEnabled Then
-                        cmb.IsDropDownOpen = True
-                    End If
-                End Sub), System.Windows.Threading.DispatcherPriority.Input)
-
-            Finally
-                _isFilteringPartner = False
-            End Try
+            If vm IsNot Nothing Then vm.ApplyPartnerFilter(e)
         End Sub
 
-        Private Sub PartnerComboBox_LostFocus(sender As Object, e As RoutedEventArgs)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb Is Nothing Then Return
-
+        Private Sub PartnerDropdown_ItemSelected(sender As Object, e As Object)
+            Dim selected = TryCast(e, Models.Partner)
+            If selected Is Nothing Then Return
             Dim vm = TryCast(Me.DataContext, QuoteViewModel)
-            If vm IsNot Nothing Then
-                ' إعادة عرض اسم الشريك المحدد بعد مغادرة القائمة
-                If cmb.SelectedItem IsNot Nothing Then
-                    Dim selected = TryCast(cmb.SelectedItem, Models.Partner)
-                    If selected IsNot Nothing Then
-                        Dim tb As TextBox = TryCast(cmb.Template?.FindName("PART_EditableTextBox", cmb), TextBox)
-                        If tb IsNot Nothing Then tb.Text = selected.SearchText
-                    End If
+            If vm IsNot Nothing AndAlso vm.CurrentQuote IsNot Nothing Then
+                vm.CurrentQuote.PartnerID = selected.PartnerID
+            End If
+        End Sub
+
+        Private Sub PartnerDropdown_MoveNext(sender As Object, e As EventArgs)
+            Dim req As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
+            Dim ctrl = TryCast(sender, Vegtablity.Controls.SearchableDropdown)
+            If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
+        End Sub
+
+
+
+        Private Sub Date_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
+            If e.Key = System.Windows.Input.Key.Enter Then
+                e.Handled = True
+                Dim tb = TryCast(sender, TextBox)
+                If tb IsNot Nothing Then
+                    Dim req As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
+                    tb.MoveFocus(req)
                 End If
             End If
         End Sub
 
-        ' ══════════════════════════════════════════════════
-        '  Date Parsing Handlers
-        ' ══════════════════════════════════════════════════
+        Private Sub dgInvoiceDetails_ArrowNav_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
+            If e.Key = System.Windows.Input.Key.Down OrElse e.Key = System.Windows.Input.Key.Up Then Return
+            If e.Key = System.Windows.Input.Key.Tab Then Return
+        End Sub
+
         Private Sub QuoteDate_LostFocus(sender As Object, e As RoutedEventArgs)
             Dim tb = TryCast(sender, TextBox)
             If tb Is Nothing Then Return
-
-            Dim raw = tb.Text.Trim().Replace("-", "/").Replace(".", "/")
+            Dim raw = tb.Text.Trim()
             If String.IsNullOrWhiteSpace(raw) Then Return
-
-            ' قبول صيغة بدون فواصل: 01052026 → 01/05/2026
-            If raw.Length = 8 AndAlso Not raw.Contains("/") Then
-                raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
-            End If
-
             Dim parsed As DateTime
-            If DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
+            If DateTime.TryParseExact(raw, New String() {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
                                       System.Globalization.CultureInfo.InvariantCulture,
                                       System.Globalization.DateTimeStyles.None, parsed) Then
-                Dim vm = TryCast(Me.DataContext, QuoteViewModel)
-                If vm IsNot Nothing AndAlso vm.CurrentQuote IsNot Nothing Then
-                    vm.CurrentQuote.QuoteDate = parsed
-                    tb.Text = parsed.ToString("dd/MM/yyyy")
-                    tb.Foreground = System.Windows.Media.Brushes.Black
-                    tb.ToolTip = "أدخل التاريخ: dd/MM/yyyy"
-                End If
+                Dim vm = TryCast(Me.DataContext, ViewModels.QuoteViewModel)
+                If vm IsNot Nothing Then vm.QuoteDateText = parsed.ToString("dd/MM/yyyy")
+                tb.Text = parsed.ToString("dd/MM/yyyy")
+                tb.Foreground = System.Windows.Media.Brushes.Black
             Else
                 tb.Foreground = System.Windows.Media.Brushes.Red
-                tb.ToolTip = "صيغة تاريخ غير صحيحة — استخدم: dd/MM/yyyy"
-                ShowSnackbar("تنسيق التاريخ غير صحيح، استخدم يوم/شهر/سنة")
             End If
         End Sub
 
         Private Sub ExpiryDate_LostFocus(sender As Object, e As RoutedEventArgs)
             Dim tb = TryCast(sender, TextBox)
             If tb Is Nothing Then Return
-
-            Dim raw = tb.Text.Trim().Replace("-", "/").Replace(".", "/")
-            Dim vm = TryCast(Me.DataContext, QuoteViewModel)
-            If vm Is Nothing OrElse vm.CurrentQuote Is Nothing Then Return
-
-            If String.IsNullOrWhiteSpace(raw) Then
-                vm.CurrentQuote.ExpiryDate = Nothing
-                tb.Text = ""
-                tb.Foreground = System.Windows.Media.Brushes.Black
-                Return
-            End If
-
-            ' قبول صيغة بدون فواصل: 01052026 → 01/05/2026
-            If raw.Length = 8 AndAlso Not raw.Contains("/") Then
-                raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
-            End If
-
+            Dim raw = tb.Text.Trim()
+            If String.IsNullOrWhiteSpace(raw) Then Return
             Dim parsed As DateTime
-            If DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
+            If DateTime.TryParseExact(raw, New String() {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
                                       System.Globalization.CultureInfo.InvariantCulture,
                                       System.Globalization.DateTimeStyles.None, parsed) Then
-                vm.CurrentQuote.ExpiryDate = parsed
+                Dim vm = TryCast(Me.DataContext, ViewModels.QuoteViewModel)
+                If vm IsNot Nothing Then vm.ExpiryDateText = parsed.ToString("dd/MM/yyyy")
                 tb.Text = parsed.ToString("dd/MM/yyyy")
                 tb.Foreground = System.Windows.Media.Brushes.Black
-                tb.ToolTip = "أدخل التاريخ: dd/MM/yyyy"
             Else
                 tb.Foreground = System.Windows.Media.Brushes.Red
-                tb.ToolTip = "صيغة تاريخ غير صحيحة — استخدم: dd/MM/yyyy"
-                ShowSnackbar("تنسيق التاريخ غير صحيح، استخدم يوم/شهر/سنة")
             End If
         End Sub
 
-        ''' <summary>يبحث في الشجرة البصرية عن عنصر أب من نوع T</summary>
-        Private Shared Function FindVisualParent(Of T As DependencyObject)(child As DependencyObject) As T
-            Dim parent = Media.VisualTreeHelper.GetParent(child)
-            While parent IsNot Nothing
-                Dim result = TryCast(parent, T)
-                If result IsNot Nothing Then Return result
-                parent = Media.VisualTreeHelper.GetParent(parent)
-            End While
-            Return Nothing
-        End Function
-    
-        Private Sub Date_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
-            If e.Key = System.Windows.Input.Key.Enter Then
-                e.Handled = True
-                Dim tb = TryCast(sender, System.Windows.Controls.TextBox)
-                If tb IsNot Nothing Then
-                    Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-                    tb.MoveFocus(request)
-                End If
-            End If
-        End Sub
-
-        Private Sub PartnerComboBox_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
-            If e.Key = System.Windows.Input.Key.Enter Then
-                e.Handled = True
-                Dim cb = TryCast(sender, ComboBox)
-                If cb Is Nothing Then Return
-
-                If cb.IsDropDownOpen Then cb.IsDropDownOpen = False
-                
-                Dim doMove = Sub()
-                                 Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-                                 Dim focusedElement = TryCast(System.Windows.Input.Keyboard.FocusedElement, System.Windows.UIElement)
-                                 If focusedElement IsNot Nothing Then
-                                     focusedElement.MoveFocus(request)
-                                 Else
-                                     cb.MoveFocus(request)
-                                 End If
-                             End Sub
-
-                Dim vm = TryCast(Me.DataContext, ViewModels.QuoteViewModel)
-                If vm Is Nothing Then Return
-                
-                If cb.SelectedItem IsNot Nothing Then
-                    doMove()
-                    Return
-                End If
-                
-                Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-                If tb IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tb.Text) Then
-                    Dim searchText = tb.Text.Trim().ToLower()
-                    Dim match As Models.Partner = Nothing
-                    
-                    If vm.AllPartners IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.AllPartners, Function(pt) pt.PartnerName.ToLower() = searchText OrElse pt.AccountCode = searchText)
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredPartners IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.FilteredPartners, Function(pt) pt.PartnerName.ToLower() = searchText OrElse pt.AccountCode = searchText)
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredPartners IsNot Nothing AndAlso vm.FilteredPartners.Count = 1 Then
-                        match = vm.FilteredPartners(0)
-                    End If
-                    
-                    If match IsNot Nothing Then
-                        cb.SelectedItem = match
-                        doMove()
-                        Return
-                    End If
-                End If
-
-                ShowSnackbar("الرجاء اختيار اسم المورد أو العميل الصحيح من القائمة")
-            End If
-        End Sub
     End Class
 End Namespace

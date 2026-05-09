@@ -23,8 +23,8 @@ Namespace Views
                 AddHandler VM.RequestSnackbar, AddressOf ShowSnackbar
             End If
 
-            ' Animate cards in
-            AnimateCards()
+            ' Animate cards in - Disabled: Now hidden by default and controlled by ToggleStatsBtn
+            ' AnimateCards()
 
             ' Animate payment panel when IsPaymentPanelOpen changes
             AddHandler VM.PropertyChanged, Sub(s, args)
@@ -33,6 +33,39 @@ Namespace Views
                     sb?.Begin()
                 End If
             End Sub
+        End Sub
+
+        ' ══════════════════════════════════════════════════
+        '  Stats Cards Toggle (إخفاء / إظهار الإحصائيات)
+        ' ══════════════════════════════════════════════════
+        Private _statsVisible As Boolean = False
+
+        Private Sub ToggleStatsBtn_Click(sender As Object, e As RoutedEventArgs)
+            If _statsVisible Then
+                ' Collapse
+                Dim sb = TryCast(Me.Resources("CollapseStats"), Storyboard)
+                If sb IsNot Nothing Then sb.Begin(Me)
+            Else
+                ' Expand
+                StatsPanel.Visibility = Visibility.Visible
+                Dim sb = TryCast(Me.Resources("ExpandStats"), Storyboard)
+                If sb IsNot Nothing Then sb.Begin(Me)
+                _statsVisible = True
+                UpdateStatsBtnLabel()
+            End If
+        End Sub
+
+        Private Sub CollapseStats_Completed(sender As Object, e As EventArgs)
+            StatsPanel.Visibility = Visibility.Collapsed
+            _statsVisible = False
+            UpdateStatsBtnLabel()
+        End Sub
+
+        Private Sub UpdateStatsBtnLabel()
+            Dim lbl = TryCast(ToggleStatsBtn.Template.FindName("StatsBtnLabel", ToggleStatsBtn), TextBlock)
+            If lbl IsNot Nothing Then
+                lbl.Text = If(_statsVisible, "إخفاء الإحصائيات", "إظهار الإحصائيات")
+            End If
         End Sub
 
         ''' <summary>Staggered fade-in for the stats cards</summary>

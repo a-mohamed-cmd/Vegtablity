@@ -63,5 +63,39 @@ Namespace Views
         Private Sub CloseBtn_Click(sender As Object, e As RoutedEventArgs)
             Application.Current.Shutdown()
         End Sub
+
+        ' ══════════════════════════════════════════════════
+        '  Stats Cards Toggle (إخفاء / إظهار الإحصائيات)
+        ' ══════════════════════════════════════════════════
+        Private _statsVisible As Boolean = False
+
+        Private Sub ToggleStatsBtn_Click(sender As Object, e As RoutedEventArgs)
+            If _statsVisible Then
+                ' Collapse
+                Dim sb = TryCast(Me.Resources("CollapseStats"), System.Windows.Media.Animation.Storyboard)
+                If sb IsNot Nothing Then sb.Begin(Me)
+            Else
+                ' Expand
+                StatsPanel.Visibility = Visibility.Visible
+                Dim sb = TryCast(Me.Resources("ExpandStats"), System.Windows.Media.Animation.Storyboard)
+                If sb IsNot Nothing Then sb.Begin(Me)
+                _statsVisible = True
+                UpdateStatsBtnLabel()
+            End If
+        End Sub
+
+        Private Sub CollapseStats_Completed(sender As Object, e As EventArgs)
+            StatsPanel.Visibility = Visibility.Collapsed
+            _statsVisible = False
+            UpdateStatsBtnLabel()
+        End Sub
+
+        Private Sub UpdateStatsBtnLabel()
+            Dim lbl = TryCast(ToggleStatsBtn.Template.FindName("StatsBtnLabel", ToggleStatsBtn), System.Windows.Controls.TextBlock)
+            If lbl IsNot Nothing Then
+                lbl.Text = If(_statsVisible, "إخفاء الإحصائيات", "إظهار الإحصائيات")
+            End If
+        End Sub
+
     End Class
 End Namespace

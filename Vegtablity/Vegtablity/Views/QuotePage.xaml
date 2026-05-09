@@ -6,6 +6,7 @@
       xmlns:local="clr-namespace:Vegtablity"
       xmlns:viewmodels="clr-namespace:Vegtablity.ViewModels"
       xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+      xmlns:controls="clr-namespace:Vegtablity.Controls"
       mc:Ignorable="d" 
       d:DesignHeight="750" d:DesignWidth="1050"
       FlowDirection="RightToLeft">
@@ -171,17 +172,15 @@
                         <!-- Customer -->
                         <StackPanel Grid.Row="0" Grid.Column="2">
                             <TextBlock Text="العميل / المورد الموجه له السعر *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                            <ComboBox x:Name="CmbPartner"
-                                      ItemsSource="{Binding FilteredPartners}"
-                                      SelectedValue="{Binding CurrentQuote.PartnerID, UpdateSourceTrigger=PropertyChanged}"
-                                      SelectedValuePath="PartnerID"
-                                      DisplayMemberPath="SearchText"
-                                      IsEditable="True"
-                                      IsTextSearchEnabled="False"
-                                      StaysOpenOnEdit="True"
-                                      TextBoxBase.TextChanged="PartnerSearch_TextChanged"
-                                      PreviewKeyDown="PartnerComboBox_PreviewKeyDown"
-                                      LostFocus="PartnerComboBox_LostFocus"/>
+                            <controls:SearchableDropdown
+                                  x:Name="PartnerDropdown"
+                                  ItemsSource="{Binding FilteredPartners}"
+                                  DisplayMemberPath="SearchText"
+                                  Watermark="ابحث باسم العميل أو المورد..."
+                                  Height="40"
+                                  SearchChanged="PartnerDropdown_SearchChanged"
+                                  ItemSelected="PartnerDropdown_ItemSelected"
+                                  ConfirmedAndMoveNext="PartnerDropdown_MoveNext"/>
                         </StackPanel>
 
                         <!-- Expiry Date -->

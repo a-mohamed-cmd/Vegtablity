@@ -21,6 +21,34 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
+        <!-- Stats Panel Expand Storyboard -->
+        <Storyboard x:Key="ExpandStats">
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Height"
+                             To="180" Duration="0:0:0.35">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.3"/>
+        </Storyboard>
+
+        <!-- Stats Panel Collapse Storyboard -->
+        <Storyboard x:Key="CollapseStats" Completed="CollapseStats_Completed">
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.2"/>
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Height"
+                             To="0" Duration="0:0:0.3" BeginTime="0:0:0.1">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
         <!-- Sidebar Button Style -->
         <Style x:Key="SidebarButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
@@ -234,9 +262,42 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Page Title -->
+                        <!-- Page Title + Stats Toggle -->
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="{Binding CurrentPageTitle}" FontSize="22" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+
+                            <!-- Stats Toggle Button (only on Home) -->
+                            <Border Margin="18,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding IsHomePage, Converter={StaticResource BoolToVis}}">
+                                <Button x:Name="ToggleStatsBtn"
+                                        Click="ToggleStatsBtn_Click"
+                                        Cursor="Hand"
+                                        BorderThickness="1" BorderBrush="#dde3ed"
+                                        Background="White" Padding="14,7"
+                                        ToolTip="إظهار / إخفاء الإحصائيات">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="btnBg"
+                                                    Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="20" Padding="{TemplateBinding Padding}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="📊" FontSize="15" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <TextBlock x:Name="StatsBtnLabel" Text="إظهار الإحصائيات" FontSize="13" FontWeight="SemiBold"
+                                                               Foreground="#2c3e50" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="btnBg" Property="Background" Value="#f0f4ff"/>
+                                                    <Setter TargetName="btnBg" Property="BorderBrush" Value="#3498db"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Border>
                         </StackPanel>
 
                         <!-- Window Controls -->
@@ -249,6 +310,7 @@
                 </Border>
 
                 <!-- Content Area -->
+
                 <Grid Grid.Row="1" Margin="20">
                     
                     <!-- HOME PAGE: Dashboard Cards (visible only when IsHomePage = True) -->
@@ -278,7 +340,9 @@
                                 <RowDefinition Height="1*"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Quick Stats Cards -->
+                            <!-- Quick Stats Cards (Collapsible — hidden by default) -->
+                            <Border x:Name="StatsPanel" Height="0" Opacity="0"
+                                    Visibility="Collapsed" ClipToBounds="True">
                             <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,20">
                                 <!-- Sales Card -->
                                 <Border Margin="8" CornerRadius="12" Padding="20">
@@ -337,6 +401,7 @@
                                     </StackPanel>
                                 </Border>
                             </UniformGrid>
+                            </Border>
 
                             <!-- Main Content Grid for Charts and Alerts -->
                             <Grid Grid.Row="1">

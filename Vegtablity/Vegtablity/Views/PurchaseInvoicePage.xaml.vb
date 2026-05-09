@@ -1,4 +1,4 @@
-﻿Imports System.Windows.Input
+Imports System.Windows.Input
 Imports System.Windows.Controls
 Imports System.Linq
 Imports Vegtablity.ViewModels
@@ -385,216 +385,62 @@ Namespace Views
         End Sub
 
         ' ══════════════════════════════════════════════════
-        '  Partner Search ComboBox Handlers
-        ' ══════════════════════════════════════════════════
-        Private _isFilteringPartner As Boolean = False
 
-        Private Sub PartnerSearch_TextChanged(sender As Object, e As System.Windows.Controls.TextChangedEventArgs)
-            Dim _cbCheck = TryCast(sender, System.Windows.Controls.ComboBox)
-            If _cbCheck IsNot Nothing AndAlso Not _cbCheck.IsEnabled Then Return
-            If _isFilteringPartner Then Return
 
-            ' عند إرفاق TextBoxBase.TextChanged على ComboBox:
-            '   sender          = ComboBox (ليس TextBox!)
-            '   e.OriginalSource = TextBox الداخلي (PART_EditableTextBox)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb Is Nothing Then Return
-            Dim tb = TryCast(e.OriginalSource, TextBox)
-            If tb Is Nothing Then Return
+        ' ══════════════════════════════════════════════════════
+        '  Partner SearchableDropdown — فاتورة المشتريات
+        ' ══════════════════════════════════════════════════════
 
+        Private Sub PartnerDropdown_SearchChanged(sender As Object, e As String)
             Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
-            If vm Is Nothing Then Return
-
-            ' حفظ النص قبل أي تعديل
-            Dim searchText = tb.Text
-
-            _isFilteringPartner = True
-            Try
-                Dim settingsSvc As New Services.SettingsService()
-                Dim partnerSvc As New Services.PartnerService()
-                Dim compInfo = settingsSvc.GetCompanyInfo()
-                Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
-
-                Dim results As System.Collections.Generic.List(Of Models.Partner)
-                If isUnified Then
-                    results = partnerSvc.SearchAllPartners(searchText.Trim())
-                Else
-                    results = partnerSvc.SearchPartners("Supplier", searchText.Trim())
-                End If
-
-                vm.FilteredPartners.Clear()
-                For Each p In results
-                    vm.FilteredPartners.Add(p)
-                Next
-
-                ' WPF يمسح النص بعد CollectionChanged — نُعيده بعد انتهاء معالجته
-                Dispatcher.BeginInvoke(New Action(Sub()
-                    _isFilteringPartner = True
-                    tb.Text = searchText
-                    tb.CaretIndex = searchText.Length
-                    _isFilteringPartner = False
-                    If Not String.IsNullOrEmpty(searchText) AndAlso cmb.IsEnabled Then
-                        cmb.IsDropDownOpen = True
-                    End If
-                End Sub), System.Windows.Threading.DispatcherPriority.Input)
-
-            Finally
-                _isFilteringPartner = False
-            End Try
+            If vm IsNot Nothing Then vm.ApplyPartnerFilter(e)
         End Sub
 
-        Private Sub PartnerComboBox_LostFocus(sender As Object, e As RoutedEventArgs)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb Is Nothing Then Return
+        Private Sub PartnerDropdown_ItemSelected(sender As Object, e As Object)
+            Dim selected = TryCast(e, Models.Partner)
+            If selected Is Nothing Then Return
             Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
-            If vm IsNot Nothing Then
-                vm.PartnerSearchText = ""
-                If cmb.SelectedItem IsNot Nothing Then
-                    Dim selected = TryCast(cmb.SelectedItem, Models.Partner)
-                    If selected IsNot Nothing Then
-                        Dim tb As TextBox = TryCast(cmb.Template.FindName("PART_EditableTextBox", cmb), TextBox)
-                        If tb IsNot Nothing Then tb.Text = selected.SearchText
-                    End If
-                End If
+            If vm IsNot Nothing AndAlso vm.CurrentInvoice IsNot Nothing Then
+                vm.CurrentInvoice.PartnerID = selected.PartnerID
             End If
         End Sub
 
-        ' ══════════════════════════════════════════════════
-        '  Invoice Date TextBox Handlers
-        ' ══════════════════════════════════════════════════
+        Private Sub PartnerDropdown_MoveNext(sender As Object, e As EventArgs)
+            Dim req As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
+            Dim ctrl = TryCast(sender, Vegtablity.Controls.SearchableDropdown)
+            If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
+        End Sub
+
+
         Private Sub InvDate_LostFocus(sender As Object, e As RoutedEventArgs)
             Dim tb = TryCast(sender, TextBox)
             If tb Is Nothing Then Return
-
-            Dim raw = tb.Text.Trim().Replace("-", "/").Replace(".", "/")
-            If raw.Length = 8 AndAlso Not raw.Contains("/") Then
-                raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
-            End If
-
+            Dim raw = tb.Text.Trim()
+            If String.IsNullOrWhiteSpace(raw) Then Return
             Dim parsed As DateTime
-            If DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
+            If DateTime.TryParseExact(raw, New String() {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
                                       System.Globalization.CultureInfo.InvariantCulture,
                                       System.Globalization.DateTimeStyles.None, parsed) Then
-                Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
-                If vm IsNot Nothing AndAlso vm.CurrentInvoice IsNot Nothing Then
-                    vm.CurrentInvoice.InvDate = parsed
-                    tb.Text = parsed.ToString("dd/MM/yyyy")
-                    tb.Foreground = System.Windows.Media.Brushes.Black
-                    tb.ToolTip = "أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"
-                End If
+                tb.Text = parsed.ToString("dd/MM/yyyy")
+                tb.Foreground = System.Windows.Media.Brushes.Black
             Else
                 tb.Foreground = System.Windows.Media.Brushes.Red
-                tb.ToolTip = "صيغة تاريخ غير صحيحة — استخدم: dd/MM/yyyy"
             End If
         End Sub
 
-        ' ══════════════════════════════════════════════════
-        '  DataGrid Arrow Key Navigation
-        ' ══════════════════════════════════════════════════
-        Private Sub dgInvoiceDetails_ArrowNav_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key <> Key.Up AndAlso e.Key <> Key.Down AndAlso
-               e.Key <> Key.Left AndAlso e.Key <> Key.Right Then Return
-
-            Dim dg = TryCast(sender, DataGrid)
-            If dg Is Nothing Then Return
-
-            Dim isInEditMode = dg.CurrentCell.IsValid AndAlso
-                               Keyboard.FocusedElement IsNot dg AndAlso
-                               (TypeOf Keyboard.FocusedElement Is TextBox OrElse
-                                TypeOf Keyboard.FocusedElement Is ComboBox)
-            If Not isInEditMode Then Return
-
-            Dim currentRow = dg.Items.IndexOf(dg.CurrentCell.Item)
-            Dim colIndex   = dg.Columns.IndexOf(dg.CurrentCell.Column)
-            Dim targetRow  = currentRow
-            Dim targetCol  = colIndex
-
-            Select Case e.Key
-                Case Key.Down  : If currentRow < dg.Items.Count - 1 Then targetRow += 1 Else Return
-                Case Key.Up    : If currentRow > 0 Then targetRow -= 1 Else Return
-                Case Key.Right : If colIndex > 0 Then targetCol -= 1 Else Return
-                Case Key.Left  : If colIndex < dg.Columns.Count - 1 Then targetCol += 1 Else Return
-                Case Else      : Return
-            End Select
-
-            e.Handled = True
-            dg.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode:=True)
-
-            Dim targetItem = dg.Items(targetRow)
-            dg.CurrentCell = New DataGridCellInfo(targetItem, dg.Columns(targetCol))
-            dg.SelectedItem = targetItem
-            dg.ScrollIntoView(targetItem, dg.Columns(targetCol))
-
-            Dispatcher.BeginInvoke(New Action(Sub()
-                dg.BeginEdit()
-                Dim focused = TryCast(Keyboard.FocusedElement, TextBox)
-                If focused IsNot Nothing Then focused.SelectAll()
-            End Sub), System.Windows.Threading.DispatcherPriority.Input)
-        End Sub
-    
         Private Sub Date_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
             If e.Key = System.Windows.Input.Key.Enter Then
                 e.Handled = True
-                Dim tb = TryCast(sender, System.Windows.Controls.TextBox)
+                Dim tb = TryCast(sender, TextBox)
                 If tb IsNot Nothing Then
-                    Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-                    tb.MoveFocus(request)
+                    Dim req As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
+                    tb.MoveFocus(req)
                 End If
             End If
         End Sub
 
-        Private Sub PartnerComboBox_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
-            If e.Key = System.Windows.Input.Key.Enter Then
-                e.Handled = True
-                Dim cb = TryCast(sender, ComboBox)
-                If cb Is Nothing Then Return
-
-                If cb.IsDropDownOpen Then cb.IsDropDownOpen = False
-                
-                Dim doMove = Sub()
-                                 Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-                                 Dim focusedElement = TryCast(System.Windows.Input.Keyboard.FocusedElement, System.Windows.UIElement)
-                                 If focusedElement IsNot Nothing Then
-                                     focusedElement.MoveFocus(request)
-                                 Else
-                                     cb.MoveFocus(request)
-                                 End If
-                             End Sub
-
-                Dim vm = TryCast(Me.DataContext, ViewModels.PurchaseInvoiceViewModel)
-                If vm Is Nothing Then Return
-                
-                If cb.SelectedItem IsNot Nothing Then
-                    doMove()
-                    Return
-                End If
-                
-                Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-                If tb IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tb.Text) Then
-                    Dim searchText = tb.Text.Trim().ToLower()
-                    Dim match As Models.Partner = Nothing
-                    
-                    If vm.AllPartners IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.AllPartners, Function(pt) pt.PartnerName.ToLower() = searchText OrElse pt.AccountCode = searchText)
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredPartners IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.FilteredPartners, Function(pt) pt.PartnerName.ToLower() = searchText OrElse pt.AccountCode = searchText)
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredPartners IsNot Nothing AndAlso vm.FilteredPartners.Count = 1 Then
-                        match = vm.FilteredPartners(0)
-                    End If
-                    
-                    If match IsNot Nothing Then
-                        cb.SelectedItem = match
-                        doMove()
-                        Return
-                    End If
-                End If
-
-                ShowSnackbar("الرجاء اختيار اسم المورد أو العميل الصحيح من القائمة")
-            End If
+        Private Sub dgInvoiceDetails_ArrowNav_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
+            ' Allow normal DataGrid arrow navigation
         End Sub
     End Class
 End Namespace

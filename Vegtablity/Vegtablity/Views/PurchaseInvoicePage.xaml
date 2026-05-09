@@ -5,6 +5,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:Vegtablity"
       xmlns:viewmodels="clr-namespace:Vegtablity.ViewModels"
+      xmlns:controls="clr-namespace:Vegtablity.Controls"
       mc:Ignorable="d" 
       d:DesignHeight="750" d:DesignWidth="1050"
       FlowDirection="RightToLeft">
@@ -131,18 +132,16 @@
                 <!-- Partner Search (عملاء + موردون) -->
                 <StackPanel Grid.Row="0" Grid.Column="2">
                     <TextBlock Text="المورد / العميل *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
-                    <ComboBox x:Name="CmbPartner"
-                              ItemsSource="{Binding FilteredPartners}"
-                              SelectedValue="{Binding CurrentInvoice.PartnerID, UpdateSourceTrigger=PropertyChanged}"
-                              SelectedValuePath="PartnerID"
-                              DisplayMemberPath="SearchText"
-                              IsEditable="True"
-                              IsTextSearchEnabled="False"
-                              StaysOpenOnEdit="True"
-                              TextBoxBase.TextChanged="PartnerSearch_TextChanged"
-                              PreviewKeyDown="PartnerComboBox_PreviewKeyDown"
-                              LostFocus="PartnerComboBox_LostFocus"
-                              IsEnabled="{Binding IsEditAllowed}"/>
+                    <controls:SearchableDropdown
+                        x:Name="PartnerDropdown"
+                        ItemsSource="{Binding FilteredPartners}"
+                        DisplayMemberPath="SearchText"
+                        Watermark="ابحث باسم المورد أو العميل..."
+                        Height="40"
+                        IsEnabled="{Binding IsEditAllowed}"
+                        SearchChanged="PartnerDropdown_SearchChanged"
+                        ItemSelected="PartnerDropdown_ItemSelected"
+                        ConfirmedAndMoveNext="PartnerDropdown_MoveNext"/>
                 </StackPanel>
 
                 <!-- Warehouse -->

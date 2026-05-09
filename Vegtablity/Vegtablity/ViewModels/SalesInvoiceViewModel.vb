@@ -56,8 +56,8 @@ Namespace ViewModels
         End Sub
 
         ''' <summary>فلترة قائمة الشركاء بحسب نص البحث عبر الـ Database</summary>
-        Private Sub ApplyPartnerFilter()
-            Dim txt = _partnerSearchText.Trim()
+        Public Sub ApplyPartnerFilter(Optional searchText As String = "")
+            Dim txt = searchText.Trim()
 
             Dim settingsSvc As New Vegtablity.Services.SettingsService()
             Dim compInfo = settingsSvc.GetCompanyInfo()

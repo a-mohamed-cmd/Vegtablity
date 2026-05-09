@@ -152,10 +152,13 @@
                                 </DataGridTemplateColumn.CellTemplate>
                                 <DataGridTemplateColumn.CellEditingTemplate>
                                     <DataTemplate>
-                                        <ComboBox ItemsSource="{Binding DataContext.Accounts, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                  SelectedValue="{Binding AccountID}" SelectedValuePath="AccountID" 
-                                                  IsEditable="True" DisplayMemberPath="AccountName"
-                                                  TextSearch.TextPath="AccountName">
+                                        <ComboBox ItemsSource="{Binding DataContext.FilteredAccounts, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  SelectedValue="{Binding AccountID}" SelectedValuePath="AccountID"
+                                                  IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="False"
+                                                  TextBoxBase.TextChanged="AccountComboBox_TextChanged"
+                                                  SelectionChanged="AccountComboBox_SelectionChanged"
+                                                  PreviewKeyDown="AccountComboBox_PreviewKeyDown"
+                                                  LostFocus="AccountComboBox_LostFocus">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <TextBlock>

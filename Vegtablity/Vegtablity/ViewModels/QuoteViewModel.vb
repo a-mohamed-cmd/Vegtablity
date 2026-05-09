@@ -69,6 +69,27 @@ Namespace ViewModels
             End If
         End Sub
 
+        Public Sub ApplyPartnerFilter(Optional searchText As String = "")
+            Dim txt = searchText.Trim()
+            Try
+                Dim settingsSvc As New Vegtablity.Services.SettingsService()
+                Dim compInfo = settingsSvc.GetCompanyInfo()
+                Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
+                Dim partnerSvc As New Vegtablity.Services.PartnerService()
+                Dim results As System.Collections.Generic.List(Of Partner)
+                If isUnified Then
+                    results = partnerSvc.SearchAllPartners(txt)
+                Else
+                    results = partnerSvc.SearchPartners("Customer", txt)
+                End If
+                FilteredPartners.Clear()
+                For Each p In results
+                    FilteredPartners.Add(p)
+                Next
+            Catch
+            End Try
+        End Sub
+
         Public Property SaveCommand As ICommand
         Public Property NewCommand As ICommand
         Public Property AddItemCommand As ICommand

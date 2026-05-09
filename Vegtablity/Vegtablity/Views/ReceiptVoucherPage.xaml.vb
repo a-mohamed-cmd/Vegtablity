@@ -1,4 +1,4 @@
-﻿Imports System.Windows.Input
+Imports System.Windows.Input
 Imports System.Windows.Controls
 
 Namespace Views
@@ -67,98 +67,27 @@ Namespace Views
             Await System.Threading.Tasks.Task.Delay(3000)
             SnackbarBorder.Visibility = Visibility.Collapsed
         End Sub
+        ' ══════════════════════════════════════════════════════
+        '  Account SearchableDropdown — سند القبض
+        ' ══════════════════════════════════════════════════════
 
-        Private _isFilteringAccount As Boolean = False
-        
-        Private Sub AccountComboBox_TextChanged(sender As Object, e As TextChangedEventArgs)
-            If _isFilteringAccount Then Return
-            Dim cb = TryCast(sender, ComboBox)
-            If cb Is Nothing Then Return
-            Dim tb = TryCast(e.OriginalSource, TextBox)
-            If tb Is Nothing Then Return
-
+        Private Sub AccountDropdown_SearchChanged(sender As Object, e As String)
             Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
-            If vm Is Nothing Then Return
-
-            Dim searchText = tb.Text
-            vm.FilterAccounts(searchText)
-            
-            _isFilteringAccount = True
-            cb.IsDropDownOpen = True
-            tb.Text = searchText
-            tb.CaretIndex = tb.Text.Length
-            _isFilteringAccount = False
+            If vm IsNot Nothing Then vm.FilterAccounts(e)
         End Sub
 
-        Private Sub AccountComboBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Enter Then
-                e.Handled = True
-                Dim cb = TryCast(sender, ComboBox)
-                If cb Is Nothing Then Return
-
-                If cb.IsDropDownOpen Then cb.IsDropDownOpen = False
-                
-                Dim moveFocus = Sub()
-                                    Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-                                    Dim focusedElement = TryCast(System.Windows.Input.Keyboard.FocusedElement, System.Windows.UIElement)
-                                    If focusedElement IsNot Nothing Then
-                                        focusedElement.MoveFocus(request)
-                                    Else
-                                        cb.MoveFocus(request)
-                                    End If
-                                End Sub
-
-                Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
-                If vm Is Nothing Then Return
-                
-                If cb.SelectedItem IsNot Nothing Then
-                    moveFocus()
-                    Return
-                End If
-                
-                Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-                If tb IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tb.Text) Then
-                    Dim searchText = tb.Text.Trim().ToLower()
-                    Dim match As Models.Account = Nothing
-                    
-                    If vm.Accounts IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.Accounts, Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower() = searchText) OrElse (a.AccountCode IsNot Nothing AndAlso a.AccountCode = searchText))
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredAccounts IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.FilteredAccounts, Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower() = searchText) OrElse (a.AccountCode IsNot Nothing AndAlso a.AccountCode = searchText))
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredAccounts IsNot Nothing AndAlso vm.FilteredAccounts.Count = 1 Then
-                        match = vm.FilteredAccounts(0)
-                    End If
-                    
-                    If match IsNot Nothing Then
-                        cb.SelectedItem = match
-                        moveFocus()
-                        Return
-                    End If
-                End If
-
-                ShowSnackbar("الرجاء اختيار اسم أو رقم الحساب الصحيح من القائمة")
-            End If
-        End Sub
-
-        Private Sub AccountComboBox_LostFocus(sender As Object, e As RoutedEventArgs)
-            Dim cb = TryCast(sender, ComboBox)
-            If cb Is Nothing Then Return
+        Private Sub AccountDropdown_ItemSelected(sender As Object, e As Object)
+            Dim selected = TryCast(e, Models.Account)
+            If selected Is Nothing Then Return
             Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
-            If vm IsNot Nothing Then
-                If cb.SelectedItem IsNot Nothing Then
-                    Dim selected = TryCast(cb.SelectedItem, Models.Account)
-                    Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-                    If tb IsNot Nothing AndAlso selected IsNot Nothing Then
-                        _isFilteringAccount = True
-                        tb.Text = selected.AccountCode & " - " & selected.AccountName
-                        _isFilteringAccount = False
-                    End If
-                End If
-            End If
+            If vm IsNot Nothing Then vm.EditReceiptAccountID = selected.AccountID
         End Sub
-End Class
+
+        Private Sub AccountDropdown_MoveNext(sender As Object, e As EventArgs)
+            Dim req As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
+            Dim ctrl = TryCast(sender, Vegtablity.Controls.SearchableDropdown)
+            If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
+        End Sub
+
+    End Class
 End Namespace

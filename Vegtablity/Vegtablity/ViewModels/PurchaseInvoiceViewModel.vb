@@ -52,8 +52,8 @@ Namespace ViewModels
             End If
         End Sub
 
-        Private Sub ApplyPartnerFilter()
-            Dim txt = _partnerSearchText.Trim()
+        Public Sub ApplyPartnerFilter(Optional searchText As String = "")
+            Dim txt = searchText.Trim()
             
             Dim settingsSvc As New Vegtablity.Services.SettingsService()
             Dim compInfo = settingsSvc.GetCompanyInfo()

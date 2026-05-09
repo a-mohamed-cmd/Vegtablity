@@ -38,6 +38,34 @@
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
         </Storyboard>
+
+        <!-- Stats Panel Expand Storyboard -->
+        <Storyboard x:Key="ExpandStats">
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Height"
+                             To="180" Duration="0:0:0.35">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0" To="1" Duration="0:0:0.3"/>
+        </Storyboard>
+
+        <!-- Stats Panel Collapse Storyboard -->
+        <Storyboard x:Key="CollapseStats" Completed="CollapseStats_Completed">
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Opacity"
+                             To="0" Duration="0:0:0.2"/>
+            <DoubleAnimation Storyboard.TargetName="StatsPanel"
+                             Storyboard.TargetProperty="Height"
+                             To="0" Duration="0:0:0.3" BeginTime="0:0:0.1">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
     </UserControl.Resources>
 
     <Grid Background="#F0F4F8">
@@ -133,7 +161,7 @@
                         </Button.Template>
                     </Button>
 
-                    <Button Command="{Binding RefreshCommand}" Cursor="Hand" ToolTip="تحديث البيانات">
+                    <Button Command="{Binding RefreshCommand}" Cursor="Hand" ToolTip="تحديث البيانات" Margin="0,0,12,0">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border x:Name="bg" CornerRadius="10" Padding="12,10" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1">
@@ -152,14 +180,33 @@
                             </ControlTemplate>
                         </Button.Template>
                     </Button>
+
+                    <!-- Stats Toggle Button -->
+                    <Button x:Name="ToggleStatsBtn" Click="ToggleStatsBtn_Click" Cursor="Hand" ToolTip="إظهار / إخفاء ملخص الإحصائيات">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="bg" CornerRadius="10" Padding="14,10" Background="White" BorderBrush="#E2E8F0" BorderThickness="1">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="📊" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="StatsBtnLabel" Text="إظهار الإحصائيات" Foreground="#334155" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bg" Property="Background" Value="#F8FAFC"/>
+                                        <Setter TargetName="bg" Property="BorderBrush" Value="#3B82F6"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- ═══ 2. STATS CARDS ═══ -->
-        <Border Grid.Row="1" Padding="24,20,24,0">
-            <Grid x:Name="CardsGrid" Opacity="0">
-                <Grid.RenderTransform><TranslateTransform Y="20"/></Grid.RenderTransform>
+        <!-- ═══ 2. STATS CARDS (Collapsible) ═══ -->
+        <Border x:Name="StatsPanel" Grid.Row="1" Height="0" Opacity="0" Visibility="Collapsed" ClipToBounds="True" Padding="24,20,24,10">
+            <Grid x:Name="CardsGrid">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="1*"/>
                     <ColumnDefinition Width="20"/>

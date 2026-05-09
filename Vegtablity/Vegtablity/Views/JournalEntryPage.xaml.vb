@@ -66,11 +66,14 @@ Namespace Views
             Await System.Threading.Tasks.Task.Delay(3000)
             SnackbarBorder.Visibility = Visibility.Collapsed
         End Sub
+        ' ═══════════════════════════════════════════════════════════════════
+        '  Account ComboBox — منطق البحث والاختيار (نهج نظيف موحد)
+        ' ═══════════════════════════════════════════════════════════════════
 
-        Private _isFilteringAccount As Boolean = False
-        
+        Private _cbSuppressEvents As Boolean = False
+
         Private Sub AccountComboBox_TextChanged(sender As Object, e As TextChangedEventArgs)
-            If _isFilteringAccount Then Return
+            If _cbSuppressEvents Then Return
             Dim cb = TryCast(sender, ComboBox)
             If cb Is Nothing Then Return
             Dim tb = TryCast(e.OriginalSource, TextBox)
@@ -79,73 +82,119 @@ Namespace Views
             Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
             If vm Is Nothing Then Return
 
-            Dim searchText = tb.Text
+            Dim selected = TryCast(cb.SelectedItem, Models.Account)
+            If selected IsNot Nothing Then
+                Dim expectedText = selected.AccountCode & " - " & selected.AccountName
+                If tb.Text = expectedText Then Return
+            End If
+
+            _cbSuppressEvents = True
+            cb.SelectedItem = Nothing
+            _cbSuppressEvents = False
+
+            Dim searchText = tb.Text.Trim()
             vm.FilterAccounts(searchText)
-            
-            _isFilteringAccount = True
+
             cb.IsDropDownOpen = True
-            tb.Text = searchText
-            tb.CaretIndex = tb.Text.Length
-            _isFilteringAccount = False
+
+            Dispatcher.BeginInvoke(New Action(Sub()
+                tb.CaretIndex = tb.Text.Length
+            End Sub), System.Windows.Threading.DispatcherPriority.Input)
         End Sub
 
-                Private Sub AccountComboBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Enter Then
-                e.Handled = True
-                Dim cb = TryCast(sender, ComboBox)
-                If cb Is Nothing Then Return
+        Private Sub AccountComboBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            If _cbSuppressEvents Then Return
+            Dim cb = TryCast(sender, ComboBox)
+            If cb Is Nothing Then Return
+            Dim selected = TryCast(cb.SelectedItem, Models.Account)
+            If selected Is Nothing Then Return
 
-                If cb.IsDropDownOpen Then cb.IsDropDownOpen = False
+            _cbSuppressEvents = True
+            Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
+            If tb IsNot Nothing Then
+                tb.Text = selected.AccountCode & " - " & selected.AccountName
+                tb.CaretIndex = tb.Text.Length
+            End If
+            cb.IsDropDownOpen = False
+            _cbSuppressEvents = False
+        End Sub
 
-                Dim moveFocusNext = Sub()
-                    cb.Dispatcher.BeginInvoke(New Action(Sub()
-                        Try
-                            Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-                            Dim focusedElement = TryCast(System.Windows.Input.Keyboard.FocusedElement, System.Windows.UIElement)
-                            If focusedElement IsNot Nothing Then
-                                focusedElement.MoveFocus(request)
-                            Else
-                                cb.MoveFocus(request)
-                            End If
-                        Catch ex As Exception
-                        End Try
-                    End Sub), System.Windows.Threading.DispatcherPriority.Background)
-                End Sub
-                
-                Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
-                If vm Is Nothing Then Return
-                
-                If cb.SelectedItem IsNot Nothing Then
-                    moveFocusNext()
-                    Return
-                End If
-                
-                Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-                If tb IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tb.Text) Then
-                    Dim searchText = tb.Text.Trim().ToLower()
-                    Dim match As Models.Account = Nothing
-                    
-                    If vm.Accounts IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.Accounts, Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower() = searchText) OrElse (a.AccountCode IsNot Nothing AndAlso a.AccountCode = searchText))
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredAccounts IsNot Nothing Then
-                        match = System.Linq.Enumerable.FirstOrDefault(vm.FilteredAccounts, Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower() = searchText) OrElse (a.AccountCode IsNot Nothing AndAlso a.AccountCode = searchText))
-                    End If
-                    
-                    If match Is Nothing AndAlso vm.FilteredAccounts IsNot Nothing AndAlso vm.FilteredAccounts.Count = 1 Then
-                        match = vm.FilteredAccounts(0)
-                    End If
-                    
-                    If match IsNot Nothing Then
-                        cb.SelectedItem = match
-                        moveFocusNext()
-                        Return
-                    End If
-                End If
+        Private Sub AccountComboBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key <> Key.Enter Then Return
+            e.Handled = True
 
-                ShowSnackbar("الرجاء اختيار اسم أو رقم الحساب الصحيح من القائمة")
+            Dim cb = TryCast(sender, ComboBox)
+            If cb Is Nothing Then Return
+            If cb.IsDropDownOpen Then cb.IsDropDownOpen = False
+
+            Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+            If vm Is Nothing Then Return
+
+            If cb.SelectedItem IsNot Nothing Then
+                AccountComboBox_MoveNext(cb)
+                Return
+            End If
+
+            Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
+            If tb Is Nothing OrElse String.IsNullOrWhiteSpace(tb.Text) Then
+                ShowSnackbar("الرجاء اختيار أو كتابة اسم/رقم الحساب")
+                Return
+            End If
+
+            Dim searchText = tb.Text.Trim().ToLower()
+            Dim allSource = If(vm.Accounts, New System.Collections.ObjectModel.ObservableCollection(Of Models.Account)())
+            Dim filtered = If(vm.FilteredAccounts, allSource)
+
+            Dim match As Models.Account = Nothing
+
+            match = System.Linq.Enumerable.FirstOrDefault(allSource,
+                Function(a) String.Equals(a.AccountCode, searchText, StringComparison.OrdinalIgnoreCase) OrElse
+                            String.Equals(a.AccountName, searchText, StringComparison.OrdinalIgnoreCase))
+
+            If match Is Nothing Then
+                match = System.Linq.Enumerable.FirstOrDefault(filtered,
+                    Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower().Contains(searchText)) OrElse
+                                (a.AccountCode IsNot Nothing AndAlso a.AccountCode.Contains(searchText)))
+            End If
+
+            If match Is Nothing AndAlso filtered.Count = 1 Then
+                match = filtered(0)
+            End If
+
+            If match IsNot Nothing Then
+                _cbSuppressEvents = True
+                cb.SelectedItem = match
+                _cbSuppressEvents = False
+                AccountComboBox_MoveNext(cb)
+            Else
+                ShowSnackbar("لم يُعثر على حساب بهذا الاسم أو الرقم")
             End If
         End Sub
+
+        Private Sub AccountComboBox_LostFocus(sender As Object, e As RoutedEventArgs)
+            If _cbSuppressEvents Then Return
+            Dim cb = TryCast(sender, ComboBox)
+            If cb Is Nothing Then Return
+            Dim selected = TryCast(cb.SelectedItem, Models.Account)
+            If selected Is Nothing Then Return
+
+            Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
+            If tb IsNot Nothing Then
+                _cbSuppressEvents = True
+                tb.Text = selected.AccountCode & " - " & selected.AccountName
+                _cbSuppressEvents = False
+            End If
+        End Sub
+
+        Private Sub AccountComboBox_MoveNext(cb As ComboBox)
+            Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
+            Dim focused = TryCast(System.Windows.Input.Keyboard.FocusedElement, System.Windows.UIElement)
+            If focused IsNot Nothing Then
+                focused.MoveFocus(request)
+            Else
+                cb.MoveFocus(request)
+            End If
+        End Sub
+
     End Class
 End Namespace

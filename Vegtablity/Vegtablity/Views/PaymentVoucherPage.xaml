@@ -1,8 +1,9 @@
-﻿<UserControl x:Class="Views.PaymentVoucherPage"
+<UserControl x:Class="Views.PaymentVoucherPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
-             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             xmlns:controls="clr-namespace:Vegtablity.Controls">
 
     <UserControl.DataContext>
         <vm:VouchersViewModel/>
@@ -162,18 +163,15 @@
                         </Border>
 
                         <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <ComboBox ItemsSource="{Binding FilteredAccounts}" IsEditable="True" StaysOpenOnEdit="True" IsTextSearchEnabled="False" TextBoxBase.TextChanged="AccountComboBox_TextChanged" PreviewKeyDown="AccountComboBox_PreviewKeyDown" LostFocus="AccountComboBox_LostFocus" SelectedValue="{Binding EditPaymentAccountID}"
-                                  SelectedValuePath="AccountID" Margin="0,0,0,10">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock>
-                                        <Run Text="{Binding AccountCode}"/>
-                                        <Run Text=" - "/>
-                                        <Run Text="{Binding AccountName}"/>
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <controls:SearchableDropdown
+                            x:Name="AccountDropdown"
+                            ItemsSource="{Binding FilteredAccounts}"
+                            DisplayMemberPath="DisplayText"
+                            Watermark="ابحث برقم أو اسم الحساب..."
+                            Height="40" Margin="0,0,0,10"
+                            SearchChanged="AccountDropdown_SearchChanged"
+                            ItemSelected="AccountDropdown_ItemSelected"
+                            ConfirmedAndMoveNext="AccountDropdown_MoveNext"/>
 
                         <TextBlock Text="المبلغ *" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=LostFocus}" PreviewTextInput="Amount_PreviewTextInput" InputMethod.IsInputMethodEnabled="False" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>

@@ -1,0 +1,102 @@
+<UserControl x:Class="Controls.SearchableDropdown"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid x:Name="RootGrid">
+
+        <!-- Input TextBox -->
+        <TextBox x:Name="SearchBox"
+                 Height="40"
+                 VerticalContentAlignment="Center"
+                 Padding="10,0"
+                 Style="{DynamicResource ModernTextBoxStyle}"
+                 TextChanged="SearchBox_TextChanged"
+                 PreviewKeyDown="SearchBox_PreviewKeyDown"
+                 GotFocus="SearchBox_GotFocus"
+                 LostFocus="SearchBox_LostFocus"/>
+
+        <!-- Dropdown Popup -->
+        <Popup x:Name="DropPopup"
+               PlacementTarget="{Binding ElementName=SearchBox}"
+               Placement="Bottom"
+               StaysOpen="False"
+               AllowsTransparency="True"
+               PopupAnimation="Slide"
+               Opened="DropPopup_Opened">
+
+            <Border x:Name="PopupBorder"
+                    Background="White"
+                    BorderBrush="#CBD5E1"
+                    BorderThickness="1"
+                    CornerRadius="0,0,8,8"
+                    MinWidth="{Binding ActualWidth, ElementName=SearchBox}"
+                    MaxHeight="280">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.15" Color="#000000"/>
+                </Border.Effect>
+
+                <ListBox x:Name="ItemsList"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.CanContentScroll="True"
+                         VirtualizingPanel.IsVirtualizing="True"
+                         VirtualizingPanel.VirtualizationMode="Recycling"
+                         MouseLeftButtonUp="ItemsList_MouseLeftButtonUp"
+                         PreviewKeyDown="ItemsList_PreviewKeyDown">
+
+                    <!-- Item style -->
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="12,8"/>
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Bd" Background="Transparent"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#EFF6FF"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#DBEAFE"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+
+                    <!-- Empty state -->
+                    <ListBox.Template>
+                        <ControlTemplate TargetType="ListBox">
+                            <Border Background="White" BorderThickness="0">
+                                <StackPanel>
+                                    <ItemsPresenter/>
+                                    <TextBlock x:Name="EmptyMsg" Text="لا توجد نتائج"
+                                               Padding="12,8" Foreground="#94A3B8"
+                                               FontStyle="Italic" FontSize="13"
+                                               Visibility="Collapsed"/>
+                                </StackPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="HasItems" Value="False">
+                                    <Setter TargetName="EmptyMsg" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ListBox.Template>
+
+                </ListBox>
+            </Border>
+        </Popup>
+
+    </Grid>
+</UserControl>
