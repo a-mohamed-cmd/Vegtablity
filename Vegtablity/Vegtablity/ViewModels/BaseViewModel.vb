@@ -7,7 +7,7 @@ Namespace ViewModels
 
         Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
-        Protected Sub OnPropertyChanged(<CallerMemberName> Optional propertyName As String = Nothing)
+        Protected Overridable Sub OnPropertyChanged(<CallerMemberName> Optional propertyName As String = Nothing)
             RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))
         End Sub
 

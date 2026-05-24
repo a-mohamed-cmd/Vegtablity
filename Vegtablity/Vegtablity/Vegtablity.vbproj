@@ -123,12 +123,6 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="SQL\08_ManualJournals.sql" />
-    <Content Include="SQL\08_JournalEntries_Triggers.sql" />
-    <Content Include="SQL\09_StoredProcedures_Reports.sql" />
-    <Content Include="SQL\10_CompanySettings.sql" />
-    <Content Include="SQL\11_TrialBalance.sql" />
-    <Content Include="SQL\SQLVegtablity.sql" />
     <Import Include="System.Threading.Tasks" />
     <Import Include="System.Linq" />
     <Import Include="System.Xml.Linq" />
@@ -148,6 +142,8 @@
     <Import Include="System.Windows.Navigation" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\PurchaseQuoteDetail.vb" />
+    <Compile Include="Models\PurchaseQuoteHeader.vb" />
     <Compile Include="My Project\AssemblyInfo.vb">
       <SubType>Code</SubType>
     </Compile>
@@ -203,6 +199,7 @@
     <Compile Include="Models\InvoiceReportData.vb" />
     <Compile Include="Models\DashboardModels.vb" />
     <Compile Include="Services\DatabaseHelper.vb" />
+    <Compile Include="Services\PurchaseQuoteService.vb" />
     <Compile Include="Services\SettingsService.vb" />
     <Compile Include="Services\LicenseService.vb" />
     <Compile Include="Services\Session.vb" />
@@ -223,6 +220,7 @@
     <Compile Include="ViewModels\LicenseViewModel.vb" />
     <Compile Include="ViewModels\LoginViewModel.vb" />
     <Compile Include="ViewModels\DashboardViewModel.vb" />
+    <Compile Include="ViewModels\PurchaseQuoteViewModel.vb" />
     <Compile Include="ViewModels\UserManagementViewModel.vb" />
     <Compile Include="ViewModels\SettingsViewModel.vb" />
     <Compile Include="ViewModels\InventoryViewModel.vb" />
@@ -264,6 +262,9 @@
     <Compile Include="Helpers\ExcelImporter.vb" />
     <Compile Include="Views\LicenseWindow.xaml.vb">
       <DependentUpon>LicenseWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PurchaseQuotePage.xaml.vb">
+      <DependentUpon>PurchaseQuotePage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\UnknownProductsDialog.xaml.vb">
       <DependentUpon>UnknownProductsDialog.xaml</DependentUpon>
@@ -356,6 +357,10 @@
     <Page Include="Views\LicenseWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\PurchaseQuotePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\UnknownProductsDialog.xaml">
       <SubType>Designer</SubType>

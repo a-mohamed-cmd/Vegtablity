@@ -289,7 +289,19 @@ Namespace ViewModels
                 .Children = salesChildren
             })
 
-            allItems.Add(New MenuItem With {.Title = "المشتريات", .Icon = "📦", .FormName = "Purchases", .IsVisible = True})
+            Dim purchaseChildren As New ObservableCollection(Of MenuItem)()
+            purchaseChildren.Add(New MenuItem With {.Title = "فاتورة مشتريات", .Icon = "📦", .FormName = "Purchases", .IsVisible = True})
+            purchaseChildren.Add(New MenuItem With {.Title = "عروض المشتريات", .Icon = "📜", .FormName = "PurchaseQuotes", .IsVisible = True})
+
+            allItems.Add(New MenuItem With {
+                .Title = "المشتريات",
+                .Icon = "📦",
+                .FormName = "PurchasesParent",
+                .IsVisible = True,
+                .IsParent = True,
+                .IsExpanded = False,
+                .Children = purchaseChildren
+            })
             allItems.Add(New MenuItem With {.Title = "المخزون", .Icon = "🏪", .FormName = "Inventory", .IsVisible = True})
 
             ' === قسم الحسابات (قابل للتوسيع) ===
@@ -342,7 +354,7 @@ Namespace ViewModels
             Dim ProcessItem As Func(Of MenuItem, MenuItem) = Nothing
             ProcessItem = Function(item As MenuItem) As MenuItem
                               ' Dashboard and Quotes are always visible (Quotes bypassed until permissions are mapped)
-                              If item.FormName = "Dashboard" OrElse item.FormName = "Quotes" Then Return item
+                              If item.FormName = "Dashboard" OrElse item.FormName = "Quotes" OrElse item.FormName = "PurchaseQuotes" Then Return item
 
                               Dim canView As Boolean = False
                               If Services.Session.CurrentUser IsNot Nothing Then
@@ -468,7 +480,7 @@ Namespace ViewModels
                 SelectedMenuItem = item
 
                 ' Check permissions right before navigation (in case they changed but menu wasn't refreshed)
-                If item.FormName <> "Dashboard" AndAlso item.FormName <> "Quotes" AndAlso Services.Session.CurrentUser IsNot Nothing Then
+                If item.FormName <> "Dashboard" AndAlso item.FormName <> "Quotes" AndAlso item.FormName <> "PurchaseQuotes" AndAlso Services.Session.CurrentUser IsNot Nothing Then
                     If Not _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, item.FormName) Then
                         MessageBox.Show("عفواً، ليس لديك صلاحية لعرض هذه الشاشة.", "رسالة نظام", MessageBoxButton.OK, MessageBoxImage.Warning)
                         Return
@@ -495,6 +507,10 @@ Namespace ViewModels
 
                     Case "Purchases"
                         CurrentPage = New Views.PurchaseInvoicePage()
+                        IsHomePage = False
+
+                    Case "PurchaseQuotes"
+                        CurrentPage = New Views.PurchaseQuotePage()
                         IsHomePage = False
 
                     Case "Settings"

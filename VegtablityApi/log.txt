@@ -1,0 +1,29 @@
+Starting Server at 20/05/2026  1:52:26.92 
+INFO:     192.168.43.129:14736 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.43.129:14736 - "GET /openapi.json HTTP/1.1" 200 OK
+Starting Server at 20/05/2026  1:55:05.50 
+INFO:     192.168.43.129:14761 - "POST /auth/login HTTP/1.1" 422 Unprocessable Content
+ INFO:     192.168.43.129:14780 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     192.168.43.129:14780 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     192.168.43.129:14780 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.43.129:14780 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     192.168.43.129:14782 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+ INFO:     192.168.43.129:14926 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     192.168.43.129:14926 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     192.168.43.129:14926 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.43.129:14926 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     192.168.43.129:14985 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     192.168.43.129:15042 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     192.168.43.129:15046 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.43.129:15046 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     192.168.43.129:15047 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+INFO:     192.168.43.129:15075 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+Starting Server at 20/05/2026  2:22:02.68 
+INFO:     192.168.43.129:15105 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.43.129:15105 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     192.168.43.129:15106 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     192.168.43.129:30929 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.43.129:30929 - "GET /openapi.json HTTP/1.1" 200 OK
+ Starting Server at 21/05/2026 23:09:55.40 
+INFO:     192.168.43.129:4505 - "GET /docs HTTP/1.1" 200 OK
+INFO:     192.168.43.129:4505 - "GET /openapi.json HTTP/1.1" 200 OK

@@ -6,6 +6,29 @@ Namespace Views
 
         Public Sub New()
             InitializeComponent()
+            AddHandler Me.Loaded, AddressOf OnLoaded
+        End Sub
+
+        Private Sub OnLoaded(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(Me.DataContext, ViewModels.DashboardViewModel)
+            If vm IsNot Nothing Then
+                AddHandler vm.PropertyChanged, AddressOf OnViewModelPropertyChanged
+            End If
+        End Sub
+
+        Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
+            If e.PropertyName = "IsSidebarExpanded" Then
+                Dim vm = TryCast(Me.DataContext, ViewModels.DashboardViewModel)
+                If vm IsNot Nothing Then
+                    If vm.IsSidebarExpanded Then
+                        Dim sb = TryCast(Me.Resources("ExpandSidebar"), System.Windows.Media.Animation.Storyboard)
+                        If sb IsNot Nothing Then sb.Begin(Me)
+                    Else
+                        Dim sb = TryCast(Me.Resources("CollapseSidebar"), System.Windows.Media.Animation.Storyboard)
+                        If sb IsNot Nothing Then sb.Begin(Me)
+                    End If
+                End If
+            End If
         End Sub
 
         ''' <summary>Navigation stack for back-button support</summary>

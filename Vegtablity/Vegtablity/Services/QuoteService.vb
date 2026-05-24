@@ -70,46 +70,41 @@ Namespace Services
         End Function
 
         Public Function SaveQuote(quote As QuoteHeader) As Integer
-            Using conn = db.GetConnection()
-                conn.Open()
-                Using trans = conn.BeginTransaction()
-                    Try
-                        Dim p As New DynamicParameters()
-                        p.Add("@QuoteID", quote.QuoteID, dbType:=DbType.Int32, direction:=ParameterDirection.InputOutput)
-                        p.Add("@PartnerID", quote.PartnerID)
-                        p.Add("@QuoteDate", quote.QuoteDate)
-                        p.Add("@ExpiryDate", quote.ExpiryDate)
-                        p.Add("@IsActive", quote.IsActive)
-                        p.Add("@Notes", quote.Notes)
+            Try
+                ' Convert details to XML for high-performance batch processing
+                Dim detailsXml As String = ConvertDetailsToXml(quote.Details)
 
-                        conn.Execute(Helpers.StoredProcedures.SP_QUOTATION_UPSERT, p, transaction:=trans, commandType:=CommandType.StoredProcedure)
-                        Dim newId = p.Get(Of Integer)("@QuoteID")
+                Using conn = db.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@QuoteID", quote.QuoteID, dbType:=DbType.Int32, direction:=ParameterDirection.InputOutput)
+                    p.Add("@PartnerID", quote.PartnerID)
+                    p.Add("@QuoteDate", quote.QuoteDate)
+                    p.Add("@ExpiryDate", quote.ExpiryDate)
+                    p.Add("@IsActive", quote.IsActive)
+                    p.Add("@Notes", quote.Notes)
+                    p.Add("@DetailsXml", detailsXml, dbType:=DbType.Xml)
 
-                        ' Delete old details if updating
-                        If quote.QuoteID > 0 Then
-                            Dim pDel As New DynamicParameters()
-                            pDel.Add("@QuoteID", newId)
-                            conn.Execute(Helpers.StoredProcedures.SP_QUOTATIONDETAILS_DELETEBYQUOTEID, pDel, transaction:=trans, commandType:=CommandType.StoredProcedure)
-                        End If
-
-                        ' Insert new details
-                        For Each detail In quote.Details
-                            Dim pDet As New DynamicParameters()
-                            pDet.Add("@QuoteID", newId)
-                            pDet.Add("@ProductID", detail.ProductID)
-                            pDet.Add("@QuotedPrice", detail.QuotedPrice)
-                            pDet.Add("@Quantity", detail.Quantity)
-                            conn.Execute(Helpers.StoredProcedures.SP_QUOTATIONDETAILS_INSERT, pDet, transaction:=trans, commandType:=CommandType.StoredProcedure)
-                        Next
-
-                        trans.Commit()
-                        Return newId
-                    Catch ex As Exception
-                        trans.Rollback()
-                        Throw New Exception("Error saving quotation: " & ex.Message)
-                    End Try
+                    ' استخدام الإجراء الجديد _XML
+                    conn.Execute(Helpers.StoredProcedures.SP_QUOTATION_UPSERT_XML, p, commandType:=CommandType.StoredProcedure)
+                    Return p.Get(Of Integer)("@QuoteID")
                 End Using
-            End Using
+            Catch ex As Exception
+                Throw New Exception("Error saving quotation with XML: " & ex.Message)
+            End Try
+        End Function
+
+        Private Function ConvertDetailsToXml(details As IEnumerable(Of QuoteDetail)) As String
+            Dim sb As New Text.StringBuilder()
+            sb.Append("<Details>")
+            For Each d In details
+                If d.ProductID > 0 Then
+                    sb.AppendFormat("<Item ProductID=""{0}"" QuotedPrice=""{1}"" />",
+                                    d.ProductID,
+                                    d.QuotedPrice.ToString("F3", System.Globalization.CultureInfo.InvariantCulture))
+                End If
+            Next
+            sb.Append("</Details>")
+            Return sb.ToString()
         End Function
 
         Public Sub DeleteQuote(quoteId As Integer)

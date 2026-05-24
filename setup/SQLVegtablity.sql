@@ -18,10 +18,7 @@
 -- 00. كود تنظيف (حذف) القديم - Cleanup Script
 -- (استخدم هذا الكود لحذف الجداول القديمة التي بدون Schema لإعادة إنشائها بالشكل الجديد)
 -- =============================================
-USE VegtablityDB;
-GO
-
-
+ 
 
 -- =============================================
 -- 0. إنشاء المخططات (Schemas)
@@ -48,6 +45,8 @@ BEGIN
 	insert into Security.Roles( RoleName ) values ('Admin');
 END
 go
+
+
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Users' AND schema_id = SCHEMA_ID('Security'))
 BEGIN
     CREATE TABLE [Security].[Users] (
@@ -80,7 +79,7 @@ BEGIN
         FOREIGN KEY (RoleID) REFERENCES [Security].[Roles](RoleID) ON DELETE CASCADE
     );
 END
-
+go
 -- =============================================
 -- 2. الإعدادات العامة (Schema: Settings)
 -- =============================================
@@ -103,6 +102,7 @@ BEGIN
         CatName NVARCHAR(100) NOT NULL UNIQUE
     );
 END
+go
 
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Warehouses' AND schema_id = SCHEMA_ID('Settings'))
 BEGIN
@@ -421,6 +421,8 @@ BEGIN
         FOREIGN KEY (UnitID) REFERENCES [Settings].[Units](UnitID)
     );
 END
+go
+
 
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ProductStock' AND schema_id = SCHEMA_ID('Inventory'))
 BEGIN
@@ -435,14 +437,14 @@ BEGIN
         UNIQUE(ProductID, WarehouseID)
     );
 END
-
+go
 -- Add AvgCostPrice to existing ProductStock table if column doesn't exist
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Inventory].[ProductStock]') AND name = 'AvgCostPrice')
 BEGIN
     ALTER TABLE [Inventory].[ProductStock]
     ADD AvgCostPrice DECIMAL(18, 2) DEFAULT 0;
 END
-
+go
 -- =============================================
 -- 6. الفواتير (Schema: Sales)
 -- =============================================
@@ -468,20 +470,21 @@ BEGIN
         FOREIGN KEY (UserID) REFERENCES [Security].[Users](UserID)
     );
 END
-
+go
 -- Add PaymentAccountID to existing InvoiceHeader table if column doesn't exist
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Sales].[InvoiceHeader]') AND name = 'PaymentAccountID')
 BEGIN
     ALTER TABLE [Sales].[InvoiceHeader]
     ADD PaymentAccountID INT NULL;
 END
-
+go
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'InvoiceDetails' AND schema_id = SCHEMA_ID('Sales'))
 BEGIN
-    CREATE TABLE [Sales].[InvoiceDetails] (
+    create TABLE [Sales].[InvoiceDetails] (
         DetID INT PRIMARY KEY IDENTITY(1,1),
         InvID INT NOT NULL,
         ProductID INT NOT NULL,
+		ReferenceNo nvarchar null,
         UnitPrice DECIMAL(18, 2) DEFAULT 0,
         Quantity DECIMAL(18, 2) DEFAULT 1,
         TotalPrice DECIMAL(18, 2) DEFAULT 0, 
@@ -490,7 +493,7 @@ BEGIN
         FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID)
     );
 END
-
+go
 -- =============================================
 -- =============================================
 -- 7. السندات المالية (Schema: Accounting)
@@ -740,7 +743,7 @@ BEGIN
     );
 END
 
-
+go
 
 -- =============================================
 -- 1. تسلسل أرقام القيود + إنشاء جدول القيود المحاسبية
@@ -2005,10 +2008,7 @@ GO
 -- Schema: [Security]
 -- Execute this script in SQL Server Management Studio (SSMS)
 -- =============================================
-
-USE [VegtablityDB]
-GO
-
+ 
 -- =============================================
 -- 1. sp_User_Login
 -- =============================================
@@ -2436,8 +2436,6 @@ GO
 -- =============================================
 -- Invoices Triggers (Inventory & Accounting)
 -- =============================================
-USE VegtablityDB;
-GO
 
 -- =============================================
 -- Trigger: trg_Invoice_Post
@@ -2843,7 +2841,7 @@ BEGIN
 END
 GO
 
-
+ 
 -- =============================================
 -- 2. جلب حركة الصنف (Server-Side Pagination)
 -- =============================================
@@ -5645,6 +5643,418 @@ BEGIN
            OR p.PartnerName LIKE '%' + @SearchText + '%'
            OR q.Notes LIKE '%' + @SearchText + '%'
            OR CAST(q.QuoteID AS NVARCHAR) = @SearchText)
+    ORDER BY q.QuoteDate DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- =============================================
+-- عروض المشتريات (Purchase Quotations)
+-- Tables and Stored Procedures
+-- =============================================
+USE [VegtablityDB]
+GO
+
+-- 1. إنشاء الـ Schema إذا لم تكن موجودة
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Purchases')
+BEGIN
+    EXEC('CREATE SCHEMA [Purchases]')
+END
+GO
+
+-- 2. جدول رأس عرض المشتريات
+IF OBJECT_ID('[Purchases].[PurchaseQuoteHeader]', 'U') IS NULL 
+begin
+CREATE TABLE [Purchases].[PurchaseQuoteHeader](
+    [PurchaseQuoteID] INT IDENTITY(1,1) PRIMARY KEY,
+    [PartnerID] INT NOT NULL,
+    [QuoteDate] DATETIME NOT NULL DEFAULT GETDATE(),
+    [ExpiryDate] DATETIME NULL,
+    [Notes] NVARCHAR(500) NULL,
+    [CreatedAt] DATETIME DEFAULT GETDATE(),
+    CONSTRAINT FK_PurchaseQuote_Partner FOREIGN KEY (PartnerID) REFERENCES [Sales].[Partners](PartnerID)
+	
+);
+end;
+GO
+
+-- 3. جدول تفاصيل عرض المشتريات
+IF OBJECT_ID('[Purchases].[PurchaseQuoteDetails]', 'U') IS NULL 
+begin
+CREATE TABLE [Purchases].[PurchaseQuoteDetails](
+    [DetailID] INT IDENTITY(1,1) PRIMARY KEY,
+    [PurchaseQuoteID] INT NOT NULL,
+    [ProductID] INT NOT NULL,
+    [Quantity] DECIMAL(18,2) NOT NULL DEFAULT 1,
+    [UnitPrice] DECIMAL(18,2) NOT NULL,
+    CONSTRAINT FK_Details_Header FOREIGN KEY (PurchaseQuoteID) REFERENCES [Purchases].[PurchaseQuoteHeader](PurchaseQuoteID) ON DELETE CASCADE,
+    CONSTRAINT FK_Details_Product FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID)
+);
+end;
+GO
+
+
+-- 4. إجراء الحفظ (Header + Details)
+
+-- 4. إجراء الحفظ (Header + Details)
+IF OBJECT_ID('[Purchases].[sp_PurchaseQuote_Save]', 'P') IS NOT NULL DROP PROCEDURE [Purchases].[sp_PurchaseQuote_Save];
+GO
+CREATE PROCEDURE [Purchases].[sp_PurchaseQuote_Save]
+    @PurchaseQuoteID INT = 0,
+    @PartnerID INT,
+    @QuoteDate DATETIME,
+    @ExpiryDate DATETIME = NULL,
+    @Notes NVARCHAR(500) = NULL,
+    @DetailsXml XML -- استخدام XML بدلاً من JSON للتوافق مع جميع إصدارات SQL Server
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION
+    BEGIN TRY
+        IF @PurchaseQuoteID = 0
+        BEGIN
+            INSERT INTO [Purchases].[PurchaseQuoteHeader] (PartnerID, QuoteDate, ExpiryDate, Notes)
+            VALUES (@PartnerID, @QuoteDate, @ExpiryDate, @Notes);
+            SET @PurchaseQuoteID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            UPDATE [Purchases].[PurchaseQuoteHeader]
+            SET PartnerID = @PartnerID, QuoteDate = @QuoteDate, ExpiryDate = @ExpiryDate, Notes = @Notes
+            WHERE PurchaseQuoteID = @PurchaseQuoteID;
+            
+            -- مسح التفاصيل القديمة لإعادة كتابتها
+            DELETE FROM [Purchases].[PurchaseQuoteDetails] WHERE PurchaseQuoteID = @PurchaseQuoteID;
+        END
+
+        -- إدراج التفاصيل من الـ XML (حذف Quantity بناءً على طلب المستخدم)
+        INSERT INTO [Purchases].[PurchaseQuoteDetails] (PurchaseQuoteID, ProductID, UnitPrice)
+        SELECT 
+            @PurchaseQuoteID,
+            T.Item.value('@ProductID', 'INT'),
+            T.Item.value('@UnitPrice', 'DECIMAL(18,2)')
+        FROM @DetailsXml.nodes('/Details/Item') AS T(Item);
+
+        COMMIT TRANSACTION
+        SELECT @PurchaseQuoteID AS PurchaseQuoteID;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+-- 5. جلب جميع العروض مع البحث
+IF OBJECT_ID('[Purchases].[sp_PurchaseQuote_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Purchases].[sp_PurchaseQuote_GetAll];
+GO
+CREATE PROCEDURE [Purchases].[sp_PurchaseQuote_GetAll]
+    @SearchText NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT q.*, p.PartnerName
+    FROM [Purchases].[PurchaseQuoteHeader] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@SearchText IS NULL OR p.PartnerName LIKE '%' + @SearchText + '%' OR q.Notes LIKE '%' + @SearchText + '%')
+    ORDER BY q.QuoteDate DESC;
+END
+GO
+
+-- 6. جلب تفاصيل عرض معين
+IF OBJECT_ID('[Purchases].[sp_PurchaseQuote_GetDetails]', 'P') IS NOT NULL DROP PROCEDURE [Purchases].[sp_PurchaseQuote_GetDetails];
+GO
+CREATE PROCEDURE [Purchases].[sp_PurchaseQuote_GetDetails]
+    @PurchaseQuoteID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT d.*, p.ProductName, p.Barcode, u.UnitName
+    FROM [Purchases].[PurchaseQuoteDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE d.PurchaseQuoteID = @PurchaseQuoteID;
+END
+GO
+
+IF OBJECT_ID('[Purchases].[sp_PurchaseQuote_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Purchases].[sp_PurchaseQuote_GetPaged];
+GO
+CREATE PROCEDURE [Purchases].[sp_PurchaseQuote_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize INT = 20,
+    @SearchText NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- النتيجة الأولى: إجمالي عدد السجلات المطابقة للبحث
+    SELECT COUNT(*) 
+    FROM [Purchases].[PurchaseQuoteHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    WHERE (@SearchText IS NULL 
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR CAST(h.PurchaseQuoteID AS NVARCHAR) LIKE '%' + @SearchText + '%');
+
+    -- النتيجة الثانية: بيانات الصفحة المطلوبة
+    SELECT 
+        h.PurchaseQuoteID,
+        h.PartnerID,
+        p.PartnerName,
+        h.QuoteDate,
+        h.ExpiryDate,
+        h.Notes
+    FROM [Purchases].[PurchaseQuoteHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    WHERE (@SearchText IS NULL 
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR CAST(h.PurchaseQuoteID AS NVARCHAR) LIKE '%' + @SearchText + '%')
+    ORDER BY h.PurchaseQuoteID DESC
+    OFFSET (@PageNumber - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+
+ 
+-- Description: جلب كافة عروض المشتريات الخاصة بمورد معين
+-- =============================================
+IF OBJECT_ID('[Purchases].[sp_PurchaseQuote_GetByPartner]', 'P') IS NOT NULL DROP PROCEDURE [Purchases].[sp_PurchaseQuote_GetByPartner];
+GO
+CREATE PROCEDURE [Purchases].[sp_PurchaseQuote_GetByPartner]
+    @PartnerID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        h.PurchaseQuoteID,
+        h.PartnerID,
+        h.QuoteDate,
+        h.ExpiryDate,
+        h.Notes
+    FROM [Purchases].[PurchaseQuoteHeader] h
+    WHERE h.PartnerID = @PartnerID
+    ORDER BY h.PurchaseQuoteID DESC; -- ترتيب تنازلي لعرض أحدث العروض أولاً
+END
+GO
+
+
+-- 1. [Sales].[sp_Invoice_Save_XML]
+-- نسخة مطورة تدعم حفظ التفاصيل عبر XML لتجنب التعارض مع الإجراء القديم
+IF OBJECT_ID('[Sales].[sp_Invoice_Save_XML]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save_XML];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_Save_XML]
+    @InvID INT OUTPUT,
+    @InvType NVARCHAR(20),
+    @InvDate DATETIME,
+    @PartnerID INT,
+    @WarehouseID INT,
+    @TotalAmount DECIMAL(18, 2),
+    @Discount DECIMAL(18, 2),
+    @NetAmount DECIMAL(18, 2),
+    @PaidAmount DECIMAL(18, 2),
+    @Remainder DECIMAL(18, 2),
+    @UserID INT,
+    @Notes NVARCHAR(255),
+    @IsPosted BIT = 0,
+    @ReferenceNo NVARCHAR(50) = NULL,
+    @PaymentAccountID INT = NULL,
+    @DetailsXml XML 
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        -- حفظ الرأس
+        IF @InvID = 0
+        BEGIN
+            INSERT INTO [Sales].[InvoiceHeader] 
+                (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID)
+            VALUES 
+                (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID);
+            SET @InvID = CAST(SCOPE_IDENTITY() AS INT);
+        END
+        ELSE
+        BEGIN
+            UPDATE [Sales].[InvoiceHeader] 
+            SET InvType = @InvType, InvDate = @InvDate, PartnerID = @PartnerID, WarehouseID = @WarehouseID, 
+                TotalAmount = @TotalAmount, Discount = @Discount, NetAmount = @NetAmount, 
+                PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes,
+                IsPosted = @IsPosted, ReferenceNo = @ReferenceNo, PaymentAccountID = @PaymentAccountID
+            WHERE InvID = @InvID;
+            
+            DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+        END
+
+        -- إدراج التفاصيل من الـ XML
+        INSERT INTO [Sales].[InvoiceDetails] (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+        SELECT 
+            @InvID,
+            T.Item.value('@ProductID', 'INT'),
+            T.Item.value('@UnitPrice', 'DECIMAL(18,2)'),
+            T.Item.value('@Quantity', 'DECIMAL(18,2)'),
+            T.Item.value('@TotalPrice', 'DECIMAL(18,2)'),
+            T.Item.value('@CostPrice', 'DECIMAL(18,2)')
+        FROM @DetailsXml.nodes('//Item') AS T(Item);
+
+        COMMIT TRANSACTION;
+        SELECT @InvID AS InvID;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+-- 2. [Sales].[sp_Quotations_Upsert_XML]
+-- نسخة مطورة لعروض الأسعار تدعم XML لتجنب التعارض مع الإجراء القديم
+IF OBJECT_ID('[Sales].[sp_Quotations_Upsert_XML]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_Upsert_XML];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Quotations_Upsert_XML]
+    @QuoteID INT OUTPUT,
+    @PartnerID INT,
+    @QuoteDate DATETIME,
+    @ExpiryDate DATETIME = NULL,
+    @IsActive BIT,
+    @Notes NVARCHAR(MAX) = NULL,
+    @DetailsXml XML 
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        IF @QuoteID = 0
+        BEGIN
+            INSERT INTO [Sales].[Quotations] (PartnerID, QuoteDate, ExpiryDate, IsActive, Notes)
+            VALUES (@PartnerID, @QuoteDate, @ExpiryDate, @IsActive, @Notes);
+            SET @QuoteID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            UPDATE [Sales].[Quotations]
+            SET PartnerID = @PartnerID,
+                QuoteDate = @QuoteDate,
+                ExpiryDate = @ExpiryDate,
+                IsActive = @IsActive,
+                Notes = @Notes
+            WHERE QuoteID = @QuoteID;
+            
+            DELETE FROM [Sales].[QuotationDetails] WHERE QuoteID = @QuoteID;
+        END
+
+        -- إدراج التفاصيل الجديدة (بدون كمية بناءً على طلب المستخدم)
+        INSERT INTO [Sales].[QuotationDetails] (QuoteID, ProductID, QuotedPrice)
+        SELECT 
+            @QuoteID,
+            T.Item.value('@ProductID', 'INT'),
+            T.Item.value('@QuotedPrice', 'DECIMAL(18,3)')
+        FROM @DetailsXml.nodes('//Item') AS T(Item);
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+
+-- 3. [Sales].[sp_Invoice_GetByID]
+-- نسخة مطورة تجلب بيانات الرأس مع اسم الشريك لضمان الظهور الصحيح في الواجهة
+IF OBJECT_ID('[Sales].[sp_Invoice_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetByID];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]  
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        inv.*, 
+        par.PartnerName,
+        chart.AccountCode
+    FROM [Sales].[InvoiceHeader] inv
+    LEFT JOIN [Sales].[Partners] par ON inv.[PartnerID] = par.[PartnerID]
+    LEFT JOIN [Accounting].[ChartOfAccounts] chart ON par.[AccountID] = chart.[AccountID]
+    WHERE inv.InvID = @InvID;
+END
+GO
+
+-- 4. [Sales].[sp_InvoiceDetails_GetByInvID]
+-- نسخة مطورة تستخدم LEFT JOIN لضمان تحميل التفاصيل حتى لو حذف الصنف
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_GetByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID];
+GO
+
+CREATE PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.*,
+        p.ProductName,
+        p.Barcode
+    FROM [Sales].[InvoiceDetails] d
+    LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    WHERE d.InvID = @InvID;
+END
+GO
+
+
+-- [Sales].[sp_Quotations_GetPaged]
+-- يُستدعى من QuoteService.GetQuotesPaged لعرض سجل عروض الأسعار مع ترقيم الصفحات
+IF OBJECT_ID('[Sales].[sp_Quotations_GetPaged]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Quotations_GetPaged];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Quotations_GetPaged]
+    @PageNumber INT = 1,
+    @PageSize   INT = 20,
+    @SearchText NVARCHAR(200) = NULL,
+    @PartnerID  INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- 1. إجمالي عدد السجلات
+    SELECT COUNT(*) AS TotalCount
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE
+        (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+        AND (
+            @SearchText IS NULL
+            OR @SearchText = ''
+            OR p.PartnerName LIKE N'%' + @SearchText + N'%'
+            OR CAST(q.QuoteID AS NVARCHAR) LIKE N'%' + @SearchText + N'%'
+        );
+
+    -- 2. البيانات المرقّمة
+    SELECT
+        q.QuoteID,
+        q.PartnerID,
+        q.QuoteDate,
+        q.ExpiryDate,
+        q.IsActive,
+        q.Notes,
+        p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE
+        (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+        AND (
+            @SearchText IS NULL
+            OR @SearchText = ''
+            OR p.PartnerName LIKE N'%' + @SearchText + N'%'
+            OR CAST(q.QuoteID AS NVARCHAR) LIKE N'%' + @SearchText + N'%'
+        )
     ORDER BY q.QuoteDate DESC
     OFFSET @Offset ROWS
     FETCH NEXT @PageSize ROWS ONLY;

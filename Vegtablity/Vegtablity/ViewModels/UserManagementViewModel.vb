@@ -61,6 +61,7 @@ Namespace ViewModels
                 {"YearEndClose", "الإقفال السنوي"},
                 {"Partners", "العملاء والموردين"},
                 {"Quotes", "عروض الأسعار"},
+                {"PurchaseQuotes", "عروض المشتريات"},
                 {"Reports", "التقارير"},
                 {"SettingsParent", "قسم الإعدادات"},
                 {"Settings", "إعدادات عامة"},

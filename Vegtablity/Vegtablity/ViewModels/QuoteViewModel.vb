@@ -16,7 +16,17 @@ Namespace ViewModels
         Private _isUpdatingDetail As Boolean = False
 
         Public Property AllPartners As List(Of Partner)                         ' المصدر الكامل
+        
+        Private _filteredPartners As ObservableCollection(Of Partner)
         Public Property FilteredPartners As ObservableCollection(Of Partner)     ' المعروض في الـ ComboBox
+            Get
+                Return _filteredPartners
+            End Get
+            Set(value As ObservableCollection(Of Partner))
+                SetProperty(_filteredPartners, value)
+            End Set
+        End Property
+
         Public Property Products As ObservableCollection(Of Product)
         Public Property QuotesHistory As ObservableCollection(Of QuoteHeader)
 
@@ -76,17 +86,16 @@ Namespace ViewModels
                 Dim settingsSvc As New Vegtablity.Services.SettingsService()
                 Dim compInfo = settingsSvc.GetCompanyInfo()
                 Dim isUnified = If(compInfo IsNot Nothing, compInfo.UnifiedPartnerSearch, True)
-                Dim partnerSvc As New Vegtablity.Services.PartnerService()
+                
                 Dim results As System.Collections.Generic.List(Of Partner)
                 If isUnified Then
-                    results = partnerSvc.SearchAllPartners(txt)
+                    results = _partnerService.SearchAllPartners(txt)
                 Else
-                    results = partnerSvc.SearchPartners("Customer", txt)
+                    results = _partnerService.SearchPartners("Customer", txt)
                 End If
-                FilteredPartners.Clear()
-                For Each p In results
-                    FilteredPartners.Add(p)
-                Next
+
+                FilteredPartners = New ObservableCollection(Of Partner)(results)
+                OnPropertyChanged(NameOf(FilteredPartners))
             Catch
             End Try
         End Sub
@@ -333,8 +342,13 @@ Namespace ViewModels
             FilteredPartners = New ObservableCollection(Of Partner)(partnerList)
             OnPropertyChanged(NameOf(FilteredPartners))
 
-            ProductPage = 0
-            UpdateProductPagination()
+            ' ✅ تحميل جميع الأصناف مرة واحدة في الذاكرة — بدون استدعاء DB عند كل تغيير
+            Try
+                Dim allProducts = _productService.GetAllProducts()
+                Products = New ObservableCollection(Of Product)(allProducts)
+                OnPropertyChanged(NameOf(Products))
+            Catch
+            End Try
         End Sub
 
         Private _productFilter As String = ""
@@ -480,7 +494,6 @@ Namespace ViewModels
                 OnPropertyChanged(NameOf(CanGoNextDetails))
                 OnPropertyChanged(NameOf(CanGoPrevDetails))
                 OnPropertyChanged(NameOf(DetailsTotalCount))
-                UpdateProductPagination()
             Catch ex As Exception
                 System.Windows.MessageBox.Show("خطأ في تحديث صفحات العرض: " & ex.Message, "خطأ")
             End Try
@@ -706,27 +719,8 @@ Namespace ViewModels
 
         Private Sub OnDetailPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             Dim detail = CType(sender, QuoteDetail)
-            
-            If e.PropertyName = NameOf(QuoteDetail.Barcode) Then
-                If _isUpdatingDetail OrElse String.IsNullOrWhiteSpace(detail.Barcode) Then Return
-                
-                Dim found = _productService.GetProductByBarcode(detail.Barcode)
-                If found IsNot Nothing Then
-                    _isUpdatingDetail = True
-                    Try
-                        ' Map for ProductID lookup
-                        _selectedProductsMap(found.ProductID) = found
-                        
-                        detail.ProductName = found.ProductName
-                        detail.UnitName = found.UnitName
-                        detail.QuotedPrice = found.SalePrice
-                        detail.ProductID = found.ProductID
-                        detail.IsUnmatched = False
-                    Finally
-                        _isUpdatingDetail = False
-                    End Try
-                End If
-            End If
+
+            ' ملاحظة: تم حذف معالجة Barcode عمداً — التحميل يتم فقط عند الضغط على Enter في الواجهة
 
             If e.PropertyName = NameOf(QuoteDetail.ProductID) Then
                 ' Default the quote price to the global standard sale price on first select
@@ -749,6 +743,8 @@ Namespace ViewModels
             
             System.Windows.Input.CommandManager.InvalidateRequerySuggested()
         End Sub
+
+
 
     End Class
 End Namespace

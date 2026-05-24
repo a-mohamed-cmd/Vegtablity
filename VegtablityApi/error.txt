@@ -1,0 +1,60 @@
+INFO:     Will watch for changes in these directories: ['D:\\VB.NET\\backup\\Vegtablity\\VegtablityApi']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [15368] using StatReload
+INFO:     Started server process [3920]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3920]
+INFO:     Stopping reloader process [15368]
+INFO:     Will watch for changes in these directories: ['D:\\VB.NET\\backup\\Vegtablity\\VegtablityApi']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [3136] using StatReload
+INFO:     Started server process [10460]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app\routes\auth.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10460]
+INFO:     Started server process [17800]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app\services\auth_service.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17800]
+^CINFO:     Will watch for changes in these directories: ['D:\\VB.NET\\backup\\Vegtablity\\VegtablityApi']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [10456] using StatReload
+INFO:     Started server process [17356]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  StatReload detected changes in 'app\services\product_service.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17356]
+INFO:     Started server process [4560]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4560]
+INFO:     Stopping reloader process [10456]
+INFO:     Will watch for changes in these directories: ['D:\\VB.NET\\backup\\Vegtablity\\VegtablityApi']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [18296] using StatReload
+INFO:     Started server process [21896]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21896]
+INFO:     Stopping reloader process [18296]

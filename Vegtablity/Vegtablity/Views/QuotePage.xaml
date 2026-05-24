@@ -271,26 +271,23 @@
                             </DataGrid.CellStyle>
                             <DataGrid.Columns>
                                 
-                                <!-- Product Code - Editable to search by barcode on Enter -->
+                                <!-- كود الصنف -->
                                 <DataGridTemplateColumn Header="كود الصنف" Width="1.5*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBox Text="{Binding Barcode, UpdateSourceTrigger=PropertyChanged}"
-                                                     KeyDown="BarcodeCell_KeyDown"
-                                                     BorderThickness="0" Background="Transparent"
-                                                     Foreground="#64748B" VerticalContentAlignment="Center"
-                                                     Padding="5,0"
-                                                     ToolTip="اكتب الكود ثم اضغط Enter للبحث عن الصنف"/>                                            
+                                                     PreviewKeyDown="Barcode_PreviewKeyDown"
+                                                     GotFocus="TextBox_GotFocus"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!-- Product Selection -->
-                                <DataGridTemplateColumn Header="اختيار الصنف" Width="3*" IsReadOnly="False">
+                                <!-- اسم الصنف / الباركود - ComboBox قابل للبحث -->
+                                <DataGridTemplateColumn Header="اسم الصنف / الباركود" Width="3*" IsReadOnly="False">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <ComboBox ItemsSource="{Binding DataContext.Products, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                      SelectedValue="{Binding ProductID, UpdateSourceTrigger=PropertyChanged}"
+                                                      SelectedValue="{Binding ProductID, UpdateSourceTrigger=Explicit}"
                                                       SelectedValuePath="ProductID" DisplayMemberPath="SearchText"
                                                       TextSearch.TextPath="SearchText"
                                                       IsEditable="True"
@@ -301,37 +298,33 @@
                                                       DropDownOpened="ProductComboBox_DropDownOpened"
                                                       DropDownClosed="ProductComboBox_DropDownClosed"
                                                       LostFocus="ProductComboBox_LostFocus"
-                                                      BorderThickness="0" Background="Transparent" Padding="5,0"/>
+                                                      BorderThickness="0" Background="Transparent"
+                                                      Padding="5,0"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!-- Fallback Product Name (Read-Only) -->
-                                <DataGridTextColumn Header="اسم الصنف (تأكيدي)" Binding="{Binding ProductName}" Width="2*" IsReadOnly="True" Foreground="#334155"/>
+                                <!-- الوحدة -->
+                                <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName}" Width="1*" IsReadOnly="True"/>
 
-                                <!-- Unit Name -->
-                                <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName, Mode=OneWay}" Width="1*" IsReadOnly="True" Foreground="#64748B"/>
-
-                                <!-- Quoted Price -->
-                                <DataGridTemplateColumn Header="سعر العرض المخصص" Width="1.5*">
+                                <!-- سعر البيع المقترح -->
+                                <DataGridTemplateColumn Header="سعر البيع المقترح" Width="1.5*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding QuotedPrice, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N2}}" 
-                                                     PreviewKeyDown="Price_PreviewKeyDown"
-                                                     GotFocus="TextBox_GotFocus"
-                                                     BorderThickness="0" Background="#EEF2FF" Foreground="#4F46E5" TextAlignment="Center" FontWeight="Bold"/>
+                                            <TextBox Text="{Binding QuotedPrice, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                                     TextAlignment="Center" FontWeight="Bold" Foreground="#2563EB"
+                                                     PreviewKeyDown="Price_PreviewKeyDown" GotFocus="TextBox_GotFocus"/>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <!-- Delete Row Command -->
+                                <!-- حذف -->
                                 <DataGridTemplateColumn Header="حذف" Width="60">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Button Background="Transparent" BorderThickness="0" 
-                                                    Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                    CommandParameter="{Binding}"
-                                                    ToolTip="حذف السطر">
+                                            <Button Background="Transparent" BorderThickness="0"
+                                                    Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}">
                                                 <TextBlock Text="🗑️" Foreground="#EF4444" FontSize="16"/>
                                             </Button>
                                         </DataTemplate>

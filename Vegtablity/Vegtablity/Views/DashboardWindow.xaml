@@ -49,6 +49,28 @@
             </DoubleAnimation>
         </Storyboard>
 
+        <!-- Sidebar Expand Storyboard -->
+        <Storyboard x:Key="ExpandSidebar">
+            <DoubleAnimation Storyboard.TargetName="SidebarBorder"
+                             Storyboard.TargetProperty="Width"
+                             To="260" Duration="0:0:0.4">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <!-- Sidebar Collapse Storyboard -->
+        <Storyboard x:Key="CollapseSidebar">
+            <DoubleAnimation Storyboard.TargetName="SidebarBorder"
+                             Storyboard.TargetProperty="Width"
+                             To="80" Duration="0:0:0.4">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
         <!-- Sidebar Button Style -->
         <Style x:Key="SidebarButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
@@ -131,10 +153,12 @@
                     </Grid.RowDefinitions>
 
                     <!-- App Logo -->
-                    <StackPanel Grid.Row="0" Margin="20,25,20,10" HorizontalAlignment="Center">
-                        <TextBlock Text="🥬" FontSize="48" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Vegtablity" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,5,0,0"/>
-                        <TextBlock Text="نظام إدارة متكامل" FontSize="11" Foreground="#95a5a6" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                    <StackPanel Grid.Row="0" Margin="10,25,10,10" HorizontalAlignment="Center">
+                        <TextBlock Text="🥬" FontSize="42" HorizontalAlignment="Center"/>
+                        <StackPanel Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="Vegtablity" FontSize="20" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                            <TextBlock Text="نظام إدارة متكامل" FontSize="10" Foreground="#95a5a6" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+                        </StackPanel>
                     </StackPanel>
 
                     <!-- Separator -->
@@ -165,15 +189,20 @@
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="18" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" FontSize="14"/>
+                                                <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center" Width="40" Margin="0,0,5,0"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" FontSize="14"
+                                                           Visibility="{Binding DataContext.IsSidebarExpanded, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"/>
                                                 <!-- Arrow for expandable parents -->
                                                 <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="11" Foreground="#95a5a6"
-                                                           Visibility="{Binding IsParent, Converter={StaticResource BoolToVis}}">
+                                                           Visibility="{Binding DataContext.IsSidebarExpanded, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
                                                             <Setter Property="Text" Value="▶"/>
                                                             <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsParent}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
                                                                 <DataTrigger Binding="{Binding IsExpanded}" Value="True">
                                                                     <Setter Property="Text" Value="▼"/>
                                                                 </DataTrigger>
@@ -208,8 +237,9 @@
                                                             </EventTrigger>
                                                         </Button.Triggers>
                                                         <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="{Binding Icon}" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="13"/>
+                                                            <TextBlock Text="{Binding Icon}" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center" Width="30" Margin="0,0,10,0"/>
+                                                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="13"
+                                                                       Visibility="{Binding DataContext.IsSidebarExpanded, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}"/>
                                                         </StackPanel>
                                                     </Button>
                                                 </DataTemplate>
@@ -232,11 +262,12 @@
                             <Border Grid.Column="0" Width="38" Height="38" CornerRadius="19" Background="#2ecc71" Margin="0,0,10,0">
                                 <TextBlock Text="👤" FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                             </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding CurrentUserName}" Foreground="White" FontSize="13" FontWeight="SemiBold"/>
                                 <TextBlock Text="{Binding CurrentRoleName}" Foreground="#95a5a6" FontSize="11"/>
                             </StackPanel>
                             <Button Grid.Column="2" Content="🚪" FontSize="18" VerticalAlignment="Center"
+                                    Visibility="{Binding IsSidebarExpanded, Converter={StaticResource BoolToVis}}"
                                     Background="Transparent" BorderThickness="0" Foreground="#e74c3c" Cursor="Hand"
                                     Command="{Binding LogoutCommand}" ToolTip="تسجيل خروج"/>
                         </Grid>
@@ -264,6 +295,15 @@
 
                         <!-- Page Title + Stats Toggle -->
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- Sidebar Toggle Button -->
+                            <Button x:Name="ToggleSidebarBtn" 
+                                    Command="{Binding ToggleSidebarCommand}"
+                                    Style="{StaticResource SidebarButtonStyle}" 
+                                    Width="45" Height="45" Padding="0" Margin="0,0,15,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="≡" FontSize="24" FontWeight="Bold" Foreground="#2c3e50" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+
                             <TextBlock Text="{Binding CurrentPageTitle}" FontSize="22" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
 
                             <!-- Stats Toggle Button (only on Home) -->

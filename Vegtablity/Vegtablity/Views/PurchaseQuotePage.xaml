@@ -1,0 +1,390 @@
+<UserControl x:Class="Views.PurchaseQuotePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:Vegtablity"
+      xmlns:viewmodels="clr-namespace:Vegtablity.ViewModels"
+      xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+      xmlns:controls="clr-namespace:Vegtablity.Controls"
+      mc:Ignorable="d" 
+      d:DesignHeight="750" d:DesignWidth="1050"
+      FlowDirection="RightToLeft">
+
+    <UserControl.DataContext>
+        <viewmodels:PurchaseQuoteViewModel />
+    </UserControl.DataContext>
+
+    <!-- Resources -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <helpers:IdToVisibilityConverter x:Key="IdToVisibilityConverter"/>
+
+        <!-- Hover Scale Animation for Cards -->
+        <Style x:Key="AnimatedCardStyle" TargetType="Border">
+            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+            <Setter Property="RenderTransform">
+                <Setter.Value>
+                    <ScaleTransform ScaleX="1" ScaleY="1"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <EventTrigger RoutedEvent="MouseEnter">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.005" Duration="0:0:0.2">
+                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.005" Duration="0:0:0.2">
+                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                            </DoubleAnimation>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+                <EventTrigger RoutedEvent="MouseLeave">
+                    <BeginStoryboard>
+                        <Storyboard>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.2"/>
+                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.2"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Grid Background="#F5F7FA" Margin="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 1. Title/ToolBar -->
+                <Border Grid.Row="0" Background="White" BorderBrush="#E0E6ED" BorderThickness="0,0,0,1" Padding="20,15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="عروض المشتريات" FontSize="26" FontWeight="SemiBold" Foreground="#1E293B"/>
+                            <Border Margin="15,0,0,0" Padding="10,5" CornerRadius="12" Background="#DBEAFE" VerticalAlignment="Center">
+                                <TextBlock Text="📦 قسم الموردين" Foreground="#1E40AF" FontWeight="SemiBold" FontSize="13"/>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Action Buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="📜 سجل العروض" Command="{Binding LoadHistoryCommand}" Click="HistoryButton_Click"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#334155" Margin="0,0,10,0"/>
+
+                            <Button Content="➕ عرض جديد" Command="{Binding NewCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#2563EB" Margin="0,0,10,0"
+                                    Visibility="{Binding CurrentPermissions.CanAdd, Converter={StaticResource BoolToVis}}"/>
+
+                            <Button Content="💾 حـفـظ واعتماد" Command="{Binding SaveCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#10B981" Margin="0,0,10,0"
+                                    Visibility="{Binding CurrentPermissions.CanEdit, Converter={StaticResource BoolToVis}}"/>
+
+                            <!-- Export Buttons (CanPrint) -->
+                            <Button Content="📊 تصدير CSV" Command="{Binding ExportCsvCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#D97706" Margin="0,0,6,0"
+                                    Visibility="{Binding CurrentPermissions.CanPrint, Converter={StaticResource BoolToVis}}"/>
+
+                            <Button Content="📄 تصدير PDF" Command="{Binding ExportPdfCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#DC2626" Margin="0,0,10,0"
+                                    Visibility="{Binding CurrentPermissions.CanPrint, Converter={StaticResource BoolToVis}}"/>
+
+                            <!-- Excel Import Buttons (CanAdd) -->
+                            <Button Content="📥" Command="{Binding DownloadTemplateCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#64748B" Margin="0,0,6,0"
+                                    Visibility="{Binding CurrentPermissions.CanAdd, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="تحميل قالب Excel فارغ للملء واستيراده لاحقاً"/>
+
+                            <Button Content="📂" Command="{Binding ImportFromExcelCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#7C3AED"
+                                    Visibility="{Binding CurrentPermissions.CanAdd, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="استيراد ملف Excel يحتوي على أصناف عرض السعر"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 2. Header Fields -->
+                <Border x:Name="HeaderCard" Style="{StaticResource AnimatedCardStyle}" Grid.Row="1" Background="White" Margin="20,20,20,10" CornerRadius="10" Padding="20">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#000000" Opacity="0.04" BlurRadius="10" ShadowDepth="2"/>
+                    </Border.Effect>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="1*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="15"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Date -->
+                        <StackPanel Grid.Row="0" Grid.Column="0">
+                            <TextBlock Text="تاريخ العرض" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                            <TextBox x:Name="TxtQuoteDate" Text="{Binding QuoteDateText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     GotFocus="TextBox_GotFocus"
+                                     LostFocus="QuoteDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                                     helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
+                        </StackPanel>
+
+                        <!-- Supplier -->
+                        <StackPanel Grid.Row="0" Grid.Column="2">
+                            <TextBlock Text="المورد *" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                            <controls:SearchableDropdown
+                                  x:Name="PartnerDropdown"
+                                  ItemsSource="{Binding FilteredPartners}"
+                                  DisplayMemberPath="SearchText"
+                                  Watermark="ابحث باسم المورد، الهاتف أو الكود..."
+                                  Height="40"
+                                  SearchChanged="PartnerDropdown_SearchChanged"
+                                  ItemSelected="PartnerDropdown_ItemSelected"
+                                  ConfirmedAndMoveNext="PartnerDropdown_MoveNext"/>
+                        </StackPanel>
+
+                        <!-- Expiry Date -->
+                        <StackPanel Grid.Row="0" Grid.Column="4">
+                            <TextBlock Text="تاريخ الانتهاء" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                            <TextBox x:Name="TxtExpiryDate" Text="{Binding ExpiryDateText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     GotFocus="TextBox_GotFocus"
+                                     LostFocus="ExpiryDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
+                                     helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
+                        </StackPanel>
+
+                        <!-- Notes -->
+                        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="5">
+                            <TextBlock Text="ملاحظات" Foreground="#64748B" FontSize="13" Margin="0,0,0,5" FontWeight="SemiBold"/>
+                            <TextBox Text="{Binding CurrentQuote.Notes, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{DynamicResource ModernTextBoxStyle}" Height="40" MaxLength="250"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 3. Items Grid -->
+                <Border x:Name="DetailsCard" Grid.Row="2" Background="White" Margin="20,10,20,20" CornerRadius="10" Padding="15">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#000000" Opacity="0.04" BlurRadius="10" ShadowDepth="2"/>
+                    </Border.Effect>
+
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="أصناف عرض المشتريات" FontSize="18" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center"/>
+                            <Button Content="➕ إضافة صنف" Command="{Binding AddItemCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}"
+                                    Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#2563EB" 
+                                    Margin="20,0,0,0" Padding="15,5"/>
+                        </StackPanel>
+
+                        <!-- Barcode Search -->
+                        <Border Grid.Row="1" Background="#F8FAFC" CornerRadius="8" Padding="10" Margin="0,0,0,10" BorderBrush="#E2E8F0" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="🔍 إضافة بالباركود:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold" Foreground="#475569"/>
+                                <TextBox Grid.Column="1" Text="{Binding BarcodeSearch, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource ModernTextBoxStyle}" BorderThickness="0" Background="Transparent"
+                                         KeyDown="BarcodeSearch_KeyDown"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- DataGrid with FadeIn Animation -->
+                        <DataGrid x:Name="dgDetails" Grid.Row="2" ItemsSource="{Binding CurrentQuote.Details}" AutoGenerateColumns="False" 
+                                  CanUserAddRows="False" SelectionMode="Single" MinHeight="300">
+                            <DataGrid.Triggers>
+                                <EventTrigger RoutedEvent="Loaded">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.35">
+                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </DataGrid.Triggers>
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="كود الصنف" Width="1.5*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding Barcode, UpdateSourceTrigger=PropertyChanged}" 
+                                                     PreviewKeyDown="Barcode_PreviewKeyDown" GotFocus="TextBox_GotFocus"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                
+                                <DataGridTemplateColumn Header="اسم الصنف / الباركود" Width="3*" IsReadOnly="False">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ComboBox ItemsSource="{Binding DataContext.Products, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                      SelectedValue="{Binding ProductID, UpdateSourceTrigger=Explicit}"
+                                                      SelectedValuePath="ProductID" DisplayMemberPath="SearchText"
+                                                      TextSearch.TextPath="SearchText"
+                                                      IsEditable="True"
+                                                      IsTextSearchEnabled="False"
+                                                      StaysOpenOnEdit="True"
+                                                      KeyUp="ProductComboBox_KeyUp"
+                                                      PreviewKeyDown="ProductComboBox_PreviewKeyDown"
+                                                      DropDownOpened="ProductComboBox_DropDownOpened"
+                                                      DropDownClosed="ProductComboBox_DropDownClosed"
+                                                      LostFocus="ProductComboBox_LostFocus"
+                                                      BorderThickness="0" Background="Transparent"
+                                                      Padding="5,0"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName}" Width="1*" IsReadOnly="True"/>
+                                
+                                <DataGridTemplateColumn Header="سعر الشراء" Width="1.5*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}" 
+                                                     TextAlignment="Center" FontWeight="Bold" Foreground="#2563EB"
+                                                     PreviewKeyDown="Price_PreviewKeyDown" GotFocus="TextBox_GotFocus"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                
+                                <DataGridTemplateColumn Header="حذف" Width="60">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Background="Transparent" BorderThickness="0" 
+                                                    Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="🗑️" Foreground="#EF4444" FontSize="16"/>
+                                            </Button>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Pagination Bar -->
+                        <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0"
+                                BorderThickness="1,1,1,1" CornerRadius="0,0,12,12" Padding="15,6"
+                                Margin="0,2,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0" Content="→ الصفحة السابقة"
+                                        Command="{Binding PrevDetailsPageCommand}"
+                                        IsEnabled="{Binding CanGoPrevDetails}"
+                                        Style="{StaticResource ModernButtonStyle}"
+                                        Background="#94A3B8" Padding="15,5"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DetailsPageLabel}"
+                                               FontWeight="Bold" Foreground="#475569" FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Text=" | " Foreground="#CBD5E1" VerticalAlignment="Center" Margin="8,0"/>
+                                    <TextBlock Text="إجمالي الأصناف: " Foreground="#64748B" FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding DetailsTotalCount}" Foreground="#1E293B"
+                                               FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <Button Grid.Column="2" Content="الصفحة التالية ←"
+                                        Command="{Binding NextDetailsPageCommand}"
+                                        IsEnabled="{Binding CanGoNextDetails}"
+                                        Style="{StaticResource ModernButtonStyle}"
+                                        Background="#3B82F6" Padding="15,5"/>
+                            </Grid>
+                        </Border>
+
+
+                    </Grid>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Snackbar -->
+        <Border x:Name="SnackbarBorder" VerticalAlignment="Bottom" HorizontalAlignment="Center" Background="#1E293B" CornerRadius="12" Padding="20,12" Margin="0,0,0,30" Visibility="Collapsed" Panel.ZIndex="99">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="SnackbarText" Foreground="White" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- History Modal -->
+        <Grid x:Name="HistoryModal" Background="#80000000" Visibility="Collapsed" Panel.ZIndex="100">
+            <Border Background="White" CornerRadius="12" Margin="100" Padding="25" VerticalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="سجل عروض المشتريات" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    
+                    <!-- Search Box -->
+                    <Border Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Center" 
+                            Background="#F1F5F9" CornerRadius="8" Padding="10,5" Margin="0,0,0,15">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔍 بحث: " VerticalAlignment="Center" Foreground="#64748B" Margin="0,0,5,0"/>
+                            <TextBox Width="250" Text="{Binding HistorySearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Style="{DynamicResource ModernTextBoxStyle}" BorderThickness="0" Background="Transparent"/>
+                        </StackPanel>
+                    </Border>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding QuotesHistory}" AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="الرقم" Binding="{Binding PurchaseQuoteID}" Width="60"/>
+                            <DataGridTextColumn Header="المورد" Binding="{Binding PartnerName}" Width="*"/>
+                            <DataGridTextColumn Header="التاريخ" Binding="{Binding QuoteDate, StringFormat=dd/MM/yyyy}" Width="100"/>
+                            <DataGridTemplateColumn Header="إجراء" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="تعديل" Command="{Binding DataContext.EditQuoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Click="HistoryEdit_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,15,0,0">
+                        <Button Content="إغلاق" Click="CloseHistory_Click" HorizontalAlignment="Left" 
+                                Style="{StaticResource ModernButtonStyle}" Background="#64748B"/>
+                        
+                        <!-- History Pagination Controls -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="150,0,0,0">
+                            <Button Content="← السابق" Command="{Binding PrevHistoryPageCommand}" 
+                                    IsEnabled="{Binding CanGoPrevHistory}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Margin="0,0,10,0"/>
+                            
+                            <TextBlock Text="{Binding HistoryPageLabel}" VerticalAlignment="Center" 
+                                       FontWeight="Bold" Foreground="#475569" Margin="10,0"/>
+                            
+                            <Button Content="التالي →" Command="{Binding NextHistoryPageCommand}" 
+                                    IsEnabled="{Binding CanGoNextHistory}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Margin="10,0,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -9,6 +9,7 @@ Namespace ViewModels
 
         Private ReadOnly _partnerService As New Services.PartnerService()
         Private ReadOnly _quoteService As New Services.QuoteService()
+        Private ReadOnly _purchaseQuoteService As New Services.PurchaseQuoteService()
 
         ' ===== Customers =====
         Private _customers As ObservableCollection(Of Partner)
@@ -21,6 +22,7 @@ Namespace ViewModels
         Private _editCustomerAddress As String
         Private _customerNameError As String
         Private _customerStatusMessage As String
+        Private _isCustomerPanelVisible As Boolean
 
         ' ===== Suppliers =====
         Private _suppliers As ObservableCollection(Of Partner)
@@ -33,6 +35,7 @@ Namespace ViewModels
         Private _editSupplierAddress As String
         Private _supplierNameError As String
         Private _supplierStatusMessage As String
+        Private _isSupplierPanelVisible As Boolean
 
         ' ===== Customer Quotes Panel =====
         Private _customerQuotes As ObservableCollection(Of QuoteHeader)
@@ -41,6 +44,7 @@ Namespace ViewModels
 
         ''' <summary>Raised when the user clicks a quote — View navigates to QuotePage with that quote.</summary>
         Public Event RequestNavigateToQuote As Action(Of QuoteHeader)
+        Public Event RequestNavigateToPurchaseQuote As Action(Of PurchaseQuoteHeader)
 
         Public Sub New()
             LoadPermissions("Partners")
@@ -73,7 +77,17 @@ Namespace ViewModels
 
                     ' Auto-load quotes and open side panel
                     LoadCustomerQuotes(value.PartnerID, value.PartnerName)
+                    IsCustomerPanelVisible = True
                 End If
+            End Set
+        End Property
+
+        Public Property IsCustomerPanelVisible As Boolean
+            Get
+                Return _isCustomerPanelVisible
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isCustomerPanelVisible, value)
             End Set
         End Property
 
@@ -196,7 +210,20 @@ Namespace ViewModels
                     EditSupplierAddress = value.Address
                     IsEditingSupplier = True
                     SupplierNameError = Nothing
+
+                    ' Auto-load purchase quotes for supplier
+                    LoadSupplierQuotes(value.PartnerID, value.PartnerName)
+                    IsSupplierPanelVisible = True
                 End If
+            End Set
+        End Property
+
+        Public Property IsSupplierPanelVisible As Boolean
+            Get
+                Return _isSupplierPanelVisible
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isSupplierPanelVisible, value)
             End Set
         End Property
 
@@ -268,6 +295,36 @@ Namespace ViewModels
                 SetProperty(_supplierStatusMessage, value)
             End Set
         End Property
+
+        Private _supplierQuotes As ObservableCollection(Of PurchaseQuoteHeader)
+        Public Property SupplierQuotes As ObservableCollection(Of PurchaseQuoteHeader)
+            Get
+                Return _supplierQuotes
+            End Get
+            Set(value As ObservableCollection(Of PurchaseQuoteHeader))
+                SetProperty(_supplierQuotes, value)
+            End Set
+        End Property
+
+        Private _isSupplierQuotesPanelOpen As Boolean
+        Public Property IsSupplierQuotesPanelOpen As Boolean
+            Get
+                Return _isSupplierQuotesPanelOpen
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isSupplierQuotesPanelOpen, value)
+            End Set
+        End Property
+
+        Private _quotePanelSupplierName As String
+        Public Property QuotePanelSupplierName As String
+            Get
+                Return _quotePanelSupplierName
+            End Get
+            Set(value As String)
+                SetProperty(_quotePanelSupplierName, value)
+            End Set
+        End Property
 #End Region
 
 #Region "Commands - Customers"
@@ -305,6 +362,15 @@ Namespace ViewModels
             End Get
         End Property
 
+        Public ReadOnly Property CloseCustomerPanelCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) 
+                                                    IsCustomerPanelVisible = False
+                                                    SelectedCustomer = Nothing
+                                                End Sub)
+            End Get
+        End Property
+
         Public ReadOnly Property ViewQuoteCommand As ICommand
             Get
                 Return New Helpers.RelayCommand(
@@ -335,6 +401,42 @@ Namespace ViewModels
                 Return New Helpers.RelayCommand(AddressOf ExecuteDeleteSupplier, Function(o) SelectedSupplier IsNot Nothing AndAlso CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete)
             End Get
         End Property
+
+        Public ReadOnly Property CloseSupplierPanelCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) 
+                                                    IsSupplierPanelVisible = False
+                                                    SelectedSupplier = Nothing
+                                                End Sub)
+            End Get
+        End Property
+
+        Public ReadOnly Property ShowSupplierQuotesPanelCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                                                     If SelectedSupplier IsNot Nothing Then
+                                                         LoadSupplierQuotes(SelectedSupplier.PartnerID, SelectedSupplier.PartnerName)
+                                                     End If
+                                                 End Sub)
+            End Get
+        End Property
+
+        Public ReadOnly Property CloseSupplierQuotesPanelCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) IsSupplierQuotesPanelOpen = False)
+            End Get
+        End Property
+
+        Public ReadOnly Property ViewPurchaseQuoteCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(
+                    Sub(o)
+                        Dim q = TryCast(o, PurchaseQuoteHeader)
+                        If q IsNot Nothing Then RaiseEvent RequestNavigateToPurchaseQuote(q)
+                    End Sub,
+                    Function(o) o IsNot Nothing)
+            End Get
+        End Property
 #End Region
 
 #Region "Methods - Customers"
@@ -350,6 +452,15 @@ Namespace ViewModels
             Try
                 QuotePanelCustomerName = customerName
                 Dim quotes = _quoteService.GetQuotesByPartner(partnerID)
+                
+                ' تأكيد وجود اسم العميل في كل عرض لضمان ظهوره عند الانتقال للتفاصيل
+                If quotes IsNot Nothing Then
+                    For Each q In quotes
+                        q.PartnerName = customerName
+                        q.PartnerID = partnerID
+                    Next
+                End If
+
                 CustomerQuotes = New ObservableCollection(Of QuoteHeader)(quotes)
                 IsQuotesPanelOpen = True
             Catch ex As Exception
@@ -372,6 +483,7 @@ Namespace ViewModels
             EditCustomerAddress = ""
             IsEditingCustomer = False
             CustomerNameError = Nothing
+            IsCustomerPanelVisible = True
         End Sub
 
         Private Sub ExecuteSaveCustomer(obj As Object)
@@ -436,6 +548,26 @@ Namespace ViewModels
             End Try
         End Sub
 
+        Private Sub LoadSupplierQuotes(partnerID As Integer, supplierName As String)
+            Try
+                QuotePanelSupplierName = supplierName
+                Dim quotes = _purchaseQuoteService.GetQuotesByPartner(partnerID)
+                
+                ' تأكيد وجود اسم المورد في كل عرض لضمان ظهوره عند الانتقال للتفاصيل
+                If quotes IsNot Nothing Then
+                    For Each q In quotes
+                        q.PartnerName = supplierName
+                        q.PartnerID = partnerID
+                    Next
+                End If
+
+                SupplierQuotes = New ObservableCollection(Of PurchaseQuoteHeader)(quotes)
+                IsSupplierQuotesPanelOpen = True
+            Catch ex As Exception
+                SupplierStatusMessage = "خطأ في تحميل عروض الأسعار: " & ex.Message
+            End Try
+        End Sub
+
         Private Sub ExecuteNewSupplier(obj As Object)
             SelectedSupplier = Nothing
             EditSupplierName = ""
@@ -443,6 +575,7 @@ Namespace ViewModels
             EditSupplierAddress = ""
             IsEditingSupplier = False
             SupplierNameError = Nothing
+            IsSupplierPanelVisible = True
         End Sub
 
         Private Sub ExecuteSaveSupplier(obj As Object)

@@ -403,29 +403,35 @@ Namespace ViewModels
 
         ''' <summary>Load an existing invoice by ID (called from Invoice Dashboard)</summary>
         Public Sub LoadInvoice(invID As Integer)
-            Dim loaded = _invoiceService.LoadInvoiceForEdit(invID)
-            If loaded IsNot Nothing Then
-                _allInvoiceDetails.Clear()
-                _detailsPage = 0
-                ' Move all loaded details to in-memory list
-                For Each d In loaded.Details
-                    AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
-                    _allInvoiceDetails.Add(d)
-                Next
-                ' Replace Details with an empty observable (UpdateDetailsPagination will populate it)
-                loaded.Details = New ObservableCollection(Of InvoiceDetail)()
-                CurrentInvoice = loaded
+            Try
+                Dim loaded = _invoiceService.LoadInvoiceForEdit(invID)
+                If loaded IsNot Nothing Then
+                    _allInvoiceDetails.Clear()
+                    _detailsPage = 0
+                    ' Move all loaded details to in-memory list
+                    For Each d In loaded.Details
+                        AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
+                        _allInvoiceDetails.Add(d)
+                    Next
+                    ' Replace Details with an empty observable (UpdateDetailsPagination will populate it)
+                    loaded.Details = New ObservableCollection(Of InvoiceDetail)()
+                    CurrentInvoice = loaded
 
-                If Not CurrentInvoice.IsPosted AndAlso _allInvoiceDetails.Count = 0 Then
-                    ExecuteAddItem(Nothing)
+                    If Not CurrentInvoice.IsPosted AndAlso _allInvoiceDetails.Count = 0 Then
+                        ExecuteAddItem(Nothing)
+                    Else
+                        UpdateDetailsPagination()
+                    End If
+
+                    ' أبلغ الـ View بتحديث التاريخ واسم الشريك
+                    SyncDateText()
+                    RaiseEvent InvoiceLoaded(CurrentInvoice.PartnerID, CurrentInvoice.PartnerName)
                 Else
-                    UpdateDetailsPagination()
+                    System.Windows.MessageBox.Show($"عذراً، تعذر العثور على الفاتورة رقم {invID} أو بياناتها ناقصة.", "خطأ في التحميل", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
                 End If
-
-                ' أبلغ الـ View بتحديث التاريخ واسم الشريك
-                SyncDateText()
-                RaiseEvent InvoiceLoaded(CurrentInvoice.PartnerID, CurrentInvoice.PartnerName)
-            End If
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ غير متوقع أثناء تحميل الفاتورة: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End Try
         End Sub
 
         Private Function CanExecuteSave(parameter As Object) As Boolean
@@ -727,7 +733,8 @@ Namespace ViewModels
 
                 If prod IsNot Nothing Then
 
-                    detail.Quantity = 1
+                    ' Keep existing quantity if already set, otherwise default to 1
+                    If detail.Quantity <= 0 Then detail.Quantity = 1
                     detail.ProductName = prod.ProductName
                     detail.ProductNameEn = prod.ProductNameEn
                     detail.UnitName = prod.UnitName

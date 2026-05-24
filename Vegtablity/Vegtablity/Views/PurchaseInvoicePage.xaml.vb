@@ -198,7 +198,7 @@ Namespace Views
 
         Private Sub Price_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
-                ' Force the binding to commit the typed value BEFORE adding a new row
+                ' Force the binding to commit
                 Dim tb = TryCast(sender, TextBox)
                 If tb IsNot Nothing Then
                     Dim binding = tb.GetBindingExpression(TextBox.TextProperty)
@@ -206,7 +206,15 @@ Namespace Views
                 End If
 
                 e.Handled = True
+                ' Move to Total column (Index 4)
+                MoveFocusToNextColumn(TryCast(sender, TextBox), 1)
+            End If
+        End Sub
 
+        Private Sub Total_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key = Key.Enter Then
+                e.Handled = True
+                
                 ' Add new row
                 Dim vm = TryCast(Me.DataContext, PurchaseInvoiceViewModel)
                 If vm IsNot Nothing AndAlso vm.AddItemCommand.CanExecute(Nothing) Then

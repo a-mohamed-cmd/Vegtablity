@@ -313,7 +313,15 @@
                         </DataGridTemplateColumn>
 
                         <!-- Total Price (Readonly calculation inside ViewModel) -->
-                        <DataGridTextColumn Header="الإجمالي" Binding="{Binding TotalPrice, Mode=OneWay, StringFormat={}{0:N2}}" Width="1*" IsReadOnly="True" Foreground="#0F172A" FontWeight="Bold"/>
+                        <DataGridTemplateColumn Header="الإجمالي" Width="1*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding TotalPrice, Mode=OneWay, StringFormat={}{0:N2}}" 
+                                             IsReadOnly="True" FontWeight="Bold" Background="Transparent" BorderThickness="0"
+                                             TextAlignment="Center" PreviewKeyDown="Total_PreviewKeyDown"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
 
                         <!-- Delete Row Command -->
                         <DataGridTemplateColumn Header="حذف" Width="60">

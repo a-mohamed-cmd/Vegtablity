@@ -43,72 +43,57 @@ Namespace Services
         End Function
 
         Public Function SaveInvoice(header As InvoiceHeader) As Integer
-            Using conn As IDbConnection = _dbHelper.GetConnection()
-                If conn.State = ConnectionState.Closed Then conn.Open()
-                
-                Using tx = conn.BeginTransaction()
-                    Try
-                        ' 1. Save Header
-                        Dim newInvID = conn.ExecuteScalar(Of Integer)(
-                            Helpers.StoredProcedures.SP_INVOICE_SAVE,
-                            New With {
-                                .InvID = header.InvID,
-                                .InvType = header.InvType,
-                                .InvDate = header.InvDate,
-                                .PartnerID = header.PartnerID,
-                                .WarehouseID = header.WarehouseID,
-                                .TotalAmount = header.TotalAmount,
-                                .Discount = header.Discount,
-                                .NetAmount = header.NetAmount,
-                                .PaidAmount = header.PaidAmount,
-                                .Remainder = header.Remainder,
-                                .UserID = header.UserID,
-                                .Notes = header.Notes,
-                                .IsPosted = header.IsPosted,
-                                .ReferenceNo = header.ReferenceNo,
-                                .PaymentAccountID = header.PaymentAccountID
-                            },
-                            commandType:=CommandType.StoredProcedure,
-                            transaction:=tx)
+            Try
+                ' Convert details to XML for high-performance batch saving
+                Dim detailsXml As String = ConvertDetailsToXml(header.Details)
 
-                        header.InvID = newInvID
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@InvID", header.InvID, dbType:=DbType.Int32, direction:=ParameterDirection.InputOutput)
+                    p.Add("@InvType", header.InvType)
+                    p.Add("@InvDate", header.InvDate)
+                    p.Add("@PartnerID", header.PartnerID)
+                    p.Add("@WarehouseID", header.WarehouseID)
+                    p.Add("@TotalAmount", header.TotalAmount)
+                    p.Add("@Discount", header.Discount)
+                    p.Add("@NetAmount", header.NetAmount)
+                    p.Add("@PaidAmount", header.PaidAmount)
+                    p.Add("@Remainder", header.Remainder)
+                    p.Add("@UserID", header.UserID)
+                    p.Add("@Notes", header.Notes)
+                    p.Add("@IsPosted", header.IsPosted)
+                    p.Add("@ReferenceNo", header.ReferenceNo)
+                    p.Add("@PaymentAccountID", header.PaymentAccountID)
+                    p.Add("@DetailsXml", detailsXml, dbType:=DbType.Xml)
 
-                        ' 2. Delete existing details (clean slate for updates)
-                        conn.Execute(
-                            Helpers.StoredProcedures.SP_INVOICEDETAIL_DELETEBYINVID,
-                            New With {.InvID = newInvID},
-                            commandType:=CommandType.StoredProcedure,
-                            transaction:=tx)
-
-                        ' 3. Insert new details
-                        For Each detail In header.Details
-                            detail.InvID = newInvID
-                            conn.Execute(
-                                Helpers.StoredProcedures.SP_INVOICEDETAIL_SAVE,
-                                New With {
-                                    .InvID = detail.InvID,
-                                    .ProductID = detail.ProductID,
-                                    .UnitPrice = detail.UnitPrice,
-                                    .Quantity = detail.Quantity,
-                                    .TotalPrice = detail.TotalPrice,
-                                    .CostPrice = detail.CostPrice
-                                },
-                                commandType:=CommandType.StoredProcedure,
-                                transaction:=tx)
-                        Next
-
-                        tx.Commit()
-                        Return newInvID
-                    Catch ex As Exception
-                        tx.Rollback()
-                        Dim errorMsg = "فشل حفظ الفاتورة: " & ex.Message
-                        If ex.InnerException IsNot Nothing Then
-                            errorMsg &= vbCrLf & "التفاصيل: " & ex.InnerException.Message
-                        End If
-                        Throw New Exception(errorMsg, ex)
-                    End Try
+                    ' استخدام الإجراء الجديد _XML لتجنب التعارض مع النسخة القديمة
+                    conn.Execute(Helpers.StoredProcedures.SP_INVOICE_SAVE_XML, p, commandType:=CommandType.StoredProcedure)
+                    Return p.Get(Of Integer)("@InvID")
                 End Using
-            End Using
+            Catch ex As Exception
+                Dim errorMsg = "فشل حفظ الفاتورة بنظام XML: " & ex.Message
+                If ex.InnerException IsNot Nothing Then
+                    errorMsg &= vbCrLf & "التفاصيل: " & ex.InnerException.Message
+                End If
+                Throw New Exception(errorMsg, ex)
+            End Try
+        End Function
+
+        Private Function ConvertDetailsToXml(details As IEnumerable(Of InvoiceDetail)) As String
+            Dim sb As New Text.StringBuilder()
+            sb.Append("<Details>")
+            For Each d In details
+                If d.ProductID > 0 Then
+                    sb.AppendFormat("<Item ProductID=""{0}"" UnitPrice=""{1}"" Quantity=""{2}"" TotalPrice=""{3}"" CostPrice=""{4}"" />",
+                                    d.ProductID, 
+                                    d.UnitPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), 
+                                    d.Quantity.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                                    d.TotalPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), 
+                                    d.CostPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))
+                End If
+            Next
+            sb.Append("</Details>")
+            Return sb.ToString()
         End Function
 
         Public Sub DeleteInvoice(invID As Integer)

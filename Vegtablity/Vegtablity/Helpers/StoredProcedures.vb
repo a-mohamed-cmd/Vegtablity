@@ -140,6 +140,7 @@ Namespace Helpers
         Public Const SP_INVOICE_GETALL As String = "[Sales].[sp_Invoice_GetAll]"
         Public Const SP_INVOICE_GETBYID As String = "[Sales].[sp_Invoice_GetByID]"
         Public Const SP_INVOICE_SAVE As String = "[Sales].[sp_Invoice_Save]"
+        Public Const SP_INVOICE_SAVE_XML As String = "[Sales].[sp_Invoice_Save_XML]"
         Public Const SP_INVOICE_DELETE As String = "[Sales].[sp_Invoice_Delete]"
         Public Const SP_INVOICE_GETPAGED As String = "[Sales].[sp_Invoice_GetPaged]"
         Public Const SP_SALES_GETPRODUCTPRICING_INVOICE As String = "[Sales].[sp_GetProductPricingForInvoice]"
@@ -156,6 +157,7 @@ Namespace Helpers
         Public Const SP_QUOTATION_GETALL As String = "[Sales].[sp_Quotations_GetAll]"
         Public Const SP_QUOTATION_GETBYPARTNER As String = "[Sales].[sp_Quotations_GetByPartner]"
         Public Const SP_QUOTATION_UPSERT As String = "[Sales].[sp_Quotations_Upsert]"
+        Public Const SP_QUOTATION_UPSERT_XML As String = "[Sales].[sp_Quotations_Upsert_XML]"
         Public Const SP_QUOTATION_DELETE As String = "[Sales].[sp_Quotations_Delete]"
         Public Const SP_QUOTATIONDETAILS_GETBYQUOTEID As String = "[Sales].[sp_QuotationDetails_GetByQuoteID]"
         Public Const SP_QUOTATIONDETAILS_INSERT As String = "[Sales].[sp_QuotationDetails_Insert]"
@@ -205,5 +207,16 @@ Namespace Helpers
         Public Const SP_REPORT_CUSTOMERPRODUCTSALES As String = "[Sales].[sp_Report_CustomerProductSales]"
 
         Public Const SP_REPORT_INVOICE_PRINT As String = "[Sales].[sp_Report_InvoicePrint]"
+
+        ' =============================================
+        ' Purchases Schema - Purchase Quotations
+        ' =============================================
+        Public Const SP_PURCHASEQUOTE_SAVE As String = "[Purchases].[sp_PurchaseQuote_Save]"
+        Public Const SP_PURCHASEQUOTE_GETALL As String = "[Purchases].[sp_PurchaseQuote_GetAll]"
+        Public Const SP_PURCHASEQUOTE_GETBYID As String = "[Purchases].[sp_PurchaseQuote_GetByID]"
+        Public Const SP_PURCHASEQUOTE_GETDETAILS As String = "[Purchases].[sp_PurchaseQuote_GetDetails]"
+        Public Const SP_PURCHASEQUOTE_GETPAGED As String = "[Purchases].[sp_PurchaseQuote_GetPaged]"
+        Public Const SP_PURCHASEQUOTE_GETBYPARTNER As String = "[Purchases].[sp_PurchaseQuote_GetByPartner]"
+        Public Const SP_PURCHASEQUOTE_DELETE As String = "[Purchases].[sp_PurchaseQuote_Delete]"
     End Class
 End Namespace

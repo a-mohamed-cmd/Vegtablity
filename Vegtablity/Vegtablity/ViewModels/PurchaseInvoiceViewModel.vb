@@ -264,26 +264,32 @@ Namespace ViewModels
 
         ''' <summary>Load an existing invoice by ID (called from Invoice Dashboard)</summary>
         Public Sub LoadInvoice(invID As Integer)
-            Dim loaded = _invoiceService.LoadInvoiceForEdit(invID)
-            If loaded IsNot Nothing Then
-                _allInvoiceDetails.Clear()
-                _detailsPage = 0
-                For Each d In loaded.Details
-                    AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
-                    _allInvoiceDetails.Add(d)
-                Next
-                loaded.Details = New ObservableCollection(Of InvoiceDetail)()
-                CurrentInvoice = loaded
-                If Not CurrentInvoice.IsPosted AndAlso _allInvoiceDetails.Count = 0 Then
-                    ExecuteAddItem(Nothing)
-                Else
-                    UpdateDetailsPagination()
-                End If
+            Try
+                Dim loaded = _invoiceService.LoadInvoiceForEdit(invID)
+                If loaded IsNot Nothing Then
+                    _allInvoiceDetails.Clear()
+                    _detailsPage = 0
+                    For Each d In loaded.Details
+                        AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
+                        _allInvoiceDetails.Add(d)
+                    Next
+                    loaded.Details = New ObservableCollection(Of InvoiceDetail)()
+                    CurrentInvoice = loaded
+                    If Not CurrentInvoice.IsPosted AndAlso _allInvoiceDetails.Count = 0 Then
+                        ExecuteAddItem(Nothing)
+                    Else
+                        UpdateDetailsPagination()
+                    End If
 
-                ' أبلغ الـ View بتحديث التاريخ واسم الشريك
-                SyncDateText()
-                RaiseEvent InvoiceLoaded(CurrentInvoice.PartnerID, CurrentInvoice.PartnerName)
-            End If
+                    ' أبلغ الـ View بتحديث التاريخ واسم الشريك
+                    SyncDateText()
+                    RaiseEvent InvoiceLoaded(CurrentInvoice.PartnerID, CurrentInvoice.PartnerName)
+                Else
+                    System.Windows.MessageBox.Show($"عذراً، تعذر العثور على فاتورة المشتريات رقم {invID} أو بياناتها ناقصة.", "خطأ في التحميل", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
+                End If
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ غير متوقع أثناء تحميل فاتورة المشتريات: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End Try
         End Sub
 
         ' ========================
@@ -487,7 +493,8 @@ Namespace ViewModels
                 If detail IsNot Nothing AndAlso detail.ProductID > 0 Then
                     Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
                     If prod IsNot Nothing Then
-                        detail.Quantity = 1
+                        ' Keep existing quantity if already set, otherwise default to 1
+                        If detail.Quantity <= 0 Then detail.Quantity = 1
                         detail.UnitPrice = prod.PurchasePrice ' Use PurchasePrice for Purchases
                         detail.Barcode = prod.Barcode ' Sync Barcode
                         detail.ProductName = prod.ProductName
