@@ -4,6 +4,8 @@ import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import '../services/printer_service.dart';
 import '../providers/shift_provider.dart';
+import '../providers/pos_provider.dart';
+import '../providers/voucher_provider.dart';
 
 double _parseDouble(dynamic value) {
   if (value == null) return 0.0;
@@ -24,9 +26,13 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
   String _errorMessage = '';
   List<dynamic> _salesInvoices = [];
   List<dynamic> _purchaseInvoices = [];
+  List<dynamic> _receiptVouchers = [];
+  List<dynamic> _paymentVouchers = [];
 
   double _totalSalesAmount = 0.0;
   double _totalPurchasesAmount = 0.0;
+  double _totalReceiptAmount = 0.0;
+  double _totalPaymentAmount = 0.0;
 
   @override
   void initState() {
@@ -44,20 +50,18 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
       final apiService = Provider.of<ApiService>(context, listen: false);
       final shiftProvider = Provider.of<ShiftProvider>(context, listen: false);
       
-      String? shiftDateOnly;
-      final String? shiftStartTime = shiftProvider.shiftStartTime;
-      if (shiftStartTime != null && shiftStartTime.isNotEmpty) {
-        try {
-          final parsed = DateTime.parse(shiftStartTime);
-          shiftDateOnly = '${parsed.year}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
-        } catch (_) {}
-      }
-
-      // Fetch Sales and Purchase invoices filtered by the shift start date
+      final shiftId = shiftProvider.shiftId;
+      
+      // Fetch Sales and Purchase invoices filtered by the shift ID
       final results = await Future.wait([
-        apiService.getInvoices(type: 'Sales', shiftDate: shiftDateOnly),
-        apiService.getInvoices(type: 'Purchase', shiftDate: shiftDateOnly),
+        apiService.getInvoices(type: 'Sales', shiftId: shiftId),
+        apiService.getInvoices(type: 'Purchase', shiftId: shiftId),
       ]);
+      
+      final shiftSummary = await shiftProvider.fetchShiftSummary();
+      final List<dynamic> allVouchers = shiftSummary != null && shiftSummary['Vouchers'] != null 
+          ? List<dynamic>.from(shiftSummary['Vouchers']) 
+          : [];
 
       final salesRes = results[0];
       final purchaseRes = results[1];
@@ -69,8 +73,8 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
         List<dynamic> todaySales;
         List<dynamic> todayPurchases;
 
-        if (shiftDateOnly != null) {
-          // Stored procedure sp_Invoice_GetAll_Pos already filtered by shift date!
+        if (shiftId != null) {
+          // Stored procedure sp_Invoice_GetAll_Pos already filtered by shift ID!
           todaySales = allSales;
           todayPurchases = allPurchases;
         } else {
@@ -100,11 +104,30 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
           purchasesSum += _parseDouble(inv['NetAmount']);
         }
 
+        // Process Vouchers
+        List<dynamic> receiptVouchers = allVouchers.where((v) => v['VoucherType'] == 'Receipt').toList();
+        List<dynamic> paymentVouchers = allVouchers.where((v) => v['VoucherType'] == 'Payment').toList();
+        
+        double receiptSum = 0.0;
+        for (var v in receiptVouchers) {
+          receiptSum += _parseDouble(v['Amount']);
+        }
+        
+        double paymentSum = 0.0;
+        for (var v in paymentVouchers) {
+          paymentSum += _parseDouble(v['Amount']);
+        }
+
         setState(() {
           _salesInvoices = todaySales;
           _purchaseInvoices = todayPurchases;
+          _receiptVouchers = receiptVouchers;
+          _paymentVouchers = paymentVouchers;
+          
           _totalSalesAmount = salesSum;
           _totalPurchasesAmount = purchasesSum;
+          _totalReceiptAmount = receiptSum;
+          _totalPaymentAmount = paymentSum;
           _isLoading = false;
         });
       } else {
@@ -150,6 +173,13 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final posProvider = Provider.of<PosProvider>(context);
+    final voucherProvider = Provider.of<VoucherProvider>(context);
+    
+    final offlineInvoices = posProvider.offlineInvoices;
+    final offlineVouchers = voucherProvider.offlineVouchers;
+    final bool hasOfflineData = offlineInvoices.isNotEmpty || offlineVouchers.isNotEmpty;
+
     final now = DateTime.now();
     final todayFormatted = '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}';
 
@@ -275,6 +305,9 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                               ),
                             ),
 
+                            if (hasOfflineData)
+                              _buildOfflineDataSection(offlineInvoices, offlineVouchers),
+
                             // 1. Purchases Section (TOP)
                             _buildCategorySection(
                               title: 'مشتريات الموردين اليومية',
@@ -311,13 +344,58 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                               ),
                             ),
 
-                            // 2. Sales Section (BOTTOM)
+                            // 2. Sales Section
                             _buildCategorySection(
                               title: 'مبيعات العملاء اليومية',
                               icon: Icons.point_of_sale_rounded,
                               accentColor: Colors.blue[600]!,
                               invoices: _salesInvoices,
                               totalAmount: _totalSalesAmount,
+                            ),
+
+                            // Decorative Split Divider with Label
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              color: Colors.black26,
+                              child: Row(
+                                children: [
+                                  Expanded(child: Divider(color: Colors.grey[800], thickness: 1)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[800],
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.white10),
+                                      ),
+                                      child: const Text(
+                                        'السندات المالية للوردية',
+                                        style: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(child: Divider(color: Colors.grey[800], thickness: 1)),
+                                ],
+                              ),
+                            ),
+                            
+                            // 3. Receipt Vouchers
+                            _buildVoucherSection(
+                              title: 'سندات القبض (محصلات)',
+                              icon: Icons.download_rounded,
+                              accentColor: Colors.greenAccent[700]!,
+                              vouchers: _receiptVouchers,
+                              totalAmount: _totalReceiptAmount,
+                            ),
+                            
+                            // 4. Payment Vouchers
+                            _buildVoucherSection(
+                              title: 'سندات الصرف (مدفوعات)',
+                              icon: Icons.upload_rounded,
+                              accentColor: Colors.deepOrangeAccent[200]!,
+                              vouchers: _paymentVouchers,
+                              totalAmount: _totalPaymentAmount,
                             ),
                           ],
                         ),
@@ -328,6 +406,73 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                     _buildSummaryFooter(),
                   ],
                 ),
+    );
+  }
+
+  Widget _buildOfflineDataSection(List<Map<String, dynamic>> invoices, List<Map<String, dynamic>> vouchers) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.red[900]?.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withOpacity(0.12),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              border: const Border(bottom: BorderSide(color: Colors.redAccent)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.sync_problem, color: Colors.redAccent, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'بيانات معلقة (غير متزامنة)',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${invoices.length} فاتورة | ${vouchers.length} سند',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (invoices.isNotEmpty)
+            ...invoices.map((inv) => ListTile(
+              leading: const Icon(Icons.receipt_long, color: Colors.orangeAccent),
+              title: Text('فاتورة (${inv['type'] == 'Sales' ? 'مبيعات' : 'مشتريات'})', style: const TextStyle(color: Colors.white, fontSize: 13)),
+              subtitle: Text('الصافي: ${_parseDouble(inv['total_amount']).toStringAsFixed(3)} د.ك', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              trailing: const Icon(Icons.cloud_off, color: Colors.redAccent, size: 16),
+            )),
+          if (vouchers.isNotEmpty)
+            ...vouchers.map((v) => ListTile(
+              leading: const Icon(Icons.receipt, color: Colors.purpleAccent),
+              title: Text('سند (${v['VoucherType'] == 'Receipt' ? 'قبض' : 'صرف'})', style: const TextStyle(color: Colors.white, fontSize: 13)),
+              subtitle: Text('المبلغ: ${_parseDouble(v['TotalAmount']).toStringAsFixed(3)} د.ك', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              trailing: const Icon(Icons.cloud_off, color: Colors.redAccent, size: 16),
+            )),
+        ],
+      ),
     );
   }
 
@@ -563,8 +708,224 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
     );
   }
 
+  Widget _buildVoucherSection({
+    required String title,
+    required IconData icon,
+    required Color accentColor,
+    required List<dynamic> vouchers,
+    required double totalAmount,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[850],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.12),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              border: Border(bottom: BorderSide(color: accentColor.withValues(alpha: 0.3))),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: accentColor, size: 20),
+                const SizedBox(width: 8),
+                Text(title, style: TextStyle(color: accentColor, fontSize: 15, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(10)),
+                  child: Text('${vouchers.length} سندات', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+          vouchers.isEmpty
+              ? Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  width: double.infinity,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.receipt_long_outlined, size: 30, color: Colors.grey[700]),
+                      const SizedBox(height: 8),
+                      Text('لا توجد سندات في هذا القسم اليوم', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: vouchers.length,
+                  separatorBuilder: (ctx, idx) => const Divider(color: Colors.white10, height: 1),
+                  itemBuilder: (ctx, idx) {
+                    final v = vouchers[idx];
+                    final amount = _parseDouble(v['Amount']);
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      onTap: () => _showVoucherDetails(v),
+                      title: Text(
+                        'سند #${v['VoucherID']} - ${v['PartnerName'] ?? 'بدون شريك'}',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      subtitle: Text(
+                        '${_formatTime(v['VoucherDate'])} | ${v['AccountName'] ?? '-'}',
+                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      trailing: Text(
+                        '${amount.toStringAsFixed(3)} KWD',
+                        style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    );
+                  },
+                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              color: Colors.black12,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('إجمالي السندات:', style: TextStyle(color: Colors.white60, fontSize: 14)),
+                Text(
+                  '${totalAmount.toStringAsFixed(3)} KWD',
+                  style: TextStyle(color: accentColor, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVoucherDetails(Map<String, dynamic> voucher) {
+    final amount = _parseDouble(voucher['Amount']);
+    final vType = voucher['VoucherType'] == 'Receipt' ? 'سند قبض' : 'سند صرف';
+    final accountName = voucher['AccountName'] ?? '-';
+    final partnerName = voucher['PartnerName'] ?? 'بدون شريك';
+    final date = _formatTime(voucher['VoucherDate']);
+    final desc = voucher['Description']?.toString() ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24.0,
+          left: 24.0,
+          right: 24.0,
+          top: 24.0,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'تفاصيل $vType #${voucher['VoucherID']}',
+                  style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white54),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const Divider(color: Colors.white24),
+            const SizedBox(height: 12),
+            _buildDetailRow('تاريخ السند', date),
+            _buildDetailRow('الاسم (الشريك)', partnerName),
+            _buildDetailRow('طريقة السداد', accountName),
+            _buildDetailRow('ملاحظات', desc.isEmpty ? 'لا يوجد' : desc),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(8)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('المبلغ الإجمالي', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  Text('${amount.toStringAsFixed(3)} د.ك', style: const TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.print),
+                label: const Text('إعادة طباعة السند', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.teal[700],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  try {
+                    final apiService = Provider.of<ApiService>(context, listen: false);
+                    final printer = Provider.of<PrinterService>(context, listen: false);
+                    
+                    final res = await apiService.getVoucherAllocations(voucher['VoucherID']);
+                    List<Map<String, dynamic>> allocs = [];
+                    if (res.statusCode == 200 && res.data != null) {
+                      allocs = List<Map<String, dynamic>>.from(res.data);
+                    }
+                    
+                    await printer.printVoucher(voucher, allocs);
+                  } catch (e) {
+                    print("Error fetching allocations: $e");
+                    final printer = Provider.of<PrinterService>(context, listen: false);
+                    await printer.printVoucher(voucher, []);
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+              ),
+            ),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white60, fontSize: 14)),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSummaryFooter() {
-    final double netFlow = _totalSalesAmount - _totalPurchasesAmount;
+    final double netFlow = (_totalSalesAmount + _totalReceiptAmount) - (_totalPurchasesAmount + _totalPaymentAmount);
 
     return Container(
       width: double.infinity,

@@ -1,0 +1,355 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../providers/account_provider.dart';
+import '../providers/voucher_provider.dart';
+import '../services/api_service.dart';
+import '../providers/shift_provider.dart';
+import '../services/printer_service.dart';
+
+class GeneralPaymentVoucherScreen extends StatefulWidget {
+  const GeneralPaymentVoucherScreen({Key? key}) : super(key: key);
+
+  @override
+  State<GeneralPaymentVoucherScreen> createState() => _GeneralPaymentVoucherScreenState();
+}
+
+class _GeneralPaymentVoucherScreenState extends State<GeneralPaymentVoucherScreen> {
+  bool _isLoading = false;
+  
+  Map<String, dynamic>? _selectedTargetAccount;
+  
+  List<Map<String, dynamic>> _cashAccounts = [];
+  int? _selectedCashAccountId;
+
+  final _amountCtrl = TextEditingController();
+  final _descCtrl   = TextEditingController();
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCashAccounts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AccountProvider>(context, listen: false).fetchExpenseAccounts();
+    });
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _descCtrl.dispose();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCashAccounts() async {
+    final voucherProv = Provider.of<VoucherProvider>(context, listen: false);
+    setState(() {
+      _cashAccounts = voucherProv.cachedAccounts;
+      if (_cashAccounts.isNotEmpty) {
+        _selectedCashAccountId = _cashAccounts.first['AccountID'];
+      }
+    });
+
+    final api = Provider.of<ApiService>(context, listen: false);
+    try {
+      final resp = await api.getVoucherAccounts();
+      if (resp.statusCode == 200) {
+        setState(() {
+          _cashAccounts = List<Map<String, dynamic>>.from(resp.data);
+          if (_cashAccounts.isNotEmpty && _selectedCashAccountId == null) {
+            _selectedCashAccountId = _cashAccounts.first['AccountID'];
+          }
+        });
+      }
+    } catch (e) {
+      // Use cached
+    }
+  }
+
+  void _showAccountSelectionPopup() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final accProv = Provider.of<AccountProvider>(context);
+            final accounts = accProv.expenseAccounts;
+            
+            final filteredAccounts = accounts.where((acc) {
+              final query = _searchCtrl.text.toLowerCase();
+              return acc['AccountName'].toString().toLowerCase().contains(query) ||
+                     acc['AccountCode'].toString().toLowerCase().contains(query);
+            }).toList();
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 16,
+              ),
+              child: SizedBox(
+                height: MediaQuery.of(ctx).size.height * 0.7,
+                child: Column(
+                  children: [
+                    const Text(
+                      'اختر حساب المصروفات',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'ابحث عن حساب...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                      ),
+                      onChanged: (val) => setModalState(() {}),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: accProv.isLoadingExpenses
+                          ? const Center(child: CircularProgressIndicator())
+                          : ListView.builder(
+                              itemCount: filteredAccounts.length,
+                              itemBuilder: (context, index) {
+                                final acc = filteredAccounts[index];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  child: ListTile(
+                                    title: Text(acc['AccountName'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text('كود: ${acc['AccountCode']}'),
+                                    onTap: () {
+                                      setState(() {
+                                        _selectedTargetAccount = acc;
+                                      });
+                                      Navigator.pop(ctx);
+                                      _searchCtrl.clear();
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _saveVoucher() async {
+    final amountText = _amountCtrl.text.trim();
+    if (_selectedTargetAccount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء اختيار الحساب المستهدف (المصروفات)')));
+      return;
+    }
+    if (amountText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال المبلغ')));
+      return;
+    }
+    final amount = double.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('المبلغ غير صحيح')));
+      return;
+    }
+    if (_selectedCashAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء اختيار حساب الصندوق/البنك')));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final api = Provider.of<ApiService>(context, listen: false);
+    final shiftProv = Provider.of<ShiftProvider>(context, listen: false);
+    final printerProv = Provider.of<PrinterService>(context, listen: false);
+
+    try {
+      final resp = await api.saveGeneralVoucher(
+        voucherType: 'Payment',
+        totalAmount: amount,
+        accountId: _selectedTargetAccount!['AccountID'],
+        description: _descCtrl.text.trim(),
+        paymentMethod: _selectedCashAccountId.toString(),
+        shiftId: shiftProv.shiftId,
+      );
+
+      if (resp.statusCode == 200) {
+        final voucher = resp.data;
+        
+        final targetAccountName = _selectedTargetAccount!['AccountName'] ?? 'غير محدد';
+        final cashAccountName = _cashAccounts.firstWhere(
+            (acc) => acc['AccountID'].toString() == _selectedCashAccountId.toString(), 
+            orElse: () => {'AccountName': 'نقدي'}
+        )['AccountName'];
+
+        // طباعة السند مباشرة
+        await printerProv.printGeneralVoucher(voucher, targetAccountName, cashAccountName);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم إنشاء وطباعة سند الصرف بنجاح (رقم ${voucher['VoucherID'] ?? voucher['VoucherNo']})'), backgroundColor: Colors.green),
+        );
+        setState(() {
+          _selectedTargetAccount = null;
+          _amountCtrl.clear();
+          _descCtrl.clear();
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: ${resp.data}'), backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر الحفظ: $e'), backgroundColor: Colors.red));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('سند صرف مباشر (مصروفات)'),
+        backgroundColor: Colors.orange.shade700,
+        foregroundColor: Colors.white,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Target Account Selection
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: InkWell(
+                        onTap: _showAccountSelectionPopup,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              Icon(Icons.account_balance_wallet, color: Colors.orange.shade700, size: 32),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('الحساب المستهدف (المصروف)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                    Text(
+                                      _selectedTargetAccount != null 
+                                          ? _selectedTargetAccount!['AccountName'] 
+                                          : 'اضغط لاختيار الحساب',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: _selectedTargetAccount != null ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Amount Input
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: TextField(
+                          controller: _amountCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
+                          textAlign: TextAlign.center,
+                          decoration: const InputDecoration(
+                            labelText: 'المبلغ (د.ك)',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.money),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Description and Cash Account
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            TextField(
+                              controller: _descCtrl,
+                              decoration: const InputDecoration(
+                                labelText: 'البيان / الملاحظات',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.notes),
+                              ),
+                              maxLines: 2,
+                            ),
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<int>(
+                              value: _selectedCashAccountId,
+                              decoration: const InputDecoration(
+                                labelText: 'دفع من حساب (الصندوق)',
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.account_balance),
+                              ),
+                              items: _cashAccounts.map((acc) {
+                                return DropdownMenuItem<int>(
+                                  value: acc['AccountID'],
+                                  child: Text(acc['AccountName'] ?? ''),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedCashAccountId = val;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Save Button
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.save),
+                      label: const Text('حفظ السند المباشر', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.orange.shade700,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _saveVoucher,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+}

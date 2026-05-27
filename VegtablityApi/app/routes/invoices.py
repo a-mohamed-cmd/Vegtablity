@@ -10,12 +10,12 @@ router = APIRouter()
 async def get_invoices(
     type: str = "Sales", 
     search: str = None,
-    shift_date: str = None,
+    shift_id: int = None,
     user_id: int = Depends(get_current_user_id)
 ):
     service = InvoiceService()
     try:
-        return service.get_all_invoices(type, search, shift_date)
+        return service.get_all_invoices(type, search, shift_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

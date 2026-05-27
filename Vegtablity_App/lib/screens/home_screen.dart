@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pos_provider.dart';
+import '../providers/voucher_provider.dart';
 import 'login_screen.dart';
 import 'pos_screen.dart';
 import 'printer_settings_screen.dart';
@@ -10,6 +11,10 @@ import 'settings_screen.dart';
 import 'partner_offers_screen.dart';
 import 'daily_invoices_screen.dart';
 import 'close_shift_screen.dart';
+import 'receipt_voucher_screen.dart';
+import 'payment_voucher_screen.dart';
+import 'general_receipt_voucher_screen.dart';
+import 'general_payment_voucher_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +31,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadHomeLayout();
+    
+    // Refresh offline cache in background
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<VoucherProvider>(context, listen: false).refreshCache();
+    });
   }
 
   Future<void> _loadHomeLayout() async {
@@ -56,7 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final posProvider = Provider.of<PosProvider>(context);
+    final voucherProv = Provider.of<VoucherProvider>(context);
     final int unsyncedCount = posProvider.offlineInvoicesCount;
+    final int unsyncedVouchers = voucherProv.offlineVouchersCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -167,6 +179,26 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             const Divider(),
+            // ─── سندات القبض والصرف (مباشر) ────────────────────────
+            ListTile(
+              leading: const Icon(Icons.arrow_circle_down, color: Colors.greenAccent),
+              title: const Text('سند قبض', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('تحصيل إيرادات (مباشر)', style: TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const GeneralReceiptVoucherScreen()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.arrow_circle_up, color: Colors.orangeAccent),
+              title: const Text('سند صرف', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('سداد مصروفات (مباشر)', style: TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const GeneralPaymentVoucherScreen()));
+              },
+            ),
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.redAccent),
               title: const Text('تسجيل الخروج'),
@@ -249,6 +281,44 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
+                // Banner for offline pending vouchers
+                if (unsyncedVouchers > 0)
+                  Container(
+                    color: Colors.blue[100],
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.sync_problem, color: Colors.blue, size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'لديك $unsyncedVouchers سند/سندات محفوظة محلياً بانتظار المزامنة.',
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: voucherProv.isLoading
+                              ? null
+                              : () async {
+                                  final success = await voucherProv.syncOfflineVouchers();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(voucherProv.successMessage ?? voucherProv.errorMessage ?? '', textDirection: TextDirection.rtl),
+                                        backgroundColor: success ? Colors.green : Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                          icon: voucherProv.isLoading
+                              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.sync),
+                          label: const Text('مزامنة'),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 // Active Home Screen Layout Design
                 Expanded(
@@ -297,24 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.people_alt_outlined,
-                  size: 70, color: Colors.teal),
-              const SizedBox(height: 12),
-              const Text(
-                'نظام فواتير عروض الشركاء',
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'يرجى اختيار نوع العملية لاستعراض عروض الشركاء النشطة وحصر الأصناف.',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 16),
 
               // Two Beautiful, Massive Modern Cards
               Row(
@@ -358,6 +411,50 @@ class _HomeScreenState extends State<HomeScreen> {
                             builder: (context) =>
                                 const PartnerOffersScreen(type: 'Purchases'),
                           ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              
+              // Second Row of Cards (Receipts & Payments)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 3. Receipts (Customer Collection)
+                  Expanded(
+                    child: _buildGlowCard(
+                      context,
+                      title: 'تحصيل العملاء',
+                      subtitle: 'سندات قبض',
+                      icon: Icons.arrow_circle_down_rounded,
+                      color1: Colors.green[700]!,
+                      color2: Colors.lightGreen[500]!,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ReceiptVoucherScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+
+                  // 4. Payments (Supplier Payment)
+                  Expanded(
+                    child: _buildGlowCard(
+                      context,
+                      title: 'دفع الموردين',
+                      subtitle: 'سندات صرف',
+                      icon: Icons.arrow_circle_up_rounded,
+                      color1: Colors.red[700]!,
+                      color2: Colors.orangeAccent[400]!,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PaymentVoucherScreen()),
                         );
                       },
                     ),

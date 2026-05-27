@@ -1448,6 +1448,8 @@ BEGIN
 END
 GO
 
+
+
 -- =============================================
 -- 2. جلب حساب بالـ ID
 -- =============================================
@@ -5920,6 +5922,76 @@ BEGIN
 END
 GO
 
+
+IF OBJECT_ID('[Sales].[sp_Invoice_Save_XML]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save_XML];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_Save_XML]
+    @InvID INT OUTPUT,
+    @InvType NVARCHAR(20),
+    @InvDate DATETIME,
+    @PartnerID INT,
+    @WarehouseID INT,
+    @TotalAmount DECIMAL(18, 2),
+    @Discount DECIMAL(18, 2),
+    @NetAmount DECIMAL(18, 2),
+    @PaidAmount DECIMAL(18, 2),
+    @Remainder DECIMAL(18, 2),
+    @UserID INT,
+    @Notes NVARCHAR(255),
+    @IsPosted BIT = 0,
+    @ReferenceNo NVARCHAR(50) = NULL,
+    @PaymentAccountID INT = NULL,
+    @ShiftID INT = NULL,         -- ✨ تمت الإضافة هنا بـ NULL افتراضياً
+    @DetailsXml XML 
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        -- حفظ الرأس
+        IF @InvID = 0
+        BEGIN
+            INSERT INTO [Sales].[InvoiceHeader] 
+                (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID, ShiftID)
+            VALUES 
+                (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID, @ShiftID); -- ✨ تمت الإضافة
+            SET @InvID = CAST(SCOPE_IDENTITY() AS INT);
+        END
+        ELSE
+        BEGIN
+            UPDATE [Sales].[InvoiceHeader] 
+            SET InvType = @InvType, InvDate = @InvDate, PartnerID = @PartnerID, WarehouseID = @WarehouseID, 
+                TotalAmount = @TotalAmount, Discount = @Discount, NetAmount = @NetAmount, 
+                PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes,
+                IsPosted = @IsPosted, ReferenceNo = @ReferenceNo, PaymentAccountID = @PaymentAccountID,
+                ShiftID = @ShiftID   -- ✨ تمت الإضافة
+            WHERE InvID = @InvID;
+            
+            DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+        END
+
+        -- إدراج التفاصيل من الـ XML
+        INSERT INTO [Sales].[InvoiceDetails] (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+        SELECT 
+            @InvID,
+            T.Item.value('@ProductID', 'INT'),
+            T.Item.value('@UnitPrice', 'DECIMAL(18,2)'),
+            T.Item.value('@Quantity', 'DECIMAL(18,2)'),
+            T.Item.value('@TotalPrice', 'DECIMAL(18,2)'),
+            T.Item.value('@CostPrice', 'DECIMAL(18,2)')
+        FROM @DetailsXml.nodes('//Item') AS T(Item);
+
+        COMMIT TRANSACTION;
+        SELECT @InvID AS InvID;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
 -- 2. [Sales].[sp_Quotations_Upsert_XML]
 -- نسخة مطورة لعروض الأسعار تدعم XML لتجنب التعارض مع الإجراء القديم
 IF OBJECT_ID('[Sales].[sp_Quotations_Upsert_XML]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Quotations_Upsert_XML];
@@ -6091,6 +6163,18 @@ BEGIN
 END
 GO
 
+-- إضافة عمود ShiftID كعمود اختياري (NULL)
+ALTER TABLE [Sales].[InvoiceHeader] 
+ADD ShiftID INT NULL;
+GO
+
+-- (اختياري) إضافة قيد المفتاح الأجنبي لضمان تكامل البيانات مع جدول الورديات
+ALTER TABLE [Sales].[InvoiceHeader] 
+ADD CONSTRAINT FK_InvoiceHeader_Shifts 
+FOREIGN KEY (ShiftID) REFERENCES [Sales].[Shifts](ShiftID);
+GO
+
+
 -- 1. Open Shift
 IF OBJECT_ID('[Sales].[sp_Shift_Open]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Shift_Open];
 GO
@@ -6249,9 +6333,9 @@ GO
 -- =============================================
 IF OBJECT_ID('[Sales].[sp_Invoice_GetAll_Pos]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetAll_Pos];
 GO
-CREATE PROCEDURE [Sales].[sp_Invoice_GetAll_Pos]
+CREATE PROCEDURE [Sales].[sp_Invoice_GetAll_Pos]  
     @InvType NVARCHAR(20),
-	@shiftDate date = null
+	@ShiftID int = null
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -6264,7 +6348,7 @@ BEGIN
     LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
     LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
     LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
-    WHERE h.InvType = @InvType and h.[CreatedAt] between @shiftDate and GETDATE()
+    WHERE h.InvType = @InvType and ShiftID =@ShiftID
     ORDER BY h.InvID DESC;
 END
 GO
@@ -6301,6 +6385,7 @@ BEGIN
             WHERE h.InvType = 'Sales'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS TotalSales,
 
         -- إجمالي المشتريات (NetAmount) في الوردية
@@ -6310,6 +6395,7 @@ BEGIN
             WHERE h.InvType = 'Purchase'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS TotalPurchases,
 
         -- عدد فواتير المبيعات
@@ -6319,6 +6405,7 @@ BEGIN
             WHERE h.InvType = 'Sales'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS SalesCount,
 
         -- عدد فواتير المشتريات
@@ -6328,6 +6415,7 @@ BEGIN
             WHERE h.InvType = 'Purchase'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS PurchasesCount,
 
         -- إجمالي المبالغ المسددة (Paid) في فواتير المبيعات
@@ -6337,6 +6425,7 @@ BEGIN
             WHERE h.InvType = 'Sales'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS TotalPaidSales,
 
         -- إجمالي المبالغ المتبقية (Remainder / آجل) في المبيعات
@@ -6346,6 +6435,7 @@ BEGIN
             WHERE h.InvType = 'Sales'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS TotalRemainder,
 
         -- إجمالي المبالغ المسددة (Paid) في فواتير المشتريات
@@ -6355,6 +6445,7 @@ BEGIN
             WHERE h.InvType = 'Purchase'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS TotalPaidPurchases,
 
         -- إجمالي المبالغ المتبقية (Remainder / آجل) في المشتريات
@@ -6364,6 +6455,7 @@ BEGIN
             WHERE h.InvType = 'Purchase'
               AND h.CreatedAt >= s.StartTime
               AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
+              AND h.UserID = s.UserID
         ), 0) AS TotalPurchasesRemainder
 
     FROM [Sales].[Shifts] s
@@ -6427,13 +6519,15 @@ BEGIN
         SELECT @TotalPaidSales = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
         FROM [Sales].[InvoiceHeader]
         WHERE InvType = 'Sales'
-          AND CreatedAt >= @StartTime;
+          AND CreatedAt >= @StartTime
+          AND UserID = @UserID;
 
         -- مشتريات مسددة خلال الوردية
         SELECT @TotalPaidPurchases = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
         FROM [Sales].[InvoiceHeader]
         WHERE InvType = 'Purchase'
-          AND CreatedAt >= @StartTime;
+          AND CreatedAt >= @StartTime
+          AND UserID = @UserID;
 
         SET @ExpectedCash = @StartingCash - @TotalPaidPurchases + @TotalPaidSales;
         SET @Difference   = @EndingCash - @ExpectedCash;
@@ -6500,11 +6594,945 @@ BEGIN
                  @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
         END
 
+        -- =====================================================
+        -- 4. ترحيل الفواتير المرتبطة بهذه الوردية
+        -- =====================================================
+        -- بدلاً من ShiftID غير الموجود، نربط الفواتير بوقت فتح وإغلاق الوردية
+        DECLARE @ShiftEnd DATETIME;
+        SELECT @ShiftEnd = EndTime FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
+
+        UPDATE [Sales].[InvoiceHeader]
+        SET IsPosted = 1
+        WHERE CreatedAt >= @StartTime 
+          AND CreatedAt <= @ShiftEnd 
+          AND UserID = @UserID
+          AND IsPosted = 0;
+
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
         ROLLBACK TRANSACTION;
         THROW;
     END CATCH
+END
+GO
+
+IF OBJECT_ID('[Sales].[sp_Invoice_AddPayment_pos]', 'P') IS NOT NULL 
+    DROP PROCEDURE [Sales].[sp_Invoice_AddPayment_pos];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_AddPayment_pos]
+    @InvID            INT,
+    @PaymentAmount    DECIMAL(18,2),
+    @PaymentAccountID INT,
+    @UserID           INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @InvType   NVARCHAR(20), @PartnerID INT,
+                @Remainder DECIMAL(18,2), @IsPosted  BIT;
+
+        SELECT @InvType   = InvType,
+               @PartnerID = PartnerID,
+               @Remainder = Remainder,
+               @IsPosted  = IsPosted
+        FROM [Sales].[InvoiceHeader]
+        WHERE InvID = @InvID;
+
+        IF @InvID IS NULL OR @Remainder IS NULL
+        BEGIN RAISERROR(N'الفاتورة غير موجودة', 16, 1); RETURN; END
+
+        IF @PaymentAmount <= 0 OR @PaymentAmount > @Remainder
+        BEGIN RAISERROR(N'مبلغ السداد غير صحيح أو يتجاوز المتبقي', 16, 1); RETURN; END
+
+        -- ① تحديث مبالغ الفاتورة دائماً بغض النظر عن IsPosted
+        UPDATE [Sales].[InvoiceHeader]
+        SET PaidAmount = PaidAmount + @PaymentAmount,
+            Remainder  = Remainder  - @PaymentAmount
+        WHERE InvID = @InvID;
+
+        -- ② إضافة قيود محاسبية فقط إذا كانت الفاتورة مرحّلة
+        IF @IsPosted = 1
+        BEGIN
+            DECLARE @PartnerAccountID INT;
+            SELECT @PartnerAccountID = AccountID FROM [Sales].[Partners] WHERE PartnerID = @PartnerID;
+
+            DECLARE @EntryNo   INT           = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+            DECLARE @EntryDate DATE          = CAST(GETDATE() AS DATE);
+            DECLARE @Desc      NVARCHAR(255) = N'سداد إضافي - فاتورة رقم ' + CAST(@InvID AS NVARCHAR);
+
+            IF @InvType = 'Sales'
+            BEGIN
+                -- Dr Cash  /  Cr Customer
+                INSERT INTO [Accounting].[JournalEntries]
+                    (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+                VALUES
+                    (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PaymentAccountID, @PaymentAmount, 0,              @Desc, @UserID),
+                    (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PartnerAccountID,  0,              @PaymentAmount, @Desc, @UserID);
+            END
+            ELSE -- Purchase
+            BEGIN
+                -- Dr Vendor  /  Cr Cash
+                INSERT INTO [Accounting].[JournalEntries]
+                    (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+                VALUES
+                    (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PartnerAccountID,  @PaymentAmount, 0,              @Desc, @UserID),
+                    (@EntryNo, @EntryDate, 'InvoicePayment', @InvID, @PaymentAccountID,  0,              @PaymentAmount, @Desc, @UserID);
+            END
+        END
+
+        COMMIT TRANSACTION;
+        SELECT 1 AS Success;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+-- ============================================================
+-- SP 1: sp_Shift_GetSummary
+-- جلب ملخص الوردية (المبيعات، المشتريات، الكاش المتوقع)
+-- ============================================================
+IF OBJECT_ID('[Sales].[sp_Shift_GetSummary]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Shift_GetSummary];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Shift_GetSummary] 
+    @ShiftID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- جلب بيانات الوردية الأساسية
+    SELECT
+        s.ShiftID,
+        s.UserID,
+        s.StartTime,
+        s.EndTime,
+        s.StartingCash,
+        s.Status,
+        u.FullName AS UserName,
+
+        -- إجمالي المبيعات (NetAmount) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalSales,
+
+        -- إجمالي المشتريات (NetAmount) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPurchases,
+
+        -- عدد فواتير المبيعات
+        ISNULL((
+            SELECT COUNT(*)
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS SalesCount,
+
+        -- عدد فواتير المشتريات
+        ISNULL((
+            SELECT COUNT(*)
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS PurchasesCount,
+
+        -- إجمالي المبالغ المسددة (Paid) في فواتير المبيعات
+        ISNULL((
+            SELECT SUM(CAST(h.PaidAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPaidSales,
+
+        -- إجمالي المبالغ المتبقية (Remainder / آجل) في المبيعات
+        ISNULL((
+            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalRemainder,
+
+        -- إجمالي المبالغ المسددة (Paid) في فواتير المشتريات
+        ISNULL((
+            SELECT SUM(CAST(h.PaidAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPaidPurchases,
+
+        -- إجمالي المبالغ المتبقية (Remainder / آجل) في المشتريات
+        ISNULL((
+            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPurchasesRemainder
+
+    FROM [Sales].[Shifts] s
+    LEFT JOIN [Security].[Users] u ON s.UserID = u.UserID
+    WHERE s.ShiftID = @ShiftID;
+END
+GO
+
+
+-- ============================================================
+-- SP 2: sp_Shift_Close
+-- إغلاق الوردية + قيد محاسبي لفرق الكاش
+-- ============================================================
+IF OBJECT_ID('[Sales].[sp_Shift_Close]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Shift_Close];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Shift_Close]
+    @ShiftID    INT,
+    @EndingCash DECIMAL(18,3)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+
+        -- =====================================================
+        -- 1. إغلاق الوردية
+        -- =====================================================
+        UPDATE [Sales].[Shifts]
+        SET
+            EndTime    = GETDATE(),
+            EndingCash = @EndingCash,
+            Status     = 'Closed'
+        WHERE ShiftID = @ShiftID
+          AND Status  = 'Open';
+
+        IF @@ROWCOUNT = 0
+            THROW 50001, 'الوردية غير موجودة أو مغلقة بالفعل', 1;
+
+        -- =====================================================
+        -- 2. حساب الكاش المتوقع والفرق
+        -- ExpectedCash = StartingCash - TotalPaidPurchases + TotalPaidSales
+        -- =====================================================
+        DECLARE @StartingCash       DECIMAL(18,3);
+        DECLARE @UserID             INT;
+        DECLARE @TotalPaidSales     DECIMAL(18,3) = 0;
+        DECLARE @TotalPaidPurchases DECIMAL(18,3) = 0;
+        DECLARE @ExpectedCash       DECIMAL(18,3);
+        DECLARE @Difference         DECIMAL(18,3);
+
+        SELECT
+            @StartingCash = StartingCash,
+            @UserID       = UserID
+        FROM [Sales].[Shifts]
+        WHERE ShiftID = @ShiftID;
+
+        -- مبيعات مسددة خلال الوردية (الاعتماد على ShiftID)
+        SELECT @TotalPaidSales = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
+        FROM [Sales].[InvoiceHeader]
+        WHERE InvType = 'Sales'
+          AND ShiftID = @ShiftID;
+
+        -- مشتريات مسددة خلال الوردية (الاعتماد على ShiftID)
+        SELECT @TotalPaidPurchases = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
+        FROM [Sales].[InvoiceHeader]
+        WHERE InvType = 'Purchase'
+          AND ShiftID = @ShiftID;
+
+        SET @ExpectedCash = @StartingCash - @TotalPaidPurchases + @TotalPaidSales;
+        SET @Difference   = @EndingCash - @ExpectedCash;
+
+        -- =====================================================
+        -- 3. قيد محاسبي فقط إذا كان الفرق غير صفر
+        -- =====================================================
+        IF ABS(@Difference) > 0.001
+        BEGIN
+            DECLARE @CashboxID      INT;
+            DECLARE @RevenueIDchild INT;
+            DECLARE @AbsDiff        DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
+            DECLARE @JournalDesc    NVARCHAR(255);
+            DECLARE @EntryNo        INT;
+            DECLARE @DebitAccID     INT;
+            DECLARE @CreditAccID    INT;
+
+            -- جلب حساب الصندوق
+            SELECT TOP 1 @CashboxID = AccountID
+            FROM [Accounting].[ChartOfAccounts]
+            WHERE AccountName LIKE N'%صندوق%'
+              AND IsTransactional = 1;
+
+            -- جلب حساب الإيرادات الأخرى (412)
+            SELECT @RevenueIDchild = AccountID
+            FROM [Accounting].[ChartOfAccounts]
+            WHERE AccountCode = '412';
+
+            IF @CashboxID IS NULL OR @RevenueIDchild IS NULL
+                THROW 50002, 'تعذر إيجاد حسابات الصندوق أو الإيرادات الأخرى في دليل الحسابات', 1;
+
+            IF @Difference > 0
+            BEGIN
+                -- *** فائض: مدين الصندوق / دائن إيرادات أخرى (412) ***
+                SET @JournalDesc = N'فائض كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                SET @DebitAccID  = @CashboxID;
+                SET @CreditAccID = @RevenueIDchild;
+            END
+            ELSE
+            BEGIN
+                -- *** عجز: مدين إيرادات أخرى (412) / دائن الصندوق ***
+                SET @JournalDesc = N'عجز كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                SET @DebitAccID  = @RevenueIDchild;
+                SET @CreditAccID = @CashboxID;
+            END
+
+            -- جلب رقم القيد التالي من الـ Sequence (مشترك بين السطرين)
+            SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+
+            -- السطر 1: المدين
+            INSERT INTO [Accounting].[JournalEntries]
+                (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                 AccountID, DebitAmount, CreditAmount, Description, UserID)
+            VALUES
+                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                 @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID);
+
+            -- السطر 2: الدائن
+            INSERT INTO [Accounting].[JournalEntries]
+                (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                 AccountID, DebitAmount, CreditAmount, Description, UserID)
+            VALUES
+                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                 @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
+        END
+
+        -- =====================================================
+        -- 4. ترحيل الفواتير المرتبطة بهذه الوردية
+        -- =====================================================
+        -- بدلاً من الوقت، نربط الفواتير بـ ShiftID مباشرة
+        UPDATE [Sales].[InvoiceHeader]
+        SET IsPosted = 1
+        WHERE ShiftID = @ShiftID 
+          AND IsPosted = 0;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+
+
+-- ============================================================
+-- STEP 1: إضافة ShiftID لجدول السندات
+-- ============================================================
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('[Accounting].[Vouchers]')
+      AND name = 'ShiftID'
+)
+BEGIN
+    ALTER TABLE [Accounting].[Vouchers]
+    ADD ShiftID INT NULL;
+    -- إضافة Foreign Key للربط مع جدول الورديات
+    ALTER TABLE [Accounting].[Vouchers]
+    ADD CONSTRAINT FK_Vouchers_ShiftID
+        FOREIGN KEY (ShiftID) REFERENCES [Sales].[Shifts](ShiftID);
+    PRINT N'✅ تم إضافة ShiftID إلى [Accounting].[Vouchers]';
+END
+ELSE
+    PRINT N'⚠️ العمود ShiftID موجود مسبقاً في [Accounting].[Vouchers]';
+GO
+-- ============================================================
+-- STEP 2: إضافة VoucherPaidAmount لجدول رؤوس الفواتير
+-- ============================================================
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('[Sales].[InvoiceHeader]')
+      AND name = 'VoucherPaidAmount'
+)
+BEGIN
+    ALTER TABLE [Sales].[InvoiceHeader]
+    ADD VoucherPaidAmount DECIMAL(18,3) NOT NULL DEFAULT 0;
+    PRINT N'✅ تم إضافة VoucherPaidAmount إلى [Sales].[InvoiceHeader]';
+END
+ELSE
+    PRINT N'⚠️ العمود VoucherPaidAmount موجود مسبقاً في [Sales].[InvoiceHeader]';
+GO
+-- ============================================================
+-- STEP 3: sp_Partner_GetUnpaidInvoices
+-- جلب الفواتير المُرحّلة وغير المسدّدة بالكامل للشريك
+-- ============================================================
+IF OBJECT_ID('[Sales].[sp_Partner_GetUnpaidInvoices]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Partner_GetUnpaidInvoices];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_GetUnpaidInvoices]
+    @PartnerID INT,
+    @InvType   NVARCHAR(20)  -- 'Sales' or 'Purchase'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        h.InvID,
+        h.InvDate,
+        h.InvType,
+        h.TotalAmount,
+        h.Discount,
+        h.NetAmount,
+        h.PaidAmount,
+        h.VoucherPaidAmount,
+        h.Remainder,
+        h.Notes,
+        p.PartnerName,
+        h.IsPosted,
+        h.CreatedAt
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    WHERE h.PartnerID = @PartnerID
+      AND h.InvType   = @InvType
+      AND h.IsPosted  = 1
+      AND h.Remainder > 0
+    ORDER BY h.InvDate DESC, h.InvID DESC;
+END
+GO
+PRINT N'✅ تم إنشاء sp_Partner_GetUnpaidInvoices';
+GO
+-- ============================================================
+-- STEP 4: sp_Partner_BulkPayment_pos
+-- سداد مديونيات جماعي مع إنشاء سند قبض/صرف غير مرحّل
+-- الترحيل سيتم لاحقاً عند إغلاق الوردية
+-- ============================================================
+IF OBJECT_ID('[Sales].[sp_Partner_BulkPayment_pos]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Partner_BulkPayment_pos];
+GO
+CREATE PROCEDURE [Sales].[sp_Partner_BulkPayment_pos]
+        @PartnerID    INT,
+        @VoucherType  NVARCHAR(20),
+        @TotalAmount  DECIMAL(18,3),
+        @AccountID    INT,             -- حساب الصندوق/البنك المستخدم
+        @UserID       INT,
+        @ShiftID      INT,
+        @Description  NVARCHAR(255) = NULL,
+        @AllocationsXML NVARCHAR(MAX) = NULL
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        BEGIN TRY
+            BEGIN TRANSACTION;
+
+            -- 0. جلب حساب العميل/المورد
+            DECLARE @PartnerAccountID INT;
+            SELECT @PartnerAccountID = AccountID FROM [Sales].[Partners] WHERE PartnerID = @PartnerID;
+
+            IF @PartnerAccountID IS NULL
+            BEGIN
+                RAISERROR(N'الشريك ليس لديه حساب مالي مرتبط', 16, 1);
+                RETURN;
+            END
+
+            -- ① تحليل XML لجدول مؤقت
+            DECLARE @Allocs TABLE (InvID INT, Amount DECIMAL(18,3));
+
+            IF @AllocationsXML IS NOT NULL AND LTRIM(RTRIM(@AllocationsXML)) <> '' AND @AllocationsXML <> '<Allocations></Allocations>' AND @AllocationsXML <> '<Allocations />'
+            BEGIN
+                INSERT INTO @Allocs (InvID, Amount)
+                SELECT
+                    x.item.value('@InvID',  'INT'),
+                    x.item.value('@Amount', 'DECIMAL(18,3)')
+                FROM (SELECT CAST(@AllocationsXML AS XML)) T(x)
+                CROSS APPLY T.x.nodes('/Allocations/Item') AS x(item);
+
+                -- ② التحقق من مجموع المبالغ
+                DECLARE @SumCheck DECIMAL(18,3);
+                SELECT @SumCheck = SUM(Amount) FROM @Allocs;
+
+                IF ABS(@SumCheck - @TotalAmount) > 0.01
+                BEGIN
+                    RAISERROR(N'مجموع مبالغ الفواتير لا يساوي المبلغ الإجمالي المُدخل', 16, 1);
+                    RETURN;
+                END
+
+                -- ③ التحقق من أن كل فاتورة: مرحّلة، Remainder >= المبلغ المراد سداده
+                IF EXISTS (
+                    SELECT 1 FROM @Allocs a
+                    INNER JOIN [Sales].[InvoiceHeader] h ON a.InvID = h.InvID
+                    WHERE h.IsPosted = 0 OR h.Remainder < a.Amount OR a.Amount <= 0
+                )
+                BEGIN
+                    RAISERROR(N'إحدى الفواتير غير مرحّلة أو المبلغ يتجاوز المتبقي', 16, 1);
+                    RETURN;
+                END
+
+                -- ④ تحديث VoucherPaidAmount و Remainder في الفواتير المحددة
+                UPDATE h
+                SET h.VoucherPaidAmount = h.VoucherPaidAmount + a.Amount,
+                    h.Remainder         = h.Remainder         - a.Amount
+                FROM [Sales].[InvoiceHeader] h
+                INNER JOIN @Allocs a ON h.InvID = a.InvID;
+            END
+
+            -- ⑤ إنشاء السند في حالة غير مرحّلة (IsPosted = 0)
+            -- سيتم الترحيل جماعياً عند إغلاق الوردية
+            INSERT INTO [Accounting].[Vouchers]
+                (VoucherType, VoucherDate, PartnerID, AccountID,
+                 Amount, Description, PaymentMethod, UserID, IsPosted, ShiftID)
+            VALUES
+                (@VoucherType, GETDATE(), @PartnerID, @PartnerAccountID,
+                 @TotalAmount,
+                 ISNULL(@Description,
+                    CASE @VoucherType
+                        WHEN 'Receipt' THEN N'سند قبض - سداد مديونيات'
+                        ELSE                N'سند صرف - سداد مستحقات'
+                    END),
+                 CAST(@AccountID AS NVARCHAR(50)), -- يتم حفظ حساب الصندوق/البنك هنا لتستخدمه الـ Trigger
+                 @UserID, 0, @ShiftID);
+
+            DECLARE @VoucherID INT = SCOPE_IDENTITY();
+
+            COMMIT TRANSACTION;
+
+            -- إرجاع رقم السند المُنشأ للطباعة
+            SELECT
+                v.VoucherID,
+                v.VoucherType,
+                v.VoucherDate,
+                v.Amount,
+                v.Description,
+                v.ShiftID,
+                p.PartnerName,
+                u.FullName AS UserName,
+                a.AccountName
+            FROM [Accounting].[Vouchers] v
+            LEFT JOIN [Sales].[Partners]             p ON v.PartnerID = p.PartnerID
+            LEFT JOIN [Security].[Users]             u ON v.UserID    = u.UserID
+            LEFT JOIN [Accounting].[ChartOfAccounts] a ON v.AccountID = a.AccountID
+            WHERE v.VoucherID = @VoucherID;
+
+        END TRY
+        BEGIN CATCH
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+            THROW;
+        END CATCH
+
+    END
+	go
+PRINT N'✅ تم إنشاء sp_Partner_BulkPayment_pos';
+GO
+-- ============================================================
+-- STEP 5: تعديل sp_Shift_GetSummary لإضافة إجمالي السندات
+-- ============================================================
+IF OBJECT_ID('[Sales].[sp_Shift_GetSummary]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Shift_GetSummary];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Shift_GetSummary] 
+    @ShiftID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- جلب بيانات الوردية الأساسية
+    SELECT
+        s.ShiftID,
+        s.UserID,
+        s.StartTime,
+        s.EndTime,
+        s.StartingCash,
+        s.Status,
+        u.FullName AS UserName,
+
+        -- إجمالي المبيعات (NetAmount) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalSales,
+
+        -- إجمالي المشتريات (NetAmount) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPurchases,
+
+        -- عدد فواتير المبيعات
+        ISNULL((
+            SELECT COUNT(*)
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS SalesCount,
+
+        -- عدد فواتير المشتريات
+        ISNULL((
+            SELECT COUNT(*)
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS PurchasesCount,
+
+        -- المبيعات المسددة نقداً عند إنشاء الفاتورة
+        ISNULL((
+            SELECT SUM(CAST(h.PaidAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPaidSales,
+
+        -- المتبقي الآجل للمبيعات
+        ISNULL((
+            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Sales'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalRemainder,
+
+        -- المشتريات المسددة نقداً عند إنشاء الفاتورة
+        ISNULL((
+            SELECT SUM(CAST(h.PaidAmount AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPaidPurchases,
+
+        -- المتبقي الآجل للمشتريات
+        ISNULL((
+            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
+            FROM [Sales].[InvoiceHeader] h
+            WHERE h.InvType = 'Purchase'
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPurchasesRemainder,
+
+        -- ✅ إجمالي سندات القبض (تحصيل ديون العملاء) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
+            FROM [Accounting].[Vouchers] v
+            WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+        ), 0) AS TotalReceiptVouchers,
+
+        -- ✅ إجمالي سندات الصرف (سداد للموردين) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
+            FROM [Accounting].[Vouchers] v
+            WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+        ), 0) AS TotalPaymentVouchers
+
+    FROM [Sales].[Shifts] s
+    LEFT JOIN [Security].[Users] u ON s.UserID = u.UserID
+    WHERE s.ShiftID = @ShiftID;
+END
+GO
+
+
+-- ============================================================
+-- STEP 6: تعديل sp_Shift_Close - ترحيل السندات عند الإغلاق
+-- ============================================================
+IF OBJECT_ID('[Sales].[sp_Shift_Close]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Shift_Close];
+GO
+CREATE PROCEDURE [Sales].[sp_Shift_Close]
+    @ShiftID    INT,
+    @EndingCash DECIMAL(18,3)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        -- ① إغلاق الوردية
+        UPDATE [Sales].[Shifts]
+        SET EndTime    = GETDATE(),
+            EndingCash = @EndingCash,
+            Status     = 'Closed'
+        WHERE ShiftID = @ShiftID AND Status = 'Open';
+        IF @@ROWCOUNT = 0
+            THROW 50001, 'الوردية غير موجودة أو مغلقة بالفعل', 1;
+        -- ② جلب بيانات الوردية
+        DECLARE @StartingCash       DECIMAL(18,3);
+        DECLARE @UserID             INT;
+        DECLARE @TotalPaidSales     DECIMAL(18,3) = 0;
+        DECLARE @TotalPaidPurchases DECIMAL(18,3) = 0;
+        DECLARE @TotalReceiptV      DECIMAL(18,3) = 0;
+        DECLARE @TotalPaymentV      DECIMAL(18,3) = 0;
+        DECLARE @ExpectedCash       DECIMAL(18,3);
+        DECLARE @Difference         DECIMAL(18,3);
+        SELECT @StartingCash = StartingCash, @UserID = UserID
+        FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
+        -- مبيعات مسددة نقداً فقط (PaidAmount - لا VoucherPaidAmount)
+        SELECT @TotalPaidSales = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
+        FROM [Sales].[InvoiceHeader]
+        WHERE InvType = 'Sales' AND ShiftID = @ShiftID;
+        -- مشتريات مسددة نقداً فقط
+        SELECT @TotalPaidPurchases = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
+        FROM [Sales].[InvoiceHeader]
+        WHERE InvType = 'Purchase' AND ShiftID = @ShiftID;
+        -- سندات القبض المرتبطة بهذه الوردية
+        SELECT @TotalReceiptV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers]
+        WHERE VoucherType = 'Receipt' AND ShiftID = @ShiftID;
+        -- سندات الصرف المرتبطة بهذه الوردية
+        SELECT @TotalPaymentV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers]
+        WHERE VoucherType = 'Payment' AND ShiftID = @ShiftID;
+        -- الكاش المتوقع = البداية + مبيعات نقدية - مشتريات نقدية + سندات قبض - سندات صرف
+        SET @ExpectedCash = @StartingCash
+                          + @TotalPaidSales
+                          - @TotalPaidPurchases
+                          + @TotalReceiptV
+                          - @TotalPaymentV;
+        SET @Difference = @EndingCash - @ExpectedCash;
+        -- ③ قيد تسوية فرق الكاش (إن وُجد)
+        IF ABS(@Difference) > 0.001
+        BEGIN
+            DECLARE @CashboxID      INT;
+            DECLARE @RevenueIDchild INT;
+            DECLARE @AbsDiff        DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
+            DECLARE @JournalDesc    NVARCHAR(255);
+            DECLARE @EntryNo        INT;
+            DECLARE @DebitAccID     INT;
+            DECLARE @CreditAccID    INT;
+            SELECT TOP 1 @CashboxID = AccountID
+            FROM [Accounting].[ChartOfAccounts]
+            WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1;
+            SELECT @RevenueIDchild = AccountID
+            FROM [Accounting].[ChartOfAccounts]
+            WHERE AccountCode = '412';
+            IF @CashboxID IS NULL OR @RevenueIDchild IS NULL
+                THROW 50002, 'تعذر إيجاد حسابات الصندوق أو الإيرادات الأخرى', 1;
+            IF @Difference > 0
+            BEGIN
+                SET @JournalDesc = N'فائض كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                SET @DebitAccID  = @CashboxID;
+                SET @CreditAccID = @RevenueIDchild;
+            END
+            ELSE
+            BEGIN
+                SET @JournalDesc = N'عجز كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                SET @DebitAccID  = @RevenueIDchild;
+                SET @CreditAccID = @CashboxID;
+            END
+            SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+            INSERT INTO [Accounting].[JournalEntries]
+                (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                 AccountID, DebitAmount, CreditAmount, Description, UserID)
+            VALUES
+                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                 @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID),
+                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                 @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
+        END
+        -- ④ ترحيل الفواتير المرتبطة بهذه الوردية
+        UPDATE [Sales].[InvoiceHeader]
+        SET IsPosted = 1
+        WHERE ShiftID = @ShiftID AND IsPosted = 0;
+        -- ⑤ ترحيل السندات المرتبطة بهذه الوردية (تُولّد القيود عبر trg_Voucher_Post)
+        UPDATE [Accounting].[Vouchers]
+        SET IsPosted = 1
+        WHERE ShiftID = @ShiftID AND IsPosted = 0;
+        COMMIT TRANSACTION;
+        -- إرجاع ملخص للإغلاق
+        SELECT
+            @ShiftID        AS ShiftID,
+            @StartingCash   AS StartingCash,
+            @TotalPaidSales AS TotalPaidSales,
+            @TotalPaidPurchases AS TotalPaidPurchases,
+            @TotalReceiptV  AS TotalReceiptVouchers,
+            @TotalPaymentV  AS TotalPaymentVouchers,
+            @ExpectedCash   AS ExpectedCash,
+            @EndingCash     AS ActualCash,
+            @Difference     AS Difference;
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم تحديث sp_Shift_Close';
+GO
+
+
+IF OBJECT_ID('[Sales].[sp_Shift_GetVouchers]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Shift_GetVouchers];
+GO
+CREATE PROCEDURE [Sales].[sp_Shift_GetVouchers]
+    @ShiftID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        v.VoucherID,
+        v.VoucherType,
+        v.VoucherDate,
+        v.Amount,
+        v.Description,
+        p.PartnerName,
+        a.AccountName
+    FROM [Accounting].[Vouchers] v
+    LEFT JOIN [Sales].[Partners] p ON v.PartnerID = p.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] a ON v.AccountID = a.AccountID
+    WHERE v.ShiftID = @ShiftID
+    ORDER BY v.VoucherDate ASC;
+END
+GO
+
+
+IF NOT EXISTS (SELECT 1 FROM [Sales].[Partners] WHERE PartnerName = N'سند مباشر' AND PartnerType = 'Other')
+BEGIN
+    INSERT INTO [Sales].[Partners]
+               ([PartnerName]
+               ,[PartnerType])
+         VALUES
+               (N'سند مباشر'
+               ,'Other')
+    PRINT N'تم إضافة العميل الثابت "سند مباشر" بنجاح.';
+END
+ELSE
+BEGIN
+    PRINT N'العميل الثابت "سند مباشر" موجود مسبقاً.';
+END
+GO
+
+IF OBJECT_ID('[Sales].[sp_GetCode_PartnerGeneral]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_GetCode_PartnerGeneral];
+GO
+CREATE PROCEDURE [Sales].[sp_GetCode_PartnerGeneral]
+AS
+BEGIN
+select * from Sales.Partners where [PartnerName] =N'سند مباشر'
+end 
+go
+
+IF OBJECT_ID('[Accounting].[sp_Account_Revenue]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Revenue];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_Revenue]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT A.AccountID, A.AccountCode, A.AccountName, A.ParentAccountID, 
+           P.AccountName AS ParentAccountName,
+           A.AccountType, A.AccountLevel, A.IsTransactional
+    FROM [Accounting].[ChartOfAccounts] A
+    LEFT JOIN [Accounting].[ChartOfAccounts] P ON A.ParentAccountID = P.AccountID
+	where a.AccountType = 'Revenue' and a.IsTransactional = 1
+    ORDER BY A.AccountType,A.AccountCode;
+END
+GO
+
+IF OBJECT_ID('[Accounting].[sp_Account_Expenses]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Account_Expenses];
+GO
+CREATE PROCEDURE [Accounting].[sp_Account_Expenses]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT A.AccountID, A.AccountCode, A.AccountName, A.ParentAccountID, 
+           P.AccountName AS ParentAccountName,
+           A.AccountType, A.AccountLevel, A.IsTransactional
+    FROM [Accounting].[ChartOfAccounts] A
+    LEFT JOIN [Accounting].[ChartOfAccounts] P ON A.ParentAccountID = P.AccountID
+	where a.AccountType = 'Expenses' and a.IsTransactional = 1
+    ORDER BY A.AccountType,A.AccountCode;
+END
+GO
+
+IF OBJECT_ID('[Accounting].[sp_VoucherGeneral_Save]', 'P') IS NOT NULL 
+    DROP PROCEDURE [Accounting].[sp_VoucherGeneral_Save];
+GO
+
+CREATE PROCEDURE [Accounting].[sp_VoucherGeneral_Save]
+    @VoucherType NVARCHAR(20),
+    @VoucherDate DATETIME,
+    @AccountID INT,
+    @Amount DECIMAL(18,3),
+    @Description NVARCHAR(255) = NULL,
+    @PaymentMethod NVARCHAR(20) = 'Cash',
+    @UserID INT,
+    @ShiftID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @StaticPartnerID INT;
+    DECLARE @NewVoucherNo NVARCHAR(50);
+
+    -- 1. جلب معرّف العميل الثابت 'سند مباشر'
+    SELECT @StaticPartnerID = PartnerID 
+    FROM [Sales].[Partners] 
+    WHERE [PartnerName] = N'سند مباشر' AND [PartnerType] = 'Other';
+
+    IF @StaticPartnerID IS NULL
+    BEGIN
+        RAISERROR('العميل الثابت "سند مباشر" غير موجود في قاعدة البيانات.', 16, 1);
+        RETURN;
+    END
+
+    -- 2. توليد رقم السند (VoucherNo) التلقائي
+    -- يجلب أكبر رقم موجود كـ (رقم صحيح) ويزيد عليه 1
+    SELECT @NewVoucherNo = CAST(ISNULL(MAX(CAST(VoucherNo AS INT)), 0) + 1 AS NVARCHAR(50))
+    FROM [Accounting].[Vouchers]
+    WHERE ISNUMERIC(VoucherNo) = 1;
+
+    -- تفادي الأخطاء لو كان الجدول فارغاً
+    IF @NewVoucherNo IS NULL
+        SET @NewVoucherNo = '1';
+
+    -- 3. حفظ السند الجديد مع VoucherNo
+    INSERT INTO [Accounting].[Vouchers] (
+        [VoucherNo],
+        [VoucherType],
+        [VoucherDate],
+        [PartnerID],
+        [AccountID],
+        [Amount],
+        [Description],
+        [PaymentMethod],
+        [UserID],
+        [IsPosted],
+        [ShiftID]
+    )
+    VALUES (
+        @NewVoucherNo,
+        @VoucherType,
+        @VoucherDate,
+        @StaticPartnerID,
+        @AccountID,
+        @Amount,
+        @Description,
+        @PaymentMethod,
+        @UserID,
+        0, -- IsPosted = 0 (مسودة)
+        @ShiftID
+    );
+
+    DECLARE @NewVoucherID INT = SCOPE_IDENTITY();
+
+    -- 4. إرجاع السند المحفوظ بالكامل
+    SELECT 
+        [VoucherID],
+        [VoucherNo],
+        [VoucherType],
+        [VoucherDate],
+        [PartnerID],
+        [AccountID],
+        [Amount],
+        [Description],
+        [PaymentMethod],
+        [UserID],
+        [IsPosted],
+        [ShiftID]
+    FROM [Accounting].[Vouchers]
+    WHERE [VoucherID] = @NewVoucherID;
+
 END
 GO

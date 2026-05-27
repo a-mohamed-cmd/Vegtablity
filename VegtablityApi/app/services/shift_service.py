@@ -1,22 +1,25 @@
 from app.core.database import get_db_connection
 from app.schemas.shift import ShiftOpenRequest, ShiftSummaryResponse
+from app.core.db_procedures import StoredProcedures as SP
+
+# ─── كاش الذاكرة الداخلية: user_id → ShiftID ───────────────────────────────
+# يُعبأ عند فتح الوردية ويُمسح عند إغلاقها
+_active_shift_cache: dict[int, int] = {}
+
 
 class ShiftService:
     def open_shift(self, user_id: int, request: ShiftOpenRequest) -> int:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            # We use an OUTPUT parameter trick with pyodbc, or just call it and SELECT
-            sql = """
-            DECLARE @ShiftID INT;
-            EXEC [Sales].[sp_Shift_Open] @UserID=?, @StartingCash=?, @ShiftID=@ShiftID OUTPUT;
-            SELECT @ShiftID AS ShiftID;
-            """
-            cursor.execute(sql, (user_id, request.StartingCash))
+            cursor.execute(SP.SHIFT_OPEN, (user_id, request.StartingCash))
             row = cursor.fetchone()
             conn.commit()
             if row and row.ShiftID:
-                return row.ShiftID
+                shift_id = row.ShiftID
+                # ✨ تخزين ShiftID في الذاكرة عند فتح الوردية
+                _active_shift_cache[user_id] = shift_id
+                return shift_id
             return 0
         except Exception as e:
             conn.rollback()
@@ -28,10 +31,11 @@ class ShiftService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            sql = "EXEC [Sales].[sp_Shift_GetActive] @UserID=?"
-            cursor.execute(sql, (user_id,))
+            cursor.execute(SP.SHIFT_GET_ACTIVE, (user_id,))
             row = cursor.fetchone()
             if row:
+                # ✨ تحديث الكاش عند جلب الوردية من DB (مثلاً بعد إعادة تشغيل السيرفر)
+                _active_shift_cache[user_id] = row.ShiftID
                 return {
                     "ShiftID": row.ShiftID,
                     "UserID": row.UserID,
@@ -43,13 +47,30 @@ class ShiftService:
         finally:
             conn.close()
 
+    def get_active_shift_id(self, user_id: int) -> int | None:
+        """
+        ✨ يُرجع ShiftID من الذاكرة مباشرة إذا كان موجوداً،
+        وإلا يستعلم من DB مرة واحدة ويحفظه في الكاش.
+        """
+        if user_id in _active_shift_cache:
+            return _active_shift_cache[user_id]
+
+        # Fallback: جلب من DB وتحديث الكاش
+        shift = self.get_active_shift(user_id)
+        if shift:
+            return shift["ShiftID"]
+        return None
+
     def close_shift(self, shift_id: int, ending_cash: float):
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            sql = "EXEC [Sales].[sp_Shift_Close] @ShiftID=?, @EndingCash=?"
-            cursor.execute(sql, (shift_id, ending_cash))
+            cursor.execute(SP.SHIFT_CLOSE, (shift_id, ending_cash))
             conn.commit()
+            # ✨ مسح الكاش عند إغلاق الوردية
+            user_ids_to_remove = [uid for uid, sid in _active_shift_cache.items() if sid == shift_id]
+            for uid in user_ids_to_remove:
+                _active_shift_cache.pop(uid, None)
         except Exception as e:
             conn.rollback()
             raise e
@@ -60,8 +81,7 @@ class ShiftService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            sql = "EXEC [Sales].[sp_Shift_GetSummary] @ShiftID=?"
-            cursor.execute(sql, (shift_id,))
+            cursor.execute(SP.SHIFT_GET_SUMMARY, (shift_id,))
             row = cursor.fetchone()
             if row:
                 return {
@@ -80,7 +100,34 @@ class ShiftService:
                     "TotalRemainder": float(row.TotalRemainder),
                     "TotalPaidPurchases": float(row.TotalPaidPurchases),
                     "TotalPurchasesRemainder": float(row.TotalPurchasesRemainder),
+                    "TotalReceiptVouchers": float(row.TotalReceiptVouchers) if hasattr(row, 'TotalReceiptVouchers') and row.TotalReceiptVouchers is not None else 0.0,
+                    "TotalPaymentVouchers": float(row.TotalPaymentVouchers) if hasattr(row, 'TotalPaymentVouchers') and row.TotalPaymentVouchers is not None else 0.0,
+                    "Vouchers": self.get_shift_vouchers(shift_id)
                 }
             return None
+        finally:
+            conn.close()
+
+    def get_shift_vouchers(self, shift_id: int) -> list:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.SHIFT_GET_VOUCHERS, (shift_id,))
+            rows = cursor.fetchall()
+            vouchers = []
+            for row in rows:
+                vouchers.append({
+                    "VoucherID": row.VoucherID,
+                    "VoucherType": row.VoucherType,
+                    "VoucherDate": row.VoucherDate,
+                    "Amount": float(row.Amount),
+                    "Description": row.Description,
+                    "PartnerName": row.PartnerName,
+                    "AccountName": row.AccountName
+                })
+            return vouchers
+        except Exception as e:
+            # If the SP doesn't exist yet, just return empty list to not crash
+            return []
         finally:
             conn.close()

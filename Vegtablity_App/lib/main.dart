@@ -5,6 +5,8 @@ import 'services/printer_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/shift_provider.dart';
 import 'providers/pos_provider.dart';
+import 'providers/voucher_provider.dart';
+import 'providers/account_provider.dart';
 import 'providers/license_provider.dart';
 import 'screens/license_check_screen.dart';
 
@@ -28,6 +30,12 @@ void main() {
         ),
         ChangeNotifierProvider<PosProvider>(
           create: (context) => PosProvider(apiService),
+        ),
+        ChangeNotifierProvider<VoucherProvider>(
+          create: (context) => VoucherProvider(apiService),
+        ),
+        ChangeNotifierProvider<AccountProvider>(
+          create: (context) => AccountProvider(apiService),
         ),
       ],
       child: const MyApp(),

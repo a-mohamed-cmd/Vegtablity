@@ -27,9 +27,7 @@ BEGIN
             SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Sales'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
+              AND h.ShiftID = @ShiftID
         ), 0) AS TotalSales,
 
         -- إجمالي المشتريات (NetAmount) في الوردية
@@ -37,9 +35,7 @@ BEGIN
             SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Purchase'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
+              AND h.ShiftID = @ShiftID
         ), 0) AS TotalPurchases,
 
         -- عدد فواتير المبيعات
@@ -47,9 +43,7 @@ BEGIN
             SELECT COUNT(*)
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Sales'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
+              AND h.ShiftID = @ShiftID
         ), 0) AS SalesCount,
 
         -- عدد فواتير المشتريات
@@ -57,50 +51,54 @@ BEGIN
             SELECT COUNT(*)
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Purchase'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
+              AND h.ShiftID = @ShiftID
         ), 0) AS PurchasesCount,
 
-        -- إجمالي المبالغ المسددة (Paid) في فواتير المبيعات
+        -- المبيعات المسددة نقداً عند إنشاء الفاتورة
         ISNULL((
             SELECT SUM(CAST(h.PaidAmount AS DECIMAL(18,3)))
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Sales'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
+              AND h.ShiftID = @ShiftID
         ), 0) AS TotalPaidSales,
 
-        -- إجمالي المبالغ المتبقية (Remainder / آجل) في المبيعات
+        -- المتبقي الآجل للمبيعات
         ISNULL((
             SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Sales'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
+              AND h.ShiftID = @ShiftID
         ), 0) AS TotalRemainder,
 
-        -- إجمالي المبالغ المسددة (Paid) في فواتير المشتريات
+        -- المشتريات المسددة نقداً عند إنشاء الفاتورة
         ISNULL((
             SELECT SUM(CAST(h.PaidAmount AS DECIMAL(18,3)))
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Purchase'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
+              AND h.ShiftID = @ShiftID
         ), 0) AS TotalPaidPurchases,
 
-        -- إجمالي المبالغ المتبقية (Remainder / آجل) في المشتريات
+        -- المتبقي الآجل للمشتريات
         ISNULL((
             SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
             FROM [Sales].[InvoiceHeader] h
             WHERE h.InvType = 'Purchase'
-              AND h.CreatedAt >= s.StartTime
-              AND (s.EndTime IS NULL OR h.CreatedAt <= s.EndTime)
-              AND h.UserID = s.UserID
-        ), 0) AS TotalPurchasesRemainder
+              AND h.ShiftID = @ShiftID
+        ), 0) AS TotalPurchasesRemainder,
+
+        -- ✅ إجمالي سندات القبض (تحصيل ديون العملاء) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
+            FROM [Accounting].[Vouchers] v
+            WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+        ), 0) AS TotalReceiptVouchers,
+
+        -- ✅ إجمالي سندات الصرف (سداد للموردين) في الوردية
+        ISNULL((
+            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
+            FROM [Accounting].[Vouchers] v
+            WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+        ), 0) AS TotalPaymentVouchers
 
     FROM [Sales].[Shifts] s
     LEFT JOIN [Security].[Users] u ON s.UserID = u.UserID
@@ -142,19 +140,18 @@ BEGIN
 
         -- =====================================================
         -- 2. حساب الكاش المتوقع والفرق
-        -- ExpectedCash = StartingCash - TotalPaidPurchases + TotalPaidSales
         -- =====================================================
         DECLARE @StartingCash       DECIMAL(18,3);
-        DECLARE @StartTime          DATETIME;
         DECLARE @UserID             INT;
         DECLARE @TotalPaidSales     DECIMAL(18,3) = 0;
         DECLARE @TotalPaidPurchases DECIMAL(18,3) = 0;
+        DECLARE @TotalReceiptV      DECIMAL(18,3) = 0;
+        DECLARE @TotalPaymentV      DECIMAL(18,3) = 0;
         DECLARE @ExpectedCash       DECIMAL(18,3);
         DECLARE @Difference         DECIMAL(18,3);
 
         SELECT
             @StartingCash = StartingCash,
-            @StartTime    = StartTime,
             @UserID       = UserID
         FROM [Sales].[Shifts]
         WHERE ShiftID = @ShiftID;
@@ -162,18 +159,30 @@ BEGIN
         -- مبيعات مسددة خلال الوردية
         SELECT @TotalPaidSales = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
         FROM [Sales].[InvoiceHeader]
-        WHERE InvType = 'Sales'
-          AND CreatedAt >= @StartTime
-          AND UserID = @UserID;
+        WHERE InvType = 'Sales' AND ShiftID = @ShiftID;
 
         -- مشتريات مسددة خلال الوردية
         SELECT @TotalPaidPurchases = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
         FROM [Sales].[InvoiceHeader]
-        WHERE InvType = 'Purchase'
-          AND CreatedAt >= @StartTime
-          AND UserID = @UserID;
+        WHERE InvType = 'Purchase' AND ShiftID = @ShiftID;
 
-        SET @ExpectedCash = @StartingCash - @TotalPaidPurchases + @TotalPaidSales;
+        -- سندات القبض المرتبطة بهذه الوردية
+        SELECT @TotalReceiptV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers]
+        WHERE VoucherType = 'Receipt' AND ShiftID = @ShiftID;
+
+        -- سندات الصرف المرتبطة بهذه الوردية
+        SELECT @TotalPaymentV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers]
+        WHERE VoucherType = 'Payment' AND ShiftID = @ShiftID;
+
+        -- الكاش المتوقع = البداية + مبيعات نقدية - مشتريات نقدية + سندات قبض - سندات صرف
+        SET @ExpectedCash = @StartingCash
+                          + @TotalPaidSales
+                          - @TotalPaidPurchases
+                          + @TotalReceiptV
+                          - @TotalPaymentV;
+                          
         SET @Difference   = @EndingCash - @ExpectedCash;
 
         -- =====================================================
@@ -241,21 +250,22 @@ BEGIN
         -- =====================================================
         -- 4. ترحيل الفواتير المرتبطة بهذه الوردية
         -- =====================================================
-        -- بدلاً من ShiftID غير الموجود، نربط الفواتير بوقت فتح وإغلاق الوردية
-        DECLARE @ShiftEnd DATETIME;
-        SELECT @ShiftEnd = EndTime FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
-
         UPDATE [Sales].[InvoiceHeader]
         SET IsPosted = 1
-        WHERE CreatedAt >= @StartTime 
-          AND CreatedAt <= @ShiftEnd 
-          AND UserID = @UserID
+        WHERE ShiftID = @ShiftID 
           AND IsPosted = 0;
+          
+        -- =====================================================
+        -- 5. ترحيل السندات المرتبطة بهذه الوردية
+        -- =====================================================
+        UPDATE [Accounting].[Vouchers]
+        SET IsPosted = 1
+        WHERE ShiftID = @ShiftID AND IsPosted = 0;
 
         COMMIT TRANSACTION;
     END TRY
     BEGIN CATCH
-        ROLLBACK TRANSACTION;
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
         THROW;
     END CATCH
 END

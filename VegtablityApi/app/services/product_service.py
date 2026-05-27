@@ -1,4 +1,6 @@
+from typing import List, Dict, Any
 from app.core.database import get_db_connection
+from app.core.db_procedures import StoredProcedures as SP
 
 class ProductService:
     def get_products(self, search_text: str = ""):
@@ -6,9 +8,9 @@ class ProductService:
         cursor = conn.cursor()
         try:
             if search_text:
-                cursor.execute("{CALL [Inventory].[sp_Product_Search] (?)}", (search_text,))
+                cursor.execute(SP.PRODUCT_SEARCH, (search_text,))
             else:
-                cursor.execute("{CALL [Inventory].[sp_Product_GetAll]}")
+                cursor.execute(SP.PRODUCT_GET_ALL)
             
             columns = [column[0] for column in cursor.description]
             products = []
@@ -29,7 +31,7 @@ class ProductService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("{CALL [Inventory].[sp_Product_GetByBarcode] (?)}", (barcode,))
+            cursor.execute(SP.PRODUCT_GET_BY_BARCODE, (barcode,))
             columns = [column[0] for column in cursor.description]
             row = cursor.fetchone()
             if row:

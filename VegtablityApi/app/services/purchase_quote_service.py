@@ -1,5 +1,7 @@
 import xml.etree.ElementTree as ET
+from typing import List, Dict, Any
 from app.core.database import get_db_connection
+from app.core.db_procedures import StoredProcedures as SP
 from app.schemas.purchase_quotes import PurchaseQuoteCreate
 
 class PurchaseQuoteService:
@@ -7,7 +9,7 @@ class PurchaseQuoteService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("{CALL [Purchases].[sp_PurchaseQuote_GetAll] (?)}", (search_text,))
+            cursor.execute(SP.PURCHASE_QUOTES_GET_ALL, (search_text,))
             columns = [column[0] for column in cursor.description]
             results = []
             for row in cursor.fetchall():
@@ -22,7 +24,7 @@ class PurchaseQuoteService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("EXEC [Purchases].[sp_PurchaseQuote_GetDetails] @PurchaseQuoteID=?", (quote_id,))
+            cursor.execute(SP.PURCHASE_QUOTE_DETAILS, (quote_id,))
             columns = [column[0] for column in cursor.description]
             results = []
             for row in cursor.fetchall():

@@ -17,7 +17,9 @@ class _ShiftScreenState extends State<ShiftScreen> {
   @override
   void initState() {
     super.initState();
-    _checkShiftStatus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkShiftStatus();
+    });
   }
 
   void _checkShiftStatus() async {

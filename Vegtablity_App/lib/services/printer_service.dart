@@ -476,9 +476,11 @@ class PrinterService with ChangeNotifier {
     final double totalRemainder         = _parseD(summary['TotalRemainder']);
     final double totalPaidPurchases     = _parseD(summary['TotalPaidPurchases']);
     final double totalPurchasesRemainder= _parseD(summary['TotalPurchasesRemainder']);
+    final double totalReceiptVouchers   = _parseD(summary['TotalReceiptVouchers']);
+    final double totalPaymentVouchers   = _parseD(summary['TotalPaymentVouchers']);
 
-    // الصافي = مبلغ بداية الوردية - مشتريات مدفوعة فقط + مبيعات محصلة فقط
-    final double netCash    = startingCash - totalPaidPurchases + totalPaid;
+    // الصافي = مبلغ بداية الوردية - مشتريات مدفوعة فقط + مبيعات محصلة فقط + سندات قبض - سندات صرف
+    final double netCash    = startingCash - totalPaidPurchases + totalPaid + totalReceiptVouchers - totalPaymentVouchers;
     final double difference = endingCash - netCash;
     final String diffLabel  = difference >= 0 ? 'فائض (زيادة)' : 'عجز (نقص)';
 
@@ -550,12 +552,33 @@ class PrinterService with ChangeNotifier {
           await _printLine('--------------------------------');
         }
 
+        // ── تفاصيل السندات ────────────────────────────────
+        final vouchers = summary['Vouchers'] as List<dynamic>? ?? [];
+        if (vouchers.isNotEmpty) {
+          await _printLine('تفاصيل السندات:', bold: true);
+          for (final v in vouchers) {
+            final id      = v['VoucherID']?.toString() ?? '-';
+            final vType   = v['VoucherType'] == 'Receipt' ? 'قبض' : 'صرف';
+            final partner = v['PartnerName'] ?? 'بدون شريك';
+            final amt     = _fmt(_parseD(v['Amount']));
+            await _printLine('#$id $vType - $partner');
+            await _printLine('المبلغ: $amt KWD');
+          }
+          await _printLine('--------------------------------');
+        }
+
         // ── بيان النقدية ────────────────────────────────────
         await _printLine('*** بيان النقدية ***', bold: true, center: true);
         await _printLine('--------------------------------');
         await _printLine('مبلغ بدايه الورديه: ${_fmt(startingCash)} KWD');
         await _printLine('- مشتريات مدفوعه:   ${_fmt(totalPaidPurchases)} KWD');
         await _printLine('+ مبيعات محصله:     ${_fmt(totalPaid)} KWD');
+        if (totalReceiptVouchers > 0) {
+          await _printLine('+ سندات قبض:        ${_fmt(totalReceiptVouchers)} KWD');
+        }
+        if (totalPaymentVouchers > 0) {
+          await _printLine('- سندات صرف:        ${_fmt(totalPaymentVouchers)} KWD');
+        }
         await _printLine('================================', center: true);
         await _printLine('الصافي المتوقع:     ${_fmt(netCash)} KWD', bold: true);
         await _printLine('المسدد الفعلي:      ${_fmt(endingCash)} KWD', bold: true);
@@ -598,11 +621,29 @@ class PrinterService with ChangeNotifier {
           socket.write('إجمالي المشتريات ($purchasesCount): ${_fmt(totalPurchases)} KWD\n');
           socket.write('مُسدَّد مشتريات: ${_fmt(totalPaidPurchases)} KWD\n');
           socket.write('آجل مشتريات: ${_fmt(totalPurchasesRemainder)} KWD\n');
+          socket.write('--------------------------------\n');
+          final netVouchers = summary['Vouchers'] as List<dynamic>? ?? [];
+          if (netVouchers.isNotEmpty) {
+            socket.write('تفاصيل السندات:\n');
+            for (final v in netVouchers) {
+              final id      = v['VoucherID']?.toString() ?? '-';
+              final vType   = v['VoucherType'] == 'Receipt' ? 'قبض' : 'صرف';
+              final partner = v['PartnerName'] ?? 'بدون شريك';
+              final amt     = _fmt(_parseD(v['Amount']));
+              socket.write('#$id $vType - $partner : $amt KWD\n');
+            }
+          }
           socket.write('================================\n');
           socket.write('*** بيان النقدية ***\n');
           socket.write('مبلغ بدايه الورديه: ${_fmt(startingCash)} KWD\n');
           socket.write('- مشتريات مدفوعه:   ${_fmt(totalPaidPurchases)} KWD\n');
           socket.write('+ مبيعات محصله:     ${_fmt(totalPaid)} KWD\n');
+          if (totalReceiptVouchers > 0) {
+            socket.write('+ سندات قبض:        ${_fmt(totalReceiptVouchers)} KWD\n');
+          }
+          if (totalPaymentVouchers > 0) {
+            socket.write('- سندات صرف:        ${_fmt(totalPaymentVouchers)} KWD\n');
+          }
           socket.write('الصافي المتوقع:     ${_fmt(netCash)} KWD\n');
           socket.write('المسدد الفعلي:      ${_fmt(endingCash)} KWD\n');
           socket.write('$diffLabel: ${_fmt(difference.abs())} KWD\n');
@@ -625,5 +666,230 @@ class PrinterService with ChangeNotifier {
       return false;
     }
   }
-}
 
+  Future<bool> printVoucher(Map<String, dynamic> voucher, List<Map<String, dynamic>> paidInvoices) async {
+    final bool isVirtual = _connectionType == 'None';
+    final String actualConnectionType = isVirtual ? 'Virtual Printer (Console Simulator)' : _connectionType;
+
+    // Get company settings
+    final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
+    final String address = _companySettings?['Address'] ?? 'العارضيه';
+    final String phone = _companySettings?['Phone'] ?? '55381505';
+
+    final String vType = voucher['VoucherType'] == 'Receipt' ? 'سند قبض' : 'سند صرف';
+    final String vId = '${voucher['VoucherID'] ?? ''}';
+    final String partnerName = voucher['PartnerName'] ?? '-';
+    final String accountName = voucher['AccountName'] ?? 'نقدي';
+    final double amount = (voucher['Amount'] as num?)?.toDouble() ?? 0.0;
+    
+    DateTime printDateTime;
+    try {
+      printDateTime = voucher['VoucherDate'] != null ? DateTime.parse(voucher['VoucherDate']) : DateTime.now();
+    } catch (_) {
+      printDateTime = DateTime.now();
+    }
+    final String vDate = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
+    final String vTime = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}';
+    
+    final String cashier = voucher['UserName'] ?? '-';
+
+    try {
+      print('=== طباعة $vType : $actualConnectionType ===');
+      
+      if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        // Sunmi Print
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('العنوان: $address', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('الهاتف: $phone', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText(vType, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('رقم السند: #$vId', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('التاريخ: $vDate $vTime', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('الاسم (الشريك): $partnerName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('طريقة الدفع/الاستلام: $accountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('المبلغ: ${amount.toStringAsFixed(3)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText('الفواتير المسددة:', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        for (var inv in paidInvoices) {
+          final id = inv['InvID'] ?? '';
+          String date = '';
+          if (inv['InvDate'] != null) {
+             try {
+               final d = DateTime.parse(inv['InvDate'].toString());
+               date = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+             } catch(_) {
+               date = inv['InvDate'].toString().substring(0, 10);
+             }
+          }
+          final payAmount = (inv['Amount'] as num).toDouble().toStringAsFixed(3);
+          
+          await SunmiPrinter.printText('فاتورة #$id ($date)', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+          await SunmiPrinter.printText('المسدد: $payAmount د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT));
+        }
+
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('الكاشير: $cashier', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.lineWrap(3);
+      }
+      
+      // ── طابعة شبكة (Network) ────────────────────────────
+      if (_connectionType == 'Network') {
+        try {
+          final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
+          socket.add([0x1B, 0x40]);
+          // Center
+          socket.add([0x1B, 0x61, 0x01]);
+          socket.write('================================\n');
+          socket.write('  $companyName\n');
+          socket.write('  العنوان: $address\n');
+          socket.write('  الهاتف: $phone\n');
+          socket.write('================================\n');
+          socket.write('  $vType\n');
+          socket.write('رقم السند: #$vId\n');
+          socket.write('التاريخ: $vDate $vTime\n');
+          socket.write('--------------------------------\n');
+          // Right
+          socket.add([0x1B, 0x61, 0x02]);
+          socket.write('الاسم (الشريك): $partnerName\n');
+          socket.write('طريقة الدفع/الاستلام: $accountName\n');
+          socket.write('المبلغ: ${amount.toStringAsFixed(3)} د.ك\n');
+          socket.write('--------------------------------\n');
+          socket.write('الفواتير المسددة:\n');
+          
+          for (var inv in paidInvoices) {
+            final id = inv['InvID'] ?? '';
+            String date = '';
+            if (inv['InvDate'] != null) {
+               try {
+                 final d = DateTime.parse(inv['InvDate'].toString());
+                 date = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+               } catch(_) {
+                 date = inv['InvDate'].toString().substring(0, 10);
+               }
+            }
+            final payAmount = (inv['Amount'] as num).toDouble().toStringAsFixed(3);
+            socket.write('فاتورة #$id ($date)\n');
+            socket.write('المسدد: $payAmount د.ك\n');
+          }
+          
+          socket.write('================================\n');
+          socket.write('الكاشير: $cashier\n');
+          socket.write('================================\n');
+          // Cut paper
+          socket.add([0x1D, 0x56, 0x42, 0x00]);
+          
+          await socket.flush();
+          await socket.close();
+        } catch (e) {
+          print('خطأ أثناء طباعة السند عبر الشبكة: $e');
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      print('خطأ في طباعة السند: $e');
+      return false;
+    }
+  }
+
+  Future<bool> printGeneralVoucher(Map<String, dynamic> voucher, String targetAccountName, String cashAccountName) async {
+    final bool isVirtual = _connectionType == 'None';
+    final String actualConnectionType = isVirtual ? 'Virtual Printer (Console Simulator)' : _connectionType;
+
+    // Get company settings
+    final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
+    final String address = _companySettings?['Address'] ?? 'العارضيه';
+    final String phone = _companySettings?['Phone'] ?? '55381505';
+
+    final bool isReceipt = voucher['VoucherType'] == 'Receipt';
+    final String vType = isReceipt ? 'سند قبض عام' : 'سند صرف عام';
+    final String targetLabel = isReceipt ? 'الإيراد' : 'المصروف';
+    final String vId = '${voucher['VoucherID'] ?? voucher['VoucherNo'] ?? ''}';
+    
+    final double amount = (voucher['Amount'] as num?)?.toDouble() ?? 0.0;
+    final String description = voucher['Description'] ?? '-';
+    
+    DateTime printDateTime;
+    try {
+      printDateTime = voucher['VoucherDate'] != null ? DateTime.parse(voucher['VoucherDate']) : DateTime.now();
+    } catch (_) {
+      printDateTime = DateTime.now();
+    }
+    final String vDate = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
+    final String vTime = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}';
+
+    try {
+      if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('العنوان: $address', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('الهاتف: $phone', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText(vType, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('رقم السند: #$vId', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('التاريخ: $vDate $vTime', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('$targetLabel: $targetAccountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        await SunmiPrinter.printText('طريقة الدفع: $cashAccountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('المبلغ: ${amount.toStringAsFixed(3)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        await SunmiPrinter.printText('البيان: $description', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('توقيع المستلم:', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.lineWrap(2);
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('طُبع عبر نظام POS', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.lineWrap(4);
+        await SunmiPrinter.cutPaper();
+      }
+      
+      if (_connectionType == 'Network') {
+        try {
+          final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
+          socket.add([0x1B, 0x40]);
+          socket.add([0x1B, 0x61, 0x01]);
+          socket.write('================================\n');
+          socket.write('  $companyName\n');
+          socket.write('  العنوان: $address\n');
+          socket.write('  الهاتف: $phone\n');
+          socket.write('================================\n');
+          socket.write('  $vType\n');
+          socket.write('رقم السند: #$vId\n');
+          socket.write('التاريخ: $vDate $vTime\n');
+          socket.write('--------------------------------\n');
+          socket.add([0x1B, 0x61, 0x02]);
+          socket.write('$targetLabel: $targetAccountName\n');
+          socket.write('طريقة الدفع: $cashAccountName\n');
+          socket.write('المبلغ: ${amount.toStringAsFixed(3)} د.ك\n');
+          socket.write('البيان: $description\n');
+          socket.write('--------------------------------\n');
+          socket.write('================================\n');
+          socket.write('توقيع المستلم:\n\n\n');
+          socket.write('================================\n');
+          socket.add([0x1B, 0x61, 0x01]);
+          socket.write('طُبع عبر نظام POS\n');
+          socket.add([0x1D, 0x56, 0x42, 0x00]);
+          await socket.flush();
+          await socket.close();
+        } catch (e) {
+          print('خطأ أثناء طباعة السند عبر الشبكة: $e');
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      print('خطأ في طباعة السند: $e');
+      return false;
+    }
+  }
+}

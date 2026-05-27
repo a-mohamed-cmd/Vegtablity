@@ -1,20 +1,20 @@
 import xml.etree.ElementTree as ET
 from app.core.database import get_db_connection
 from app.schemas.invoices import InvoiceCreate
+from app.core.db_procedures import StoredProcedures as SP
+from app.services.shift_service import ShiftService as _ShiftService
+
+_shift_service = _ShiftService()
+
 
 class InvoiceService:
-    def get_all_invoices(self, inv_type: str = "Sales", search_text: str = None, shift_date: str = None):
+    def get_all_invoices(self, inv_type: str = "Sales", search_text: str = None, shift_id: int = None):
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            # Fallback to early date if no shift date is specified
-            if not shift_date:
-                shift_date = "1900-01-01"
-
-            # Call the new sp_Invoice_GetAll_Pos stored procedure
             cursor.execute(
-                "EXEC [Sales].[sp_Invoice_GetAll_Pos] @InvType=?, @shiftDate=?",
-                (inv_type, shift_date)
+                SP.INVOICE_GET_ALL_POS,
+                (inv_type, shift_id)
             )
             columns = [column[0] for column in cursor.description]
             results = []
@@ -50,9 +50,9 @@ class InvoiceService:
                     row = cursor.fetchone()
                     payment_account_id = row[0] if row else 1
 
-            # 2. Call sp_Invoice_AddPayment
+            # 2. Call sp_Invoice_AddPayment_pos
             cursor.execute(
-                "EXEC [Sales].[sp_Invoice_AddPayment] @InvID=?, @PaymentAmount=?, @PaymentAccountID=?, @UserID=?",
+                SP.INVOICE_ADD_PAYMENT,
                 (inv_id, payment_amount, payment_account_id, user_id)
             )
             conn.commit()
@@ -68,7 +68,7 @@ class InvoiceService:
         cursor = conn.cursor()
         try:
             # جلب الرأس
-            cursor.execute("{CALL [Sales].[sp_Invoice_GetByID] (?)}", (inv_id,))
+            cursor.execute(SP.INVOICE_GET_BY_ID, (inv_id,))
             header_row = cursor.fetchone()
             if not header_row:
                 return None
@@ -77,7 +77,7 @@ class InvoiceService:
             header = dict(zip(columns, header_row))
             
             # جلب التفاصيل
-            cursor.execute("{CALL [Sales].[sp_InvoiceDetails_GetByInvID] (?)}", (inv_id,))
+            cursor.execute(SP.INVOICE_DETAILS_GET, (inv_id,))
             detail_columns = [column[0] for column in cursor.description]
             details = []
             for d_row in cursor.fetchall():
@@ -103,30 +103,10 @@ class InvoiceService:
 
         conn = get_db_connection()
         cursor = conn.cursor()
+        # ✨ جلب ShiftID من الكاش مباشرة (صفر roundtrip إضافي)
+        active_shift_id = _shift_service.get_active_shift_id(user_id)
         try:
-            # 1. Save Header and Details using XML in one call
-            # We declare @InvID as a local variable in T-SQL to pass as an OUTPUT parameter,
-            # which is the most robust way to execute SPs with OUTPUT parameters in pyodbc.
-            cursor.execute("""
-                DECLARE @InvID INT = 0;
-                EXEC [Sales].[sp_Invoice_Save_XML] 
-                    @InvID = @InvID OUTPUT,
-                    @InvType = ?,
-                    @InvDate = ?,
-                    @PartnerID = ?,
-                    @WarehouseID = ?,
-                    @TotalAmount = ?,
-                    @Discount = ?,
-                    @NetAmount = ?,
-                    @PaidAmount = ?,
-                    @Remainder = ?,
-                    @UserID = ?,
-                    @Notes = ?,
-                    @IsPosted = ?,
-                    @ReferenceNo = ?,
-                    @PaymentAccountID = ?,
-                    @DetailsXml = ?;
-            """, (
+            cursor.execute(SP.INVOICE_SAVE_XML, (
                 invoice.InvType,
                 invoice.InvDate,
                 invoice.PartnerID,
@@ -141,6 +121,7 @@ class InvoiceService:
                 invoice.IsPosted,
                 invoice.ReferenceNo,
                 invoice.PaymentAccountID,
+                active_shift_id,
                 details_xml
             ))
             

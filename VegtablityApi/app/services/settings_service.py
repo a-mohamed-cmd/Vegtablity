@@ -1,4 +1,6 @@
 from app.core.database import get_db_connection
+from typing import Dict, Any
+from app.core.db_procedures import StoredProcedures as SP
 import base64
 
 class SettingsService:
@@ -7,7 +9,7 @@ class SettingsService:
         cursor = conn.cursor()
         try:
             # Stored procedure: [Settings].[sp_CompanySettings_Get]
-            cursor.execute("{CALL [Settings].[sp_CompanySettings_Get]}")
+            cursor.execute(SP.SETTINGS_COMPANY_GET)
             
             # Fetch the columns
             columns = [column[0] for column in cursor.description]
@@ -37,7 +39,7 @@ class SettingsService:
         try:
             # Stored procedure: [Settings].[sp_PrinterSettings_Save]
             cursor.execute(
-                "{CALL [Settings].[sp_PrinterSettings_Save] (?, ?, ?, ?, ?)}",
+                SP.SETTINGS_PRINTER_SAVE,
                 (
                     settings.get("MachineHWID"),
                     settings.get("ConnectionType"),
@@ -60,7 +62,7 @@ class SettingsService:
         try:
             # Stored procedure: [Settings].[sp_PrinterSettings_Get]
             cursor.execute(
-                "{CALL [Settings].[sp_PrinterSettings_Get] (?)}",
+                SP.SETTINGS_PRINTER_GET,
                 (machine_hwid,)
             )
             

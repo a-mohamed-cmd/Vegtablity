@@ -1,4 +1,5 @@
 from app.core.database import get_db_connection
+from app.core.db_procedures import StoredProcedures as SP
 from app.core.security import hash_password_net_style
 
 class AuthService:
@@ -9,7 +10,7 @@ class AuthService:
         
         try:
             # Calling [Security].[sp_User_Login]
-            cursor.execute("{CALL [Security].[sp_User_Login] (?, ?)}", (username, password))
+            cursor.execute(SP.USER_LOGIN, (username, password))
             row = cursor.fetchone()
             
             if row:

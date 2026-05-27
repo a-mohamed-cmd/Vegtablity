@@ -1,5 +1,6 @@
 from app.core.database import get_db_connection
-from typing import List
+from typing import List, Dict, Any
+from app.core.db_procedures import StoredProcedures as SP
 
 class PartnerService:
     def get_partners(self, partner_type: str, search_text: str = ""):
@@ -7,9 +8,9 @@ class PartnerService:
         cursor = conn.cursor()
         try:
             if search_text:
-                cursor.execute("{CALL [Sales].[sp_Partner_Search] (?, ?)}", (partner_type, search_text))
+                cursor.execute(SP.PARTNER_SEARCH, (partner_type, search_text))
             else:
-                cursor.execute("{CALL [Sales].[sp_Partner_GetAll] (?)}", (partner_type,))
+                cursor.execute(SP.PARTNER_GET_ALL, (partner_type,))
             
             columns = [column[0] for column in cursor.description]
             partners = []
@@ -31,7 +32,7 @@ class PartnerService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("EXEC [Purchases].[sp_PurchaseQuote_GetActivePartners]")
+            cursor.execute(SP.PURCHASE_ACTIVE_PARTNERS)
             columns = [column[0] for column in cursor.description]
             partners = []
             for row in cursor.fetchall():
@@ -50,7 +51,7 @@ class PartnerService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("EXEC [Sales].[sp_SalesQuote_GetActivePartners]")
+            cursor.execute(SP.SALES_ACTIVE_PARTNERS)
             columns = [column[0] for column in cursor.description]
             partners = []
             for row in cursor.fetchall():

@@ -20,6 +20,74 @@ class ApiService {
     }
   }
 
+  Future<Response> getProducts({String? search}) async {
+    try {
+      final queryParameters = search != null ? {'search': search} : null;
+      return await _dio.get('/products', queryParameters: queryParameters);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // الحسابات
+  Future<Response> getRevenueAccounts() async {
+    try {
+      return await _dio.get('/accounts/revenues');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response> getExpenseAccounts() async {
+    try {
+      return await _dio.get('/accounts/expenses');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// جلب بيانات العميل الثابت 'سند مباشر' - يُستدعى مرة واحدة ويُخزّن في الذاكرة
+  Future<Response> getGeneralPartner() async {
+    try {
+      return await _dio.get('/accounts/general-partner');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // السندات العامة
+  Future<Response> saveGeneralVoucher({
+    required String voucherType,
+    required double totalAmount,
+    required int accountId,
+    required String description,
+    required String paymentMethod,
+    int? shiftId,
+  }) async {
+    try {
+      return await _dio.post(
+        '/vouchers/general',
+        data: {
+          'VoucherType': voucherType,
+          'TotalAmount': totalAmount,
+          'AccountID': accountId,
+          'Description': description,
+          'PaymentMethod': paymentMethod,
+          if (shiftId != null) 'ShiftID': shiftId,
+        },
+      );
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response> getPartners({required String type, String search = ''}) async {
+    return await _dio.get('/partners/', queryParameters: {
+      'type':   type,
+      'search': search,
+    });
+  }
+
   Future<Response> login(String username, String password) async {
     return await _dio.post(
       '/auth/login',
@@ -62,11 +130,11 @@ class ApiService {
     return await _dio.get('/products/barcode/$barcode');
   }
 
-  Future<Response> getInvoices({required String type, String? search, String? shiftDate}) async {
+  Future<Response> getInvoices({required String type, String? search, int? shiftId}) async {
     return await _dio.get('/invoices/', queryParameters: {
       'type': type,
       if (search != null && search.isNotEmpty) 'search': search,
-      if (shiftDate != null && shiftDate.isNotEmpty) 'shift_date': shiftDate,
+      if (shiftId != null) 'shift_id': shiftId,
     });
   }
 
@@ -130,6 +198,48 @@ class ApiService {
 
   Future<Response> getPurchaseQuoteDetails(int quoteId) async {
     return await _dio.get('/purchase-quotes/$quoteId/details');
+  }
+
+  // ─── Vouchers (سندات القبض والصرف) ──────────────────────────────────────
+
+  /// جلب الفواتير المُرحّلة وغير المسدّدة للشريك
+  /// type: 'Sales' للعملاء | 'Purchase' للموردين
+  Future<Response> getUnpaidInvoices(int partnerId, String type) async {
+    return await _dio.get('/vouchers/unpaid_invoices', queryParameters: {
+      'partner_id': partnerId,
+      'type': type,
+    });
+  }
+
+  /// جلب الحسابات المتاحة (صندوق/بنك) لاستخدامها في السند
+  Future<Response> getVoucherAccounts() async {
+    return await _dio.get('/vouchers/accounts');
+  }
+
+  /// سداد جماعي وإنشاء سند قبض/صرف
+  Future<Response> bulkPay({
+    required int partnerId,
+    required String voucherType, // 'Receipt' | 'Payment'
+    required double totalAmount,
+    required int accountId,
+    required int shiftId,
+    required List<Map<String, dynamic>> allocations,
+    String description = '',
+  }) async {
+    return await _dio.post('/vouchers/bulk_pay', data: {
+      'PartnerID':   partnerId,
+      'VoucherType': voucherType,
+      'TotalAmount': totalAmount,
+      'AccountID':   accountId,
+      'ShiftID':     shiftId,
+      'Description': description,
+      'Allocations': allocations,
+    });
+  }
+
+  /// جلب الفواتير المسددة داخل السند (لإعادة الطباعة)
+  Future<Response> getVoucherAllocations(int voucherId) async {
+    return await _dio.get('/vouchers/$voucherId/allocations');
   }
 }
 

@@ -1,14 +1,14 @@
 from app.core.database import get_db_connection
 from typing import List
 from app.schemas.sales_quotes import SalesQuoteResponse, SalesQuoteDetailResponse
+from app.core.db_procedures import StoredProcedures as SP
 
 class SalesQuoteService:
     def get_quotes_paged(self, search: str = None) -> List[dict]:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            sql = "EXEC [Sales].[sp_Quotations_GetPaged] @PageNumber=1, @PageSize=100, @SearchText=?"
-            cursor.execute(sql, (search if search else "",))
+            cursor.execute(SP.SALES_QUOTES_GET_PAGED, (1, 100, search if search else ""))
             
             # The SP first returns TotalCount, then the actual rows
             # We need to skip the first result set and move to the second one
@@ -37,8 +37,7 @@ class SalesQuoteService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            sql = "EXEC [Sales].[sp_QuotationDetails_GetByQuoteID] @QuoteID=?, @PageNumber=1, @PageSize=1000"
-            cursor.execute(sql, (quote_id,))
+            cursor.execute(SP.SALES_QUOTE_DETAILS, (quote_id, 1, 1000))
             
             # Skip TotalCount
             if cursor.description and cursor.description[0][0] == 'TotalCount':

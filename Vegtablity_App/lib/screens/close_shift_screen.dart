@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
 import '../providers/shift_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pos_provider.dart';
+import '../providers/voucher_provider.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
 import 'shift_screen.dart';
@@ -35,8 +37,11 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
   double get _startingCash => _parseD(_summary?['StartingCash']);
   double get _totalPaidSales => _parseD(_summary?['TotalPaidSales']);
   double get _totalPaidPurchases => _parseD(_summary?['TotalPaidPurchases']);
-  // معادلة الكاش: عهدة الافتتاح - مشتريات مسددة + مبيعات مسددة
-  double get _expectedCash => _startingCash - _totalPaidPurchases + _totalPaidSales;
+  double get _totalReceiptVouchers => _parseD(_summary?['TotalReceiptVouchers']);
+  double get _totalPaymentVouchers => _parseD(_summary?['TotalPaymentVouchers']);
+  // معادلة الكاش: عهدة الافتتاح + مبيعات مسددة - مشتريات مسددة + سندات قبض - سندات صرف
+  double get _expectedCash => _startingCash + _totalPaidSales - _totalPaidPurchases
+      + _totalReceiptVouchers - _totalPaymentVouchers;
   double get _difference => _endingCash - _expectedCash;
 
   @override
@@ -71,19 +76,11 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
       }
 
       // جلب قوائم الفواتير للطباعة
-      final shiftStart = shiftProvider.shiftStartTime;
-      String? shiftDateOnly;
-      if (shiftStart != null) {
-        try {
-          final parsed = DateTime.parse(shiftStart);
-          shiftDateOnly =
-              '${parsed.year}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
-        } catch (_) {}
-      }
+      final shiftId = shiftProvider.shiftId;
 
-      final results = await Future.wait([
-        apiService.getInvoices(type: 'Sales', shiftDate: shiftDateOnly),
-        apiService.getInvoices(type: 'Purchase', shiftDate: shiftDateOnly),
+      final results = await Future.wait<Response>([
+        apiService.getInvoices(type: 'Sales', shiftId: shiftId),
+        apiService.getInvoices(type: 'Purchase', shiftId: shiftId),
       ]);
 
       setState(() {
@@ -113,19 +110,24 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
     }
 
     final posProvider = Provider.of<PosProvider>(context, listen: false);
-    if (posProvider.offlineInvoicesCount > 0) {
+    final voucherProvider = Provider.of<VoucherProvider>(context, listen: false);
+    
+    final offlineInvoices = posProvider.offlineInvoicesCount;
+    final offlineVouchers = voucherProvider.offlineVouchersCount;
+
+    if (offlineInvoices > 0 || offlineVouchers > 0) {
       final syncConfirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1E2A38),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text(
-            'فواتير غير متزامنة',
+            'بيانات غير متزامنة',
             style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           content: Text(
-            'يوجد عدد ${posProvider.offlineInvoicesCount} فاتورة/فواتير غير متزامنة.\nيجب مزامنتها مع الخادم قبل إغلاق الوردية.',
+            'يوجد $offlineInvoices فواتير و $offlineVouchers سندات غير متزامنة.\nيجب مزامنتها مع الخادم قبل إغلاق الوردية.',
             style: const TextStyle(color: Colors.white70),
             textAlign: TextAlign.right,
           ),
@@ -148,13 +150,23 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
 
       if (syncConfirmed == true) {
         setState(() => _isClosing = true);
-        final success = await posProvider.syncOfflineInvoices();
+        
+        bool successInvoices = true;
+        if (offlineInvoices > 0) {
+          successInvoices = await posProvider.syncOfflineInvoices();
+        }
+        
+        bool successVouchers = true;
+        if (offlineVouchers > 0) {
+          successVouchers = await voucherProvider.syncOfflineVouchers();
+        }
+        
         setState(() => _isClosing = false);
         
-        if (!success || posProvider.offlineInvoicesCount > 0) {
+        if (!successInvoices || !successVouchers || posProvider.offlineInvoicesCount > 0 || voucherProvider.offlineVouchersCount > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('فشلت مزامنة بعض الفواتير. يرجى التحقق من اتصالك بالإنترنت.', textAlign: TextAlign.right),
+              content: Text('فشلت مزامنة بعض البيانات. يرجى التحقق من اتصالك بالإنترنت.', textAlign: TextAlign.right),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -461,6 +473,25 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                         ),
                       ),
 
+                      // بطاقة السندات
+                      _buildCard(
+                        title: '🧾 السندات المالية',
+                        titleColor: Colors.purple[300],
+                        child: Column(
+                          children: [
+                            _buildInfoRow(
+                                'إجمالي سندات القبض',
+                                '${_totalReceiptVouchers.toStringAsFixed(3)} KWD',
+                                valueColor: Colors.greenAccent[200]),
+                            _buildInfoRow(
+                                'إجمالي سندات الصرف',
+                                '${_totalPaymentVouchers.toStringAsFixed(3)} KWD',
+                                valueColor: Colors.orangeAccent),
+                          ],
+                        ),
+                      ),
+
+
                       // بطاقة الكاش
                       _buildCard(
                         title: '💰 تسوية الكاش',
@@ -479,6 +510,16 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                 '- مشتريات مسددة',
                                 '${_totalPaidPurchases.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.redAccent[100]),
+                            if (_totalReceiptVouchers > 0)
+                              _buildInfoRow(
+                                  '+ سندات قبض',
+                                  '${_totalReceiptVouchers.toStringAsFixed(3)} KWD',
+                                  valueColor: Colors.greenAccent[200]),
+                            if (_totalPaymentVouchers > 0)
+                              _buildInfoRow(
+                                  '- سندات صرف',
+                                  '${_totalPaymentVouchers.toStringAsFixed(3)} KWD',
+                                  valueColor: Colors.orangeAccent),
                             Container(
                               margin: const EdgeInsets.symmetric(vertical: 4),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
