@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/printer_service.dart';
+import '../core/localization/app_localizations.dart';
 
 class PrinterSettingsScreen extends StatefulWidget {
   const PrinterSettingsScreen({super.key});
@@ -85,7 +86,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            success ? 'تم حفظ إعدادات الطابعة بنجاح!' : 'فشل في حفظ الإعدادات',
+            success ? context.tr('ps_save_success') : context.tr('ps_save_failed'),
             textAlign: TextAlign.right,
           ),
           backgroundColor: success ? Colors.green : Colors.red,
@@ -102,14 +103,14 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       
       if (success) {
         if (_selectedConnectionType == 'None') {
-          message = 'تمت محاكاة الطباعة التجريبية بنجاح في الكونسول (الطباعة الفعلية معطلة)';
+          message = context.tr('ps_test_simulated');
           bgColor = Colors.blueGrey;
         } else {
-          message = 'تمت الطباعة التجريبية بنجاح على الطابعة المحددة!';
+          message = context.tr('ps_test_success');
           bgColor = Colors.green;
         }
       } else {
-        message = 'فشل في طباعة الفاتورة التجريبية، يرجى التحقق من اتصال وإعدادات الطابعة';
+        message = context.tr('ps_test_failed');
         bgColor = Colors.redAccent;
       }
 
@@ -135,7 +136,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إعدادات الطابعة الحرارية'),
+        title: Text(context.tr('ps_screen_title')),
         centerTitle: true,
       ),
       body: Center(
@@ -150,10 +151,10 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  const Text(
-                    'تكوين طابعة إيصالات الكاشير (POS)',
+                  Text(
+                    context.tr('ps_config_title'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   Center(
@@ -180,7 +181,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            printerService.isSynced ? 'مزامنة نشطة مع السيرفر' : 'حفظ محلي فقط (أوفلاين)',
+                            printerService.isSynced ? context.tr('ps_synced') : context.tr('ps_offline'),
                             style: TextStyle(
                               color: printerService.isSynced ? Colors.green : Colors.orange,
                               fontSize: 12,
@@ -200,16 +201,16 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       ),
                     )
                   else ...[
-                    const Text('نوع الاتصال الطابعة', textAlign: TextAlign.right, style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    Text(context.tr('ps_conn_type'), textAlign: TextAlign.right, style: const TextStyle(fontSize: 16, color: Colors.grey)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: _selectedConnectionType,
                       alignment: AlignmentDirectional.centerEnd,
                       decoration: const InputDecoration(border: OutlineInputBorder()),
-                      items: const [
-                        DropdownMenuItem(value: 'None', child: Text('غير متصلة (تعطيل الطباعة)', textAlign: TextAlign.right)),
-                        DropdownMenuItem(value: 'Network', child: Text('شبكي (Network IP Printer)', textAlign: TextAlign.right)),
-                        DropdownMenuItem(value: 'Bluetooth', child: Text('بلوتوث (Bluetooth Printer)', textAlign: TextAlign.right)),
+                      items: [
+                        DropdownMenuItem(value: 'None', child: Text(context.tr('ps_conn_none'), textAlign: TextAlign.right)),
+                        DropdownMenuItem(value: 'Network', child: Text(context.tr('ps_conn_network'), textAlign: TextAlign.right)),
+                        DropdownMenuItem(value: 'Bluetooth', child: Text(context.tr('ps_conn_bluetooth'), textAlign: TextAlign.right)),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -219,7 +220,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                     ),
                     const SizedBox(height: 24),
                     if (_selectedConnectionType == 'Network') ...[
-                      const Text('عنوان IP الطابعة (مثال: 192.168.1.100)', textAlign: TextAlign.right),
+                      Text(context.tr('ps_ip_label'), textAlign: TextAlign.right),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _ipController,
@@ -227,7 +228,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                         decoration: const InputDecoration(border: OutlineInputBorder(), hintText: '192.168.1.100'),
                       ),
                       const SizedBox(height: 16),
-                      const Text('منفذ الاتصال (Port - افتراضي 9100)', textAlign: TextAlign.right),
+                      Text(context.tr('ps_port_label'), textAlign: TextAlign.right),
                       const SizedBox(height: 8),
                       TextField(
                         controller: _portController,
@@ -237,7 +238,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       ),
                     ],
                     if (_selectedConnectionType == 'Bluetooth') ...[
-                      const Text('جهاز طابعة البلوتوث', textAlign: TextAlign.right, style: TextStyle(fontSize: 16, color: Colors.grey)),
+                      Text(context.tr('ps_bt_device'), textAlign: TextAlign.right, style: const TextStyle(fontSize: 16, color: Colors.grey)),
                       const SizedBox(height: 8),
                       if (_bluetoothController.text.isNotEmpty) ...[
                         Container(
@@ -256,7 +257,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                                     _bluetoothController.clear();
                                   });
                                 },
-                                child: const Text('إلغاء التحديد', style: TextStyle(color: Colors.red)),
+                                child: Text(context.tr('ps_bt_clear'), style: const TextStyle(color: Colors.red)),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -269,9 +270,9 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                                       textAlign: TextAlign.right,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                    const Text(
-                                      'الطابعة المحددة حالياً للتشغيل',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                    Text(
+                                      context.tr('ps_bt_selected'),
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                                       textAlign: TextAlign.right,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -296,7 +297,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.green)
                                 )
                               : const Icon(Icons.bluetooth_searching),
-                          label: Text(_isScanning ? 'جاري البحث عن أجهزة...' : 'البحث عن الطابعات المتوفرة (Scan)'),
+                          label: Text(_isScanning ? context.tr('ps_bt_scan_searching') : context.tr('ps_bt_scan_button')),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue.withAlpha(26),
                             foregroundColor: Colors.blue,
@@ -314,13 +315,13 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                               SizedBox(height: 8),
                               CircularProgressIndicator(),
                               SizedBox(height: 12),
-                              Text('جاري فحص النطاق والبحث عن أجهزة بلوتوث نشطة...', style: TextStyle(color: Colors.grey, fontSize: 13)),
                             ],
                           ),
                         ),
+                        Center(child: Text(context.tr('ps_bt_scan_desc'), style: const TextStyle(color: Colors.grey, fontSize: 13))),
                       ] else if (_foundDevices.isNotEmpty) ...[
                         const SizedBox(height: 16),
-                        const Text('الطابعات التي تم العثور عليها:', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(context.tr('ps_bt_found'), textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
@@ -362,7 +363,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                           child: OutlinedButton.icon(
                             onPressed: _testPrint,
                             icon: const Icon(Icons.print),
-                            label: const Text('طباعة تجريبية'),
+                            label: Text(context.tr('ps_test_print_btn')),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               foregroundColor: Colors.blue,
@@ -376,7 +377,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                             icon: _isSaving
                                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                                 : const Icon(Icons.save),
-                            label: const Text('حفظ الإعدادات'),
+                            label: Text(context.tr('ps_save_btn')),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               backgroundColor: Colors.green,

@@ -6,6 +6,24 @@ import 'api_service.dart';
 
 import 'package:flutter/foundation.dart';
 
+String _formatCurrency(double amount) {
+  String s = amount.toStringAsFixed(2);
+  final parts = s.split('.');
+  final reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+  String intPart = parts[0].replaceAllMapped(reg, (Match match) => '${match[1]},');
+  return '$intPart.${parts[1]}';
+}
+
+String _formatQuantity(double qty, String unit) {
+  String qStr;
+  if (qty == qty.toInt()) {
+    qStr = qty.toInt().toString();
+  } else {
+    qStr = qty.toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '');
+  }
+  return unit.isNotEmpty ? '$unit $qStr' : qStr;
+}
+
 class PrinterService with ChangeNotifier {
   final ApiService? _apiService;
   Map<String, dynamic>? _companySettings;
@@ -177,6 +195,23 @@ class PrinterService with ChangeNotifier {
     final String invIdStr = invId != null && invId != 0 ? '#$invId' : 'جديدة (غير محفوظة)';
     final String partnerName = invoice['PartnerName'] ?? invoice['partner_name'] ?? (typeName == 'مبيعات' ? 'عميل نقدي' : 'مورد نقدي');
 
+    final double totalAmount       = (invoice['total_amount']        as num?)?.toDouble() ?? 0.0;
+    final double paidAtCreate       = (invoice['paid_amount']         as num?)?.toDouble() ?? 0.0;
+    final double voucherPaidAmount  = (invoice['voucher_paid_amount'] as num?)?.toDouble() ?? 0.0;
+    final double remainder          = (invoice['remainder']           as num?)?.toDouble() ?? 0.0;
+
+    // إجمالي المسدّد = ما دُفع عند الإنشاء + ما سُدّد عبر سند لاحق
+    final double totalPaid = paidAtCreate + voucherPaidAmount;
+
+    // Custom formatting to 0,000.00
+    final String formattedTotal     = _formatCurrency(totalAmount);
+    final String formattedPaid      = _formatCurrency(totalPaid);
+    final String formattedRemainder = _formatCurrency(remainder);
+    // يظهر قسم السداد إذا كان المدفوع أقل من الإجمالي أو هناك متبقٍ
+    final bool hasSplitPayment = remainder > 0.001 || totalPaid < totalAmount - 0.001;
+    // يظهر بند السند منفصلاً إذا كان هناك سداد عبر سند
+    final bool hasVoucherPayment = voucherPaidAmount > 0.001;
+
     DateTime printDateTime;
     try {
       if (invoice['created_at'] != null) {
@@ -223,7 +258,17 @@ class PrinterService with ChangeNotifier {
       }
       
       buffer.writeln('--------------------------------');
-      buffer.writeln('المجموع الإجمالي: ${invoice['total_amount']} KWD');
+      buffer.writeln('الإجمالي الكلي:   $formattedTotal KWD');
+      if (hasSplitPayment) {
+        if (hasVoucherPayment) {
+          buffer.writeln('نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} KWD');
+          buffer.writeln('عبر سند:          ${_formatCurrency(voucherPaidAmount)} KWD');
+          buffer.writeln('إجمالي المدفوع:   $formattedPaid KWD');
+        } else {
+          buffer.writeln('المدفوع:           $formattedPaid KWD');
+        }
+        buffer.writeln('المتبقي آجل:      $formattedRemainder KWD');
+      }
       buffer.writeln('================================');
       buffer.writeln('شكراً لزيارتكم! طبعت عبر نظام POS');
       buffer.writeln('================================');
@@ -302,14 +347,17 @@ class PrinterService with ChangeNotifier {
           for (final item in items) {
             final String name = item['name'];
             final double price = (item['price'] as num).toDouble();
-            final int qty = (item['quantity'] as num).toInt();
+            final double qty = (item['quantity'] as num).toDouble();
             final double total = (item['total'] as num).toDouble();
+            final String unitName = item['UnitName'] ?? item['unit'] ?? item['unit_name'] ?? '';
+            final String qtyFormatted = _formatQuantity(qty, unitName);
+            
             await SunmiPrinter.printText(
               name,
               style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
             );
             await SunmiPrinter.printText(
-              '  $qty x $price KWD = $total KWD',
+              '  $qtyFormatted x ${_formatCurrency(price)} KWD = ${_formatCurrency(total)} KWD',
               style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
             );
           }
@@ -319,9 +367,34 @@ class PrinterService with ChangeNotifier {
             style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
           );
           await SunmiPrinter.printText(
-            'المجموع الإجمالي: ${invoice['total_amount']} KWD',
+            'الإجمالي الكلي: $formattedTotal KWD',
             style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
           );
+          if (hasSplitPayment) {
+            if (hasVoucherPayment) {
+              await SunmiPrinter.printText(
+                'نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} KWD',
+                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
+              );
+              await SunmiPrinter.printText(
+                'عبر سند:          ${_formatCurrency(voucherPaidAmount)} KWD',
+                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
+              );
+              await SunmiPrinter.printText(
+                'إجمالي المدفوع:   $formattedPaid KWD',
+                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
+              );
+            } else {
+              await SunmiPrinter.printText(
+                'المدفوع:          $formattedPaid KWD',
+                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
+              );
+            }
+            await SunmiPrinter.printText(
+              'المتبقي آجل:     $formattedRemainder KWD',
+              style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
+            );
+          }
           await SunmiPrinter.printText(
             '================================',
             style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
@@ -378,14 +451,27 @@ class PrinterService with ChangeNotifier {
           for (final item in items) {
             final String name = item['name'];
             final double price = (item['price'] as num).toDouble();
-            final int qty = (item['quantity'] as num).toInt();
+            final double qty = (item['quantity'] as num).toDouble();
             final double total = (item['total'] as num).toDouble();
+            final String unitName = item['UnitName'] ?? item['unit'] ?? item['unit_name'] ?? '';
+            final String qtyFormatted = _formatQuantity(qty, unitName);
+            
             socket.write('$name\n');
-            socket.write('  $qty x $price KWD = $total KWD\n');
+            socket.write('  $qtyFormatted x ${_formatCurrency(price)} KWD = ${_formatCurrency(total)} KWD\n');
           }
           
           socket.write('--------------------------------\n');
-          socket.write('المجموع الإجمالي: ${invoice['total_amount']} KWD\n');
+          socket.write('الإجمالي الكلي: $formattedTotal KWD\n');
+          if (hasSplitPayment) {
+            if (hasVoucherPayment) {
+              socket.write('نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} KWD\n');
+              socket.write('عبر سند:         ${_formatCurrency(voucherPaidAmount)} KWD\n');
+              socket.write('إجمالي المدفوع:  $formattedPaid KWD\n');
+            } else {
+              socket.write('المدفوع:         $formattedPaid KWD\n');
+            }
+            socket.write('المتبقي آجل:     $formattedRemainder KWD\n');
+          }
           socket.write('================================\n');
           
           // Footer (Center aligned)
@@ -484,7 +570,7 @@ class PrinterService with ChangeNotifier {
     final double difference = endingCash - netCash;
     final String diffLabel  = difference >= 0 ? 'فائض (زيادة)' : 'عجز (نقص)';
 
-    String _fmt(double v) => v.toStringAsFixed(3);
+    String _fmt(double v) => _formatCurrency(v);
 
     Future<void> _printLine(String text, {bool bold = false, bool center = false}) async {
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
@@ -711,7 +797,7 @@ class PrinterService with ChangeNotifier {
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText('الاسم (الشريك): $partnerName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
         await SunmiPrinter.printText('طريقة الدفع/الاستلام: $accountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-        await SunmiPrinter.printText('المبلغ: ${amount.toStringAsFixed(3)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('المبلغ: ${_formatCurrency(amount)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
         await SunmiPrinter.printText('الفواتير المسددة:', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
@@ -726,7 +812,7 @@ class PrinterService with ChangeNotifier {
                date = inv['InvDate'].toString().substring(0, 10);
              }
           }
-          final payAmount = (inv['Amount'] as num).toDouble().toStringAsFixed(3);
+          final payAmount = _formatCurrency((inv['Amount'] as num).toDouble());
           
           await SunmiPrinter.printText('فاتورة #$id ($date)', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
           await SunmiPrinter.printText('المسدد: $payAmount د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT));
@@ -758,7 +844,7 @@ class PrinterService with ChangeNotifier {
           socket.add([0x1B, 0x61, 0x02]);
           socket.write('الاسم (الشريك): $partnerName\n');
           socket.write('طريقة الدفع/الاستلام: $accountName\n');
-          socket.write('المبلغ: ${amount.toStringAsFixed(3)} د.ك\n');
+          socket.write('المبلغ: ${_formatCurrency(amount)} د.ك\n');
           socket.write('--------------------------------\n');
           socket.write('الفواتير المسددة:\n');
           
@@ -773,7 +859,7 @@ class PrinterService with ChangeNotifier {
                  date = inv['InvDate'].toString().substring(0, 10);
                }
             }
-            final payAmount = (inv['Amount'] as num).toDouble().toStringAsFixed(3);
+            final payAmount = _formatCurrency((inv['Amount'] as num).toDouble());
             socket.write('فاتورة #$id ($date)\n');
             socket.write('المسدد: $payAmount د.ك\n');
           }
@@ -800,9 +886,6 @@ class PrinterService with ChangeNotifier {
   }
 
   Future<bool> printGeneralVoucher(Map<String, dynamic> voucher, String targetAccountName, String cashAccountName) async {
-    final bool isVirtual = _connectionType == 'None';
-    final String actualConnectionType = isVirtual ? 'Virtual Printer (Console Simulator)' : _connectionType;
-
     // Get company settings
     final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
     final String address = _companySettings?['Address'] ?? 'العارضيه';
@@ -827,6 +910,7 @@ class PrinterService with ChangeNotifier {
 
     try {
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        await SunmiPrinter.initPrinter(); // Ensure printer is ready
         await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
         await SunmiPrinter.printText('العنوان: $address', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
@@ -840,7 +924,7 @@ class PrinterService with ChangeNotifier {
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText('$targetLabel: $targetAccountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
         await SunmiPrinter.printText('طريقة الدفع: $cashAccountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-        await SunmiPrinter.printText('المبلغ: ${amount.toStringAsFixed(3)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        await SunmiPrinter.printText('المبلغ: ${_formatCurrency(amount)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
         await SunmiPrinter.printText('البيان: $description', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
@@ -870,7 +954,7 @@ class PrinterService with ChangeNotifier {
           socket.add([0x1B, 0x61, 0x02]);
           socket.write('$targetLabel: $targetAccountName\n');
           socket.write('طريقة الدفع: $cashAccountName\n');
-          socket.write('المبلغ: ${amount.toStringAsFixed(3)} د.ك\n');
+          socket.write('المبلغ: ${_formatCurrency(amount)} د.ك\n');
           socket.write('البيان: $description\n');
           socket.write('--------------------------------\n');
           socket.write('================================\n');

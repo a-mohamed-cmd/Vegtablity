@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/language_viewmodel.dart';
+import '../core/localization/app_localizations.dart';
+import '../models/language_model.dart';
 
 class GeneralSettingsScreen extends StatefulWidget {
   const GeneralSettingsScreen({super.key});
@@ -45,8 +49,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم حفظ النمط الجديد وتحديث واجهة الشاشة الرئيسية بنجاح', textAlign: TextAlign.right),
+          SnackBar(
+            content: Text(context.tr('settings_save_success'), textAlign: TextAlign.right),
             backgroundColor: Colors.green,
           ),
         );
@@ -57,8 +61,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('حدث خطأ أثناء حفظ الإعدادات يرجى المحاولة لاحقاً', textAlign: TextAlign.right),
+          SnackBar(
+            content: Text(context.tr('settings_save_error'), textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
         );
@@ -70,7 +74,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الإعدادات العامة'),
+        title: Text(context.tr('settings')),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -89,18 +93,18 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20.0),
                 children: [
-                  const Text(
-                    'مظهر وتصميم الشاشة الرئيسية',
-                    style: TextStyle(
+                  Text(
+                    context.tr('settings_layout_title'),
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.teal,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'اختر الواجهة التي ترغب بالعمل عليها. يتم تحميل التفضيل تلقائياً عند بدء التشغيل.',
-                    style: TextStyle(
+                  Text(
+                    context.tr('settings_layout_desc'),
+                    style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
                     ),
@@ -109,8 +113,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                   
                   // Classic Layout Card Option
                   _buildLayoutCard(
-                    title: 'النمط الكلاسيكي (الافتراضي)',
-                    description: 'الواجهة الأصلية التي تتيح الوصول السريع لعمليات البيع اليدوية المباشرة وإدارة الموردين واستدعاء العروض العامة.',
+                    title: context.tr('settings_classic_title'),
+                    description: context.tr('settings_classic_desc'),
                     layoutValue: 'classic',
                     icon: Icons.grid_view_rounded,
                     color: Colors.blue,
@@ -119,11 +123,50 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
 
                   // Partner Offers Layout Card Option
                   _buildLayoutCard(
-                    title: 'نمط عروض الشركاء (الجديد)',
-                    description: 'واجهة POS مخصصة بالكامل لعروض أسعار الشركاء النشطة (مشتريات/مبيعات)، تمنع إدخال منتجات خارج العرض وتدعم الدفع كاش أو آجل.',
+                    title: context.tr('settings_premium_title'),
+                    description: context.tr('settings_premium_desc'),
                     layoutValue: 'partners_offers',
                     icon: Icons.people_alt_rounded,
                     color: Colors.orange,
+                  ),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  
+                  Text(
+                    context.tr('language'),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Consumer<LanguageViewModel>(
+                    builder: (context, langVm, child) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: LanguageModel.supportedLanguages.map((lang) {
+                          final isSelected = langVm.appLocale.languageCode == lang.languageCode;
+                          return ChoiceChip(
+                            label: Text(
+                              lang.languageCode == 'ar' ? context.tr('arabic') : context.tr('english'),
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.black87,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: Colors.teal,
+                            onSelected: (selected) {
+                              if (selected) {
+                                langVm.changeLanguage(lang.languageCode);
+                              }
+                            },
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
                 ],
               ),

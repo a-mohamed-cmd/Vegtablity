@@ -16,6 +16,8 @@ dependencies:
   mobile_scanner: ^3.5.5
   url_launcher: ^6.2.5
   sunmi_printer_plus: 4.1.1
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

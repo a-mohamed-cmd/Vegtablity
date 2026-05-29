@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../core/localization/app_localizations.dart';
 import 'shift_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -27,8 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى إدخال اسم المستخدم وكلمة المرور', textAlign: TextAlign.right),
+        SnackBar(
+          content: Text(context.tr('login_empty_error'), textAlign: TextAlign.right),
           backgroundColor: Colors.red,
         ),
       );
@@ -47,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(authProvider.errorMessage ?? 'فشل تسجيل الدخول', textAlign: TextAlign.right),
+            content: Text(authProvider.errorMessage ?? context.tr('login_failed_fallback'), textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
         );
@@ -71,15 +72,15 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const Icon(Icons.shopping_cart, size: 80, color: Colors.green),
                 const SizedBox(height: 32),
-                const Text('تسجيل الدخول', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(context.tr('login_title'), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _usernameController,
                   textAlign: TextAlign.right,
-                  decoration: const InputDecoration(
-                    labelText: 'اسم المستخدم',
+                  decoration: InputDecoration(
+                    labelText: context.tr('login_username_hint'),
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -87,10 +88,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _passwordController,
                   obscureText: true,
                   textAlign: TextAlign.right,
-                  decoration: const InputDecoration(
-                    labelText: 'كلمة المرور',
+                  decoration: InputDecoration(
+                    labelText: context.tr('login_password_hint'),
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -102,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                     child: isLoading 
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('دخول', style: TextStyle(fontSize: 18)),
+                        : Text(context.tr('login_button'), style: const TextStyle(fontSize: 18)),
                   ),
                 ),
               ],

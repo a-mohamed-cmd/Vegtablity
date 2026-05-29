@@ -19,7 +19,11 @@ class StoredProcedures:
     # =========================================================================
     
     # Opens a new shift for the current user and records the starting cash
-    SHIFT_OPEN = "EXEC [Sales].[sp_Shift_Open] @UserID=?, @StartingCash=?, @ShiftID=? OUTPUT;"
+    SHIFT_OPEN = """
+    DECLARE @ShiftID INT;
+    EXEC [Sales].[sp_Shift_Open] @UserID=?, @StartingCash=?, @ShiftID=@ShiftID OUTPUT;
+    SELECT @ShiftID AS ShiftID;
+    """
     
     # Retrieves the currently active shift for the user, if any
     SHIFT_GET_ACTIVE = "EXEC [Sales].[sp_Shift_GetActive] @UserID=?"

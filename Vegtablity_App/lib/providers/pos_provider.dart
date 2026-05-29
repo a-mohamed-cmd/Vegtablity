@@ -86,6 +86,7 @@ class PosProvider extends ChangeNotifier {
             'price': priceValue,
             'quantity': 1,
             'total': priceValue,
+            'UnitName': product['UnitName'] ?? product['unit_name'] ?? product['unit'] ?? '',
           });
         }
         
@@ -117,9 +118,28 @@ class PosProvider extends ChangeNotifier {
         'price': 15.0,
         'quantity': 1,
         'total': 15.0,
+        'UnitName': 'حبه',
       });
     }
   }
+
+  void updateQuantity(int index, num newQuantity) {
+    if (index >= 0 && index < _invoiceItems.length && newQuantity > 0) {
+      _invoiceItems[index]['quantity'] = newQuantity;
+      _invoiceItems[index]['total'] = _invoiceItems[index]['price'] * newQuantity;
+      notifyListeners();
+    } else if (newQuantity <= 0) {
+      removeItem(index);
+    }
+  }
+
+  void removeItem(int index) {
+    if (index >= 0 && index < _invoiceItems.length) {
+      _invoiceItems.removeAt(index);
+      notifyListeners();
+    }
+  }
+
 
   Future<int?> saveInvoice(String invoiceType) async {
     if (_invoiceItems.isEmpty) {

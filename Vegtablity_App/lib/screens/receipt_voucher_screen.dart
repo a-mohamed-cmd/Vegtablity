@@ -5,6 +5,7 @@ import '../providers/voucher_provider.dart';
 import '../services/api_service.dart';
 import '../providers/shift_provider.dart';
 import '../services/printer_service.dart';
+import '../core/localization/app_localizations.dart';
 
 /// شاشة سند القبض - تحصيل مديونيات من العملاء
 class ReceiptVoucherScreen extends StatefulWidget {
@@ -19,19 +20,19 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
   bool _isLoading = false;
   String _searchText = '';
 
-  List<Map<String, dynamic>> _allPartners  = [];
+  List<Map<String, dynamic>> _allPartners = [];
   List<Map<String, dynamic>> _filteredPartners = [];
-  Map<String, dynamic>?      _selectedPartner;
+  Map<String, dynamic>? _selectedPartner;
 
   List<Map<String, dynamic>> _unpaidInvoices = [];
-  final Map<int, bool>   _selectedMap     = {};
-  final Map<int, double> _payAmountMap    = {};
+  final Map<int, bool> _selectedMap = {};
+  final Map<int, double> _payAmountMap = {};
 
-  List<Map<String, dynamic>> _accounts    = [];
-  int?                       _selectedAccountId;
+  List<Map<String, dynamic>> _accounts = [];
+  int? _selectedAccountId;
 
-  final _searchCtrl   = TextEditingController();
-  final _descCtrl     = TextEditingController();
+  final _searchCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
   @override
@@ -55,13 +56,13 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
       _allPartners = voucherProv.cachedCustomers;
       _filteredPartners = List.from(_allPartners);
     });
-    
+
     final api = Provider.of<ApiService>(context, listen: false);
     try {
       final resp = await api.getPartners(type: 'Customer');
       if (resp.statusCode == 200) {
         setState(() {
-          _allPartners      = List<Map<String, dynamic>>.from(resp.data);
+          _allPartners = List<Map<String, dynamic>>.from(resp.data);
           _filteredPartners = List.from(_allPartners);
         });
       }
@@ -108,14 +109,14 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
           _payAmountMap.clear();
           for (final inv in invoices) {
             final id = inv['InvID'] as int;
-            _selectedMap[id]  = false;
+            _selectedMap[id] = false;
             _payAmountMap[id] = (inv['Remainder'] as num).toDouble();
           }
         });
       }
     } catch (e) {
       // Offline mode: Allow free payment
-      _showError('أنت في وضع عدم الاتصال. لا يمكن جلب الفواتير. يرجى إدخال مبلغ السداد الحر.');
+      _showError(context.tr('rv_offline_error'));
       setState(() {
         _unpaidInvoices = [];
         _selectedMap.clear();
@@ -133,9 +134,10 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
       _filteredPartners = query.isEmpty
           ? List.from(_allPartners)
           : _allPartners.where((p) {
-              final name  = (p['PartnerName'] ?? '').toString().toLowerCase();
+              final name = (p['PartnerName'] ?? '').toString().toLowerCase();
               final phone = (p['Phone'] ?? '').toString();
-              return name.contains(query.toLowerCase()) || phone.contains(query);
+              return name.contains(query.toLowerCase()) ||
+                  phone.contains(query);
             }).toList();
     });
   }
@@ -143,7 +145,7 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
   void _selectPartner(Map<String, dynamic> partner) {
     setState(() {
       _selectedPartner = partner;
-      _unpaidInvoices  = [];
+      _unpaidInvoices = [];
       _selectedMap.clear();
       _payAmountMap.clear();
     });
@@ -169,31 +171,35 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
     return _selectedMap.entries
         .where((e) => e.value && (_payAmountMap[e.key] ?? 0) > 0)
         .map((e) {
-          final inv = _unpaidInvoices.firstWhere((x) => x['InvID'] == e.key);
-          return {
-            'InvID': e.key,
-            'Amount': _payAmountMap[e.key]!,
-            'InvDate': inv['InvDate']
-          };
-        })
-        .toList();
+      final inv = _unpaidInvoices.firstWhere((x) => x['InvID'] == e.key);
+      return {
+        'InvID': e.key,
+        'Amount': _payAmountMap[e.key]!,
+        'InvDate': inv['InvDate']
+      };
+    }).toList();
   }
 
   Future<void> _submitPayment() async {
-    if (_selectedPartner == null) return _showError('يرجى اختيار عميل أولاً');
-    
+    if (_selectedPartner == null)
+      return _showError(context.tr('rv_customer_required'));
+
     // Allow free payment if offline
-    final double freePaymentAmount = double.tryParse(_freePaymentCtrl.text) ?? 0.0;
+    final double freePaymentAmount =
+        double.tryParse(_freePaymentCtrl.text) ?? 0.0;
     if (_selectedAllocations.isEmpty && freePaymentAmount <= 0) {
-       return _showError('يرجى اختيار فاتورة واحدة على الأقل أو إدخال مبلغ سداد حر');
+      return _showError(context.tr('rv_invoice_or_free_required'));
     }
-    
-    if (_selectedAccountId == null) return _showError('يرجى اختيار حساب القبض');
+
+    if (_selectedAccountId == null)
+      return _showError(context.tr('rv_account_required'));
 
     final shift = Provider.of<ShiftProvider>(context, listen: false);
-    if (shift.shiftId == null) return _showError('لا توجد وردية مفتوحة');
+    if (shift.shiftId == null)
+      return _showError(context.tr('rv_no_shift_open'));
 
-    final double amountToPay = _selectedAllocations.isNotEmpty ? _totalSelected : freePaymentAmount;
+    final double amountToPay =
+        _selectedAllocations.isNotEmpty ? _totalSelected : freePaymentAmount;
 
     // تأكيد السداد
     final confirmed = await showDialog<bool>(
@@ -201,20 +207,28 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E2C),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('تأكيد سند القبض', style: TextStyle(color: Colors.white), textDirection: TextDirection.rtl),
+        title: Text(context.tr('rv_confirm_title'),
+            style: const TextStyle(color: Colors.white),
+            textDirection: TextDirection.rtl),
         content: Text(
-          'سيتم تسجيل سند قبض بقيمة\n${amountToPay.toStringAsFixed(3)} د.ك\nمن العميل: ${_selectedPartner!['PartnerName']}',
+          context
+              .tr('rv_confirm_desc')
+              .replaceAll('{amount}', amountToPay.toStringAsFixed(3))
+              .replaceAll('{partner}', _selectedPartner!['PartnerName'] ?? ''),
           style: const TextStyle(color: Colors.white70, fontSize: 15),
           textDirection: TextDirection.rtl,
           textAlign: TextAlign.center,
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء', style: TextStyle(color: Colors.red))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(context.tr('rv_cancel'),
+                  style: const TextStyle(color: Colors.red))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('تأكيد'),
+            child: Text(context.tr('rv_confirm')),
           ),
         ],
       ),
@@ -223,18 +237,20 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
     if (confirmed != true) return;
 
     final voucherProv = Provider.of<VoucherProvider>(context, listen: false);
-    final accountName = _accounts.firstWhere((a) => a['AccountID'] == _selectedAccountId, orElse: () => {'AccountName': ''})['AccountName'];
+    final accountName = _accounts.firstWhere(
+        (a) => a['AccountID'] == _selectedAccountId,
+        orElse: () => {'AccountName': ''})['AccountName'];
 
     try {
       final savedVoucher = await voucherProv.saveVoucher(
-        partnerId:   _selectedPartner!['PartnerID'],
+        partnerId: _selectedPartner!['PartnerID'],
         voucherType: 'Receipt',
         totalAmount: amountToPay,
-        accountId:   _selectedAccountId!,
-        shiftId:     shift.shiftId!,
+        accountId: _selectedAccountId!,
+        shiftId: shift.shiftId!,
         allocations: _selectedAllocations,
         description: _descCtrl.text.isEmpty
-            ? 'سند قبض - ${_selectedPartner!['PartnerName']}'
+            ? '${context.tr('rv_default_desc')}${_selectedPartner!['PartnerName']}'
             : _descCtrl.text,
         partnerName: _selectedPartner!['PartnerName'],
         accountName: accountName,
@@ -243,8 +259,13 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
       if (savedVoucher != null) {
         final printData = _selectedAllocationsForPrint;
         if (mounted) {
-          _showSuccess(voucherProv.successMessage ?? 'تم الحفظ');
-          await _showVoucherDialog(savedVoucher, printData);
+          final printer = Provider.of<PrinterService>(context, listen: false);
+          await printer.printVoucher(savedVoucher, printData);
+
+          _showSuccess(context
+              .tr('rv_save_print_success')
+              .replaceAll('{id}', savedVoucher['VoucherID'].toString()));
+
           // إعادة تحميل الفواتير
           if (voucherProv.errorMessage == null) {
             await _loadUnpaidInvoices(_selectedPartner!['PartnerID']);
@@ -255,79 +276,25 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
         _showError(voucherProv.errorMessage!);
       }
     } catch (e) {
-      _showError('خطأ غير متوقع: $e');
+      _showError('${context.tr('rv_save_error')}$e');
     }
   }
 
-  Future<void> _showVoucherDialog(Map<String, dynamic> voucher, List<Map<String, dynamic>> printData) async {
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2C),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.receipt_long, color: Colors.greenAccent, size: 28),
-            const SizedBox(width: 8),
-            const Text('سند القبض', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _voucherRow('رقم السند', '#${voucher['VoucherID']}'),
-            _voucherRow('العميل',    voucher['PartnerName'] ?? '-'),
-            _voucherRow('المبلغ',    '${(voucher['Amount'] ?? 0).toStringAsFixed(3)} د.ك'),
-            _voucherRow('الحساب',    voucher['AccountName'] ?? '-'),
-            _voucherRow('الكاشير',   voucher['UserName'] ?? '-'),
-            _voucherRow('ملاحظة',    voucher['Description'] ?? '-'),
-            const SizedBox(height: 8),
-            const Text('⏳ سيتم ترحيل السند عند إغلاق الوردية', style: TextStyle(color: Colors.orangeAccent, fontSize: 12), textAlign: TextAlign.center),
-          ],
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق', style: TextStyle(color: Colors.white70))),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.print),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            onPressed: () async { 
-              Navigator.pop(ctx); 
-              final printer = Provider.of<PrinterService>(context, listen: false);
-              await printer.printVoucher(voucher, printData);
-            },
-            label: const Text('طباعة حرارية'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _voucherRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 13)),
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, textDirection: TextDirection.rtl), backgroundColor: Colors.red));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg, textDirection: TextDirection.rtl),
+        backgroundColor: Colors.red));
   }
 
   void _showSuccess(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg, textDirection: TextDirection.rtl), backgroundColor: Colors.green));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg, textDirection: TextDirection.rtl),
+        backgroundColor: Colors.green));
   }
 
   // ─── Build ────────────────────────────────────────────────────────────────
   final _freePaymentCtrl = TextEditingController();
-  
+
   @override
   Widget build(BuildContext context) {
     final voucherProv = Provider.of<VoucherProvider>(context);
@@ -343,35 +310,48 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () => Navigator.pop(context),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.arrow_circle_down, color: Colors.greenAccent),
-              SizedBox(width: 8),
-              Text('سند قبض', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const Icon(Icons.arrow_circle_down, color: Colors.greenAccent),
+              const SizedBox(width: 8),
+              Text(context.tr('rv_screen_title'),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             ],
           ),
           bottom: _selectedPartner != null
               ? PreferredSize(
                   preferredSize: const Size.fromHeight(50),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.greenAccent.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.greenAccent.withOpacity(0.4)),
+                        border: Border.all(
+                            color: Colors.greenAccent.withOpacity(0.4)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.person, color: Colors.greenAccent, size: 18),
+                          const Icon(Icons.person,
+                              color: Colors.greenAccent, size: 18),
                           const SizedBox(width: 8),
-                          Text('العميل: ${_selectedPartner!['PartnerName']}',
-                              style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                          Text(
+                              '${context.tr('rv_customer_label')}${_selectedPartner!['PartnerName']}',
+                              style: const TextStyle(
+                                  color: Colors.greenAccent,
+                                  fontWeight: FontWeight.bold)),
                           const Spacer(),
                           GestureDetector(
-                            onTap: () => setState(() { _selectedPartner = null; _unpaidInvoices = []; }),
-                            child: const Icon(Icons.close, color: Colors.white54, size: 18),
+                            onTap: () => setState(() {
+                              _selectedPartner = null;
+                              _unpaidInvoices = [];
+                            }),
+                            child: const Icon(Icons.close,
+                                color: Colors.white54, size: 18),
                           ),
                         ],
                       ),
@@ -381,11 +361,14 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
               : null,
         ),
         body: voucherProv.isLoading
-            ? const Center(child: CircularProgressIndicator(color: Colors.greenAccent))
+            ? const Center(
+                child: CircularProgressIndicator(color: Colors.greenAccent))
             : _selectedPartner == null
                 ? _buildPartnerSelector()
                 : _buildInvoiceList(),
-        bottomNavigationBar: _selectedPartner != null && (_selectedAllocations.isNotEmpty || _freePaymentCtrl.text.isNotEmpty)
+        bottomNavigationBar: _selectedPartner != null &&
+                (_selectedAllocations.isNotEmpty ||
+                    _freePaymentCtrl.text.isNotEmpty)
             ? _buildBottomBar()
             : null,
       ),
@@ -401,19 +384,23 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
             controller: _searchCtrl,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'بحث عن عميل بالاسم أو الهاتف...',
+              hintText: context.tr('rv_search_hint'),
               hintStyle: const TextStyle(color: Colors.white38),
               prefixIcon: const Icon(Icons.search, color: Colors.greenAccent),
               filled: true,
               fillColor: const Color(0xFF1E1E2C),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
             ),
             onChanged: _filterPartners,
           ),
         ),
         Expanded(
           child: _filteredPartners.isEmpty
-              ? const Center(child: Text('لا يوجد عملاء', style: TextStyle(color: Colors.white38)))
+              ? Center(
+                  child: Text(context.tr('rv_no_customers'),
+                      style: const TextStyle(color: Colors.white38)))
               : ListView.builder(
                   itemCount: _filteredPartners.length,
                   itemBuilder: (ctx, i) {
@@ -421,11 +408,17 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                     return ListTile(
                       leading: const CircleAvatar(
                         backgroundColor: Color(0xFF2A2A3C),
-                        child: Icon(Icons.person_outline, color: Colors.greenAccent),
+                        child: Icon(Icons.person_outline,
+                            color: Colors.greenAccent),
                       ),
-                      title: Text(p['PartnerName'] ?? '-', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      subtitle: Text(p['Phone'] ?? '', style: const TextStyle(color: Colors.white38)),
-                      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 14),
+                      title: Text(p['PartnerName'] ?? '-',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
+                      subtitle: Text(p['Phone'] ?? '',
+                          style: const TextStyle(color: Colors.white38)),
+                      trailing: const Icon(Icons.arrow_forward_ios,
+                          color: Colors.white38, size: 14),
                       onTap: () => _selectPartner(p),
                     );
                   },
@@ -437,13 +430,15 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
 
   Widget _buildInvoiceList() {
     if (_unpaidInvoices.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 64),
-            SizedBox(height: 12),
-            Text('لا توجد فواتير مستحقة لهذا العميل', style: TextStyle(color: Colors.white54, fontSize: 16)),
+            const Icon(Icons.check_circle_outline,
+                color: Colors.greenAccent, size: 64),
+            const SizedBox(height: 12),
+            Text(context.tr('rv_no_dues'),
+                style: const TextStyle(color: Colors.white54, fontSize: 16)),
           ],
         ),
       );
@@ -461,16 +456,23 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                   value: _selectedAccountId,
                   dropdownColor: const Color(0xFF1E1E2C),
                   decoration: InputDecoration(
-                    labelText: 'حساب القبض',
+                    labelText: context.tr('rv_account_label'),
                     labelStyle: const TextStyle(color: Colors.white54),
-                    filled: true, fillColor: const Color(0xFF1E1E2C),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    filled: true,
+                    fillColor: const Color(0xFF1E1E2C),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none),
                   ),
                   style: const TextStyle(color: Colors.white),
-                  items: _accounts.map((a) => DropdownMenuItem<int>(
-                    value: a['AccountID'],
-                    child: Text(a['AccountName'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 13)),
-                  )).toList(),
+                  items: _accounts
+                      .map((a) => DropdownMenuItem<int>(
+                            value: a['AccountID'],
+                            child: Text(a['AccountName'] ?? '',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 13)),
+                          ))
+                      .toList(),
                   onChanged: (v) => setState(() => _selectedAccountId = v),
                 ),
               ),
@@ -483,24 +485,31 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
             controller: _descCtrl,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'ملاحظة (اختياري)...',
+              hintText: context.tr('rv_note_hint'),
               hintStyle: const TextStyle(color: Colors.white38),
-              filled: true, fillColor: const Color(0xFF1E1E2C),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              prefixIcon: const Icon(Icons.note_alt_outlined, color: Colors.white38),
+              filled: true,
+              fillColor: const Color(0xFF1E1E2C),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none),
+              prefixIcon:
+                  const Icon(Icons.note_alt_outlined, color: Colors.white38),
             ),
           ),
         ),
         const SizedBox(height: 8),
         if (_unpaidInvoices.isEmpty) ...[
-          const Center(
+          Center(
             child: Padding(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  Icon(Icons.wifi_off, color: Colors.orangeAccent, size: 48),
-                  SizedBox(height: 12),
-                  Text('لا يمكن جلب الفواتير (أو لا توجد فواتير).\nيمكنك إدخال سداد حر (دفعة من الحساب).', textAlign: TextAlign.center, style: TextStyle(color: Colors.orangeAccent)),
+                  const Icon(Icons.wifi_off,
+                      color: Colors.orangeAccent, size: 48),
+                  const SizedBox(height: 12),
+                  Text(context.tr('rv_no_invoices'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.orangeAccent)),
                 ],
               ),
             ),
@@ -509,15 +518,23 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: TextField(
               controller: _freePaymentCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 18),
-              onChanged: (v) => setState((){}),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                  color: Colors.greenAccent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18),
+              onChanged: (v) => setState(() {}),
               decoration: InputDecoration(
-                labelText: 'مبلغ الدفعة الحرة (سداد من الحساب)',
+                labelText: context.tr('rv_free_payment_label'),
                 labelStyle: const TextStyle(color: Colors.white54),
-                filled: true, fillColor: const Color(0xFF1E1E2C),
-                suffixText: 'د.ك', suffixStyle: const TextStyle(color: Colors.white54),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                filled: true,
+                fillColor: const Color(0xFF1E1E2C),
+                suffixText: 'د.ك',
+                suffixStyle: const TextStyle(color: Colors.white54),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none),
               ),
             ),
           )
@@ -535,10 +552,10 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
   }
 
   Widget _buildInvoiceCard(Map<String, dynamic> inv) {
-    final id        = inv['InvID'] as int;
+    final id = inv['InvID'] as int;
     final remainder = (inv['Remainder'] as num).toDouble();
-    final net       = (inv['NetAmount'] as num).toDouble();
-    final selected  = _selectedMap[id] ?? false;
+    final net = (inv['NetAmount'] as num).toDouble();
+    final selected = _selectedMap[id] ?? false;
     final payAmount = _payAmountMap[id] ?? remainder;
 
     return Container(
@@ -547,7 +564,8 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
         color: selected ? const Color(0xFF1A2E20) : const Color(0xFF1E1E2C),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: selected ? Colors.greenAccent.withOpacity(0.6) : Colors.white12,
+          color:
+              selected ? Colors.greenAccent.withOpacity(0.6) : Colors.white12,
           width: selected ? 1.5 : 1,
         ),
       ),
@@ -565,16 +583,21 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                     value: selected,
                     activeColor: Colors.greenAccent,
                     checkColor: Colors.black,
-                    onChanged: (v) => setState(() => _selectedMap[id] = v ?? false),
+                    onChanged: (v) =>
+                        setState(() => _selectedMap[id] = v ?? false),
                   ),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('فاتورة رقم #$id', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Text('${context.tr('rv_sales_invoice_label')}$id',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                         Text(
                           _formatDate(inv['InvDate']),
-                          style: const TextStyle(color: Colors.white38, fontSize: 12),
+                          style: const TextStyle(
+                              color: Colors.white38, fontSize: 12),
                         ),
                       ],
                     ),
@@ -582,9 +605,16 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('الإجمالي: ${net.toStringAsFixed(3)}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                      Text('المتبقي: ${remainder.toStringAsFixed(3)} د.ك',
-                          style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold)),
+                      Text(
+                          '${context.tr('rv_total_label')}${net.toStringAsFixed(3)}',
+                          style: const TextStyle(
+                              color: Colors.white54, fontSize: 12)),
+                      Text(
+                          context.tr('rv_remainder_label').replaceAll(
+                              '{amount}', remainder.toStringAsFixed(3)),
+                          style: const TextStyle(
+                              color: Colors.orangeAccent,
+                              fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ],
@@ -594,23 +624,34 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                   padding: const EdgeInsets.only(top: 8, right: 12, left: 12),
                   child: Row(
                     children: [
-                      const Text('مبلغ السداد: ', style: TextStyle(color: Colors.white70)),
+                      Text(context.tr('rv_receipt_amount_label'),
+                          style: const TextStyle(color: Colors.white70)),
                       Expanded(
                         child: TextFormField(
                           initialValue: payAmount.toStringAsFixed(3),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-                          style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
+                          ],
+                          style: const TextStyle(
+                              color: Colors.greenAccent,
+                              fontWeight: FontWeight.bold),
                           decoration: InputDecoration(
                             isDense: true,
                             suffixText: 'د.ك',
-                            suffixStyle: const TextStyle(color: Colors.white38, fontSize: 12),
-                            filled: true, fillColor: const Color(0xFF12121E),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                            suffixStyle: const TextStyle(
+                                color: Colors.white38, fontSize: 12),
+                            filled: true,
+                            fillColor: const Color(0xFF12121E),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide.none),
                           ),
                           onChanged: (v) {
                             final parsed = double.tryParse(v) ?? 0;
-                            setState(() => _payAmountMap[id] = parsed.clamp(0, remainder));
+                            setState(() =>
+                                _payAmountMap[id] = parsed.clamp(0, remainder));
                           },
                         ),
                       ),
@@ -625,12 +666,16 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
   }
 
   Widget _buildBottomBar() {
-    final double total = _selectedAllocations.isNotEmpty ? _totalSelected : (double.tryParse(_freePaymentCtrl.text) ?? 0.0);
+    final double total = _selectedAllocations.isNotEmpty
+        ? _totalSelected
+        : (double.tryParse(_freePaymentCtrl.text) ?? 0.0);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         color: Color(0xFF1E1E2C),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, -2))],
+        boxShadow: [
+          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, -2))
+        ],
       ),
       child: SafeArea(
         child: Row(
@@ -639,20 +684,31 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${_selectedAllocations.length} فاتورة محددة', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                Text('الإجمالي: ${total.toStringAsFixed(3)} د.ك',
-                    style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                    context.tr('rv_selected_invoices').replaceAll(
+                        '{count}', _selectedAllocations.length.toString()),
+                    style:
+                        const TextStyle(color: Colors.white54, fontSize: 12)),
+                Text(
+                    '${context.tr('rv_total_label')}${total.toStringAsFixed(3)} د.ك',
+                    style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16)),
               ],
             ),
             const Spacer(),
             ElevatedButton.icon(
               icon: const Icon(Icons.check_circle_outline),
-              label: const Text('تسجيل القبض', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: Text(context.tr('rv_submit_button'),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.greenAccent,
                 foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: _isLoading ? null : _submitPayment,
             ),

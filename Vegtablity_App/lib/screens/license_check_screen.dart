@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/license_provider.dart';
+import '../core/localization/app_localizations.dart';
 import 'auth_wrapper.dart';
 
 class LicenseCheckScreen extends StatefulWidget {
@@ -45,8 +46,8 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تعذر فتح تطبيق WhatsApp، يرجى مراسلة الرقم 55381505 يدوياً', textAlign: TextAlign.right),
+          SnackBar(
+            content: Text(context.tr('license_whatsapp_error'), textAlign: TextAlign.right),
             backgroundColor: Colors.orange,
           ),
         );
@@ -57,8 +58,8 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
   void _copyToClipboard(String hwid) {
     Clipboard.setData(ClipboardData(text: hwid));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('تم نسخ بصمة الجهاز إلى الحافظة بنجاح!', textAlign: TextAlign.right),
+      SnackBar(
+        content: Text(context.tr('license_copied'), textAlign: TextAlign.right),
         backgroundColor: Colors.green,
       ),
     );
@@ -92,38 +93,38 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                     if (licenseProvider.isChecking) ...[
                       const Icon(Icons.security, size: 80, color: Colors.green),
                       const SizedBox(height: 32),
-                      const Text(
-                        'حماية Vegtablity POS',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      Text(
+                        context.tr('license_title'),
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                       const SizedBox(height: 16),
                       const CircularProgressIndicator(color: Colors.green),
                       const SizedBox(height: 24),
-                      const Text(
-                        'جاري التحقق من ترخيص هذا الجهاز...',
+                      Text(
+                        context.tr('license_checking'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                        style: const TextStyle(color: Colors.white70, fontSize: 16),
                       ),
                     ] else if (!licenseProvider.isLicensed) ...[
                       if (licenseProvider.isExpired) ...[
                         const Icon(Icons.history_toggle_off, size: 80, color: Colors.orangeAccent),
                         const SizedBox(height: 24),
-                        const Text(
-                          'انتهت صلاحية الاشتراك!',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orangeAccent),
+                        Text(
+                          context.tr('license_expired_title'),
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orangeAccent),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'نأسف، لقد انتهت صلاحية اشتراك هذا الجهاز بتاريخ ${licenseProvider.expiryDate ?? "غير محدد"}.\nيرجى تجديد الاشتراك مع الدعم الفني للاستمرار في العمل.',
+                          '${context.tr('license_expired_desc')}${licenseProvider.expiryDate ?? "unknown"}${context.tr('license_expired_desc_2')}',
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
                         ),
                       ] else if (licenseProvider.errorMessage != null) ...[
                         const Icon(Icons.wifi_off, size: 80, color: Colors.amberAccent),
                         const SizedBox(height: 24),
-                        const Text(
-                          'خطأ في الاتصال!',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.amberAccent),
+                        Text(
+                          context.tr('license_error_title'),
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.amberAccent),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -134,28 +135,28 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                       ] else if (licenseProvider.expiryDate != null && !licenseProvider.isActive) ...[
                         const Icon(Icons.block, size: 80, color: Colors.redAccent),
                         const SizedBox(height: 24),
-                        const Text(
-                          'الترخيص غير نشط!',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                        Text(
+                          context.tr('license_inactive_title'),
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.redAccent),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'هذا الجهاز مسجل لدينا ولكن تم إيقاف الترخيص مؤقتاً.\nيرجى مراجعة الدعم الفني لتفعيل صلاحية الدخول.',
+                        Text(
+                          context.tr('license_inactive_desc'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+                          style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
                         ),
                       ] else ...[
                         const Icon(Icons.fingerprint, size: 80, color: Colors.redAccent),
                         const SizedBox(height: 24),
-                        const Text(
-                          'الجهاز غير مسجل!',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                        Text(
+                          context.tr('license_unregistered_title'),
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.redAccent),
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'رقم هوية هذا الجهاز غير مسجل في نظام التراخيص الخاص بنا.\nيرجى إرسال بصمة الجهاز للدعم الفني لتسجيله وتفعيله.',
+                        Text(
+                          context.tr('license_unregistered_desc'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
+                          style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.5),
                         ),
                       ],
                       const SizedBox(height: 32),
@@ -171,12 +172,12 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Row(
+                            Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                Text('بصمة الجهاز الخاصة بك', style: TextStyle(color: Colors.white54, fontSize: 13)),
-                                SizedBox(width: 6),
-                                Icon(Icons.fingerprint, color: Colors.white54, size: 16),
+                                Text(context.tr('license_hwid_label'), style: const TextStyle(color: Colors.white54, fontSize: 13)),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.fingerprint, color: Colors.white54, size: 16),
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -220,21 +221,21 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                         ),
                         child: Column(
                           children: [
-                            const Row(
+                            Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                Text('الدعم الفني والترخيص', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                                SizedBox(width: 8),
-                                Icon(Icons.contact_support, color: Colors.redAccent),
+                                Text(context.tr('license_support_title'), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.contact_support, color: Colors.redAccent),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            const Row(
+                            Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                Text('55381505', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
-                                SizedBox(width: 8),
-                                Text('هاتف:', style: TextStyle(color: Colors.white70)),
+                                const Text('55381505', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 8),
+                                Text(context.tr('license_phone_label'), style: const TextStyle(color: Colors.white70)),
                               ],
                             ),
                             const SizedBox(height: 16),
@@ -243,7 +244,7 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                               child: ElevatedButton.icon(
                                 onPressed: () => _sendToWhatsApp(licenseProvider.hwid ?? ''),
                                 icon: const Icon(Icons.chat, color: Colors.white),
-                                label: const Text('إرسال البصمة عبر WhatsApp', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                label: Text(context.tr('license_send_whatsapp'), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green[700],
                                   foregroundColor: Colors.white,
@@ -265,7 +266,7 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                                 // To make testing extremely convenient, clicking the outline button while holding or in mock mode bypasses it
                               },
                               icon: const Icon(Icons.info_outline),
-                              label: const Text('بيانات توضيحية'),
+                              label: Text(context.tr('license_info_button')),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white60,
                                 side: const BorderSide(color: Colors.white24),
@@ -278,7 +279,7 @@ class _LicenseCheckScreenState extends State<LicenseCheckScreen> {
                             child: ElevatedButton.icon(
                               onPressed: licenseProvider.checkDeviceLicense,
                               icon: const Icon(Icons.refresh),
-                              label: const Text('إعادة التحقق'),
+                              label: Text(context.tr('license_retry_button')),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.redAccent,
                                 foregroundColor: Colors.white,

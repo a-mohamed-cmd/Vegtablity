@@ -9,6 +9,9 @@ import 'providers/voucher_provider.dart';
 import 'providers/account_provider.dart';
 import 'providers/license_provider.dart';
 import 'screens/license_check_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'viewmodels/language_viewmodel.dart';
+import 'core/localization/app_localizations.dart';
 
 void main() {
   final apiService = ApiService();
@@ -37,6 +40,9 @@ void main() {
         ChangeNotifierProvider<AccountProvider>(
           create: (context) => AccountProvider(apiService),
         ),
+        ChangeNotifierProvider<LanguageViewModel>(
+          create: (context) => LanguageViewModel(),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -48,13 +54,28 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Vegtablity POS',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const LicenseCheckScreen(),
+    return Consumer<LanguageViewModel>(
+      builder: (context, languageViewModel, child) {
+        return MaterialApp(
+          title: 'Vegtablity POS',
+          locale: languageViewModel.appLocale,
+          supportedLocales: const [
+            Locale('ar'),
+            Locale('en'),
+          ],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+            useMaterial3: true,
+          ),
+          home: const LicenseCheckScreen(),
+        );
+      },
     );
   }
 }

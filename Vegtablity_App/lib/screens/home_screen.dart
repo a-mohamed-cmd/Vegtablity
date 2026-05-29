@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
+import '../viewmodels/language_viewmodel.dart';
+import '../core/localization/app_localizations.dart';
+import '../models/language_model.dart';
 import 'login_screen.dart';
 import 'pos_screen.dart';
 import 'printer_settings_screen.dart';
@@ -72,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('نظام الكاشير الذكي (POS)'),
+        title: Text(context.tr('home_title')),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -89,8 +92,8 @@ class _HomeScreenState extends State<HomeScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                const Text('حالة السيرفر: ',
-                    style: TextStyle(fontSize: 14, color: Colors.white)),
+                Text(context.tr('home_server_status'),
+                    style: const TextStyle(fontSize: 14, color: Colors.white)),
                 const SizedBox(width: 4),
                 Icon(
                   Icons.circle,
@@ -124,24 +127,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 24,
                           fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text('مرحباً: ${authProvider.username ?? ''}',
+                  Text('${context.tr('home_welcome')}${authProvider.username ?? ''}',
                       style:
                           const TextStyle(color: Colors.white70, fontSize: 16)),
                   const SizedBox(height: 8),
-                  const Text('Devlope by Mohamed Ragab',
-                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text(context.tr('home_developed_by'),
+                      style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ),
             ),
             ListTile(
               leading:
                   const Icon(Icons.settings_applications, color: Colors.teal),
-              title: const Text('الإعدادات العامة'),
+              title: Text(context.tr('settings')),
               onTap: _navigateToSettings,
             ),
             ListTile(
               leading: const Icon(Icons.print, color: Colors.teal),
-              title: const Text('إعدادات الطابعة الحرارية'),
+              title: Text(context.tr('home_printer_settings')),
               onTap: () {
                 Navigator.pop(context); // Close drawer
                 Navigator.push(
@@ -153,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.analytics_outlined, color: Colors.teal),
-              title: const Text('تقرير الفواتير اليومية'),
+              title: Text(context.tr('home_daily_invoices')),
               onTap: () {
                 Navigator.pop(context); // Close drawer
                 Navigator.push(
@@ -165,9 +168,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.lock_clock, color: Colors.redAccent),
-              title: const Text(
-                'إغلاق الوردية',
-                style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+              title: Text(
+                context.tr('home_close_shift'),
+                style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
               ),
               onTap: () {
                 Navigator.pop(context); // Close drawer
@@ -182,8 +185,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // ─── سندات القبض والصرف (مباشر) ────────────────────────
             ListTile(
               leading: const Icon(Icons.arrow_circle_down, color: Colors.greenAccent),
-              title: const Text('سند قبض', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('تحصيل إيرادات (مباشر)', style: TextStyle(fontSize: 11)),
+              title: Text(context.tr('home_receipt_voucher'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(context.tr('home_receipt_voucher_sub'), style: const TextStyle(fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const GeneralReceiptVoucherScreen()));
@@ -191,8 +194,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.arrow_circle_up, color: Colors.orangeAccent),
-              title: const Text('سند صرف', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('سداد مصروفات (مباشر)', style: TextStyle(fontSize: 11)),
+              title: Text(context.tr('home_payment_voucher'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(context.tr('home_payment_voucher_sub'), style: const TextStyle(fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const GeneralPaymentVoucherScreen()));
@@ -201,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.redAccent),
-              title: const Text('تسجيل الخروج'),
+              title: Text(context.tr('home_logout')),
               onTap: () async {
                 await Provider.of<AuthProvider>(context, listen: false)
                     .logout();
@@ -235,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'لديك $unsyncedCount فاتورة/فواتير محفوظة محلياً (Offline) بانتظار المزامنة.',
+                            '${context.tr('home_offline_invoices_1')}$unsyncedCount${context.tr('home_offline_invoices_2')}',
                             textAlign: TextAlign.right,
                             style: const TextStyle(
                                 fontSize: 15,
@@ -255,9 +258,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         content: Text(
                                           success
                                               ? (posProvider.successMessage ??
-                                                  'تمت المزامنة')
+                                                  context.tr('home_sync_success'))
                                               : (posProvider.errorMessage ??
-                                                  'فشلت المزامنة'),
+                                                  context.tr('home_sync_failed')),
                                           textAlign: TextAlign.right,
                                         ),
                                         backgroundColor:
@@ -273,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2, color: Colors.white))
                               : const Icon(Icons.sync),
-                          label: const Text('مزامنة الآن'),
+                          label: Text(context.tr('home_sync_now')),
                           style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.orange[800],
                               foregroundColor: Colors.white),
@@ -292,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'لديك $unsyncedVouchers سند/سندات محفوظة محلياً بانتظار المزامنة.',
+                            '${context.tr('home_offline_invoices_1')}$unsyncedVouchers${context.tr('home_offline_vouchers_2')}',
                             textAlign: TextAlign.right,
                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey),
                           ),
@@ -314,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: voucherProv.isLoading
                               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                               : const Icon(Icons.sync),
-                          label: const Text('مزامنة'),
+                          label: Text(context.tr('home_sync')),
                         ),
                       ],
                     ),
@@ -339,17 +342,17 @@ class _HomeScreenState extends State<HomeScreen> {
         runSpacing: 20,
         children: [
           _buildActionCard(
-              context, 'فاتورة مبيعات جديدة', Icons.point_of_sale, Colors.blue,
+              context, context.tr('home_classic_new_invoice'), Icons.point_of_sale, Colors.blue,
               () {
             Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (context) => const PosScreen(type: 'Sales')));
           }),
-          _buildActionCard(context, 'إدارة الموردين/العملاء', Icons.people,
+          _buildActionCard(context, context.tr('home_classic_manage_partners'), Icons.people,
               Colors.orange, () {}),
           _buildActionCard(
-              context, 'استدعاء عرض مبيعات', Icons.receipt_long, Colors.purple,
+              context, context.tr('home_classic_sales_quote'), Icons.receipt_long, Colors.purple,
               () {
             // Action for sales quotes
           }),
@@ -377,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: _buildGlowCard(
                       context,
-                      title: 'مبيعات العملاء',
+                      title: context.tr('home_premium_customer_sales'),
                       subtitle: '',
                       icon: Icons.point_of_sale_rounded,
                       color1: Colors.blue[700]!,
@@ -399,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: _buildGlowCard(
                       context,
-                      title: 'مشتريات الموردين',
+                      title: context.tr('home_premium_supplier_purchases'),
                       subtitle: '',
                       icon: Icons.shopping_basket_rounded,
                       color1: Colors.orange[700]!,
@@ -427,8 +430,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: _buildGlowCard(
                       context,
-                      title: 'تحصيل العملاء',
-                      subtitle: 'سندات قبض',
+                      title: context.tr('home_premium_customer_receipts'),
+                      subtitle: context.tr('home_premium_receipts_sub'),
                       icon: Icons.arrow_circle_down_rounded,
                       color1: Colors.green[700]!,
                       color2: Colors.lightGreen[500]!,
@@ -446,8 +449,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: _buildGlowCard(
                       context,
-                      title: 'دفع الموردين',
-                      subtitle: 'سندات صرف',
+                      title: context.tr('home_premium_supplier_payments'),
+                      subtitle: context.tr('home_premium_payments_sub'),
                       icon: Icons.arrow_circle_up_rounded,
                       color1: Colors.red[700]!,
                       color2: Colors.orangeAccent[400]!,

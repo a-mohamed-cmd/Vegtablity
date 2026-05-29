@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../core/localization/app_localizations.dart';
 import 'partner_billing_screen.dart';
 
 class PartnerOffersScreen extends StatefulWidget {
@@ -50,13 +51,13 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
         });
       } else {
         setState(() {
-          _errorMessage = 'فشل استرجاع بيانات الشركاء النشطين';
+          _errorMessage = context.tr('po_error_fetch_partners');
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'حدث خطأ في الاتصال بالشبكة: $e';
+        _errorMessage = '${context.tr('po_error_network')}$e';
         _isLoading = false;
       });
     }
@@ -84,17 +85,17 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
+      builder: (context) => Center(
         child: Card(
           child: Padding(
             padding: EdgeInsets.all(24.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: Colors.teal),
-                SizedBox(height: 16),
-                Text('جاري تحميل تفاصيل العرض والأسعار المعتمدة...',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const CircularProgressIndicator(color: Colors.teal),
+                const SizedBox(height: 16),
+                Text(context.tr('po_loading_quote'),
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
           ),
@@ -161,9 +162,8 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
       if (activeQuoteId == null || quoteDetails.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                  'لا يوجد عرض أسعار نشط أو معتمد لهذا الشريك حالياً!',
+            SnackBar(
+              content: Text(context.tr('po_no_active_quote'),
                   textAlign: TextAlign.right),
               backgroundColor: Colors.orange,
             ),
@@ -191,7 +191,7 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
         Navigator.pop(context); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('حدث خطأ أثناء تحميل العرض: $e',
+            content: Text('${context.tr('po_error_loading_quote')}$e',
                 textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
@@ -203,8 +203,8 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
   @override
   Widget build(BuildContext context) {
     final title = widget.type == 'Sales'
-        ? 'عملاء عروض المبيعات النشطة'
-        : 'موردي عروض المشتريات النشطة';
+        ? context.tr('po_sales_partners_title')
+        : context.tr('po_purchases_partners_title');
     final primaryColor =
         widget.type == 'Sales' ? Colors.blue[700]! : Colors.orange[800]!;
 
@@ -245,7 +245,7 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                 controller: _searchController,
                 onChanged: _filterPartners,
                 decoration: InputDecoration(
-                  hintText: 'ابحث باسم الشريك أو رقم الهاتف...',
+                  hintText: context.tr('po_search_hint'),
                   prefixIcon: Icon(Icons.search, color: primaryColor),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -299,7 +299,7 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                                 ElevatedButton.icon(
                                   onPressed: _fetchActivePartners,
                                   icon: const Icon(Icons.refresh),
-                                  label: const Text('إعادة المحاولة'),
+                                  label: Text(context.tr('po_retry')),
                                   style: ElevatedButton.styleFrom(
                                       backgroundColor: primaryColor,
                                       foregroundColor: Colors.white),
@@ -316,9 +316,9 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                                   Icon(Icons.people_outline_rounded,
                                       size: 70, color: Colors.grey[400]),
                                   const SizedBox(height: 16),
-                                  const Text(
-                                    'لا يوجد شركاء نشطين متطابقين للبحث حالياً.',
-                                    style: TextStyle(
+                                  Text(
+                                    context.tr('po_no_partners_found'),
+                                    style: const TextStyle(
                                         fontSize: 16, color: Colors.grey),
                                     textAlign: TextAlign.center,
                                   ),
@@ -332,10 +332,10 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                                 final partner = _filteredPartners[index];
                                 final String name =
                                     partner['PartnerName'] ?? '';
-                                final String phone =
-                                    partner['Phone'] ?? 'لا يوجد هاتف';
-                                final String address =
-                                    partner['Address'] ?? 'العنوان غير محدد';
+                                final String phone = partner['Phone'] ??
+                                    context.tr('po_no_phone');
+                                final String address = partner['Address'] ??
+                                    context.tr('po_no_address');
                                 final String initials = name.isNotEmpty
                                     ? name.substring(0, 1)
                                     : '?';

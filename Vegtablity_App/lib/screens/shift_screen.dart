@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/shift_provider.dart';
+import '../core/localization/app_localizations.dart';
 import 'home_screen.dart';
 
 class ShiftScreen extends StatefulWidget {
@@ -52,8 +53,8 @@ class _ShiftScreenState extends State<ShiftScreen> {
 
     if (startingCash == null || startingCash < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى إدخال مبلغ عهدة افتتاحية صحيح', textAlign: TextAlign.right),
+        SnackBar(
+          content: Text(context.tr('shift_open_error_empty'), textAlign: TextAlign.right),
           backgroundColor: Colors.red,
         ),
       );
@@ -72,7 +73,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(shiftProvider.errorMessage ?? 'فشل فتح الوردية', textAlign: TextAlign.right),
+            content: Text(shiftProvider.errorMessage ?? context.tr('shift_open_failed_fallback'), textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
         );
@@ -95,18 +96,18 @@ class _ShiftScreenState extends State<ShiftScreen> {
               colors: [Colors.grey[900]!, Colors.black],
             ),
           ),
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircularProgressIndicator(
+                const CircularProgressIndicator(
                   color: Colors.green,
                   strokeWidth: 3,
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 Text(
-                  'جاري التحقق من حالة الوردية...',
-                  style: TextStyle(
+                  context.tr('shift_checking_status'),
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -114,10 +115,10 @@ class _ShiftScreenState extends State<ShiftScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  'يرجى الانتظار لحين تحميل البيانات من السيرفر',
-                  style: TextStyle(
+                  context.tr('shift_wait_data'),
+                  style: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
                   ),
@@ -131,7 +132,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('فتح وردية جديدة'), centerTitle: true),
+      appBar: AppBar(title: Text(context.tr('shift_new_title')), centerTitle: true),
       body: Center(
         child: SingleChildScrollView(
           child: Container(
@@ -140,15 +141,15 @@ class _ShiftScreenState extends State<ShiftScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('تأكيد العهدة الافتتاحية للكاشير', style: TextStyle(fontSize: 20)),
+                Text(context.tr('shift_confirm_cash'), style: const TextStyle(fontSize: 20)),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _cashController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.right,
-                  decoration: const InputDecoration(
-                    labelText: 'الرقم (الكاش)', 
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('shift_cash_label'), 
+                    border: const OutlineInputBorder(),
                     prefixText: 'Kwd ',
                   ),
                 ),
@@ -161,7 +162,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                     child: isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('فتح الوردية وبدء العمل', style: TextStyle(fontSize: 18)),
+                        : Text(context.tr('shift_open_button'), style: const TextStyle(fontSize: 18)),
                   ),
                 ),
               ],

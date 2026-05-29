@@ -6,24 +6,27 @@ import '../providers/voucher_provider.dart';
 import '../services/api_service.dart';
 import '../providers/shift_provider.dart';
 import '../services/printer_service.dart';
+import '../core/localization/app_localizations.dart';
 
 class GeneralReceiptVoucherScreen extends StatefulWidget {
   const GeneralReceiptVoucherScreen({Key? key}) : super(key: key);
 
   @override
-  State<GeneralReceiptVoucherScreen> createState() => _GeneralReceiptVoucherScreenState();
+  State<GeneralReceiptVoucherScreen> createState() =>
+      _GeneralReceiptVoucherScreenState();
 }
 
-class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScreen> {
+class _GeneralReceiptVoucherScreenState
+    extends State<GeneralReceiptVoucherScreen> {
   bool _isLoading = false;
-  
+
   Map<String, dynamic>? _selectedTargetAccount;
-  
+
   List<Map<String, dynamic>> _cashAccounts = [];
   int? _selectedCashAccountId;
 
   final _amountCtrl = TextEditingController();
-  final _descCtrl   = TextEditingController();
+  final _descCtrl = TextEditingController();
   final _searchCtrl = TextEditingController();
 
   @override
@@ -31,7 +34,8 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
     super.initState();
     _loadCashAccounts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AccountProvider>(context, listen: false).fetchRevenueAccounts();
+      Provider.of<AccountProvider>(context, listen: false)
+          .fetchRevenueAccounts();
     });
   }
 
@@ -80,11 +84,14 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
           builder: (context, setModalState) {
             final accProv = Provider.of<AccountProvider>(context);
             final accounts = accProv.revenueAccounts;
-            
+
             final filteredAccounts = accounts.where((acc) {
               final query = _searchCtrl.text.toLowerCase();
-              return acc['AccountName'].toString().toLowerCase().contains(query) ||
-                     acc['AccountCode'].toString().toLowerCase().contains(query);
+              return acc['AccountName']
+                      .toString()
+                      .toLowerCase()
+                      .contains(query) ||
+                  acc['AccountCode'].toString().toLowerCase().contains(query);
             }).toList();
 
             return Padding(
@@ -98,18 +105,21 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
                 height: MediaQuery.of(ctx).size.height * 0.7,
                 child: Column(
                   children: [
-                    const Text(
-                      'اختر حساب الإيرادات',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Text(
+                      context.tr('grv_choose_revenue_account'),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
                     TextField(
                       controller: _searchCtrl,
                       decoration: InputDecoration(
-                        hintText: 'ابحث عن حساب...',
+                        hintText: context.tr('gpv_search_account_hint'),
                         prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 0, horizontal: 10),
                       ),
                       onChanged: (val) => setModalState(() {}),
                     ),
@@ -124,8 +134,14 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
                                 return Card(
                                   margin: const EdgeInsets.only(bottom: 8),
                                   child: ListTile(
-                                    title: Text(acc['AccountName'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800)),
-                                    subtitle: Text('كود: ${acc['AccountCode']}'),
+                                    title: Text(acc['AccountName'] ?? '',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue.shade800)),
+                                    subtitle: Text(context
+                                        .tr('gpv_account_code')
+                                        .replaceAll('{code}',
+                                            acc['AccountCode'].toString())),
                                     onTap: () {
                                       setState(() {
                                         _selectedTargetAccount = acc;
@@ -151,20 +167,24 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
   void _saveVoucher() async {
     final amountText = _amountCtrl.text.trim();
     if (_selectedTargetAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء اختيار الحساب المستهدف (الإيرادات)')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('grv_revenue_account_required'))));
       return;
     }
     if (amountText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء إدخال المبلغ')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('gpv_amount_required'))));
       return;
     }
     final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('المبلغ غير صحيح')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('gpv_invalid_amount'))));
       return;
     }
     if (_selectedCashAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الرجاء اختيار حساب الصندوق/البنك')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('gpv_cash_account_required'))));
       return;
     }
 
@@ -186,18 +206,26 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
 
       if (resp.statusCode == 200) {
         final voucher = resp.data;
-        
-        final targetAccountName = _selectedTargetAccount!['AccountName'] ?? 'غير محدد';
+
+        final targetAccountName = _selectedTargetAccount!['AccountName'] ??
+            context.tr('gpv_undefined');
         final cashAccountName = _cashAccounts.firstWhere(
-            (acc) => acc['AccountID'].toString() == _selectedCashAccountId.toString(), 
-            orElse: () => {'AccountName': 'نقدي'}
-        )['AccountName'];
+            (acc) =>
+                acc['AccountID'].toString() ==
+                _selectedCashAccountId.toString(),
+            orElse: () =>
+                {'AccountName': context.tr('gpv_cash')})['AccountName'];
 
         // طباعة السند مباشرة
-        await printerProv.printGeneralVoucher(voucher, targetAccountName, cashAccountName);
+        await printerProv.printGeneralVoucher(
+            voucher, targetAccountName, cashAccountName);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تم إنشاء وطباعة سند القبض بنجاح (رقم ${voucher['VoucherID'] ?? voucher['VoucherNo']})'), backgroundColor: Colors.green),
+          SnackBar(
+              content: Text(context.tr('grv_save_print_success').replaceAll(
+                  '{id}',
+                  (voucher['VoucherID'] ?? voucher['VoucherNo']).toString())),
+              backgroundColor: Colors.green),
         );
         setState(() {
           _selectedTargetAccount = null;
@@ -205,21 +233,24 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
           _descCtrl.clear();
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطأ: ${resp.data}'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${context.tr('gpv_save_error')}${resp.data}'),
+            backgroundColor: Colors.red));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر الحفظ: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${context.tr('gpv_cannot_save')}$e'),
+          backgroundColor: Colors.red));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('سند قبض مباشر (إيرادات)'),
+        title: Text(context.tr('grv_screen_title')),
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
       ),
@@ -234,7 +265,8 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
                     // Target Account Selection
                     Card(
                       elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       child: InkWell(
                         onTap: _showAccountSelectionPopup,
                         borderRadius: BorderRadius.circular(12),
@@ -242,26 +274,34 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
                             children: [
-                              Icon(Icons.account_balance_wallet, color: Colors.blue.shade700, size: 32),
+                              Icon(Icons.account_balance_wallet,
+                                  color: Colors.blue.shade700, size: 32),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('الحساب المستهدف (الإيراد)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                    Text(context.tr('grv_target_account_label'),
+                                        style: const TextStyle(
+                                            color: Colors.grey, fontSize: 12)),
                                     Text(
-                                      _selectedTargetAccount != null 
-                                          ? _selectedTargetAccount!['AccountName'] 
-                                          : 'اضغط لاختيار الحساب',
+                                      _selectedTargetAccount != null
+                                          ? _selectedTargetAccount![
+                                              'AccountName']
+                                          : context.tr('gpv_click_to_choose'),
                                       style: TextStyle(
                                         fontSize: 16,
-                                        fontWeight: _selectedTargetAccount != null ? FontWeight.bold : FontWeight.normal,
+                                        fontWeight:
+                                            _selectedTargetAccount != null
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                              const Icon(Icons.arrow_drop_down,
+                                  color: Colors.grey),
                             ],
                           ),
                         ),
@@ -272,19 +312,27 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
                     // Amount Input
                     Card(
                       elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: TextField(
                           controller: _amountCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'^\d*\.?\d*'))
+                          ],
+                          style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green),
                           textAlign: TextAlign.center,
-                          decoration: const InputDecoration(
-                            labelText: 'المبلغ (د.ك)',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.money),
+                          decoration: InputDecoration(
+                            labelText: context.tr('gpv_amount_label'),
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.money),
                           ),
                         ),
                       ),
@@ -294,27 +342,28 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
                     // Description and Cash Account
                     Card(
                       elevation: 4,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           children: [
                             TextField(
                               controller: _descCtrl,
-                              decoration: const InputDecoration(
-                                labelText: 'البيان / الملاحظات',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.notes),
+                              decoration: InputDecoration(
+                                labelText: context.tr('gpv_statement_label'),
+                                border: const OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.notes),
                               ),
                               maxLines: 2,
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<int>(
                               value: _selectedCashAccountId,
-                              decoration: const InputDecoration(
-                                labelText: 'استلام في حساب (الصندوق)',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.account_balance),
+                              decoration: InputDecoration(
+                                labelText: context.tr('grv_receive_to_account'),
+                                border: const OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.account_balance),
                               ),
                               items: _cashAccounts.map((acc) {
                                 return DropdownMenuItem<int>(
@@ -337,12 +386,15 @@ class _GeneralReceiptVoucherScreenState extends State<GeneralReceiptVoucherScree
                     // Save Button
                     ElevatedButton.icon(
                       icon: const Icon(Icons.save),
-                      label: const Text('حفظ السند المباشر', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      label: Text(context.tr('grv_save_button'),
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         backgroundColor: Colors.blue.shade700,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: _saveVoucher,
                     ),

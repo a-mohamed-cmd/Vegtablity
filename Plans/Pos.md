@@ -552,3 +552,76 @@
 
 ### د- معمارية الخادم (Backend Clean Code):
 * **كلاس الإجراءات المركزية (`StoredProcedures`):** تم إنشاء ملف `app/core/db_procedures.py` ليجمع كافة الإجراءات المخزنة كمتغيرات ثابتة (Constants) مصنفة ومنظمة لتفادي الأخطاء الإملائية وتنظيف شفرة الخدمات (`Services`) الخاصة بـ FastAPI.
+
+---
+
+## 14. نظام الترجمة المتعددة اللغات وإصلاحات التخطيط (مايو 2026 - المرحلة الرابعة عشرة)
+
+تم تطبيق نظام متكامل للتوطين والترجمة (i18n) على شاشات التطبيق المختلفة، مع إصلاح مشاكل تخطيط العرض الناجمة عن الـ Overflow.
+
+### أ- نظام التوطين (`AppLocalizations`):
+* **الهيكل المعتمد:** نظام ترجمة مركزي معتمد على مفاتيح نصية (String Keys) في `lib/core/localization/app_localizations.dart`، يدعم العربية والإنجليزية.
+* **آلية التطبيق:** استدعاء الترجمة عبر `context.tr('key')` في جميع واجهات العرض.
+* **قاعدة الترجمة:** النصوص القادمة من API لا تُترجم وتُحتفظ بها كما هي.
+* **حل مشكلة `const` widgets:** استبدال `const Text(...)` بـ `Text(context.tr(...))` لأن `context.tr()` لا يصلح `const expression`.
+
+### ب- ترجمة شاشة إغلاق الوردية (`close_shift_screen.dart`):
+* إضافة مجموعة مفاتيح `cs_*` بالعربية والإنجليزية تغطي عناوين الأقسام، رسائل التأكيد والخطأ، وأسماء الحقول المالية.
+* **إصلاح Overflow:** تطبيق `Expanded` على عناصر `Row` لتوزيع المساحة وحل `RenderFlex overflow`.
+
+### ج- ترجمة شاشة الفواتير اليومية (`daily_invoices_screen.dart`):
+* إضافة مجموعة مفاتيح `di_*` شاملة تغطي:
+  * تبويبات الشاشة والملخصات المالية.
+  * أعمدة جدول التفاصيل: `di_item_col`، `di_price_col`، `di_qty_col`، `di_total_col`.
+  * مفاتيح حوارات السداد الآجل: `di_payment_dialog_title`، `di_payment_remaining`، `di_confirm_payment`، ...
+  * أزرار الـ BottomSheet: `di_reprint`، `di_close_popup`، `di_register_payment`.
+
+---
+
+## 15. تنسيق الأرقام في المطبوعات (مايو 2026 - المرحلة الخامسة عشرة)
+
+تم تطبيق معيار موحد لتنسيق الأرقام في جميع المطبوعات دون الاستعانة بحزم خارجية.
+
+### أ- دالة تنسيق العملة `_formatCurrency` في `printer_service.dart`:
+* **الصيغة المعتمدة:** `0,000.00` — فاصل آلاف مع رقمين عشريين ثابتين.
+* **التقنية:** RegEx مخصص `(\d{1,3})(?=(\d{3})+(?!\d))` بدلاً من حزمة `intl` المرفوضة.
+* **التطبيق:** استبدال `.toStringAsFixed(2)` في كل المجاميع بـ `_formatCurrency()` عبر جميع دوال الطباعة.
+
+### ب- دالة تنسيق الكمية `_formatQuantity` في `printer_service.dart`:
+* الكمية الصحيحة (مثل `5.0`) تُطبع `5` بدون عشري.
+* الكمية العشرية (مثل `2.5`) تُطبع `2.5` بمنزلة عشرية واحدة.
+* يُضاف `UnitName` أمام الكمية في المطبوع (مثال: `كيلو 2.5`، `حبة 10`).
+* مطبقة على: `printReceipt`، `printDailyReport`، `printVoucher`، `printPaymentReceipt`.
+
+### ج- تحديث بيانات الطباعة في الشاشات:
+* **`pos_provider.dart`:** إضافة `UnitName` لكل عنصر في السلة من بيانات الـ API.
+* **`daily_invoices_screen.dart`:** تمرير `quantity` كـ `double` و`UnitName` عند إعادة الطباعة من تفاصيل الفاتورة.
+* **`partner_billing_screen.dart`:** تصحيح بيانات الطباعة ليمرر `quantity` كـ `double` و`UnitName` من `_cartItems`.
+
+---
+
+## 16. إعادة بناء نافذة تفاصيل الفاتورة (Bottom Sheet) (مايو 2026 - المرحلة السادسة عشرة)
+
+تم إعادة بناء `_InvoiceDetailsBottomSheet` بالكامل لإصلاح الـ Overflow وتحسين التجربة.
+
+### أ- إصلاح مشكلة الـ Overflow:
+* **المشكلة:** `Column` ذو `mainAxisSize: min` يتجاوز ارتفاع الـ BottomSheet عند كثرة الأصناف (`RenderFlex overflowed`).
+* **الحل:**
+  * تغليف المحتوى بـ `Flexible + SingleChildScrollView`.
+  * استبدال `ConstrainedBox + ListView.builder` بـ `spread operator` لعرض الأصناف مباشرةً داخل Column بلا scroll متداخل.
+  * تثبيت أزرار الإجراءات خارج منطقة التمرير لتبقى دائمة الظهور.
+
+### ب- تحسين جدول الأصناف:
+* جدول منسق بـ `Row + Expanded` بأربعة أعمدة: **الصنف** (flex:3) | **السعر** (flex:1) | **الكمية** (flex:1) | **الإجمالي** (flex:2).
+* عرض الكمية مع رمز الوحدة (`كيلو 2`، `حبة 10`) بنفس منطق `_formatQuantity`.
+* تلوين عمود الإجمالي بـ `Colors.tealAccent` للتمييز البصري.
+* إضافة عنوان ثابت للنافذة (`di_invoice_details`) فوق منطقة التمرير.
+
+### ج- الترجمة الكاملة للنافذة:
+* استبدال جميع النصوص الثابتة بمفاتيح `context.tr(...)` للعربية والإنجليزية.
+* استخدام `builder: (ctx)` في `showDialog` بدلاً من `(context)` لتفادي تعارض المتغير.
+
+### د- إصلاحات جودة الكود:
+* إضافة `mounted` check في `_reprintInvoice` لتفادي `use_build_context_synchronously`.
+* حذف دالة `_formatDateTime` الغير مستخدمة لإزالة تحذير `unused_element`.
+* تعطيل زر الطباعة (`onPressed: null`) عند غياب بيانات الفاتورة لمنع الـ null crash.

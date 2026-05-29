@@ -5949,6 +5949,8 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRANSACTION;
     BEGIN TRY
+	-- قيمه افتراضيه لو مفيش حساب للسداد
+	
         -- حفظ الرأس
         IF @InvID = 0
         BEGIN
@@ -6651,7 +6653,8 @@ BEGIN
         -- ① تحديث مبالغ الفاتورة دائماً بغض النظر عن IsPosted
         UPDATE [Sales].[InvoiceHeader]
         SET PaidAmount = PaidAmount + @PaymentAmount,
-            Remainder  = Remainder  - @PaymentAmount
+            Remainder  = Remainder  - @PaymentAmount,
+			PaymentAccountID =@PaymentAccountID
         WHERE InvID = @InvID;
 
         -- ② إضافة قيود محاسبية فقط إذا كانت الفاتورة مرحّلة

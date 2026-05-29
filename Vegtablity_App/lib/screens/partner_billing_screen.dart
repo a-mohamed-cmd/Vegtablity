@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
+import '../core/localization/app_localizations.dart';
 
 class PartnerBillingScreen extends StatefulWidget {
   final Map<String, dynamic> partner;
@@ -75,24 +76,30 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       _filteredAllowedItems = widget.allowedItems.where((item) {
         final name = (item['ProductName'] ?? '').toString().toLowerCase();
         final barcode = (item['Barcode'] ?? '').toString().toLowerCase();
-        return name.contains(lowercaseQuery) || barcode.contains(lowercaseQuery);
+        return name.contains(lowercaseQuery) ||
+            barcode.contains(lowercaseQuery);
       }).toList();
     });
   }
 
   void _addOrIncrementProduct(Map<String, dynamic> allowedItem) {
     final productId = allowedItem['ProductID'];
-    final price = (allowedItem['UnitPrice'] ?? allowedItem['QuotedPrice'] ?? 0.0).toDouble();
-    final name = allowedItem['ProductName'] ?? 'صنف غير معروف';
+    final price =
+        (allowedItem['UnitPrice'] ?? allowedItem['QuotedPrice'] ?? 0.0)
+            .toDouble();
+    final name = allowedItem['ProductName'] ?? context.tr('pb_unknown_item');
     final barcode = allowedItem['Barcode'] ?? '';
-    final unitName = allowedItem['UnitName'] ?? 'حبة';
+    final unitName = allowedItem['UnitName'] ?? context.tr('pb_item_piece');
 
-    final existingIndex = _cartItems.indexWhere((item) => item['ProductID'] == productId);
+    final existingIndex =
+        _cartItems.indexWhere((item) => item['ProductID'] == productId);
 
     setState(() {
       if (existingIndex != -1) {
         _cartItems[existingIndex]['quantity'] += 1.0;
-        _cartItems[existingIndex]['total'] = _cartItems[existingIndex]['quantity'] * _cartItems[existingIndex]['price'];
+        _cartItems[existingIndex]['total'] = _cartItems[existingIndex]
+                ['quantity'] *
+            _cartItems[existingIndex]['price'];
       } else {
         _cartItems.add({
           'ProductID': productId,
@@ -110,19 +117,39 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
   }
 
   void _decrementOrRemoveProduct(int productId) {
-    final existingIndex = _cartItems.indexWhere((item) => item['ProductID'] == productId);
+    final existingIndex =
+        _cartItems.indexWhere((item) => item['ProductID'] == productId);
     if (existingIndex == -1) return;
 
     setState(() {
       if (_cartItems[existingIndex]['quantity'] > 1.0) {
         _cartItems[existingIndex]['quantity'] -= 1.0;
-        _cartItems[existingIndex]['total'] = _cartItems[existingIndex]['quantity'] * _cartItems[existingIndex]['price'];
+        _cartItems[existingIndex]['total'] = _cartItems[existingIndex]
+                ['quantity'] *
+            _cartItems[existingIndex]['price'];
       } else {
         _cartItems.removeAt(existingIndex);
       }
     });
 
     HapticFeedback.lightImpact();
+  }
+
+  void _updateCartQuantity(int productId, num newQty) {
+    final existingIndex =
+        _cartItems.indexWhere((item) => item['ProductID'] == productId);
+    if (existingIndex == -1) return;
+
+    setState(() {
+      if (newQty > 0) {
+        _cartItems[existingIndex]['quantity'] = newQty.toDouble();
+        _cartItems[existingIndex]['total'] = _cartItems[existingIndex]
+                ['quantity'] *
+            _cartItems[existingIndex]['price'];
+      } else {
+        _cartItems.removeAt(existingIndex);
+      }
+    });
   }
 
   void _handleBarcodeScanned(String barcode) {
@@ -139,7 +166,9 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       _addOrIncrementProduct(allowedItem);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('تم إضافة: ${allowedItem['ProductName']}', textAlign: TextAlign.right),
+          content: Text(
+              '${context.tr('pb_item_added')}${allowedItem['ProductName']}',
+              textAlign: TextAlign.right),
           backgroundColor: Colors.green,
           duration: const Duration(seconds: 1),
         ),
@@ -154,23 +183,28 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-            SizedBox(width: 8),
-            Text('تنبيه - صنف غير معتمد', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Icon(Icons.warning_amber_rounded,
+                color: Colors.red, size: 28),
+            const SizedBox(width: 8),
+            Text(context.tr('pb_alert_unapproved'),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Text(
-          'الباركود ($barcode) غير مدرج في عرض الأسعار النشط والعتمد لهذا الشريك!\n\nيُمنع إضافة منتجات من خارج العرض.',
+          context
+              .tr('pb_alert_unapproved_desc')
+              .replaceAll('{barcode}', barcode),
           textAlign: TextAlign.right,
           style: const TextStyle(fontSize: 15),
         ),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            child: const Text('موافق'),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: Text(context.tr('pb_ok')),
           )
         ],
       ),
@@ -190,7 +224,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               child: Column(
                 children: [
                   AppBar(
-                    title: const Text('مسح الباركود بالكاميرا', style: TextStyle(color: Colors.white)),
+                    title: Text(context.tr('pb_scan_camera_title'),
+                        style: const TextStyle(color: Colors.white)),
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                     leading: IconButton(
@@ -230,9 +265,11 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           ),
                         ),
                         // Animated scanner line
-                        const Positioned(
+                        Positioned(
                           top: 150,
-                          child: Text('وجه الكاميرا نحو باركود الصنف', style: TextStyle(color: Colors.white, fontSize: 16)),
+                          child: Text(context.tr('pb_scan_camera_hint'),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 16)),
                         )
                       ],
                     ),
@@ -251,8 +288,9 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
   Future<void> _submitInvoice(bool isCash) async {
     if (_cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('السلة فارغة! يرجى إضافة منتجات أولاً', textAlign: TextAlign.right),
+        SnackBar(
+          content: Text(context.tr('pb_cart_empty_error'),
+              textAlign: TextAlign.right),
           backgroundColor: Colors.red,
         ),
       );
@@ -276,7 +314,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         'UnitPrice': item['price'],
         'Quantity': item['quantity'],
         'TotalPrice': item['total'],
-        'CostPrice': item['price'], // Default cost price to sale price if unknown
+        'CostPrice':
+            item['price'], // Default cost price to sale price if unknown
       };
     }).toList();
 
@@ -291,7 +330,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'NetAmount': net,
       'PaidAmount': paid,
       'Remainder': remainder,
-      'Notes': 'فاتورة عروض شركاء - عرض رقم ${widget.quoteId}',
+      'Notes': '${context.tr('pb_offer_notes')}${widget.quoteId}',
       'IsPosted': false,
       'Details': details,
     };
@@ -304,58 +343,51 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         final int newInvId = response.data['InvID'] ?? 0;
 
         // Auto print receipt using PrinterService
-        final printerService = Provider.of<PrinterService>(context, listen: false);
-        
+        final printerService =
+            Provider.of<PrinterService>(context, listen: false);
+
         final printInvoiceData = {
           'InvID': newInvId,
           'PartnerName': widget.partner['PartnerName'],
           'type': widget.type == 'Sales' ? 'Sales' : 'Purchase',
           'created_at': DateTime.now().toIso8601String(),
           'total_amount': net,
-          'items': _cartItems.map((c) => {
-            'name': c['name'],
-            'price': c['price'],
-            'quantity': c['quantity'].toInt(),
-            'total': c['total'],
-          }).toList(),
+          'paid_amount':  paid,
+          'remainder':    remainder,
+          'items': _cartItems
+              .map((c) => {
+                    'name': c['name'],
+                    'price': c['price'],
+                    'quantity': (c['quantity'] as num).toDouble(),
+                    'total': c['total'],
+                    'UnitName': c['unitName'] ?? '',
+                  })
+              .toList(),
         };
-        
+
         await printerService.printReceipt(printInvoiceData);
 
         if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              title: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 28),
-                  SizedBox(width: 8),
-                  Text('تم الحفظ والطباعة', style: TextStyle(fontWeight: FontWeight.bold)),
-                ],
-              ),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
               content: Text(
-                'تم تسجيل الفاتورة رقم ($newInvId) بنجاح وإرسال أمر الطباعة للمكينة.\n\nطريقة الدفع: ${isCash ? "نقدي (كاش)" : "آجل (ذمم)"}',
+                context
+                    .tr('pb_save_success')
+                    .replaceAll('{id}', newInvId.toString()),
                 textAlign: TextAlign.right,
               ),
-              actions: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Return to offers screen
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                  child: const Text('موافق'),
-                )
-              ],
+              backgroundColor: Colors.green,
             ),
           );
+          Navigator.pop(context); // Return to offers screen
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('فشل حفظ الفاتورة على السيرفر: ${response.data}', textAlign: TextAlign.right),
+              content: Text(
+                  '${context.tr('pb_save_server_fail')}${response.data}',
+                  textAlign: TextAlign.right),
               backgroundColor: Colors.red,
             ),
           );
@@ -365,7 +397,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ في الاتصال بالشبكة: $e', textAlign: TextAlign.right),
+            content: Text('${context.tr('pb_network_error')}$e',
+                textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
         );
@@ -382,7 +415,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isTablet = MediaQuery.of(context).size.width > 700;
-    final primaryColor = widget.type == 'Sales' ? Colors.blue[700]! : Colors.orange[800]!;
+    final primaryColor =
+        widget.type == 'Sales' ? Colors.blue[700]! : Colors.orange[800]!;
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -399,12 +433,15 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           title: Column(
             children: [
               Text(
-                widget.type == 'Sales' ? 'فاتورة مبيعات عروض' : 'فاتورة مشتريات عروض',
+                widget.type == 'Sales'
+                    ? context.tr('pb_sales_offer_invoice')
+                    : context.tr('pb_purchase_offer_invoice'),
                 style: const TextStyle(fontSize: 16),
               ),
               Text(
-                'الشريك: ${widget.partner['PartnerName']}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                '${context.tr('pb_partner_name')}${widget.partner['PartnerName']}',
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.normal),
               )
             ],
           ),
@@ -423,7 +460,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.qr_code_scanner, size: 28),
-              tooltip: 'مسح باركود بالكاميرا',
+              tooltip: context.tr('pb_scan_tooltip'),
               onPressed: _openCameraScanner,
             )
           ],
@@ -431,7 +468,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         body: Directionality(
           textDirection: TextDirection.rtl,
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: Colors.teal))
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.teal))
               : isTablet
                   ? Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -454,13 +492,22 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                         _buildSearchBar(primaryColor),
                         // Small stats
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           color: Colors.grey[100],
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('الأصناف في السلة: ${_cartItems.length}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text('الإجمالي: ${_subtotal.toStringAsFixed(2)} د.ك', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                              Text(
+                                  '${context.tr('pb_items_in_cart')}${_cartItems.length}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              Text(
+                                  context.tr('pb_total_kd').replaceAll(
+                                      '{total}', _subtotal.toStringAsFixed(2)),
+                                  style: const TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -489,10 +536,11 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               controller: _searchController,
               onChanged: _filterAllowedItems,
               decoration: InputDecoration(
-                hintText: 'ابحث باسم المنتج أو الباركود...',
+                hintText: context.tr('pb_search_hint'),
                 prefixIcon: Icon(Icons.search, color: primaryColor),
                 border: const OutlineInputBorder(),
-                contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               ),
             ),
           ),
@@ -502,10 +550,11 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             width: 160,
             child: TextField(
               controller: _barcodeInputController,
-              decoration: const InputDecoration(
-                hintText: 'أدخل الباركود...',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: InputDecoration(
+                hintText: context.tr('pb_barcode_hint'),
+                border: const OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 8, horizontal: 12),
               ),
               onSubmitted: (val) {
                 _handleBarcodeScanned(val);
@@ -527,9 +576,10 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         children: [
           _buildSearchBar(primaryColor),
           const SizedBox(height: 8),
-          const Text(
-            'الأصناف والأسعار المعتمدة داخل عرض الشريك:',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+          Text(
+            context.tr('pb_approved_items_title'),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.grey),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -543,14 +593,17 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               itemCount: _filteredAllowedItems.length,
               itemBuilder: (context, index) {
                 final item = _filteredAllowedItems[index];
-                final price = (item['UnitPrice'] ?? item['QuotedPrice'] ?? 0.0).toDouble();
+                final price = (item['UnitPrice'] ?? item['QuotedPrice'] ?? 0.0)
+                    .toDouble();
                 final name = item['ProductName'] ?? 'صنف غير معروف';
-                final barcode = item['Barcode'] ?? 'بلا باركود';
-                final unitName = item['UnitName'] ?? 'حبة';
+                final barcode = item['Barcode'] ?? context.tr('pb_no_barcode');
+                final unitName =
+                    item['UnitName'] ?? context.tr('pb_item_piece');
 
                 return Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: InkWell(
                     onTap: () => _addOrIncrementProduct(item),
                     borderRadius: BorderRadius.circular(12),
@@ -559,11 +612,13 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shopping_bag_outlined, color: primaryColor, size: 28),
+                          Icon(Icons.shopping_bag_outlined,
+                              color: primaryColor, size: 28),
                           const SizedBox(height: 6),
                           Text(
                             name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 13),
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -571,12 +626,16 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           const SizedBox(height: 4),
                           Text(
                             '${price.toStringAsFixed(3)} د.ك / $unitName',
-                            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                            style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             barcode,
-                            style: const TextStyle(color: Colors.grey, fontSize: 10),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 10),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           )
@@ -603,41 +662,58 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             color: primaryColor.withOpacity(0.05),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.shopping_cart, color: Colors.teal),
-                SizedBox(width: 8),
-                Text('سلة المشتريات / الفاتورة الحالية', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Icon(Icons.shopping_cart, color: Colors.teal),
+                const SizedBox(width: 8),
+                Text(context.tr('pb_cart_title'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
               ],
             ),
           ),
           Expanded(
             child: _cartItems.isEmpty
-                ? const Center(
-                    child: Text('السلة فارغة\nانقر على الأصناف لإضافتها', style: TextStyle(color: Colors.grey), textAlign: TextAlign.center),
+                ? Center(
+                    child: Text(context.tr('pb_cart_empty'),
+                        style: const TextStyle(color: Colors.grey),
+                        textAlign: TextAlign.center),
                   )
                 : ListView.builder(
                     itemCount: _cartItems.length,
                     itemBuilder: (context, index) {
                       final item = _cartItems[index];
                       return ListTile(
-                        title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${item['price'].toStringAsFixed(3)} د.ك  x  ${item['quantity']} ${item['unitName']}'),
+                        title: Text(item['name'],
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                                '${context.tr('pb_item_price')}${item['price'].toStringAsFixed(3)}${context.tr('pb_item_quantity')}'),
+                            _QuantityEditor(
+                              initialQuantity: item['quantity'],
+                              onChanged: (newQty) => _updateCartQuantity(
+                                  item['ProductID'], newQty),
+                            ),
+                          ],
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               '${item['total'].toStringAsFixed(2)} د.ك',
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 15),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                  fontSize: 15),
                             ),
                             const SizedBox(width: 12),
                             IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                              onPressed: () => _decrementOrRemoveProduct(item['ProductID']),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_outline, color: Colors.green),
-                              onPressed: () => _addOrIncrementProduct(item),
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () =>
+                                  _updateCartQuantity(item['ProductID'], 0),
                             ),
                           ],
                         ),
@@ -661,21 +737,26 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('الإجمالي الفرعي:', style: TextStyle(fontSize: 15)),
-              Text('${_subtotal.toStringAsFixed(2)} د.ك', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              Text(context.tr('pb_subtotal'),
+                  style: const TextStyle(fontSize: 15)),
+              Text('${_subtotal.toStringAsFixed(2)} د.ك',
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('قيمة الخصم:', style: TextStyle(fontSize: 15)),
+              Text(context.tr('pb_discount_value'),
+                  style: const TextStyle(fontSize: 15)),
               Container(
                 width: 100,
                 height: 35,
                 child: TextField(
                   controller: _discountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(
                     contentPadding: EdgeInsets.zero,
@@ -694,8 +775,14 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('الصافي النهائي:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('${_netAmount.toStringAsFixed(2)} د.ك', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor)),
+              Text(context.tr('pb_net_amount'),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('${_netAmount.toStringAsFixed(2)} د.ك',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: primaryColor)),
             ],
           ),
           const SizedBox(height: 16),
@@ -704,11 +791,14 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _cartItems.isEmpty ? null : () => _submitInvoice(true),
+                  onPressed:
+                      _cartItems.isEmpty ? null : () => _submitInvoice(true),
                   icon: const Icon(Icons.payment),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12.0),
-                    child: Text('حفظ كاش (F12)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Text(context.tr('pb_pay_cash'),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold)),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
@@ -719,11 +809,14 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _cartItems.isEmpty ? null : () => _submitInvoice(false),
+                  onPressed:
+                      _cartItems.isEmpty ? null : () => _submitInvoice(false),
                   icon: const Icon(Icons.timer_outlined),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12.0),
-                    child: Text('حفظ آجل (Credit)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Text(context.tr('pb_pay_credit'),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.bold)),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange[800],
@@ -742,43 +835,57 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   Widget _buildMobileCatalogList() {
     return _filteredAllowedItems.isEmpty
-        ? const Center(child: Text('لا توجد نتائج مطابقة للبحث'))
+        ? Center(child: Text(context.tr('pb_no_results')))
         : ListView.builder(
             itemCount: _filteredAllowedItems.length,
             itemBuilder: (context, index) {
               final item = _filteredAllowedItems[index];
-              final price = (item['UnitPrice'] ?? item['QuotedPrice'] ?? 0.0).toDouble();
+              final price =
+                  (item['UnitPrice'] ?? item['QuotedPrice'] ?? 0.0).toDouble();
               final name = item['ProductName'] ?? '';
               final barcode = item['Barcode'] ?? '';
               final unitName = item['UnitName'] ?? '';
 
-              final cartIndex = _cartItems.indexWhere((c) => c['ProductID'] == item['ProductID']);
-              final cartQty = cartIndex != -1 ? _cartItems[cartIndex]['quantity'] : 0.0;
+              final cartIndex = _cartItems
+                  .indexWhere((c) => c['ProductID'] == item['ProductID']);
+              final cartQty =
+                  cartIndex != -1 ? _cartItems[cartIndex]['quantity'] : 0.0;
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: ListTile(
-                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('$barcode | السعر: ${price.toStringAsFixed(3)} د.ك / $unitName'),
+                  title: Text(name,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(
+                      '$barcode | السعر: ${price.toStringAsFixed(3)} د.ك / $unitName'),
                   trailing: cartQty > 0
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                              onPressed: () => _decrementOrRemoveProduct(item['ProductID']),
+                              icon: const Icon(Icons.remove_circle,
+                                  color: Colors.red),
+                              onPressed: () =>
+                                  _decrementOrRemoveProduct(item['ProductID']),
                             ),
-                            Text(cartQty.toInt().toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            _QuantityEditor(
+                              initialQuantity: cartQty,
+                              onChanged: (newQty) => _updateCartQuantity(
+                                  item['ProductID'], newQty),
+                            ),
                             IconButton(
-                              icon: const Icon(Icons.add_circle, color: Colors.green),
+                              icon: const Icon(Icons.add_circle,
+                                  color: Colors.green),
                               onPressed: () => _addOrIncrementProduct(item),
                             ),
                           ],
                         )
                       : ElevatedButton(
                           onPressed: () => _addOrIncrementProduct(item),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                          child: const Text('إضافة', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.teal),
+                          child: Text(context.tr('pb_add_btn'),
+                              style: const TextStyle(color: Colors.white)),
                         ),
                 ),
               );
@@ -806,10 +913,14 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('الإجمالي: ${_netAmount.toStringAsFixed(2)} د.ك', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text('الإجمالي: ${_netAmount.toStringAsFixed(2)} د.ك',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               TextButton.icon(
                 icon: const Icon(Icons.shopping_cart),
-                label: Text('عرض السلة (${_cartItems.length})'),
+                label: Text(context
+                    .tr('pb_view_cart')
+                    .replaceAll('{count}', _cartItems.length.toString())),
                 onPressed: _showCartDetailsBottomSheet,
               )
             ],
@@ -819,17 +930,25 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _cartItems.isEmpty ? null : () => _submitInvoice(true),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
-                  child: const Text('دفع نقدي (كاش)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed:
+                      _cartItems.isEmpty ? null : () => _submitInvoice(true),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white),
+                  child: Text(context.tr('pb_pay_cash'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _cartItems.isEmpty ? null : () => _submitInvoice(false),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[800], foregroundColor: Colors.white),
-                  child: const Text('دفع آجل (Credit)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  onPressed:
+                      _cartItems.isEmpty ? null : () => _submitInvoice(false),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[800],
+                      foregroundColor: Colors.white),
+                  child: Text(context.tr('pb_pay_credit'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -842,7 +961,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
   void _showCartDetailsBottomSheet() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
@@ -853,35 +973,54 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('محتويات السلة الحالية:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(context.tr('pb_current_cart'),
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     Expanded(
                       child: _cartItems.isEmpty
-                          ? const Center(child: Text('السلة فارغة'))
+                          ? Center(
+                              child: Text(context.tr('pb_empty_cart_short')))
                           : ListView.builder(
                               itemCount: _cartItems.length,
                               itemBuilder: (context, index) {
                                 final item = _cartItems[index];
                                 return Card(
                                   child: ListTile(
-                                    title: Text(item['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    subtitle: Text('${item['price'].toStringAsFixed(3)} د.ك  x  ${item['quantity']}'),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                    title: Text(item['name'],
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    subtitle: Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
                                       children: [
-                                        Text('${item['total'].toStringAsFixed(2)} د.ك', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                                        IconButton(
-                                          icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
-                                          onPressed: () {
-                                            _decrementOrRemoveProduct(item['ProductID']);
+                                        Text(
+                                            '${context.tr('pb_item_price')}${item['price'].toStringAsFixed(3)}${context.tr('pb_item_quantity')}'),
+                                        _QuantityEditor(
+                                          initialQuantity: item['quantity'],
+                                          onChanged: (newQty) {
+                                            _updateCartQuantity(
+                                                item['ProductID'], newQty);
                                             setSheetState(() {});
                                             setState(() {});
                                           },
                                         ),
+                                      ],
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                            '${item['total'].toStringAsFixed(2)} د.ك',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green)),
                                         IconButton(
-                                          icon: const Icon(Icons.add_circle_outline, color: Colors.green),
+                                          icon: const Icon(Icons.delete,
+                                              color: Colors.red),
                                           onPressed: () {
-                                            _addOrIncrementProduct(item);
+                                            _updateCartQuantity(
+                                                item['ProductID'], 0);
                                             setSheetState(() {});
                                             setState(() {});
                                           },
@@ -897,13 +1036,15 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('قيمة الخصم:', style: TextStyle(fontSize: 16)),
+                        Text(context.tr('pb_discount_value'),
+                            style: const TextStyle(fontSize: 16)),
                         Container(
                           width: 100,
                           height: 35,
                           child: TextField(
                             controller: _discountController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
                             textAlign: TextAlign.center,
                             decoration: const InputDecoration(
                               contentPadding: EdgeInsets.zero,
@@ -919,8 +1060,13 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'الإجمالي النهائي الصافي: ${_netAmount.toStringAsFixed(2)} د.ك',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+                      context
+                          .tr('pb_final_net')
+                          .replaceAll('{total}', _netAmount.toStringAsFixed(2)),
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal),
                     ),
                     const SizedBox(height: 8),
                   ],
@@ -930,6 +1076,69 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           },
         );
       },
+    );
+  }
+}
+
+class _QuantityEditor extends StatefulWidget {
+  final num initialQuantity;
+  final Function(num) onChanged;
+
+  const _QuantityEditor(
+      {required this.initialQuantity, required this.onChanged});
+
+  @override
+  _QuantityEditorState createState() => _QuantityEditorState();
+}
+
+class _QuantityEditorState extends State<_QuantityEditor> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        TextEditingController(text: widget.initialQuantity.toString());
+  }
+
+  @override
+  void didUpdateWidget(covariant _QuantityEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialQuantity != widget.initialQuantity) {
+      if (num.tryParse(_controller.text) != widget.initialQuantity) {
+        _controller.text = widget.initialQuantity.toString();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 60,
+      height: 35,
+      child: TextField(
+        controller: _controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textAlign: TextAlign.center,
+        decoration: const InputDecoration(
+          contentPadding: EdgeInsets.zero,
+          border: OutlineInputBorder(),
+        ),
+        onSubmitted: (val) {
+          final numVal = num.tryParse(val);
+          if (numVal != null) {
+            widget.onChanged(numVal);
+          } else {
+            _controller.text = widget.initialQuantity.toString();
+          }
+        },
+      ),
     );
   }
 }
