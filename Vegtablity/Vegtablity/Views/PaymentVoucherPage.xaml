@@ -101,7 +101,7 @@
                         <DataGridTextColumn Header="التاريخ" Binding="{Binding VoucherDate, StringFormat=\{0:yyyy/MM/dd\}}" Width="100"/>
                         <DataGridTextColumn Header="المستلم" Binding="{Binding PartnerName}" Width="130"/>
                         <DataGridTextColumn Header="الحساب" Binding="{Binding AccountName}" Width="130"/>
-                        <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N2}" Width="100"/>
+                        <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N3}" Width="100"/>
                         <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethod}" Width="80"/>
                         <DataGridCheckBoxColumn Header="مرحّل" Binding="{Binding IsPosted}" Width="55"/>
                         <DataGridTextColumn Header="الوصف" Binding="{Binding Description}" Width="*"/>
@@ -174,7 +174,7 @@
                             ConfirmedAndMoveNext="AccountDropdown_MoveNext"/>
 
                         <TextBlock Text="المبلغ *" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=LostFocus}" PreviewTextInput="Amount_PreviewTextInput" InputMethod.IsInputMethodEnabled="False" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                        <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}" PreviewTextInput="Amount_PreviewTextInput" InputMethod.IsInputMethodEnabled="False" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
                         <TextBlock Text="{Binding PaymentAmountError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
                                    Visibility="{Binding PaymentAmountError, Converter={StaticResource StringToVisConverter}}"/>
 

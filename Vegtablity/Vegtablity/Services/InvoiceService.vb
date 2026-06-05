@@ -86,10 +86,10 @@ Namespace Services
                 If d.ProductID > 0 Then
                     sb.AppendFormat("<Item ProductID=""{0}"" UnitPrice=""{1}"" Quantity=""{2}"" TotalPrice=""{3}"" CostPrice=""{4}"" />",
                                     d.ProductID, 
-                                    d.UnitPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), 
-                                    d.Quantity.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                                    d.TotalPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), 
-                                    d.CostPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))
+                                    d.UnitPrice.ToString("F3", System.Globalization.CultureInfo.InvariantCulture), 
+                                    d.Quantity.ToString("F3", System.Globalization.CultureInfo.InvariantCulture),
+                                    d.TotalPrice.ToString("F3", System.Globalization.CultureInfo.InvariantCulture), 
+                                    d.CostPrice.ToString("F3", System.Globalization.CultureInfo.InvariantCulture))
                 End If
             Next
             sb.Append("</Details>")

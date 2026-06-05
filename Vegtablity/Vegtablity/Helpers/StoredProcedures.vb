@@ -218,5 +218,6 @@ Namespace Helpers
         Public Const SP_PURCHASEQUOTE_GETPAGED As String = "[Purchases].[sp_PurchaseQuote_GetPaged]"
         Public Const SP_PURCHASEQUOTE_GETBYPARTNER As String = "[Purchases].[sp_PurchaseQuote_GetByPartner]"
         Public Const SP_PURCHASEQUOTE_DELETE As String = "[Purchases].[sp_PurchaseQuote_Delete]"
+        Public Const SP_PURCHASEQUOTE_GETITEMPRICE As String = "[Purchases].[sp_Purchases_quoteItems_Price]"
     End Class
 End Namespace

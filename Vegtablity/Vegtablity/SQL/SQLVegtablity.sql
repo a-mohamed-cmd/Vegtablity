@@ -413,8 +413,8 @@ BEGIN
         Barcode NVARCHAR(50) UNIQUE,
         CategoryID INT,
         UnitID INT,
-        PurchasePrice DECIMAL(18, 2) DEFAULT 0,
-        SalePrice DECIMAL(18, 2) DEFAULT 0,
+        PurchasePrice DECIMAL(18, 3) DEFAULT 0,
+        SalePrice DECIMAL(18, 3) DEFAULT 0,
         AlertQty DECIMAL(18, 2) DEFAULT 0,
         IsActive BIT DEFAULT 1,
         FOREIGN KEY (CategoryID) REFERENCES [Settings].[Categories](CatID),
@@ -431,7 +431,7 @@ BEGIN
         ProductID INT NOT NULL,
         WarehouseID INT NOT NULL,
         CurrentQty DECIMAL(18, 2) DEFAULT 0,
-        AvgCostPrice DECIMAL(18, 2) DEFAULT 0,   -- متوسط سعر التكلفة المرجح لكل مخزن
+        AvgCostPrice DECIMAL(18, 3) DEFAULT 0,   -- متوسط سعر التكلفة المرجح لكل مخزن
         FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID),
         FOREIGN KEY (WarehouseID) REFERENCES [Settings].[Warehouses](WarehouseID),
         UNIQUE(ProductID, WarehouseID)
@@ -456,11 +456,11 @@ BEGIN
         InvDate DATETIME DEFAULT GETDATE(),
         PartnerID INT,
         WarehouseID INT,
-        TotalAmount DECIMAL(18, 2) DEFAULT 0,
-        Discount DECIMAL(18, 2) DEFAULT 0,
-        NetAmount DECIMAL(18, 2) DEFAULT 0,
-        PaidAmount DECIMAL(18, 2) DEFAULT 0,
-        Remainder DECIMAL(18, 2) DEFAULT 0,
+        TotalAmount DECIMAL(18, 3) DEFAULT 0,
+        Discount DECIMAL(18, 3) DEFAULT 0,
+        NetAmount DECIMAL(18, 3) DEFAULT 0,
+        PaidAmount DECIMAL(18, 3) DEFAULT 0,
+        Remainder DECIMAL(18, 3) DEFAULT 0,
         UserID INT,
         Notes NVARCHAR(255),
         IsPosted BIT DEFAULT 0,
@@ -485,10 +485,10 @@ BEGIN
         InvID INT NOT NULL,
         ProductID INT NOT NULL,
 		ReferenceNo nvarchar null,
-        UnitPrice DECIMAL(18, 2) DEFAULT 0,
+        UnitPrice DECIMAL(18, 3) DEFAULT 0,
         Quantity DECIMAL(18, 2) DEFAULT 1,
-        TotalPrice DECIMAL(18, 2) DEFAULT 0, 
-        CostPrice DECIMAL(18, 2) DEFAULT 0, 
+        TotalPrice DECIMAL(18, 3) DEFAULT 0, 
+        CostPrice DECIMAL(18, 3) DEFAULT 0, 
         FOREIGN KEY (InvID) REFERENCES [Sales].[InvoiceHeader](InvID) ON DELETE CASCADE,
         FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID)
     );
@@ -732,7 +732,7 @@ BEGIN
         VoucherDate DATETIME DEFAULT GETDATE(),
         PartnerID INT NULL, 
         AccountID INT NULL, 
-        Amount DECIMAL(18, 2) NOT NULL,
+        Amount DECIMAL(18, 3) NOT NULL,
         Description NVARCHAR(255),
         PaymentMethod NVARCHAR(20) DEFAULT 'Cash', 
         UserID INT,
@@ -761,8 +761,8 @@ BEGIN
         ReferenceType NVARCHAR(20) NOT NULL,       -- 'Voucher' / 'Invoice'
         ReferenceID INT NOT NULL,                    -- رقم السند أو الفاتورة
         AccountID INT NOT NULL,
-        DebitAmount DECIMAL(18, 2) DEFAULT 0,
-        CreditAmount DECIMAL(18, 2) DEFAULT 0,
+        DebitAmount DECIMAL(18, 3) DEFAULT 0,
+        CreditAmount DECIMAL(18, 3) DEFAULT 0,
         Description NVARCHAR(255),
         UserID INT NULL,
         CreatedAt DATETIME DEFAULT GETDATE(),
@@ -952,7 +952,7 @@ CREATE PROCEDURE [Accounting].[sp_Voucher_Save]
     @VoucherDate DATETIME,
     @PartnerID INT = NULL,
     @AccountID INT = NULL,
-    @Amount DECIMAL(18,2),
+    @Amount DECIMAL(18,3),
     @Description NVARCHAR(255) = NULL,
     @PaymentMethod NVARCHAR(20) = 'Cash',
     @UserID INT = NULL
@@ -1186,7 +1186,7 @@ BEGIN
         Description NVARCHAR(255),
         UserID INT,
         IsPosted BIT DEFAULT 0,
-        TotalAmount DECIMAL(18, 2) DEFAULT 0,
+        TotalAmount DECIMAL(18, 3) DEFAULT 0,
         ReferenceType NVARCHAR(50) DEFAULT 'Manual', 
         ReferenceID INT NULL, 
         FOREIGN KEY (UserID) REFERENCES [Security].[Users](UserID)
@@ -1212,7 +1212,7 @@ CREATE PROCEDURE [Accounting].[sp_JournalEntry_Save]
     @JDate DATETIME,
     @Description NVARCHAR(255),
     @UserID INT,
-    @TotalAmount DECIMAL(18, 2),
+    @TotalAmount DECIMAL(18, 3),
     @DetailsXml XML
 AS
 BEGIN
@@ -1249,8 +1249,8 @@ BEGIN
         SELECT 
             @JID,
             T.c.value('@AccountID', 'INT'),
-            T.c.value('@Debit', 'DECIMAL(18,2)'),
-            T.c.value('@Credit', 'DECIMAL(18,2)'),
+            T.c.value('@Debit', 'DECIMAL(18,3)'),
+            T.c.value('@Credit', 'DECIMAL(18,3)'),
             T.c.value('@Notes', 'NVARCHAR(200)')
         FROM @DetailsXml.nodes('/details/item') T(c);
 
@@ -1344,8 +1344,8 @@ BEGIN
         JDID INT PRIMARY KEY IDENTITY(1,1),
         JID INT NOT NULL,
         AccountID INT NOT NULL,
-        Debit DECIMAL(18, 2) DEFAULT 0,
-        Credit DECIMAL(18, 2) DEFAULT 0,
+        Debit DECIMAL(18, 3) DEFAULT 0,
+        Credit DECIMAL(18, 3) DEFAULT 0,
         Notes NVARCHAR(200),
         FOREIGN KEY (JID) REFERENCES [Accounting].[JournalHeader](JID),
         FOREIGN KEY (AccountID) REFERENCES [Accounting].[ChartOfAccounts](AccountID)
@@ -2357,8 +2357,8 @@ CREATE PROCEDURE [Inventory].[sp_Product_Save]
     @Barcode NVARCHAR(50) = NULL,
     @CategoryID INT = NULL,
     @UnitID INT = NULL,
-    @PurchasePrice DECIMAL(18,2) = 0,
-    @SalePrice DECIMAL(18,2) = 0,
+    @PurchasePrice DECIMAL(18,3) = 0,
+    @SalePrice DECIMAL(18,3) = 0,
     @AlertQty DECIMAL(18,2) = 0
 AS
 BEGIN
@@ -2482,6 +2482,7 @@ BEGIN
                      / (S.CurrentQty + D.Quantity)
                 ELSE D.UnitPrice
             END
+
         FROM [Inventory].[ProductStock] S
         INNER JOIN [Sales].[InvoiceDetails] D ON S.ProductID = D.ProductID
         INNER JOIN inserted i ON D.InvID = i.InvID
@@ -2774,14 +2775,14 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @Balance           DECIMAL(18,2) = 0;
-    DECLARE @AvgCost           DECIMAL(18,2) = 0;
-    DECLARE @TotalInQty        DECIMAL(18,2) = 0;
-    DECLARE @TotalInValue      DECIMAL(18,2) = 0;
-    DECLARE @TotalOutQty       DECIMAL(18,2) = 0;
-    DECLARE @TotalOutValue     DECIMAL(18,2) = 0;
-    DECLARE @LastPurchasePrice DECIMAL(18,2) = 0;
-    DECLARE @ProfitRate        DECIMAL(18,2) = 0;
+    DECLARE @Balance           DECIMAL(18,3) = 0;
+    DECLARE @AvgCost           DECIMAL(18,3) = 0;
+    DECLARE @TotalInQty        DECIMAL(18,3) = 0;
+    DECLARE @TotalInValue      DECIMAL(18,3) = 0;
+    DECLARE @TotalOutQty       DECIMAL(18,3) = 0;
+    DECLARE @TotalOutValue     DECIMAL(18,3) = 0;
+    DECLARE @LastPurchasePrice DECIMAL(18,3) = 0;
+    DECLARE @ProfitRate        DECIMAL(18,3) = 0;
     DECLARE @AlertQty          DECIMAL(18,2) = 0;
     DECLARE @Barcode           NVARCHAR(50) = '';
 
@@ -3231,11 +3232,11 @@ CREATE PROCEDURE [Sales].[sp_Invoice_Save]
     @InvDate DATETIME,
     @PartnerID INT,
     @WarehouseID INT,
-    @TotalAmount DECIMAL(18, 2),
-    @Discount DECIMAL(18, 2),
-    @NetAmount DECIMAL(18, 2),
-    @PaidAmount DECIMAL(18, 2),
-    @Remainder DECIMAL(18, 2),
+    @TotalAmount DECIMAL(18, 3),
+    @Discount DECIMAL(18, 3),
+    @NetAmount DECIMAL(18, 3),
+    @PaidAmount DECIMAL(18, 3),
+    @Remainder DECIMAL(18, 3),
     @UserID INT,
     @Notes NVARCHAR(255),
     @IsPosted BIT = 0,
@@ -3421,7 +3422,7 @@ BEGIN
         h.TotalAmount,
         h.Discount,
         h.NetAmount,
-        h.PaidAmount,
+        (h.PaidAmount + h.VoucherPaidAmount) as PaidAmount,
         h.Remainder,
         h.IsPosted,
         h.ReferenceNo,
@@ -5700,7 +5701,7 @@ CREATE TABLE [Purchases].[PurchaseQuoteDetails](
     [PurchaseQuoteID] INT NOT NULL,
     [ProductID] INT NOT NULL,
     [Quantity] DECIMAL(18,2) NOT NULL DEFAULT 1,
-    [UnitPrice] DECIMAL(18,2) NOT NULL,
+    [UnitPrice] DECIMAL(18,3) NOT NULL,
     CONSTRAINT FK_Details_Header FOREIGN KEY (PurchaseQuoteID) REFERENCES [Purchases].[PurchaseQuoteHeader](PurchaseQuoteID) ON DELETE CASCADE,
     CONSTRAINT FK_Details_Product FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID)
 );
@@ -5746,7 +5747,7 @@ BEGIN
         SELECT 
             @PurchaseQuoteID,
             T.Item.value('@ProductID', 'INT'),
-            T.Item.value('@UnitPrice', 'DECIMAL(18,2)')
+            T.Item.value('@UnitPrice', 'DECIMAL(18,3)')
         FROM @DetailsXml.nodes('/Details/Item') AS T(Item);
 
         COMMIT TRANSACTION
@@ -5864,11 +5865,11 @@ CREATE PROCEDURE [Sales].[sp_Invoice_Save_XML]
     @InvDate DATETIME,
     @PartnerID INT,
     @WarehouseID INT,
-    @TotalAmount DECIMAL(18, 2),
-    @Discount DECIMAL(18, 2),
-    @NetAmount DECIMAL(18, 2),
-    @PaidAmount DECIMAL(18, 2),
-    @Remainder DECIMAL(18, 2),
+    @TotalAmount DECIMAL(18, 3),
+    @Discount DECIMAL(18, 3),
+    @NetAmount DECIMAL(18, 3),
+    @PaidAmount DECIMAL(18, 3),
+    @Remainder DECIMAL(18, 3),
     @UserID INT,
     @Notes NVARCHAR(255),
     @IsPosted BIT = 0,
@@ -5906,10 +5907,10 @@ BEGIN
         SELECT 
             @InvID,
             T.Item.value('@ProductID', 'INT'),
-            T.Item.value('@UnitPrice', 'DECIMAL(18,2)'),
-            T.Item.value('@Quantity', 'DECIMAL(18,2)'),
-            T.Item.value('@TotalPrice', 'DECIMAL(18,2)'),
-            T.Item.value('@CostPrice', 'DECIMAL(18,2)')
+            T.Item.value('@UnitPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@Quantity', 'DECIMAL(18,3)'),
+            T.Item.value('@TotalPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@CostPrice', 'DECIMAL(18,3)')
         FROM @DetailsXml.nodes('//Item') AS T(Item);
 
         COMMIT TRANSACTION;
@@ -5932,11 +5933,11 @@ CREATE PROCEDURE [Sales].[sp_Invoice_Save_XML]
     @InvDate DATETIME,
     @PartnerID INT,
     @WarehouseID INT,
-    @TotalAmount DECIMAL(18, 2),
-    @Discount DECIMAL(18, 2),
-    @NetAmount DECIMAL(18, 2),
-    @PaidAmount DECIMAL(18, 2),
-    @Remainder DECIMAL(18, 2),
+    @TotalAmount DECIMAL(18, 3),
+    @Discount DECIMAL(18, 3),
+    @NetAmount DECIMAL(18, 3),
+    @PaidAmount DECIMAL(18, 3),
+    @Remainder DECIMAL(18, 3),
     @UserID INT,
     @Notes NVARCHAR(255),
     @IsPosted BIT = 0,
@@ -5978,10 +5979,10 @@ BEGIN
         SELECT 
             @InvID,
             T.Item.value('@ProductID', 'INT'),
-            T.Item.value('@UnitPrice', 'DECIMAL(18,2)'),
-            T.Item.value('@Quantity', 'DECIMAL(18,2)'),
-            T.Item.value('@TotalPrice', 'DECIMAL(18,2)'),
-            T.Item.value('@CostPrice', 'DECIMAL(18,2)')
+            T.Item.value('@UnitPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@Quantity', 'DECIMAL(18,3)'),
+            T.Item.value('@TotalPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@CostPrice', 'DECIMAL(18,3)')
         FROM @DetailsXml.nodes('//Item') AS T(Item);
 
         COMMIT TRANSACTION;
@@ -6158,7 +6159,7 @@ BEGIN
         [StartTime] DATETIME NOT NULL DEFAULT GETDATE(),
         [EndTime] DATETIME NULL,
         [StartingCash] DECIMAL(18, 2) NOT NULL DEFAULT 0,
-        [EndingCash] DECIMAL(18, 2) NULL,
+        [EndingCash] DECIMAL(18, 3) NULL,
         [Status] NVARCHAR(20) NOT NULL DEFAULT 'Open', -- 'Open', 'Closed'
         FOREIGN KEY ([UserID]) REFERENCES [Security].[Users]([UserID])
     );
@@ -7537,5 +7538,29 @@ BEGIN
     FROM [Accounting].[Vouchers]
     WHERE [VoucherID] = @NewVoucherID;
 
+END
+GO
+
+-- جلب سعر الصنف من عرض اسعار المورد
+
+IF OBJECT_ID('[Purchases].[sp_Purchases_quoteItems_Price]', 'P') IS NOT NULL 
+    DROP PROCEDURE [Purchases].[sp_Purchases_quoteItems_Price];
+GO
+
+CREATE PROCEDURE [Purchases].[sp_Purchases_quoteItems_Price]
+    @PartnerID  INT,
+    @ProductID  INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT TOP 1 d.UnitPrice
+    FROM [Purchases].[PurchaseQuoteDetails] d
+    INNER JOIN [Purchases].[PurchaseQuoteHeader] h
+        ON d.PurchaseQuoteID = h.PurchaseQuoteID
+    WHERE h.PartnerID  = @PartnerID
+      AND d.ProductID  = @ProductID
+      AND (h.ExpiryDate IS NULL OR h.ExpiryDate >= CAST(GETDATE() AS DATE))
+    ORDER BY h.QuoteDate DESC, h.PurchaseQuoteID DESC;
 END
 GO

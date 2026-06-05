@@ -134,8 +134,8 @@ Namespace Services
                 
                 xmlBuilder.AppendFormat("<item AccountID=""{0}"" Debit=""{1}"" Credit=""{2}"" Notes=""{3}"" />",
                                          d.AccountID,
-                                         d.Debit.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
-                                         d.Credit.ToString("F2", System.Globalization.CultureInfo.InvariantCulture),
+                                         d.Debit.ToString("F3", System.Globalization.CultureInfo.InvariantCulture),
+                                         d.Credit.ToString("F3", System.Globalization.CultureInfo.InvariantCulture),
                                          notes)
             Next
             xmlBuilder.Append("</details>")

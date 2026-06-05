@@ -15,6 +15,7 @@ Namespace ViewModels
         Private ReadOnly _productService As ProductService
         Private ReadOnly _warehouseService As WarehouseService
         Private ReadOnly _accountingService As AccountingService
+        Private ReadOnly _purchaseQuoteService As PurchaseQuoteService  ' ← عروض أسعار الموردين
 
         ' --- Collections for UI Dropdowns ---
         Public Property AllPartners As List(Of Partner)          ' المصدر الكامل (لا يتغير)
@@ -162,6 +163,7 @@ Namespace ViewModels
             _productService = New ProductService()
             _warehouseService = New WarehouseService()
             _accountingService = New AccountingService()
+            _purchaseQuoteService = New PurchaseQuoteService()  ' ← عروض أسعار الموردين
 
             AllPartners = New List(Of Partner)()
             FilteredPartners = New ObservableCollection(Of Partner)()
@@ -478,30 +480,47 @@ Namespace ViewModels
 
         Private Sub OnDetailPropertyChanged(sender As Object, e As PropertyChangedEventArgs)
             If e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
-                ' Auto-fill Price based on Product Selection
-                Dim detail = CType(sender, InvoiceDetail)
-                Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
-                If prod IsNot Nothing AndAlso detail.UnitPrice = 0 Then
-                    detail.UnitPrice = prod.PurchasePrice ' Assuming PurchaseInvoice
-                End If
-            End If
-
-            If e.PropertyName = NameOf(InvoiceDetail.Quantity) OrElse e.PropertyName = NameOf(InvoiceDetail.UnitPrice) OrElse e.PropertyName = NameOf(InvoiceDetail.TotalPrice) Then
-                RecalculateTotals()
-            ElseIf e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
+                ' ─────────────────────────────────────────────────────────────
+                '  تحميل بيانات الصنف عند اختياره:
+                '  1. السعر: يُؤخذ من عرض أسعار المورد المحدد إن وُجد
+                '            وإلا يُستخدم PurchasePrice الافتراضي للصنف
+                '  2. باقي البيانات: الاسم والباركود والوحدة
+                ' ─────────────────────────────────────────────────────────────
                 Dim detail = TryCast(sender, InvoiceDetail)
                 If detail IsNot Nothing AndAlso detail.ProductID > 0 Then
                     Dim prod = Products.FirstOrDefault(Function(p) p.ProductID = detail.ProductID)
                     If prod IsNot Nothing Then
                         ' Keep existing quantity if already set, otherwise default to 1
                         If detail.Quantity <= 0 Then detail.Quantity = 1
-                        detail.UnitPrice = prod.PurchasePrice ' Use PurchasePrice for Purchases
-                        detail.Barcode = prod.Barcode ' Sync Barcode
+
+                        ' ── تحديد السعر: عرض الأسعار أولاً ثم السعر الافتراضي ──
+                        Dim resolvedPrice As Decimal = prod.PurchasePrice  ' الافتراضي
+
+                        ' هل يوجد مورد محدد على الفاتورة الحالية؟
+                        If CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.PartnerID.HasValue Then
+                            Dim quotePrice = _purchaseQuoteService.GetProductPriceForPartner(
+                                                CurrentInvoice.PartnerID.Value, detail.ProductID)
+                            If quotePrice.HasValue AndAlso quotePrice.Value > 0 Then
+                                resolvedPrice = quotePrice.Value  ' ← سعر عرض الأسعار
+                            Else
+                                ' ⚠️ الصنف غير مدرج في عرض أسعار هذا المورد — نُبلّغ المستخدم
+                                RaiseEvent RequestSnackbar($"⚠️ الصنف [{prod.ProductName}] غير موجود في عرض أسعار المورد — تم استخدام سعر الشراء الافتراضي")
+                            End If
+                        End If
+
+                        detail.UnitPrice = resolvedPrice
+                        detail.Barcode = prod.Barcode
                         detail.ProductName = prod.ProductName
                         detail.ProductNameEn = prod.ProductNameEn
                         detail.UnitName = prod.UnitName
                     End If
                 End If
+            End If
+
+            If e.PropertyName = NameOf(InvoiceDetail.Quantity) OrElse
+               e.PropertyName = NameOf(InvoiceDetail.UnitPrice) OrElse
+               e.PropertyName = NameOf(InvoiceDetail.TotalPrice) Then
+                RecalculateTotals()
             End If
 
             System.Windows.Input.CommandManager.InvalidateRequerySuggested()

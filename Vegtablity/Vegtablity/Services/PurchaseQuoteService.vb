@@ -42,6 +42,27 @@ Namespace Services
             End Try
         End Function
 
+        ''' <summary>
+        ''' يُعيد سعر الشراء المُدرج في أحدث عرض أسعار للمورد المحدد لهذا الصنف.
+        ''' يُرجع Nothing إذا لم يكن هناك عرض أسعار مسجّل.
+        ''' </summary>
+        ''' <param name="partnerID">معرّف المورد</param>
+        ''' <param name="productID">معرّف الصنف</param>
+        Public Function GetProductPriceForPartner(partnerID As Integer, productID As Integer) As Decimal?
+            Try
+                Using conn = db.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@PartnerID", partnerID)
+                    p.Add("@ProductID", productID)
+                    Return conn.QueryFirstOrDefault(Of Decimal?)(
+                        Helpers.StoredProcedures.SP_PURCHASEQUOTE_GETITEMPRICE, p,
+                        commandType:=CommandType.StoredProcedure)
+                End Using
+            Catch ex As Exception
+                Return Nothing  ' عند أي خطأ نعود للسعر الافتراضي
+            End Try
+        End Function
+
         Public Function SaveQuote(quote As PurchaseQuoteHeader) As Integer
             Try
                 Using conn = db.GetConnection()
@@ -104,7 +125,7 @@ Namespace Services
                 If item.ProductID > 0 Then
                     xml.AppendFormat("<Item ProductID=""{0}"" UnitPrice=""{1}"" />",
                                      item.ProductID,
-                                     item.UnitPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture))
+                                     item.UnitPrice.ToString("F3", System.Globalization.CultureInfo.InvariantCulture))
                 End If
             Next
             xml.Append("</Details>")

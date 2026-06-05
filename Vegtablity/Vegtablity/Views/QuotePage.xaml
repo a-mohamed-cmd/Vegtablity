@@ -311,7 +311,7 @@
                                 <DataGridTemplateColumn Header="سعر البيع المقترح" Width="1.5*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding QuotedPrice, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}"
+                                            <TextBox Text="{Binding QuotedPrice, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}"
                                                      TextAlignment="Center" FontWeight="Bold" Foreground="#2563EB"
                                                      PreviewKeyDown="Price_PreviewKeyDown" GotFocus="TextBox_GotFocus"/>
                                         </DataTemplate>

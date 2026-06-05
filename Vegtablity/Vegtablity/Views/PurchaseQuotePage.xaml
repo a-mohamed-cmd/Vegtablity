@@ -260,7 +260,7 @@
                                 <DataGridTemplateColumn Header="سعر الشراء" Width="1.5*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:N2}}" 
+                                            <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}" 
                                                      TextAlignment="Center" FontWeight="Bold" Foreground="#2563EB"
                                                      PreviewKeyDown="Price_PreviewKeyDown" GotFocus="TextBox_GotFocus"/>
                                         </DataTemplate>

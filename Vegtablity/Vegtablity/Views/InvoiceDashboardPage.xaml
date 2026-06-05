@@ -525,7 +525,7 @@
                         </DataGridTextColumn>
 
                         <!-- Net Amount -->
-                        <DataGridTextColumn Header="الصافي" Binding="{Binding NetAmount, StringFormat={}{0:N2}}" Width="130">
+                        <DataGridTextColumn Header="الصافي" Binding="{Binding NetAmount, StringFormat={}{0:N3}}" Width="130">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -537,7 +537,7 @@
                         </DataGridTextColumn>
 
                         <!-- Paid -->
-                        <DataGridTextColumn Header="المدفوع" Binding="{Binding PaidAmount, StringFormat={}{0:N2}}" Width="110">
+                        <DataGridTextColumn Header="المدفوع" Binding="{Binding PaidAmount, StringFormat={}{0:N3}}" Width="110">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -549,7 +549,7 @@
                         </DataGridTextColumn>
 
                         <!-- Remainder -->
-                        <DataGridTextColumn Header="المتبقي" Binding="{Binding Remainder, StringFormat={}{0:N2}}" Width="110">
+                        <DataGridTextColumn Header="المتبقي" Binding="{Binding Remainder, StringFormat={}{0:N3}}" Width="110">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -741,12 +741,12 @@
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
                                     <TextBlock Text="الصافي الأساسي" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding SelectedInvoice.NetAmount, StringFormat={}{0:N2}}"
+                                    <TextBlock Text="{Binding SelectedInvoice.NetAmount, StringFormat={}{0:N3}}"
                                                Foreground="#1E293B" FontWeight="Black" FontSize="16" Margin="0,4,0,0"/>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="المبلغ المتبقي" Foreground="#94A3B8" FontSize="12" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding SelectedInvoice.Remainder, StringFormat={}{0:N2}}"
+                                    <TextBlock Text="{Binding SelectedInvoice.Remainder, StringFormat={}{0:N3}}"
                                                Foreground="#EF4444" FontWeight="Black" FontSize="16" Margin="0,4,0,0"/>
                                 </StackPanel>
                             </Grid>
@@ -756,7 +756,7 @@
                     <!-- Payment Amount -->
                     <StackPanel Grid.Row="2" Margin="0,0,0,20">
                         <TextBlock Text="مبلغ السداد المطلوب *" Foreground="#475569" FontSize="14" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBox Text="{Binding PaymentAmount, UpdateSourceTrigger=LostFocus}"
+                        <TextBox Text="{Binding PaymentAmount, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}"
                                  Style="{DynamicResource ModernTextBoxStyle}"
                                  FontSize="22" FontWeight="Black" TextAlignment="Center"
                                  Foreground="#10B981" Padding="12"

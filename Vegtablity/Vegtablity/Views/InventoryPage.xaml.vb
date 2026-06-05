@@ -153,35 +153,26 @@ Namespace Views
         End Sub
 
         ' --- Decimal Input Validation ---
-        Private Shared ReadOnly DecimalRegex As New Regex("^[0-9]+[\.\,]?[0-9]*$")
-
         Private Sub DecimalBox_PreviewTextInput(sender As Object, e As TextCompositionEventArgs)
             Dim textBox = TryCast(sender, TextBox)
             If textBox Is Nothing Then Return
 
-            Dim newText = textBox.Text.Insert(textBox.CaretIndex, e.Text)
+            ' السماح بالأرقام والنقاط والفواصل فقط
+            If Not System.Text.RegularExpressions.Regex.IsMatch(e.Text, "^[0-9\.\,]+$") Then
+                e.Handled = True
+                Return
+            End If
 
-            ' Allow empty for deletion, otherwise must match decimal regex
-            If Not String.IsNullOrEmpty(newText) AndAlso Not DecimalRegex.IsMatch(newText) Then
+            ' منع إدخال أكثر من علامة عشرية واحدة
+            Dim isDecimalChar = (e.Text = "." OrElse e.Text = ",")
+            If isDecimalChar AndAlso (textBox.Text.Contains(".") OrElse textBox.Text.Contains(",")) Then
                 e.Handled = True
             End If
         End Sub
 
         Private Sub DecimalBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Decimal OrElse e.Key = Key.OemPeriod Then
-                Dim textBox = TryCast(sender, TextBox)
-                If textBox Is Nothing Then Return
-
-                Dim sep = System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator
-
-                If textBox.Text.Contains(sep) Then
-                    e.Handled = True
-                    Return
-                End If
-
-                Dim caretPos = textBox.CaretIndex
-                textBox.Text = textBox.Text.Insert(caretPos, sep)
-                textBox.CaretIndex = caretPos + 1
+            ' منع المسافة
+            If e.Key = Key.Space Then
                 e.Handled = True
             End If
         End Sub
@@ -189,7 +180,7 @@ Namespace Views
         Private Sub DecimalBox_Pasting(sender As Object, e As DataObjectPastingEventArgs)
             If e.DataObject.GetDataPresent(GetType(String)) Then
                 Dim text As String = CStr(e.DataObject.GetData(GetType(String)))
-                If Not DecimalRegex.IsMatch(text) Then
+                If Not System.Text.RegularExpressions.Regex.IsMatch(text, "^[0-9]+[\.\,]?[0-9]*$") Then
                     e.CancelCommand()
                 End If
             Else

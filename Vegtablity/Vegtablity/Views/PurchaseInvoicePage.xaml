@@ -290,7 +290,7 @@
                         <DataGridTemplateColumn Header="الكمية" Width="1*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBox Text="{Binding Quantity, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N2}}" 
+                                    <TextBox Text="{Binding Quantity, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}" 
                                              PreviewKeyDown="Quantity_PreviewKeyDown"
                                              GotFocus="TextBox_GotFocus"
                                              IsEnabled="{Binding DataContext.IsEditAllowed, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -303,7 +303,7 @@
                         <DataGridTemplateColumn Header="السعر" Width="1*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N2}}" 
+                                    <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}" 
                                              PreviewKeyDown="Price_PreviewKeyDown"
                                              GotFocus="TextBox_GotFocus"
                                              IsEnabled="{Binding DataContext.IsEditAllowed, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -316,7 +316,7 @@
                         <DataGridTemplateColumn Header="الإجمالي" Width="1*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBox Text="{Binding TotalPrice, Mode=OneWay, StringFormat={}{0:N2}}" 
+                                    <TextBox Text="{Binding TotalPrice, Mode=OneWay, StringFormat={}{0:N3}}" 
                                              IsReadOnly="True" FontWeight="Bold" Background="Transparent" BorderThickness="0"
                                              TextAlignment="Center" PreviewKeyDown="Total_PreviewKeyDown"/>
                                 </DataTemplate>
@@ -376,7 +376,7 @@
                     <!-- Subtotal -->
                     <Grid Margin="0,0,0,10">
                         <TextBlock Text="الإجمالي قبل الخصم:" Foreground="#64748B" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding CurrentInvoice.TotalAmount, StringFormat={}{0:N2}}" Foreground="#0F172A" FontSize="16" FontWeight="Bold" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding CurrentInvoice.TotalAmount, StringFormat={}{0:N3}}" Foreground="#0F172A" FontSize="16" FontWeight="Bold" HorizontalAlignment="Left"/>
                     </Grid>
                     
                     <!-- Discount -->
@@ -397,7 +397,7 @@
                     <Grid Margin="0,0,0,10">
                         <TextBlock Text="الصافي (الإجمالي الكلي):" Foreground="#0F172A" FontSize="16" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                         <Border Background="#F1F5F9" CornerRadius="8" Padding="10,5" HorizontalAlignment="Left" MinWidth="130">
-                            <TextBlock Text="{Binding CurrentInvoice.NetAmount, StringFormat={}{0:N2}}" Foreground="#2563EB" FontSize="20" FontWeight="Black" TextAlignment="Center"/>
+                            <TextBlock Text="{Binding CurrentInvoice.NetAmount, StringFormat={}{0:N3}}" Foreground="#2563EB" FontSize="20" FontWeight="Black" TextAlignment="Center"/>
                         </Border>
                     </Grid>
 
@@ -431,7 +431,7 @@
                     <!-- Remainder -->
                     <Grid Margin="0,0,0,0">
                         <TextBlock Text="المتبقي (آجل):" Foreground="#EF4444" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding CurrentInvoice.Remainder, StringFormat={}{0:N2}}" Foreground="#EF4444" FontSize="16" FontWeight="Bold" HorizontalAlignment="Left"/>
+                        <TextBlock Text="{Binding CurrentInvoice.Remainder, StringFormat={}{0:N3}}" Foreground="#EF4444" FontSize="16" FontWeight="Bold" HorizontalAlignment="Left"/>
                     </Grid>
 
                 </StackPanel>
