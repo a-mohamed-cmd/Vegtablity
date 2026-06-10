@@ -16,6 +16,14 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>زر الرجوع — يعود للصفحة السابقة في النافيجاشن ستاك</summary>
+        Private Sub BtnGoBack_Click(sender As Object, e As System.Windows.RoutedEventArgs)
+            Dim parent = TryCast(System.Windows.Window.GetWindow(Me), DashboardWindow)
+            If parent IsNot Nothing AndAlso parent.CanGoBack Then
+                parent.GoBack()
+            End If
+        End Sub
+
         ' ══════════════════════════════════════════════════
         '  Date TextBox Handlers
         ' ══════════════════════════════════════════════════

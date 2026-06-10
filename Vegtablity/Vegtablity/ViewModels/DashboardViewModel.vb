@@ -289,6 +289,9 @@ Namespace ViewModels
                 .Children = salesChildren
             })
 
+            allItems.Add(New MenuItem With {.Title = "الورديات", .Icon = "🕒", .FormName = "Shifts", .IsVisible = True})
+
+
             Dim purchaseChildren As New ObservableCollection(Of MenuItem)()
             purchaseChildren.Add(New MenuItem With {.Title = "فاتورة مشتريات", .Icon = "📦", .FormName = "Purchases", .IsVisible = True})
             purchaseChildren.Add(New MenuItem With {.Title = "عروض المشتريات", .Icon = "📜", .FormName = "PurchaseQuotes", .IsVisible = True})
@@ -575,6 +578,10 @@ Namespace ViewModels
 
                     Case "DbUpdater"
                         CurrentPage = New Views.DbUpdaterPage()
+                        IsHomePage = False
+
+                    Case "Shifts"
+                        CurrentPage = New Views.ShiftsPage()
                         IsHomePage = False
 
                     Case Else

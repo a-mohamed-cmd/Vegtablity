@@ -56,7 +56,10 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="📤 سندات الصرف" FontSize="18" FontWeight="Bold" Foreground="#e74c3c" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button x:Name="BtnGoBack" Content="← رجوع" Click="BtnGoBack_Click" Background="Transparent" BorderThickness="0" Foreground="#e74c3c" FontSize="16" FontWeight="Bold" Margin="0,0,15,0" Cursor="Hand" ToolTip="الرجوع للصفحة السابقة"/>
+                    <TextBlock Text="📤 سندات الصرف" FontSize="18" FontWeight="Bold" Foreground="#e74c3c" VerticalAlignment="Center"/>
+                </StackPanel>
                 <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>

@@ -1,0 +1,374 @@
+<UserControl x:Class="Views.ShiftsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             mc:Ignorable="d" 
+             d:DesignHeight="900" d:DesignWidth="1200" Background="#f4f6f9" FlowDirection="RightToLeft">
+
+    <UserControl.Resources>
+        <helpers:AccountingAmountConverter x:Key="AccountConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+        
+        <!-- Hover Style for DataGrid Row -->
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#eef2f5"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#dce9f5"/>
+                    <Setter Property="Foreground" Value="#0056b3"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Style for the Expander Header -->
+        <Style x:Key="SectionExpanderStyle" TargetType="Expander">
+            <Setter Property="Margin" Value="0,0,0,15"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#e2e8f0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid x:Name="MainContainer" Margin="20" Opacity="0">
+        <Grid.RenderTransform>
+            <TranslateTransform Y="30"/>
+        </Grid.RenderTransform>
+        
+        <!-- Modern Entrance Animation -->
+        <Grid.Triggers>
+            <EventTrigger RoutedEvent="Loaded">
+                <BeginStoryboard>
+                    <Storyboard>
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="30" To="0" Duration="0:0:0.6">
+                            <DoubleAnimation.EasingFunction>
+                                <CubicEase EasingMode="EaseOut"/>
+                            </DoubleAnimation.EasingFunction>
+                        </DoubleAnimation>
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger>
+        </Grid.Triggers>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380"/>
+            <ColumnDefinition Width="20"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Right Panel: Shifts List -->
+        <Border Grid.Column="0" Background="White" CornerRadius="12" Padding="15">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="15" Direction="270" ShadowDepth="4"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <Grid Grid.Row="0" Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="سجل الورديات" FontSize="22" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Command="{Binding RefreshCommand}" Content="تحديث" Padding="15,6" Background="#f8f9fa" BorderBrush="#e2e8f0" Foreground="#4a5568" Cursor="Hand" Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="6" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Shifts}" SelectedItem="{Binding SelectedShift}" 
+                          AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" 
+                          GridLinesVisibility="None" RowHeight="45" Background="Transparent" BorderThickness="0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="رقم" Binding="{Binding ShiftID}" Width="50" />
+                        <DataGridTextColumn Header="المستخدم" Binding="{Binding UserName}" Width="*" />
+                        <DataGridTextColumn Header="وقت الفتح" Binding="{Binding StartTime, StringFormat=dd/MM hh:mm tt}" Width="100"/>
+                        <DataGridTemplateColumn Header="الحالة" Width="70">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="6,3" HorizontalAlignment="Center" VerticalAlignment="Center" Name="StatusBorder" Background="#6c757d">
+                                        <TextBlock Text="{Binding Status}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Status}" Value="Open">
+                                            <Setter TargetName="StatusBorder" Property="Background" Value="#28a745"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Status}" Value="Closed">
+                                            <Setter TargetName="StatusBorder" Property="Background" Value="#dc3545"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                
+                <!-- Loading Indicator -->
+                <Border Grid.Row="1" Background="#B3FFFFFF" Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}">
+                    <TextBlock Text="جاري التحميل..." VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="16" Foreground="#4a5568"/>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Left Panel: Shift Details -->
+        <Border Grid.Column="2" Background="White" CornerRadius="12" Padding="20">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="15" Direction="270" ShadowDepth="4"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header Details -->
+                <StackPanel Grid.Row="0" Margin="0,0,0,15" Orientation="Horizontal">
+                    <TextBlock Text="تفاصيل الوردية المحددة" FontSize="20" FontWeight="Bold" Foreground="#2c3e50"/>
+                    <TextBlock Text="{Binding SelectedShift.ShiftID, StringFormat=' (رقم {0})'}" FontSize="20" FontWeight="Bold" Foreground="#6c757d" Visibility="{Binding SelectedShift, Converter={StaticResource BoolToVisConverter}}"/>
+                </StackPanel>
+
+                <!-- Scrollable Content Area -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,15,0">
+                    <StackPanel>
+                        <!-- Section 1: Shift Cash Flow Report -->
+                        <Border Background="#f8f9fa" CornerRadius="10" Padding="20" Margin="0,0,0,20" BorderBrush="#e2e8f0" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Text="تقرير التدفق النقدي للوردية" FontSize="18" FontWeight="Bold" Foreground="#1a202c" Margin="0,0,0,15"/>
+
+                                <Grid Grid.Row="1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Row 1: Starting Cash & Sales/Purchases -->
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,15">
+                                        <TextBlock Text="مبلغ بداية الوردية" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SelectedShift.StartingCash, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" Margin="0,5,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,15">
+                                        <TextBlock Text="(+) مبيعات محصلة" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SelectedShift.TotalPaidSales, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#28a745" Margin="0,5,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,15">
+                                        <TextBlock Text="(-) مشتريات مدفوعة" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SelectedShift.TotalPaidPurchases, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#dc3545" Margin="0,5,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- Row 2: Vouchers -->
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,15">
+                                        <TextBlock Text="(+) سندات قبض" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SelectedShift.TotalReceiptVouchers, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#007bff" Margin="0,5,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,15">
+                                        <TextBlock Text="(-) سندات صرف" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SelectedShift.TotalPaymentVouchers, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#fd7e14" Margin="0,5,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- Row 3: Totals -->
+                                    <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" BorderThickness="0,1,0,0" BorderBrush="#ced4da" Margin="0,10,0,0" Padding="0,15,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="مبلغ نهاية الوردية (المتوقع)" Foreground="#6c757d" FontSize="14" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding ExpectedEndingCash, Converter={StaticResource AccountConverter}}" FontSize="22" FontWeight="Bold" Foreground="#17a2b8" Margin="0,5,0,0"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="مبلغ نهاية الوردية (الفعلي)" Foreground="#6c757d" FontSize="14" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding SelectedShift.EndingCash, Converter={StaticResource AccountConverter}}" FontSize="22" FontWeight="Bold" Foreground="#2c3e50" Margin="0,5,0,0"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="العجز / الزيادة" Foreground="#6c757d" FontSize="14" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding CashDifference, Converter={StaticResource AccountConverter}}" FontSize="22" FontWeight="Bold" Margin="0,5,0,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="#2c3e50"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding CashDifference, Converter={StaticResource AccountConverter}}" Value="0.000">
+                                                                    <Setter Property="Foreground" Value="#2c3e50"/>
+                                                                </DataTrigger>
+                                                                <Trigger Property="Text" Value="0.000">
+                                                                    <Setter Property="Foreground" Value="#28a745"/>
+                                                                </Trigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- Section 2: Revenues Expander -->
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="الإيرادات" FontSize="18" FontWeight="Bold" Foreground="#1a202c" Margin="0,0,15,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.SalesCount, StringFormat='المبيعات: {0} فاتورة'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.TotalPaidSales, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#28a745" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                    <TextBlock Text="|" FontSize="14" Foreground="#ced4da" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                    <TextBlock Text="{Binding ReceiptVouchers.Count, StringFormat='سندات قبض: {0}'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.TotalReceiptVouchers, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#007bff" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            
+                            <StackPanel Margin="0,15,0,0">
+                                <!-- Sales Invoices -->
+                                <TextBlock Text="فواتير المبيعات" FontSize="15" FontWeight="SemiBold" Foreground="#4a5568" Margin="0,0,0,10"/>
+                                <DataGrid ItemsSource="{Binding SalesInvoices}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                          GridLinesVisibility="None" RowHeight="40" Background="Transparent" BorderThickness="0" Margin="0,0,0,20" MouseDoubleClick="SalesDataGrid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="رقم" Binding="{Binding InvID}" Width="60"/>
+                                        <DataGridTextColumn Header="التاريخ" Binding="{Binding InvDate, StringFormat=dd/MM/yyyy}" Width="100"/>
+                                        <DataGridTextColumn Header="العميل" Binding="{Binding PartnerName}" Width="*"/>
+                                        <DataGridTextColumn Header="الإجمالي" Binding="{Binding TotalAmount, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="FontWeight" Value="SemiBold"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="المحصل" Binding="{Binding PaidAmount, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#28a745"/><Setter Property="FontWeight" Value="Bold"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="المتبقي" Binding="{Binding Remainder, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#dc3545"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Receipt Vouchers -->
+                                <TextBlock Text="سندات القبض" FontSize="15" FontWeight="SemiBold" Foreground="#4a5568" Margin="0,0,0,10"/>
+                                <DataGrid ItemsSource="{Binding ReceiptVouchers}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                          GridLinesVisibility="None" RowHeight="40" Background="Transparent" BorderThickness="0" MouseDoubleClick="ReceiptDataGrid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="رقم" Binding="{Binding VoucherID}" Width="60"/>
+                                        <DataGridTextColumn Header="التاريخ" Binding="{Binding VoucherDate, StringFormat=dd/MM/yyyy}" Width="100"/>
+                                        <DataGridTextColumn Header="البيان" Binding="{Binding Description}" Width="*"/>
+                                        <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#007bff"/><Setter Property="FontWeight" Value="Bold"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Expander>
+
+                        <!-- Section 3: Expenses Expander -->
+                        <Expander Style="{StaticResource SectionExpanderStyle}" IsExpanded="True">
+                            <Expander.Header>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="المدفوعات" FontSize="18" FontWeight="Bold" Foreground="#1a202c" Margin="0,0,15,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.PurchasesCount, StringFormat='المشتريات: {0} فاتورة'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.TotalPaidPurchases, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#dc3545" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                    <TextBlock Text="|" FontSize="14" Foreground="#ced4da" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                    <TextBlock Text="{Binding PaymentVouchers.Count, StringFormat='سندات صرف: {0}'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.TotalPaymentVouchers, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#fd7e14" FontWeight="Bold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Expander.Header>
+                            
+                            <StackPanel Margin="0,15,0,0">
+                                <!-- Purchase Invoices -->
+                                <TextBlock Text="فواتير المشتريات" FontSize="15" FontWeight="SemiBold" Foreground="#4a5568" Margin="0,0,0,10"/>
+                                <DataGrid ItemsSource="{Binding PurchaseInvoices}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                          GridLinesVisibility="None" RowHeight="40" Background="Transparent" BorderThickness="0" Margin="0,0,0,20" MouseDoubleClick="PurchaseDataGrid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="رقم" Binding="{Binding InvID}" Width="60"/>
+                                        <DataGridTextColumn Header="التاريخ" Binding="{Binding InvDate, StringFormat=dd/MM/yyyy}" Width="100"/>
+                                        <DataGridTextColumn Header="المورد" Binding="{Binding PartnerName}" Width="*"/>
+                                        <DataGridTextColumn Header="الإجمالي" Binding="{Binding TotalAmount, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="FontWeight" Value="SemiBold"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="المدفوع" Binding="{Binding PaidAmount, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#dc3545"/><Setter Property="FontWeight" Value="Bold"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                        <DataGridTextColumn Header="المتبقي" Binding="{Binding Remainder, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#2c3e50"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+
+                                <!-- Payment Vouchers -->
+                                <TextBlock Text="سندات الصرف" FontSize="15" FontWeight="SemiBold" Foreground="#4a5568" Margin="0,0,0,10"/>
+                                <DataGrid ItemsSource="{Binding PaymentVouchers}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                          GridLinesVisibility="None" RowHeight="40" Background="Transparent" BorderThickness="0" MouseDoubleClick="PaymentDataGrid_MouseDoubleClick">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="رقم" Binding="{Binding VoucherID}" Width="60"/>
+                                        <DataGridTextColumn Header="التاريخ" Binding="{Binding VoucherDate, StringFormat=dd/MM/yyyy}" Width="100"/>
+                                        <DataGridTextColumn Header="البيان" Binding="{Binding Description}" Width="*"/>
+                                        <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, Converter={StaticResource AccountConverter}}" Width="120">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock"><Setter Property="Foreground" Value="#fd7e14"/><Setter Property="FontWeight" Value="Bold"/></Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Expander>
+                    </StackPanel>
+                </ScrollViewer>
+                
+                <!-- Loading overlay for details -->
+                <Border Grid.Row="1" Background="#B3FFFFFF" Visibility="{Binding IsDetailsLoading, Converter={StaticResource BoolToVisConverter}}">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="جاري جلب تفاصيل الوردية..." FontSize="16" Foreground="#4a5568"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>

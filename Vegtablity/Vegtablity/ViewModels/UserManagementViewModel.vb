@@ -62,6 +62,7 @@ Namespace ViewModels
                 {"Partners", "العملاء والموردين"},
                 {"Quotes", "عروض الأسعار"},
                 {"PurchaseQuotes", "عروض المشتريات"},
+                {"Shifts", "الورديات"},
                 {"Reports", "التقارير"},
                 {"SettingsParent", "قسم الإعدادات"},
                 {"Settings", "إعدادات عامة"},

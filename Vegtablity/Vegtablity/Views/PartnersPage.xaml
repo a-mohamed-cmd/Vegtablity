@@ -60,16 +60,19 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="👤 إدارة العملاء" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
-                        <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0"/>
-                                <TextBox Grid.Column="1" Text="{Binding CustomerSearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"/>
-                            </Grid>
-                        </Border>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="➕ إضافة عميل" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27ae60" Foreground="White" Width="110" Height="34" Margin="0,0,10,0" ToolTip="إضافة عميل جديد للوحة التحكم"/>
+                            <Border Background="White" CornerRadius="8" Padding="8,4" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0"/>
+                                    <TextBox Grid.Column="1" Text="{Binding CustomerSearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -252,16 +255,19 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="🏭 إدارة الموردين" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
-                        <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0"/>
-                                <TextBox Grid.Column="1" Text="{Binding SupplierSearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"/>
-                            </Grid>
-                        </Border>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="➕ إضافة مورد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27ae60" Foreground="White" Width="110" Height="34" Margin="0,0,10,0" ToolTip="إضافة مورد جديد للوحة التحكم"/>
+                            <Border Background="White" CornerRadius="8" Padding="8,4" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0"/>
+                                    <TextBox Grid.Column="1" Text="{Binding SupplierSearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"/>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                     </Grid>
                 </Border>
 

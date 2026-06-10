@@ -7564,3 +7564,26 @@ BEGIN
     ORDER BY h.QuoteDate DESC, h.PurchaseQuoteID DESC;
 END
 GO
+
+IF OBJECT_ID('[Sales].[sp_Shift_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Shift_GetAll];
+    go
+ 
+    CREATE PROCEDURE [Sales].[sp_Shift_GetAll]
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        
+        SELECT 
+            s.[ShiftID],
+            s.[UserID],
+            u.[FullName] AS [UserName],
+            s.[StartTime],
+            s.[EndTime],
+            s.[StartingCash],
+            s.[EndingCash],
+            s.[Status]
+        FROM [Sales].[Shifts] s
+        LEFT JOIN [Security].[Users] u ON s.[UserID] = u.[UserID]
+        ORDER BY s.[ShiftID] DESC;
+    END
+	go

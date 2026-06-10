@@ -40,6 +40,14 @@ Namespace Helpers
         Public Const SP_LICENSE_CHECK As String = "[Security].[sp_License_Check]"
 
         ' =============================================
+        ' Sales Schema - Shifts
+        ' =============================================
+        Public Const SP_SHIFT_GETALL As String = "[Sales].[sp_Shift_GetAll]"
+        Public Const SP_SHIFT_GETSUMMARY As String = "[Sales].[sp_Shift_GetSummary]"
+        Public Const SP_SHIFT_GETVOUCHERS As String = "[Sales].[sp_Shift_GetVouchers]"
+        Public Const SP_INVOICE_GETALL_POS As String = "[Sales].[sp_Invoice_GetAll_Pos]"
+
+        ' =============================================
         ' Settings Schema - Units
         ' =============================================
         Public Const SP_UNIT_GETALL As String = "[Settings].[sp_Unit_GetAll]"

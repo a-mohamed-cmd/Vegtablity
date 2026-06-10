@@ -144,6 +144,7 @@
   <ItemGroup>
     <Compile Include="Models\PurchaseQuoteDetail.vb" />
     <Compile Include="Models\PurchaseQuoteHeader.vb" />
+    <Compile Include="Models\Shift.vb" />
     <Compile Include="My Project\AssemblyInfo.vb">
       <SubType>Code</SubType>
     </Compile>
@@ -203,6 +204,7 @@
     <Compile Include="Services\SettingsService.vb" />
     <Compile Include="Services\LicenseService.vb" />
     <Compile Include="Services\Session.vb" />
+    <Compile Include="Services\ShiftService.vb" />
     <Compile Include="Services\UserService.vb" />
     <Compile Include="Services\UserManagementService.vb" />
     <Compile Include="Services\InventoryService.vb" />
@@ -221,6 +223,7 @@
     <Compile Include="ViewModels\LoginViewModel.vb" />
     <Compile Include="ViewModels\DashboardViewModel.vb" />
     <Compile Include="ViewModels\PurchaseQuoteViewModel.vb" />
+    <Compile Include="ViewModels\ShiftsViewModel.vb" />
     <Compile Include="ViewModels\UserManagementViewModel.vb" />
     <Compile Include="ViewModels\SettingsViewModel.vb" />
     <Compile Include="ViewModels\InventoryViewModel.vb" />
@@ -265,6 +268,9 @@
     </Compile>
     <Compile Include="Views\PurchaseQuotePage.xaml.vb">
       <DependentUpon>PurchaseQuotePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ShiftsPage.xaml.vb">
+      <DependentUpon>ShiftsPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\UnknownProductsDialog.xaml.vb">
       <DependentUpon>UnknownProductsDialog.xaml</DependentUpon>
@@ -359,6 +365,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\PurchaseQuotePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\ShiftsPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
