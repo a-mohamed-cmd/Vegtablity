@@ -175,10 +175,6 @@ class ApiService {
     return await _dio.get('/shifts/active');
   }
 
-  Future<Response> getCompanySettings() async {
-    return await _dio.get('/settings/company');
-  }
-
   Future<Response> getPrinterSettings(String hwid) async {
     return await _dio.get('/settings/printer/$hwid');
   }
