@@ -26,6 +26,7 @@ Namespace Services
                         .Phone = info.Phone,
                         .Email = info.Email,
                         .Logo = info.Logo,
+                        .CurrencySymbol = info.CurrencySymbol,
                         .UnifiedPartnerSearch = info.UnifiedPartnerSearch
                     },
                     commandType:=CommandType.StoredProcedure

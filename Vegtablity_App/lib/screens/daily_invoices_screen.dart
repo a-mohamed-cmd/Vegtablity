@@ -1,3 +1,4 @@
+import '../providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -523,7 +524,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                       style:
                           const TextStyle(color: Colors.white, fontSize: 13)),
                   subtitle: Text(
-                      'الصافي: ${_parseDouble(inv['total_amount']).toStringAsFixed(3)} د.ك',
+                      'الصافي: ${_parseDouble(inv['total_amount']).toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                       style:
                           const TextStyle(color: Colors.white54, fontSize: 12)),
                   trailing: const Icon(Icons.cloud_off,
@@ -538,7 +539,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                       style:
                           const TextStyle(color: Colors.white, fontSize: 13)),
                   subtitle: Text(
-                      'المبلغ: ${_parseDouble(v['TotalAmount']).toStringAsFixed(3)} د.ك',
+                      'المبلغ: ${_parseDouble(v['TotalAmount']).toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                       style:
                           const TextStyle(color: Colors.white54, fontSize: 12)),
                   trailing: const Icon(Icons.cloud_off,
@@ -745,7 +746,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '${netAmount.toStringAsFixed(2)} د.ك',
+                                  '${netAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                                   style: TextStyle(
                                     color: isCredit
                                         ? Colors.orangeAccent
@@ -758,7 +759,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                                 Text(
                                   paidAmount == netAmount
                                       ? 'مدفوع بالكامل'
-                                      : 'متبقي آجل: ${(netAmount - paidAmount).toStringAsFixed(2)} د.ك',
+                                      : 'متبقي آجل: ${(netAmount - paidAmount).toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                                   style: TextStyle(
                                     color: paidAmount == netAmount
                                         ? Colors.green[300]
@@ -798,7 +799,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                   style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
                 Text(
-                  '${totalAmount.toStringAsFixed(2)} د.ك',
+                  '${totalAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: TextStyle(
                     color: accentColor,
                     fontSize: 16,
@@ -906,7 +907,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                             color: Colors.white54, fontSize: 12),
                       ),
                       trailing: Text(
-                        '${amount.toStringAsFixed(3)} KWD',
+                        '${amount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                         style: TextStyle(
                             color: accentColor,
                             fontWeight: FontWeight.bold,
@@ -930,7 +931,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                 const Text('إجمالي السندات:',
                     style: TextStyle(color: Colors.white60, fontSize: 14)),
                 Text(
-                  '${totalAmount.toStringAsFixed(3)} KWD',
+                  '${totalAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: TextStyle(
                       color: accentColor,
                       fontWeight: FontWeight.bold,
@@ -1004,7 +1005,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                   children: [
                     const Text('المبلغ الإجمالي',
                         style: TextStyle(color: Colors.white70, fontSize: 16)),
-                    Text('${amount.toStringAsFixed(3)} د.ك',
+                    Text('${amount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                         style: const TextStyle(
                             color: Colors.greenAccent,
                             fontSize: 18,
@@ -1534,7 +1535,7 @@ class _InvoiceDetailsBottomSheetState
                                         color: Colors.white70, fontSize: 13))),
                             Expanded(
                                 flex: 2,
-                                child: Text('${total.toStringAsFixed(2)} د.ك',
+                                child: Text('${total.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                                     textAlign: TextAlign.end,
                                     style: const TextStyle(
                                         color: Colors.tealAccent,
@@ -1669,19 +1670,19 @@ class _InvoiceDetailsBottomSheetState
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: _buildSummaryRow(
-              'الإجمالي الكلي', '${totalAmount.toStringAsFixed(2)} د.ك', false),
+              'الإجمالي الكلي', '${totalAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', false),
         ),
         if (discount > 0)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: _buildSummaryRow(context.tr('di_discount').split(':').first,
-                '-${discount.toStringAsFixed(2)} د.ك', false,
+                '-${discount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', false,
                 textColor: Colors.redAccent),
           ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: _buildSummaryRow(
-              'الصافي الكلي', '${netAmount.toStringAsFixed(2)} د.ك', true),
+              'الصافي الكلي', '${netAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', true),
         ),
         const SizedBox(height: 8),
         Row(
@@ -1702,7 +1703,7 @@ class _InvoiceDetailsBottomSheetState
                             color: Colors.white54, fontSize: 11)),
                     const SizedBox(height: 4),
                     Text(
-                      '${paidAmount.toStringAsFixed(2)} د.ك',
+                      '${paidAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                       style: const TextStyle(
                           color: Colors.greenAccent,
                           fontSize: 15,
@@ -1728,7 +1729,7 @@ class _InvoiceDetailsBottomSheetState
                             color: Colors.white54, fontSize: 11)),
                     const SizedBox(height: 4),
                     Text(
-                      '${remainder.toStringAsFixed(2)} د.ك',
+                      '${remainder.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                       style: const TextStyle(
                           color: Colors.redAccent,
                           fontSize: 15,

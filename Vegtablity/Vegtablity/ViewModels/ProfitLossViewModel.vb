@@ -190,7 +190,8 @@ Namespace ViewModels
                 .Title = "Profit and Loss",
                 .StartDate = StartDate,
                 .EndDate = EndDate,
-                .Items = RevenueItems.Concat(ExpenseItems).ToList()
+                .Items = RevenueItems.Concat(ExpenseItems).ToList(),
+                .TotalBalance = NetProfit
             }
             ReportExporter.ExportFinancialToCsv(report)
         End Sub
@@ -200,7 +201,8 @@ Namespace ViewModels
                 .Title = "قائمة الأرباح والخسائر",
                 .StartDate = StartDate,
                 .EndDate = EndDate,
-                .Items = RevenueItems.Concat(ExpenseItems).ToList()
+                .Items = RevenueItems.Concat(ExpenseItems).ToList(),
+                .TotalBalance = NetProfit
             }
             ReportExporter.ExportProfitLossToPdf(report, StartDate, EndDate)
         End Sub

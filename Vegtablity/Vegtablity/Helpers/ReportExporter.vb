@@ -864,9 +864,10 @@ Namespace Helpers
                 gfx.DrawRectangle(XPens.Black, amountRect)
                 gfx.DrawString(voucher.Amount.ToString("N3"), fontBold, XBrushes.Black, New XRect(width - margin - 185, currentY, 100, 20), XStringFormats.Center)
 
-                ' Amount in Words (Tafqeet) - Centered and Spaced Down
-                Dim tafqeet = CurrencyToLetters.Convert(voucher.Amount, "دينار كويتي", "فلس", 3)
-                gfx.DrawString(ArabicTextHelper.Fix(tafqeet), fontReg, XBrushes.Black, New XRect(margin, currentY + 12, width, 25), XStringFormats.TopCenter)
+                ' Amount in Words (Tafqeet) - Centered on the left side
+                Dim currSymbol = If(company IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(company.CurrencySymbol), company.CurrencySymbol, "دينار كويتي")
+                Dim tafqeet = CurrencyToLetters.Convert(voucher.Amount, currSymbol, "", 3)
+                gfx.DrawString(ArabicTextHelper.Fix(tafqeet), fontReg, XBrushes.Black, New XRect(margin, currentY + 12, width - 210, 25), XStringFormats.TopCenter)
 
                 currentY += 50
 
@@ -966,9 +967,10 @@ Namespace Helpers
                 gfx.DrawRectangle(XPens.Black, amountRect)
                 gfx.DrawString(voucher.Amount.ToString("N3"), fontBold, XBrushes.Black, New XRect(width - margin - 185, currentY, 100, 20), XStringFormats.Center)
 
-                ' Amount in Words (Tafqeet) - Centered and Spaced Down
-                Dim tafqeet = CurrencyToLetters.Convert(voucher.Amount, "دينار كويتي", "فلس", 3)
-                gfx.DrawString(ArabicTextHelper.Fix(tafqeet), fontReg, XBrushes.Black, New XRect(margin, currentY + 12, width, 25), XStringFormats.TopCenter)
+                ' Amount in Words (Tafqeet) - Centered on the left side
+                Dim currSymbol = If(company IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(company.CurrencySymbol), company.CurrencySymbol, "دينار كويتي")
+                Dim tafqeet = CurrencyToLetters.Convert(voucher.Amount, currSymbol, "", 3)
+                gfx.DrawString(ArabicTextHelper.Fix(tafqeet), fontReg, XBrushes.Black, New XRect(margin, currentY + 12, width - 210, 25), XStringFormats.TopCenter)
 
                 currentY += 50
 
@@ -1040,9 +1042,10 @@ Namespace Helpers
                 gfx.DrawRectangle(XBrushes.WhiteSmoke, margin, currentY, width, 35)
                 gfx.DrawRectangle(XPens.DarkSlateGray, margin, currentY, width, 35)
 
-                Dim netLabel As String = If(report.TotalBalance < 0, "صافي الربح:", "صافي الخسارة:")
+                Dim netLabel As String = If(report.TotalBalance < 0, "صافي الأرباح:", "صافي الخسارة:")
                 gfx.DrawString(ArabicTextHelper.Fix(netLabel), fontLarge, XBrushes.Black, New XRect(margin + 10, currentY + 7, width, 25), XStringFormats.TopLeft)
-                gfx.DrawString(FormatAmount(Math.Abs(report.TotalBalance)), fontLarge, XBrushes.DarkGreen, New XRect(margin, currentY + 7, width - 10, 25), XStringFormats.TopRight)
+                Dim amountBrush As XBrush = If(report.TotalBalance < 0, XBrushes.DarkGreen, XBrushes.DarkRed)
+                gfx.DrawString(FormatAmount(Math.Abs(report.TotalBalance)), fontLarge, amountBrush, New XRect(margin, currentY + 7, width - 10, 25), XStringFormats.TopRight)
 
                 doc.Save(dlg.FileName)
                 Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})

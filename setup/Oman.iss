@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
-#define MyAppName "ZaterApp"
+#define MyAppName "OmanApp"
 #define MyAppVersion "16"
 #define MyAppPublisher "Mohamed Ragab"
 #define MyAppURL "www.mohamedRagab.com"
@@ -14,8 +14,8 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{E9D0B1D9-9865-4201-ABC5-46AECDE250CF}
-AppName={#MyAppName}
+AppId={{A760CC7E-3358-4684-A9D1-E1D8AB395E27}
+AppName="OmanApp"
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -29,7 +29,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=D:\VB.NET\backup\Vegtablity\setup\Output
-OutputBaseFilename=ZaterApp_SetupV16
+OutputBaseFilename=OmanApp_SetupV16
 SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\lettuce.ico
 SolidCompression=yes
 WizardStyle=modern dynamic

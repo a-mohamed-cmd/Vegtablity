@@ -21,10 +21,13 @@ Namespace ViewModels
         Private _currentPageTitle As String = "الرئيسية"
         Private _currentPage As Object
         Private _isHomePage As Boolean = True
+        Private _currencySymbol As String = "د.ك"
 
         ' --- Dashboard Metrics ---
         Private _todaySales As Decimal
         Private _todayPurchases As Decimal
+        Private _todaySalesFormatted As String
+        Private _todayPurchasesFormatted As String
         Private _totalProducts As Integer
         Private _totalCustomers As Integer
 
@@ -47,7 +50,18 @@ Namespace ViewModels
             SupplierDebts = New ObservableCollection(Of DashboardPartnerDebt)()
             SalesSeries = New SeriesCollection()
             SalesLabels = New List(Of String)()
-            YFormatter = Function(value) value.ToString("N3") & " د.ك"
+
+            Dim settingsSvc As New Services.SettingsService()
+            Dim companyInfo = settingsSvc.GetCompanyInfo()
+            If companyInfo IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(companyInfo.CurrencySymbol) Then
+                If companyInfo.CurrencySymbol.Contains("/") Then
+                    CurrencySymbol = companyInfo.CurrencySymbol.Split("/"c)(0).Trim()
+                Else
+                    CurrencySymbol = companyInfo.CurrencySymbol.Trim()
+                End If
+            End If
+
+            YFormatter = Function(value) value.ToString("N3") & " " & CurrencySymbol
 
             ' Avoid DB calls at design time
             If Not System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then
@@ -142,6 +156,15 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property CurrencySymbol As String
+            Get
+                Return _currencySymbol
+            End Get
+            Set(value As String)
+                SetProperty(_currencySymbol, value)
+            End Set
+        End Property
+
         ' --- Dashboard Properties ---
         Public Property TodaySales As Decimal
             Get
@@ -149,6 +172,16 @@ Namespace ViewModels
             End Get
             Set(value As Decimal)
                 SetProperty(_todaySales, value)
+                TodaySalesFormatted = value.ToString("N3") & " " & CurrencySymbol
+            End Set
+        End Property
+
+        Public Property TodaySalesFormatted As String
+            Get
+                Return _todaySalesFormatted
+            End Get
+            Set(value As String)
+                SetProperty(_todaySalesFormatted, value)
             End Set
         End Property
 
@@ -158,6 +191,16 @@ Namespace ViewModels
             End Get
             Set(value As Decimal)
                 SetProperty(_todayPurchases, value)
+                TodayPurchasesFormatted = value.ToString("N3") & " " & CurrencySymbol
+            End Set
+        End Property
+
+        Public Property TodayPurchasesFormatted As String
+            Get
+                Return _todayPurchasesFormatted
+            End Get
+            Set(value As String)
+                SetProperty(_todayPurchasesFormatted, value)
             End Set
         End Property
 
@@ -356,9 +399,7 @@ Namespace ViewModels
 
             Dim ProcessItem As Func(Of MenuItem, MenuItem) = Nothing
             ProcessItem = Function(item As MenuItem) As MenuItem
-                              ' Dashboard and Quotes are always visible (Quotes bypassed until permissions are mapped)
-                              If item.FormName = "Dashboard" OrElse item.FormName = "Quotes" OrElse item.FormName = "PurchaseQuotes" Then Return item
-
+                              ' Check permission from DB for ALL forms
                               Dim canView As Boolean = False
                               If Services.Session.CurrentUser IsNot Nothing Then
                                   Try
@@ -482,8 +523,8 @@ Namespace ViewModels
 
                 SelectedMenuItem = item
 
-                ' Check permissions right before navigation (in case they changed but menu wasn't refreshed)
-                If item.FormName <> "Dashboard" AndAlso item.FormName <> "Quotes" AndAlso item.FormName <> "PurchaseQuotes" AndAlso Services.Session.CurrentUser IsNot Nothing Then
+                ' Check permissions right before navigation
+                If Services.Session.CurrentUser IsNot Nothing Then
                     If Not _permissionService.CanViewForm(Services.Session.CurrentUser.RoleID, item.FormName) Then
                         MessageBox.Show("عفواً، ليس لديك صلاحية لعرض هذه الشاشة.", "رسالة نظام", MessageBoxButton.OK, MessageBoxImage.Warning)
                         Return

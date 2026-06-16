@@ -15,6 +15,7 @@ Public Class InvoicePrinter
     Private _currentItemIndex As Integer
     Private _currentPageNumber As Integer
     Private _totalPages As Integer
+    Private _currencySymbol As String = "دينار كويتي"
 
     ' ─── ثوابت التخطيط (سنتيمتر → مم بضربها × 10) ──
     Private Const ITEM_START_CM As Single = 7.0F   ' بداية جدول الأصناف
@@ -40,6 +41,16 @@ Public Class InvoicePrinter
         _currentItemIndex = 0
         _currentPageNumber = 1
         _totalPages = Math.Max(1, CInt(Math.Ceiling(reportData.Details.Count / CDbl(ITEMS_PER_PAGE))))
+
+        Try
+            Dim svc As New Services.SettingsService()
+            Dim company = svc.GetCompanyInfo()
+            If company IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(company.CurrencySymbol) Then
+                _currencySymbol = company.CurrencySymbol
+            End If
+        Catch ex As Exception
+            ' Fallback if DB not ready
+        End Try
 
         _printFontNormal = New Font("Arial", 10, System.Drawing.FontStyle.Bold)
         _printFontBold = New Font("Arial", 10, System.Drawing.FontStyle.Bold)
@@ -117,7 +128,7 @@ Public Class InvoicePrinter
                 g.DrawString(_reportData.Header.TotalAmount.ToString("N3"),
                              _printFontBold, brush, gl(18.0F), footerY, fLeft)
                 Dim tafqeet As String = CurrencyToLetters.Convert(
-                    _reportData.Header.TotalAmount, "دينار كويتي", "فلس")
+                    _reportData.Header.TotalAmount, _currencySymbol, "", 3)
                 ' رسم التفقيط بتنسيق عربي (RTL)
                 Dim rectTafq As New RectangleF(gl(2.5F), footerY, 150.0F, 8.0F)
                 g.DrawString(tafqeet, _printFontBold, brush, rectTafq, fRight)

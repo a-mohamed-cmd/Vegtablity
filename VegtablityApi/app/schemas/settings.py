@@ -8,6 +8,7 @@ class CompanySettingsResponse(BaseModel):
     Phone: Optional[str] = None
     Email: Optional[str] = None
     Logo: Optional[str] = None
+    CurrencySymbol: Optional[str] = None
     IsActive: Optional[bool] = None
 
     class Config:

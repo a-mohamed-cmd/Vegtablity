@@ -20,6 +20,14 @@ class ApiService {
     }
   }
 
+  Future<Response> getCompanySettings() async {
+    try {
+      return await _dio.get('/settings/company');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Response> getProducts({String? search}) async {
     try {
       final queryParameters = search != null ? {'search': search} : null;

@@ -8,6 +8,7 @@ import 'providers/pos_provider.dart';
 import 'providers/voucher_provider.dart';
 import 'providers/account_provider.dart';
 import 'providers/license_provider.dart';
+import 'providers/settings_provider.dart';
 import 'screens/license_check_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/language_viewmodel.dart';
@@ -39,6 +40,9 @@ void main() {
         ),
         ChangeNotifierProvider<AccountProvider>(
           create: (context) => AccountProvider(apiService),
+        ),
+        ChangeNotifierProvider<SettingsProvider>(
+          create: (context) => SettingsProvider(apiService)..fetchSettings(),
         ),
         ChangeNotifierProvider<LanguageViewModel>(
           create: (context) => LanguageViewModel(),

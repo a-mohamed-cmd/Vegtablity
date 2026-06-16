@@ -67,6 +67,17 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _currencySymbol As String
+        Public Property CurrencySymbol As String
+            Get
+                Return _currencySymbol
+            End Get
+            Set(value As String)
+                _currencySymbol = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
         Private _unifiedPartnerSearch As Boolean = True
         Public Property UnifiedPartnerSearch As Boolean
             Get
@@ -97,6 +108,7 @@ Namespace ViewModels
                     Phone = info.Phone
                     Email = info.Email
                     Logo = info.Logo
+                    CurrencySymbol = info.CurrencySymbol
                     UnifiedPartnerSearch = info.UnifiedPartnerSearch
                 End If
             Catch ex As Exception
@@ -120,6 +132,7 @@ Namespace ViewModels
                     .Phone = Phone,
                     .Email = Email,
                     .Logo = Logo,
+                    .CurrencySymbol = CurrencySymbol,
                     .UnifiedPartnerSearch = UnifiedPartnerSearch
                 }
                 _settingsService.SaveCompanyInfo(info)

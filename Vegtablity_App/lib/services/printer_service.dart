@@ -232,57 +232,6 @@ class PrinterService with ChangeNotifier {
 
     try {
       // Formatted receipt content
-      final buffer = StringBuffer();
-      buffer.writeln('================================');
-      buffer.writeln('   $companyName   ');
-      buffer.writeln('   العنوان: $address   ');
-      buffer.writeln('   الهاتف: $phone   ');
-      buffer.writeln('================================');
-      buffer.writeln('فاتورة $typeName جديدة');
-      buffer.writeln('رقم الفاتورة: $invIdStr');
-      buffer.writeln('الشريك: $partnerName');
-      buffer.writeln('التاريخ: $shortDate');
-      buffer.writeln('الوقت: $timeStr');
-      buffer.writeln('اليوم: $dayName');
-      buffer.writeln('نوع العملية: ${invoice['type']}');
-      buffer.writeln('--------------------------------');
-      
-      final items = invoice['items'] as List<dynamic>;
-      for (final item in items) {
-        final String name = item['name'];
-        final double price = (item['price'] as num).toDouble();
-        final int qty = (item['quantity'] as num).toInt();
-        final double total = (item['total'] as num).toDouble();
-        buffer.writeln(name);
-        buffer.writeln('  $qty x $price KWD = $total KWD');
-      }
-      
-      buffer.writeln('--------------------------------');
-      buffer.writeln('الإجمالي الكلي:   $formattedTotal KWD');
-      if (hasSplitPayment) {
-        if (hasVoucherPayment) {
-          buffer.writeln('نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} KWD');
-          buffer.writeln('عبر سند:          ${_formatCurrency(voucherPaidAmount)} KWD');
-          buffer.writeln('إجمالي المدفوع:   $formattedPaid KWD');
-        } else {
-          buffer.writeln('المدفوع:           $formattedPaid KWD');
-        }
-        buffer.writeln('المتبقي آجل:      $formattedRemainder KWD');
-      }
-      buffer.writeln('================================');
-      buffer.writeln('شكراً لزيارتكم! طبعت عبر نظام POS');
-      buffer.writeln('================================');
-
-      // Print simulated/actual output to console
-      print('=== طابعة حرارية: $actualConnectionType ===');
-      if (isVirtual) {
-        print('محاكاة الطباعة النشطة: لم يتم تكوين طابعة بعد.');
-      } else if (_connectionType == 'Network') {
-        print('الاتصال عبر الشبكة: $_ipAddress:$_port');
-      } else {
-        print('الاتصال عبر البلوتوث: $_bluetoothDevice');
-      }
-      print(buffer.toString());
 
       // 1. Physical Printing for Sunmi Built-in Printer (Bluetooth or Simulator Fallback)
       // Since it's a Sunmi terminal, we can attempt to print directly
@@ -357,7 +306,7 @@ class PrinterService with ChangeNotifier {
               style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
             );
             await SunmiPrinter.printText(
-              '  $qtyFormatted x ${_formatCurrency(price)} KWD = ${_formatCurrency(total)} KWD',
+              '  $qtyFormatted x ${_formatCurrency(price)} ${_currencySymbol} = ${_formatCurrency(total)} ${_currencySymbol}',
               style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
             );
           }
@@ -367,31 +316,31 @@ class PrinterService with ChangeNotifier {
             style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
           );
           await SunmiPrinter.printText(
-            'الإجمالي الكلي: $formattedTotal KWD',
+            'الإجمالي الكلي: $formattedTotal ${_currencySymbol}',
             style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
           );
           if (hasSplitPayment) {
             if (hasVoucherPayment) {
               await SunmiPrinter.printText(
-                'نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} KWD',
+                'نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} ${_currencySymbol}',
                 style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
               );
               await SunmiPrinter.printText(
-                'عبر سند:          ${_formatCurrency(voucherPaidAmount)} KWD',
+                'عبر سند:          ${_formatCurrency(voucherPaidAmount)} ${_currencySymbol}',
                 style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
               );
               await SunmiPrinter.printText(
-                'إجمالي المدفوع:   $formattedPaid KWD',
+                'إجمالي المدفوع:   $formattedPaid ${_currencySymbol}',
                 style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
               );
             } else {
               await SunmiPrinter.printText(
-                'المدفوع:          $formattedPaid KWD',
+                'المدفوع:          $formattedPaid ${_currencySymbol}',
                 style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
               );
             }
             await SunmiPrinter.printText(
-              'المتبقي آجل:     $formattedRemainder KWD',
+              'المتبقي آجل:     $formattedRemainder ${_currencySymbol}',
               style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
             );
           }
@@ -457,20 +406,20 @@ class PrinterService with ChangeNotifier {
             final String qtyFormatted = _formatQuantity(qty, unitName);
             
             socket.write('$name\n');
-            socket.write('  $qtyFormatted x ${_formatCurrency(price)} KWD = ${_formatCurrency(total)} KWD\n');
+            socket.write('  $qtyFormatted x ${_formatCurrency(price)} ${_currencySymbol} = ${_formatCurrency(total)} ${_currencySymbol}\n');
           }
           
           socket.write('--------------------------------\n');
-          socket.write('الإجمالي الكلي: $formattedTotal KWD\n');
+          socket.write('الإجمالي الكلي: $formattedTotal ${_currencySymbol}\n');
           if (hasSplitPayment) {
             if (hasVoucherPayment) {
-              socket.write('نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} KWD\n');
-              socket.write('عبر سند:         ${_formatCurrency(voucherPaidAmount)} KWD\n');
-              socket.write('إجمالي المدفوع:  $formattedPaid KWD\n');
+              socket.write('نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} ${_currencySymbol}\n');
+              socket.write('عبر سند:         ${_formatCurrency(voucherPaidAmount)} ${_currencySymbol}\n');
+              socket.write('إجمالي المدفوع:  $formattedPaid ${_currencySymbol}\n');
             } else {
-              socket.write('المدفوع:         $formattedPaid KWD\n');
+              socket.write('المدفوع:         $formattedPaid ${_currencySymbol}\n');
             }
-            socket.write('المتبقي آجل:     $formattedRemainder KWD\n');
+            socket.write('المتبقي آجل:     $formattedRemainder ${_currencySymbol}\n');
           }
           socket.write('================================\n');
           
@@ -602,16 +551,16 @@ class PrinterService with ChangeNotifier {
 
         // ── ملخص المبيعات ──────────────────────────────────
         await _printLine('مبيعات الوردية ($salesCount فاتورة)', bold: true);
-        await _printLine('إجمالي المبيعات: ${_fmt(totalSales)} KWD');
-        await _printLine('مُسدَّد نقداً:   ${_fmt(totalPaid)} KWD');
-        await _printLine('آجل متبقي:       ${_fmt(totalRemainder)} KWD');
+        await _printLine('إجمالي المبيعات: ${_fmt(totalSales)} ${_currencySymbol}');
+        await _printLine('مُسدَّد نقداً:   ${_fmt(totalPaid)} ${_currencySymbol}');
+        await _printLine('آجل متبقي:       ${_fmt(totalRemainder)} ${_currencySymbol}');
         await _printLine('--------------------------------');
 
         // ── ملخص المشتريات ─────────────────────────────────
         await _printLine('مشتريات الوردية ($purchasesCount فاتورة)', bold: true);
-        await _printLine('إجمالي المشتريات: ${_fmt(totalPurchases)} KWD');
-        await _printLine('مُسدَّد نقداً:    ${_fmt(totalPaidPurchases)} KWD');
-        await _printLine('آجل متبقي:        ${_fmt(totalPurchasesRemainder)} KWD');
+        await _printLine('إجمالي المشتريات: ${_fmt(totalPurchases)} ${_currencySymbol}');
+        await _printLine('مُسدَّد نقداً:    ${_fmt(totalPaidPurchases)} ${_currencySymbol}');
+        await _printLine('آجل متبقي:        ${_fmt(totalPurchasesRemainder)} ${_currencySymbol}');
         await _printLine('--------------------------------');
 
         // ── تفاصيل المبيعات ────────────────────────────────
@@ -621,7 +570,7 @@ class PrinterService with ChangeNotifier {
             final id      = inv['InvID']?.toString() ?? '-';
             final partner = inv['PartnerName'] ?? 'عميل نقدي';
             final net     = _fmt(_parseD(inv['NetAmount']));
-            await _printLine('#$id  $partner  $net KWD');
+            await _printLine('#$id  $partner  $net ${_currencySymbol}');
           }
           await _printLine('--------------------------------');
         }
@@ -633,7 +582,7 @@ class PrinterService with ChangeNotifier {
             final id      = inv['InvID']?.toString() ?? '-';
             final partner = inv['PartnerName'] ?? 'مورد نقدي';
             final net     = _fmt(_parseD(inv['NetAmount']));
-            await _printLine('#$id  $partner  $net KWD');
+            await _printLine('#$id  $partner  $net ${_currencySymbol}');
           }
           await _printLine('--------------------------------');
         }
@@ -648,7 +597,7 @@ class PrinterService with ChangeNotifier {
             final partner = v['PartnerName'] ?? 'بدون شريك';
             final amt     = _fmt(_parseD(v['Amount']));
             await _printLine('#$id $vType - $partner');
-            await _printLine('المبلغ: $amt KWD');
+            await _printLine('المبلغ: $amt ${_currencySymbol}');
           }
           await _printLine('--------------------------------');
         }
@@ -656,21 +605,21 @@ class PrinterService with ChangeNotifier {
         // ── بيان النقدية ────────────────────────────────────
         await _printLine('*** بيان النقدية ***', bold: true, center: true);
         await _printLine('--------------------------------');
-        await _printLine('مبلغ بدايه الورديه: ${_fmt(startingCash)} KWD');
-        await _printLine('- مشتريات مدفوعه:   ${_fmt(totalPaidPurchases)} KWD');
-        await _printLine('+ مبيعات محصله:     ${_fmt(totalPaid)} KWD');
+        await _printLine('مبلغ بدايه الورديه: ${_fmt(startingCash)} ${_currencySymbol}');
+        await _printLine('- مشتريات مدفوعه:   ${_fmt(totalPaidPurchases)} ${_currencySymbol}');
+        await _printLine('+ مبيعات محصله:     ${_fmt(totalPaid)} ${_currencySymbol}');
         if (totalReceiptVouchers > 0) {
-          await _printLine('+ سندات قبض:        ${_fmt(totalReceiptVouchers)} KWD');
+          await _printLine('+ سندات قبض:        ${_fmt(totalReceiptVouchers)} ${_currencySymbol}');
         }
         if (totalPaymentVouchers > 0) {
-          await _printLine('- سندات صرف:        ${_fmt(totalPaymentVouchers)} KWD');
+          await _printLine('- سندات صرف:        ${_fmt(totalPaymentVouchers)} ${_currencySymbol}');
         }
         await _printLine('================================', center: true);
-        await _printLine('الصافي المتوقع:     ${_fmt(netCash)} KWD', bold: true);
-        await _printLine('المسدد الفعلي:      ${_fmt(endingCash)} KWD', bold: true);
+        await _printLine('الصافي المتوقع:     ${_fmt(netCash)} ${_currencySymbol}', bold: true);
+        await _printLine('المسدد الفعلي:      ${_fmt(endingCash)} ${_currencySymbol}', bold: true);
         await _printLine('--------------------------------');
         await _printLine(
-          '$diffLabel: ${_fmt(difference.abs())} KWD',
+          '$diffLabel: ${_fmt(difference.abs())} ${_currencySymbol}',
           bold: true,
         );
         await _printLine('================================', center: true);
@@ -701,12 +650,12 @@ class PrinterService with ChangeNotifier {
           socket.write('بداية الوردية: $startStr\n');
           socket.write('نهاية الوردية: $endStr\n');
           socket.write('--------------------------------\n');
-          socket.write('إجمالي المبيعات ($salesCount): ${_fmt(totalSales)} KWD\n');
-          socket.write('مُسدَّد: ${_fmt(totalPaid)} KWD\n');
-          socket.write('آجل متبقي: ${_fmt(totalRemainder)} KWD\n');
-          socket.write('إجمالي المشتريات ($purchasesCount): ${_fmt(totalPurchases)} KWD\n');
-          socket.write('مُسدَّد مشتريات: ${_fmt(totalPaidPurchases)} KWD\n');
-          socket.write('آجل مشتريات: ${_fmt(totalPurchasesRemainder)} KWD\n');
+          socket.write('إجمالي المبيعات ($salesCount): ${_fmt(totalSales)} ${_currencySymbol}\n');
+          socket.write('مُسدَّد: ${_fmt(totalPaid)} ${_currencySymbol}\n');
+          socket.write('آجل متبقي: ${_fmt(totalRemainder)} ${_currencySymbol}\n');
+          socket.write('إجمالي المشتريات ($purchasesCount): ${_fmt(totalPurchases)} ${_currencySymbol}\n');
+          socket.write('مُسدَّد مشتريات: ${_fmt(totalPaidPurchases)} ${_currencySymbol}\n');
+          socket.write('آجل مشتريات: ${_fmt(totalPurchasesRemainder)} ${_currencySymbol}\n');
           socket.write('--------------------------------\n');
           final netVouchers = summary['Vouchers'] as List<dynamic>? ?? [];
           if (netVouchers.isNotEmpty) {
@@ -716,23 +665,23 @@ class PrinterService with ChangeNotifier {
               final vType   = v['VoucherType'] == 'Receipt' ? 'قبض' : 'صرف';
               final partner = v['PartnerName'] ?? 'بدون شريك';
               final amt     = _fmt(_parseD(v['Amount']));
-              socket.write('#$id $vType - $partner : $amt KWD\n');
+              socket.write('#$id $vType - $partner : $amt ${_currencySymbol}\n');
             }
           }
           socket.write('================================\n');
           socket.write('*** بيان النقدية ***\n');
-          socket.write('مبلغ بدايه الورديه: ${_fmt(startingCash)} KWD\n');
-          socket.write('- مشتريات مدفوعه:   ${_fmt(totalPaidPurchases)} KWD\n');
-          socket.write('+ مبيعات محصله:     ${_fmt(totalPaid)} KWD\n');
+          socket.write('مبلغ بدايه الورديه: ${_fmt(startingCash)} ${_currencySymbol}\n');
+          socket.write('- مشتريات مدفوعه:   ${_fmt(totalPaidPurchases)} ${_currencySymbol}\n');
+          socket.write('+ مبيعات محصله:     ${_fmt(totalPaid)} ${_currencySymbol}\n');
           if (totalReceiptVouchers > 0) {
-            socket.write('+ سندات قبض:        ${_fmt(totalReceiptVouchers)} KWD\n');
+            socket.write('+ سندات قبض:        ${_fmt(totalReceiptVouchers)} ${_currencySymbol}\n');
           }
           if (totalPaymentVouchers > 0) {
-            socket.write('- سندات صرف:        ${_fmt(totalPaymentVouchers)} KWD\n');
+            socket.write('- سندات صرف:        ${_fmt(totalPaymentVouchers)} ${_currencySymbol}\n');
           }
-          socket.write('الصافي المتوقع:     ${_fmt(netCash)} KWD\n');
-          socket.write('المسدد الفعلي:      ${_fmt(endingCash)} KWD\n');
-          socket.write('$diffLabel: ${_fmt(difference.abs())} KWD\n');
+          socket.write('الصافي المتوقع:     ${_fmt(netCash)} ${_currencySymbol}\n');
+          socket.write('المسدد الفعلي:      ${_fmt(endingCash)} ${_currencySymbol}\n');
+          socket.write('$diffLabel: ${_fmt(difference.abs())} ${_currencySymbol}\n');
           socket.write('================================\n');
           socket.add([0x1B, 0x61, 0x01]);
           socket.write('طُبع: $printTimestamp\n');
@@ -780,7 +729,6 @@ class PrinterService with ChangeNotifier {
     final String cashier = voucher['UserName'] ?? '-';
 
     try {
-      print('=== طباعة $vType : $actualConnectionType ===');
       
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
         // Sunmi Print
@@ -797,7 +745,7 @@ class PrinterService with ChangeNotifier {
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText('الاسم (الشريك): $partnerName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
         await SunmiPrinter.printText('طريقة الدفع/الاستلام: $accountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-        await SunmiPrinter.printText('المبلغ: ${_formatCurrency(amount)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('المبلغ: ${_formatCurrency(amount)} ${_currencySymbol}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
         await SunmiPrinter.printText('الفواتير المسددة:', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
@@ -815,7 +763,7 @@ class PrinterService with ChangeNotifier {
           final payAmount = _formatCurrency((inv['Amount'] as num).toDouble());
           
           await SunmiPrinter.printText('فاتورة #$id ($date)', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-          await SunmiPrinter.printText('المسدد: $payAmount د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT));
+          await SunmiPrinter.printText('المسدد: $payAmount ${_currencySymbol}', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT));
         }
 
         await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
@@ -844,7 +792,7 @@ class PrinterService with ChangeNotifier {
           socket.add([0x1B, 0x61, 0x02]);
           socket.write('الاسم (الشريك): $partnerName\n');
           socket.write('طريقة الدفع/الاستلام: $accountName\n');
-          socket.write('المبلغ: ${_formatCurrency(amount)} د.ك\n');
+          socket.write('المبلغ: ${_formatCurrency(amount)} ${_currencySymbol}\n');
           socket.write('--------------------------------\n');
           socket.write('الفواتير المسددة:\n');
           
@@ -861,7 +809,7 @@ class PrinterService with ChangeNotifier {
             }
             final payAmount = _formatCurrency((inv['Amount'] as num).toDouble());
             socket.write('فاتورة #$id ($date)\n');
-            socket.write('المسدد: $payAmount د.ك\n');
+            socket.write('المسدد: $payAmount ${_currencySymbol}\n');
           }
           
           socket.write('================================\n');
@@ -924,7 +872,7 @@ class PrinterService with ChangeNotifier {
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText('$targetLabel: $targetAccountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
         await SunmiPrinter.printText('طريقة الدفع: $cashAccountName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-        await SunmiPrinter.printText('المبلغ: ${_formatCurrency(amount)} د.ك', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        await SunmiPrinter.printText('المبلغ: ${_formatCurrency(amount)} ${_currencySymbol}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
         await SunmiPrinter.printText('البيان: $description', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
@@ -954,7 +902,7 @@ class PrinterService with ChangeNotifier {
           socket.add([0x1B, 0x61, 0x02]);
           socket.write('$targetLabel: $targetAccountName\n');
           socket.write('طريقة الدفع: $cashAccountName\n');
-          socket.write('المبلغ: ${_formatCurrency(amount)} د.ك\n');
+          socket.write('المبلغ: ${_formatCurrency(amount)} ${_currencySymbol}\n');
           socket.write('البيان: $description\n');
           socket.write('--------------------------------\n');
           socket.write('================================\n');

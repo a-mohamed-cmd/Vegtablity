@@ -1,3 +1,4 @@
+import '../providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -512,7 +513,7 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                 labelStyle: const TextStyle(color: Colors.white54),
                 filled: true,
                 fillColor: const Color(0xFF1E1E2C),
-                suffixText: 'د.ك',
+                suffixText: ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                 suffixStyle: const TextStyle(color: Colors.white54),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -619,7 +620,7 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                               fontWeight: FontWeight.bold),
                           decoration: InputDecoration(
                             isDense: true,
-                            suffixText: 'د.ك',
+                            suffixText: ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                             suffixStyle: const TextStyle(
                                 color: Colors.white38, fontSize: 12),
                             filled: true,
@@ -670,7 +671,7 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                     style:
                         const TextStyle(color: Colors.white54, fontSize: 12)),
                 Text(
-                    '${context.tr('pv_total_label')}${total.toStringAsFixed(3)} د.ك',
+                    '${context.tr('pv_total_label')}${total.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                     style: const TextStyle(
                         color: Colors.orangeAccent,
                         fontWeight: FontWeight.bold,

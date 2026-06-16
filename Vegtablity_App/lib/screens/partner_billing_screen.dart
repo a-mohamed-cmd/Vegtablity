@@ -1,3 +1,4 @@
+import '../providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -625,7 +626,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${price.toStringAsFixed(3)} د.ك / $unitName',
+                            '${price.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol} / $unitName',
                             style: const TextStyle(
                                 color: Colors.green,
                                 fontWeight: FontWeight.bold,
@@ -703,7 +704,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${item['total'].toStringAsFixed(2)} د.ك',
+                              '${item['total'].toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.green,
@@ -739,7 +740,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             children: [
               Text(context.tr('pb_subtotal'),
                   style: const TextStyle(fontSize: 15)),
-              Text('${_subtotal.toStringAsFixed(2)} د.ك',
+              Text('${_subtotal.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold)),
             ],
@@ -778,7 +779,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               Text(context.tr('pb_net_amount'),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('${_netAmount.toStringAsFixed(2)} د.ك',
+              Text('${_netAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -857,7 +858,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                   title: Text(name,
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
-                      '$barcode | السعر: ${price.toStringAsFixed(3)} د.ك / $unitName'),
+                      '$barcode | السعر: ${price.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol} / $unitName'),
                   trailing: cartQty > 0
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
@@ -913,7 +914,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('الإجمالي: ${_netAmount.toStringAsFixed(2)} د.ك',
+              Text('الإجمالي: ${_netAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
               TextButton.icon(
@@ -1011,7 +1012,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                            '${item['total'].toStringAsFixed(2)} د.ك',
+                                            '${item['total'].toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                                             style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.green)),

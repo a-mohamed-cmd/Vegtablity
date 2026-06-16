@@ -395,7 +395,7 @@
                                     <StackPanel>
                                         <TextBlock Text="🛒" FontSize="28"/>
                                         <TextBlock Text="المبيعات اليوم" Foreground="White" FontSize="13" Margin="0,8,0,3"/>
-                                        <TextBlock Text="{Binding TodaySales, StringFormat={}{0:N3} د.ك}" Foreground="White" FontSize="22" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TodaySalesFormatted}" Foreground="White" FontSize="22" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
                                 <!-- Purchases Card -->
@@ -409,7 +409,7 @@
                                     <StackPanel>
                                         <TextBlock Text="📦" FontSize="28"/>
                                         <TextBlock Text="المشتريات اليوم" Foreground="White" FontSize="13" Margin="0,8,0,3"/>
-                                        <TextBlock Text="{Binding TodayPurchases, StringFormat={}{0:N3} د.ك}" Foreground="White" FontSize="22" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TodayPurchasesFormatted}" Foreground="White" FontSize="22" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Border>
                                 <!-- Products Card -->
@@ -598,7 +598,16 @@
                                             </DataGrid.Resources>
                                             <DataGrid.Columns>
                                                 <DataGridTextColumn Header="العميل" Binding="{Binding PartnerName}" Width="*" Foreground="#2c3e50" FontWeight="Medium"/>
-                                                <DataGridTextColumn Header="المديونية" Binding="{Binding Balance, StringFormat={}{0:N3} د.ك}" Width="Auto" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                <DataGridTemplateColumn Header="المديونية" Width="Auto">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Balance, StringFormat={}{0:N3}}" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                                <TextBlock Text="{Binding DataContext.CurrencySymbol, RelativeSource={RelativeSource AncestorType=Window}}" Margin="4,0,0,0" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
                                                 <DataGridTemplateColumn Header="إجراء" Width="Auto">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
@@ -669,7 +678,16 @@
                                             </DataGrid.Resources>
                                             <DataGrid.Columns>
                                                 <DataGridTextColumn Header="المورد" Binding="{Binding PartnerName}" Width="*" Foreground="#2c3e50" FontWeight="Medium"/>
-                                                <DataGridTextColumn Header="المديونية" Binding="{Binding Balance, StringFormat={}{0:N3} د.ك}" Width="Auto" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                <DataGridTemplateColumn Header="المديونية" Width="Auto">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Balance, StringFormat={}{0:N3}}" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                                <TextBlock Text="{Binding DataContext.CurrencySymbol, RelativeSource={RelativeSource AncestorType=Window}}" Margin="4,0,0,0" Foreground="#e74c3c" FontWeight="Bold"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
                                                 <DataGridTemplateColumn Header="إجراء" Width="Auto">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>

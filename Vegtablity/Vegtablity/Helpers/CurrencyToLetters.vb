@@ -5,7 +5,16 @@ Namespace Helpers
         Private Shared ReadOnly Teens As String() = {"عشر", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"}
         Private Shared ReadOnly Hundreds As String() = {"", "مائة", "مائتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"}
 
-        Public Shared Function Convert(amount As Decimal, Optional currencyName As String = "دينار كويتي", Optional subCurrencyName As String = "فلس", Optional decimalPlaces As Integer = 3) As String
+        Public Shared Function Convert(amount As Decimal, Optional currencyName As String = "دينار كويتي/فلس", Optional subCurrencyName As String = "", Optional decimalPlaces As Integer = 3) As String
+            ' Parse "MainCurrency/SubCurrency" format
+            If currencyName.Contains("/") Then
+                Dim parts = currencyName.Split("/"c)
+                currencyName = parts(0).Trim()
+                If parts.Length > 1 AndAlso String.IsNullOrWhiteSpace(subCurrencyName) Then
+                    subCurrencyName = parts(1).Trim()
+                End If
+            End If
+
             If amount = 0 Then Return "صفر " & currencyName
             
             Dim integerPart = Fix(amount)
@@ -23,7 +32,7 @@ Namespace Helpers
                 result &= ConvertNumber(decimalPart) & " " & subCurrencyName
             End If
             
-            Return "فقط " & result & " لا غير"
+            Return ("فقط " & result & " لا غير").Trim()
         End Function
 
         Private Shared Function ConvertNumber(number As Long) As String

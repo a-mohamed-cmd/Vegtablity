@@ -56,6 +56,15 @@
                                 <TextBlock Text="البريد الإلكتروني" FontSize="16" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,10"/>
                                 <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}" Height="45" Padding="12,10" FontSize="16" Margin="0,0,0,25" VerticalContentAlignment="Center"/>
 
+                                <!-- Currency Symbol -->
+                                <StackPanel Margin="0,0,0,10">
+                                    <TextBlock Text="العملة / العملة الصغرى" FontSize="16" FontWeight="SemiBold" Foreground="#34495e"/>
+                                    <TextBlock Text="(أدخل العملة والعملة الصغرى مفصولين بعلامة / حتى يتم طباعة التفقيط وعرض العملة بشكل سليم)" FontSize="12" Foreground="#7f8c8d" Margin="0,5,0,2"/>
+                                    <TextBlock Text="• أمثلة: دينار كويتي/فلس ، ر.س/هللة ، دولار/سنت ، ج.م/قرش" 
+                                               FontSize="11" Foreground="#95a5a6" Margin="10,0,0,0" LineHeight="18"/>
+                                </StackPanel>
+                                <TextBox Text="{Binding CurrencySymbol, UpdateSourceTrigger=PropertyChanged}" Height="45" Padding="12,10" FontSize="16" Margin="0,0,0,25" VerticalContentAlignment="Center" MaxLength="30"/>
+
                                 <!-- System Preferences: Partner Mode -->
                                 <TextBlock Text="تفضيلات النظام" FontSize="16" FontWeight="SemiBold" Foreground="#34495e" Margin="0,15,0,10"/>
                                 <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15">
