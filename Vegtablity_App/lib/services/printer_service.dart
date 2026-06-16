@@ -60,6 +60,15 @@ class PrinterService with ChangeNotifier {
     }
   }
 
+  String get _currencySymbol {
+    final rawCurrency = _companySettings?['CurrencySymbol']?.toString() ?? '';
+    if (rawCurrency.isEmpty) return ''; // if empty, just hide it
+    if (rawCurrency.contains('/')) {
+      return rawCurrency.split('/')[0].trim();
+    }
+    return rawCurrency.trim();
+  }
+
   Future<void> _initSunmiPrinter() async {
     try {
       await SunmiPrinter.bindingPrinter();
@@ -231,9 +240,10 @@ class PrinterService with ChangeNotifier {
     final String dayName = arDays[printDateTime.weekday - 1];
 
     try {
-      // Formatted receipt content
+      final items = invoice['items'] as List<dynamic>? ?? [];
 
       // 1. Physical Printing for Sunmi Built-in Printer (Bluetooth or Simulator Fallback)
+
       // Since it's a Sunmi terminal, we can attempt to print directly
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
         try {
