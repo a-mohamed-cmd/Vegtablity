@@ -236,4 +236,27 @@ Namespace Models
         Public Property NetProfit As Decimal
     End Class
 
+    ' ==========================================================
+    ' Report 17: Wastage Report (تقرير الهالك)
+    ' ==========================================================
+    Public Class ReportWastageItem
+        Public Property WastageID As Integer
+        Public Property WastageDate As DateTime
+        Public Property WarehouseName As String
+        Public Property ProductCode As String
+        Public Property ProductName As String
+        Public Property Quantity As Decimal
+        Public Property CostPrice As Decimal
+        Public Property TotalCost As Decimal
+        Public Property IsPosted As Boolean
+        Public Property Notes As String
+
+        ' Computed display helpers
+        Public ReadOnly Property StatusText As String
+            Get
+                Return If(IsPosted, "مرحّل", "مسودة")
+            End Get
+        End Property
+    End Class
+
 End Namespace

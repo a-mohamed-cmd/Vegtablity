@@ -67,7 +67,9 @@ Namespace ViewModels
                 {"SettingsParent", "قسم الإعدادات"},
                 {"Settings", "إعدادات عامة"},
                 {"CompanySettings", "بيانات الشركة"},
-                {"UserManagement", "إدارة المستخدمين"}
+                {"UserManagement", "إدارة المستخدمين"},
+                {"Wastage", "إدارة التوالف والهوالك"},
+                {"StockTaking", "إدارة الجرد الآلي"}
             }
             LoadData()
         End Sub

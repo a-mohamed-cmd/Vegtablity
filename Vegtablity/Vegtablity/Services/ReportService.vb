@@ -207,5 +207,27 @@ Namespace Services
             End Try
         End Function
 
+        ' 14. Wastage Report (تقرير الهالك)
+        Public Function GetWastageReport(startDate As DateTime, endDate As DateTime,
+                                         Optional warehouseID As Integer? = Nothing,
+                                         Optional productID As Integer? = Nothing) As List(Of ReportWastageItem)
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Return conn.Query(Of ReportWastageItem)(
+                        StoredProcedures.SP_WASTAGE_REPORT,
+                        New With {
+                            .StartDate = startDate.Date,
+                            .EndDate = endDate.Date,
+                            .WarehouseID = If(warehouseID.HasValue, CObj(warehouseID.Value), CObj(DBNull.Value)),
+                            .ProductID = If(productID.HasValue, CObj(productID.Value), CObj(DBNull.Value))
+                        },
+                        commandType:=CommandType.StoredProcedure
+                    ).AsList()
+                End Using
+            Catch ex As Exception
+                Throw New Exception("Error loading wastage report: " & ex.Message, ex)
+            End Try
+        End Function
+
     End Class
 End Namespace

@@ -348,7 +348,20 @@ Namespace ViewModels
                 .IsExpanded = False,
                 .Children = purchaseChildren
             })
-            allItems.Add(New MenuItem With {.Title = "المخزون", .Icon = "🏪", .FormName = "Inventory", .IsVisible = True})
+            Dim inventoryChildren As New ObservableCollection(Of MenuItem)()
+            inventoryChildren.Add(New MenuItem With {.Title = "المنتجات والمخزون", .Icon = "📦", .FormName = "Inventory", .IsVisible = True})
+            inventoryChildren.Add(New MenuItem With {.Title = "الهوالك والتوالف", .Icon = "🗑️", .FormName = "Wastage", .IsVisible = True})
+            inventoryChildren.Add(New MenuItem With {.Title = "الجرد الآلي", .Icon = "📝", .FormName = "StockTaking", .IsVisible = True})
+
+            allItems.Add(New MenuItem With {
+                .Title = "إدارة المخزون",
+                .Icon = "🏪",
+                .FormName = "InventoryParent",
+                .IsVisible = True,
+                .IsParent = True,
+                .IsExpanded = False,
+                .Children = inventoryChildren
+            })
 
             ' === قسم الحسابات (قابل للتوسيع) ===
             Dim accountingChildren As New ObservableCollection(Of MenuItem)()
@@ -565,6 +578,13 @@ Namespace ViewModels
                         CurrentPage = New Views.InventoryPage()
                         IsHomePage = False
 
+                    Case "Wastage"
+                        CurrentPage = New Views.WastagePage()
+                        IsHomePage = False
+
+                    Case "StockTaking"
+                        CurrentPage = New Views.StockTakePage()
+                        IsHomePage = False
                     Case "Partners"
                         CurrentPage = New Views.PartnersPage()
                         IsHomePage = False

@@ -1736,6 +1736,18 @@ select @costcode = accountID from [Accounting].[ChartOfAccounts] WHERE AccountCo
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('52', N'المصاريف التشغيلية', @ExpensesID, 'Expenses', 1, 0);
 
+    -- 6. مصروف الهالك والتوالف
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '64')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('64', N'مصروف الهالك والتوالف', @ExpensesID, 'Expenses', 1, 0);
+
+    DECLARE @WastageExpID INT;
+    SELECT @WastageExpID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '64';
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '6401')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('6401', N'هالك وتوالف بضاعة', @WastageExpID, 'Expenses', 2, 1);
+
     SELECT N'تمت تهيئة الحسابات الرئيسية بنجاح.' AS Result;
 END
 GO
@@ -7654,4 +7666,1063 @@ BEGIN
         VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol);
     END
 END
+GO
+-- ============================================================
+-- Inventory & Wastage Management Feature - Phase 2
+-- إنشاء جداول وإجراءات الهوالك والجرد الآلي
+-- ============================================================
+
+-- ============================================================
+-- 1. جدول الهوالك (الرئيسي)
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID('[Inventory].[WastageHeader]'))
+BEGIN
+    CREATE TABLE [Inventory].[WastageHeader] (
+        WastageID INT IDENTITY(1,1) PRIMARY KEY,
+        WastageDate DATETIME NOT NULL DEFAULT GETDATE(),
+        UserID INT NOT NULL,
+        ShiftID INT NULL,
+        WarehouseID INT NOT NULL DEFAULT 1,
+        TotalValue DECIMAL(18,3) NOT NULL DEFAULT 0,
+        Notes NVARCHAR(500),
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        IsPosted BIT NOT NULL DEFAULT 0 -- 0=Pending, 1=Posted/Deducted from stock
+    );
+    PRINT N'✅ تم إنشاء جدول WastageHeader';
+END
+GO
+
+-- ============================================================
+-- 2. جدول الهوالك (التفاصيل)
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID('[Inventory].[WastageDetails]'))
+BEGIN
+    CREATE TABLE [Inventory].[WastageDetails] (
+        DetailID INT IDENTITY(1,1) PRIMARY KEY,
+        WastageID INT NOT NULL FOREIGN KEY REFERENCES [Inventory].[WastageHeader](WastageID) ON DELETE CASCADE,
+        ProductID INT NOT NULL,
+        Quantity DECIMAL(18,3) NOT NULL,
+        CostPrice DECIMAL(18,3) NOT NULL,
+        TotalCost AS (Quantity * CostPrice) PERSISTED
+    );
+    PRINT N'✅ تم إنشاء جدول WastageDetails';
+END
+GO
+
+-- ============================================================
+-- 3. جدول الجرد الآلي (الرئيسي)
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID('[Inventory].[StockTakeHeader]'))
+BEGIN
+    CREATE TABLE [Inventory].[StockTakeHeader] (
+        StockTakeID INT IDENTITY(1,1) PRIMARY KEY,
+        StockTakeDate DATETIME NOT NULL DEFAULT GETDATE(),
+        UserID INT NOT NULL,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Pending', -- Pending, Approved, Rejected
+        TotalDifferenceValue DECIMAL(18,3) NOT NULL DEFAULT 0,
+        Notes NVARCHAR(500),
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        ApprovedBy INT NULL,
+        ApprovedAt DATETIME NULL
+    );
+    PRINT N'✅ تم إنشاء جدول StockTakeHeader';
+END
+GO
+-- ============================================================
+-- 4. جدول الجرد الآلي (التفاصيل)
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID('[Inventory].[StockTakeDetails]'))
+BEGIN
+    CREATE TABLE [Inventory].[StockTakeDetails] (
+        DetailID INT IDENTITY(1,1) PRIMARY KEY,
+        StockTakeID INT NOT NULL FOREIGN KEY REFERENCES [Inventory].[StockTakeHeader](StockTakeID) ON DELETE CASCADE,
+        ProductID INT NOT NULL,
+        SystemQuantity DECIMAL(18,3) NOT NULL,
+        ActualQuantity DECIMAL(18,3) NOT NULL,
+        DifferenceQuantity AS (ActualQuantity - SystemQuantity) PERSISTED,
+        CostPrice DECIMAL(18,3) NOT NULL,
+        DifferenceValue AS ((ActualQuantity - SystemQuantity) * CostPrice) PERSISTED
+    );
+    PRINT N'✅ تم إنشاء جدول StockTakeDetails';
+END
+GO
+-- ============================================================
+-- 5. إضافة الصلاحيات لجدول Permissions (إن وُجد)
+-- ============================================================
+IF EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID('[Security].[Permissions]'))
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM [Security].[Permissions] WHERE PermissionName = 'إدارة التوالف')
+        INSERT INTO [Security].[Permissions] (PermissionName, Description) 
+        VALUES (N'إدارة التوالف', N'إضافة ومراجعة الهوالك والتوالف');
+    IF NOT EXISTS (SELECT 1 FROM [Security].[Permissions] WHERE PermissionName = 'إدارة الجرد الآلي')
+        INSERT INTO [Security].[Permissions] (PermissionName, Description) 
+        VALUES (N'إدارة الجرد الآلي', N'إنشاء واعتماد تسويات الجرد المخزني');
+    
+    PRINT N'✅ تم إدراج صلاحيات إدارة التوالف والجرد في جدول Permissions';
+END
+GO
+-- ============================================================
+-- 6. إجراء مخزن (SP) لحفظ الفاتورة / الهوالك عبر XML
+-- ============================================================
+IF OBJECT_ID('[Inventory].[sp_Wastage_Save_XML]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_Save_XML];
+GO
+CREATE PROCEDURE [Inventory].[sp_Wastage_Save_XML]
+    @WastageID INT OUTPUT,
+    @WastageDate DATETIME,
+    @UserID INT,
+    @ShiftID INT = NULL,
+    @WarehouseID INT = 1,
+    @TotalValue DECIMAL(18,3),
+    @Notes NVARCHAR(500),
+    @DetailsXml XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        IF @WastageID = 0 OR @WastageID IS NULL
+        BEGIN
+            INSERT INTO [Inventory].[WastageHeader] 
+                (WastageDate, UserID, ShiftID, WarehouseID, TotalValue, Notes, CreatedAt, IsPosted)
+            VALUES 
+                (@WastageDate, @UserID, @ShiftID, @WarehouseID, @TotalValue, @Notes, GETDATE(), 0);
+            
+            SET @WastageID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            UPDATE [Inventory].[WastageHeader]
+            SET WastageDate = @WastageDate,
+                UserID = @UserID,
+                ShiftID = @ShiftID,
+                WarehouseID = @WarehouseID,
+                TotalValue = @TotalValue,
+                Notes = @Notes
+            WHERE WastageID = @WastageID;
+            
+            -- حذف التفاصيل القديمة
+            DELETE FROM [Inventory].[WastageDetails] WHERE WastageID = @WastageID;
+        END
+        -- إدراج التفاصيل الجديدة
+        INSERT INTO [Inventory].[WastageDetails] (WastageID, ProductID, Quantity, CostPrice)
+        SELECT 
+            @WastageID,
+            x.item.value('@ProductID', 'INT'),
+            x.item.value('@Quantity', 'DECIMAL(18,3)'),
+            x.item.value('@CostPrice', 'DECIMAL(18,3)')
+        FROM @DetailsXml.nodes('/Details/Item') AS x(item);
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم إنشاء الإجراء المخزن لحفظ الهوالك sp_Wastage_Save_XML';
+GO
+-- ============================================================
+-- 7. إجراء مخزن لترحيل الهوالك وخصمها من المخزون
+-- (يعتمد هذا الإجراء على آلية خصم المخزون الموجودة لديك)
+-- ============================================================
+IF OBJECT_ID('[Inventory].[sp_Wastage_Post]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_Post];
+GO
+CREATE PROCEDURE [Inventory].[sp_Wastage_Post]
+    @WastageID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        DECLARE @IsPosted BIT;
+        SELECT @IsPosted = IsPosted FROM [Inventory].[WastageHeader] WHERE WastageID = @WastageID;
+        
+        IF @IsPosted = 1
+            THROW 50000, N'تم ترحيل هذا المستند مسبقاً ولا يمكن ترحيله مرة أخرى.', 1;
+        -- تحديث حالة المستند
+        UPDATE [Inventory].[WastageHeader] SET IsPosted = 1 WHERE WastageID = @WastageID;
+        -- ** ملاحظة هامة **
+        -- هنا يجب استدعاء الإجراء الخاص بتحديث كميات المنتجات (مثل sp_UpdateStock) أو كتابة استعلام التحديث.
+        -- لتجنب أي تعارض مع الجداول الحالية (التي قد يكون اسمها Products أو Stock)، يرجى ربط كود خصم الكمية هنا 
+        -- بناءً على جدول Products لديك.
+        
+        -- مثال مقترح للتحديث (يرجى إزالة التعليق إذا كان جدول المخزون اسمه Inventory.Products):
+        /*
+        UPDATE p
+        SET p.Quantity = p.Quantity - d.Quantity
+        FROM [Inventory].[Products] p
+        INNER JOIN [Inventory].[WastageDetails] d ON p.ProductID = d.ProductID
+        WHERE d.WastageID = @WastageID;
+        */
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم إنشاء الإجراء المخزن لترحيل الهوالك sp_Wastage_Post';
+GO
+-- ============================================================
+-- 8. إجراء مخزن (SP) لحفظ أو تعديل تسوية جرد (مسودة)
+-- ============================================================
+IF OBJECT_ID('[Inventory].[sp_StockTake_Save_XML]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_StockTake_Save_XML];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_StockTake_Save_XML]
+    @StockTakeID INT OUTPUT,
+    @StockTakeDate DATETIME,
+    @UserID INT,
+    @TotalDifferenceValue DECIMAL(18,3),
+    @Notes NVARCHAR(500),
+    @DetailsXml XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        IF @StockTakeID = 0 OR @StockTakeID IS NULL
+        BEGIN
+            INSERT INTO [Inventory].[StockTakeHeader] 
+                (StockTakeDate, UserID, Status, TotalDifferenceValue, Notes, CreatedAt)
+            VALUES 
+                (@StockTakeDate, @UserID, 'Pending', @TotalDifferenceValue, @Notes, GETDATE());
+            
+            SET @StockTakeID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            -- التأكد من عدم تعديل جرد معتمد
+            IF EXISTS (SELECT 1 FROM [Inventory].[StockTakeHeader] WHERE StockTakeID = @StockTakeID AND Status <> 'Pending')
+                THROW 50000, N'لا يمكن تعديل تسوية جرد تم اعتمادها أو رفضها مسبقاً', 1;
+
+            UPDATE [Inventory].[StockTakeHeader]
+            SET StockTakeDate = @StockTakeDate,
+                UserID = @UserID,
+                TotalDifferenceValue = @TotalDifferenceValue,
+                Notes = @Notes
+            WHERE StockTakeID = @StockTakeID;
+            
+            -- حذف التفاصيل القديمة
+            DELETE FROM [Inventory].[StockTakeDetails] WHERE StockTakeID = @StockTakeID;
+        END
+
+        -- إدراج التفاصيل الجديدة
+        INSERT INTO [Inventory].[StockTakeDetails] (StockTakeID, ProductID, SystemQuantity, ActualQuantity, CostPrice)
+        SELECT 
+            @StockTakeID,
+            x.item.value('@ProductID', 'INT'),
+            x.item.value('@SystemQuantity', 'DECIMAL(18,3)'),
+            x.item.value('@ActualQuantity', 'DECIMAL(18,3)'),
+            x.item.value('@CostPrice', 'DECIMAL(18,3)')
+        FROM @DetailsXml.nodes('/Details/Item') AS x(item);
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم إنشاء الإجراء المخزن لحفظ مسودة الجرد sp_StockTake_Save_XML';
+GO
+
+-- ============================================================
+-- 9. إجراء مخزن لاعتماد تسوية الجرد وتعديل المخزون
+-- ============================================================
+IF OBJECT_ID('[Inventory].[sp_StockTake_Approve]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_StockTake_Approve];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_StockTake_Approve]
+    @StockTakeID INT,
+    @ApprovedBy INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        DECLARE @Status NVARCHAR(50);
+        SELECT @Status = Status FROM [Inventory].[StockTakeHeader] WHERE StockTakeID = @StockTakeID;
+        
+        IF @Status <> 'Pending'
+            THROW 50000, N'تسوية الجرد هذه معتمدة أو مرفوضة بالفعل ولا يمكن تعديلها.', 1;
+
+        -- تحديث حالة المستند إلى Approved
+        UPDATE [Inventory].[StockTakeHeader] 
+        SET Status = 'Approved', ApprovedBy = @ApprovedBy, ApprovedAt = GETDATE()
+        WHERE StockTakeID = @StockTakeID;
+
+        -- ** ملاحظة هامة **
+        -- هنا يتم تعديل المخزون الفعلي بناءً على الفرق (DifferenceQuantity)
+        -- إذا كان الفرق موجب (فائض)، يتم إضافة الكمية.
+        -- إذا كان الفرق سالب (عجز)، يتم خصم الكمية.
+        -- كما في إجراء الهوالك، يجب استبدال هذا التحديث بكود التحديث الفعلي لنظامك (مثل [Inventory].[Products])
+
+        /*
+        UPDATE p
+        SET p.Quantity = p.Quantity + d.DifferenceQuantity
+        FROM [Inventory].[Products] p
+        INNER JOIN [Inventory].[StockTakeDetails] d ON p.ProductID = d.ProductID
+        WHERE d.StockTakeID = @StockTakeID AND d.DifferenceQuantity <> 0;
+        */
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم إنشاء الإجراء المخزن لاعتماد تسوية الجرد sp_StockTake_Approve';
+GO
+-- =============================================
+-- تعديل الإجراء المخزن لجلب رصيد الصنف ليدعم اختيار المخزن مع التوافق مع الكود القديم
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Stock_GetByProduct]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Stock_GetByProduct];
+GO
+CREATE PROCEDURE [Inventory].[sp_Stock_GetByProduct]
+    @ProductID INT,
+    @WarehouseID INT = NULL -- جعلناها اختيارية (NULL) حتى لا يتعطل الكود القديم
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    IF @WarehouseID IS NOT NULL AND @WarehouseID > 0
+    BEGIN
+        -- النظام الجديد: جلب الرصيد للمخزن المحدد فقط
+        SELECT ISNULL(CurrentQty, 0)
+        FROM [Inventory].[ProductStock] 
+        WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID;
+    END
+    ELSE
+    BEGIN
+        -- النظام القديم: جلب إجمالي الرصيد من جميع المخازن
+        SELECT ISNULL(SUM(CurrentQty), 0)
+        FROM [Inventory].[ProductStock]
+        WHERE ProductID = @ProductID;
+    END
+END
+GO
+-- =============================================
+-- تعديل الإجراء المخزن لجلب متوسط التكلفة ليدعم اختيار المخزن مع التوافق مع الكود القديم
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_Inventory_GetAvgCostByProduct]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Inventory_GetAvgCostByProduct];
+GO
+CREATE PROCEDURE [Inventory].[sp_Inventory_GetAvgCostByProduct]
+    @ProductID INT,
+    @WarehouseID INT = NULL -- اختيارية للتوافق مع العمليات القديمة
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    IF @WarehouseID IS NOT NULL AND @WarehouseID > 0
+    BEGIN
+        -- النظام الجديد: جلب التكلفة الخاصة بالمخزن المحدد
+        SELECT ISNULL(AvgCostPrice, 0) 
+        FROM [Inventory].[ProductStock] 
+        WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID;
+    END
+    ELSE
+    BEGIN
+        -- النظام القديم: جلب أحدث أو أعلى تكلفة متوفرة للصنف
+        SELECT ISNULL(MAX(AvgCostPrice), 0)
+        FROM [Inventory].[ProductStock]
+        WHERE ProductID = @ProductID;
+    END
+END
+GO
+-- ============================================================
+-- 1. sp_Wastage_GetAll  (قائمة سجلات الهالك مع الصفحات)
+-- ============================================================
+IF OBJECT_ID('[Inventory].[sp_Wastage_GetAll]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_GetAll];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Wastage_GetAll]
+    @PageNumber INT = 1,
+    @PageSize   INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- النتيجة الأولى: إجمالي عدد السجلات
+    SELECT COUNT(*) FROM [Inventory].[WastageHeader];
+
+    -- النتيجة الثانية: البيانات مع الصفحات
+    SELECT
+        w.*,
+        u.FullName AS UserName
+    FROM [Inventory].[WastageHeader] w
+    LEFT JOIN [Security].[Users] u ON w.UserID = u.UserID
+    ORDER BY w.WastageDate DESC, w.WastageID DESC
+    OFFSET (@PageNumber - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- ============================================================
+-- 2. sp_Wastage_GetDetails  (تفاصيل الأصناف مع كود الصنف)
+-- ============================================================
+IF OBJECT_ID('[Inventory].[sp_Wastage_GetDetails]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_GetDetails];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Wastage_GetDetails]
+    @WastageID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        d.*,
+        p.ProductName,
+        ISNULL(p.Barcode, CAST(p.ProductID AS NVARCHAR(50))) AS ProductCode
+    FROM [Inventory].[WastageDetails] d
+    LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    WHERE d.WastageID = @WastageID;
+END
+GO
+
+IF OBJECT_ID('[Inventory].[sp_Wastage_Unpost]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_Unpost];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Wastage_Unpost]
+    @WastageID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @IsPosted BIT;
+        SELECT @IsPosted = IsPosted 
+        FROM [Inventory].[WastageHeader] 
+        WHERE WastageID = @WastageID;
+
+        IF @IsPosted = 0
+            THROW 50001, N'هذا المستند غير مرحّل أصلاً.', 1;
+
+        -- الـ Trigger يتولى: إعادة الكمية + حذف القيد المحاسبي
+        UPDATE [Inventory].[WastageHeader] 
+        SET IsPosted = 0 
+        WHERE WastageID = @WastageID;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+-- ============================================================
+-- Trigger: trg_Wastage_Post
+-- Table  : [Inventory].[WastageHeader]
+-- Event  : AFTER UPDATE on IsPosted
+--
+-- POST   (IsPosted: 0 → 1):
+--   1. خصم الكمية من [Inventory].[ProductStock]
+--   2. إنشاء قيد محاسبي:
+--        من  / حساب مصروف الهالك   (AccountCode LIKE '64%')
+--        إلى / حساب المخزن المخصوم منه (Settings.Warehouses.AccountID)
+--
+-- UNPOST (IsPosted: 1 → 0):
+--   1. إعادة الكمية إلى [Inventory].[ProductStock]
+--   2. حذف القيود المحاسبية المرتبطة (ReferenceType = 'Wastage')
+-- ============================================================
+-- ============================================================
+-- Trigger: trg_Wastage_Post
+-- Table  : [Inventory].[WastageHeader]
+-- Event  : AFTER UPDATE on IsPosted
+--
+-- POST   (IsPosted: 0 → 1):
+--   1. خصم الكمية من [Inventory].[ProductStock]
+--   2. إنشاء قيد محاسبي:
+--        من  / حساب مصروف الهالك   (AccountCode LIKE '64%')
+--        إلى / حساب المخزن المخصوم منه (Settings.Warehouses.AccountID)
+--
+-- UNPOST (IsPosted: 1 → 0):
+--   1. إعادة الكمية إلى [Inventory].[ProductStock]
+--   2. حذف القيود المحاسبية المرتبطة (ReferenceType = 'Wastage')
+--
+-- ملاحظة: Trigger يعمل داخل transaction ضمني تلقائياً،
+--         لكن BEGIN TRY + ROLLBACK يضمن التراجع الكامل عند أي خطأ.
+-- ============================================================
+
+IF OBJECT_ID('[Inventory].[trg_Wastage_Post]', 'TR') IS NOT NULL
+    DROP TRIGGER [Inventory].[trg_Wastage_Post];
+GO
+
+CREATE TRIGGER [Inventory].[trg_Wastage_Post]
+ON [Inventory].[WastageHeader]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT UPDATE(IsPosted) RETURN;
+
+    BEGIN TRY
+
+        -- ══════════════════════════════════════════════════════════════
+        -- القسم الأول: ترحيل (IsPosted: 0 → 1)
+        -- ══════════════════════════════════════════════════════════════
+        IF EXISTS (
+            SELECT 1 FROM inserted i
+            INNER JOIN deleted del ON i.WastageID = del.WastageID
+            WHERE i.IsPosted = 1 AND del.IsPosted = 0
+        )
+        BEGIN
+
+            -- ──────────────────────────────────────────────────────────
+            -- 1A. خصم الكمية من ProductStock (سجلات موجودة)
+            -- ──────────────────────────────────────────────────────────
+            UPDATE S
+            SET S.CurrentQty = S.CurrentQty - D.Quantity
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN [Inventory].[WastageDetails] D   ON S.ProductID  = D.ProductID
+            INNER JOIN inserted                     i   ON D.WastageID  = i.WastageID
+            INNER JOIN deleted                      del ON i.WastageID  = del.WastageID
+            WHERE i.IsPosted = 1 AND del.IsPosted = 0
+              AND S.WarehouseID = i.WarehouseID;
+
+            -- ──────────────────────────────────────────────────────────
+            -- 1B. إدراج سجل سالب إذا لم يكن الصنف موجوداً في المستودع
+            -- ──────────────────────────────────────────────────────────
+            INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+            SELECT
+                D.ProductID,
+                i.WarehouseID,
+                -SUM(D.Quantity),
+                0
+            FROM [Inventory].[WastageDetails] D
+            INNER JOIN inserted i   ON D.WastageID = i.WastageID
+            INNER JOIN deleted  del ON i.WastageID = del.WastageID
+            WHERE i.IsPosted = 1 AND del.IsPosted = 0
+              AND NOT EXISTS (
+                  SELECT 1 FROM [Inventory].[ProductStock] S2
+                  WHERE S2.ProductID   = D.ProductID
+                    AND S2.WarehouseID = i.WarehouseID
+              )
+            GROUP BY D.ProductID, i.WarehouseID;
+
+            -- ──────────────────────────────────────────────────────────
+            -- 2. القيد المحاسبي
+            -- ──────────────────────────────────────────────────────────
+
+            DECLARE @WastageExpenseAcc INT;
+            SET @WastageExpenseAcc = ISNULL(
+                (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts]
+                 WHERE AccountCode LIKE '64%' AND IsTransactional = 1 ORDER BY AccountCode),
+                (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts]
+                 WHERE AccountCode LIKE '5%'  AND IsTransactional = 1 ORDER BY AccountCode DESC)
+            );
+
+            DECLARE @InventoryFallbackAcc INT;
+            SET @InventoryFallbackAcc = ISNULL(
+                (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts]
+                 WHERE AccountCode LIKE '13%' AND IsTransactional = 1 ORDER BY AccountCode),
+                (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts]
+                 WHERE AccountCode = '13')
+            );
+
+            DECLARE @WastageEntryMap TABLE (WastageID INT, EntryNo INT);
+
+            INSERT INTO @WastageEntryMap (WastageID, EntryNo)
+            SELECT i.WastageID, NEXT VALUE FOR [Accounting].[seq_EntryNo]
+            FROM inserted i
+            INNER JOIN deleted del ON i.WastageID = del.WastageID
+            WHERE i.IsPosted = 1 AND del.IsPosted = 0;
+
+            -- الطرف الأول: مدين / مصروف الهالك
+            ;WITH WastageCost AS (
+                SELECT D.WastageID, SUM(D.Quantity * D.CostPrice) AS TotalCost
+                FROM [Inventory].[WastageDetails] D
+                INNER JOIN inserted i   ON D.WastageID = i.WastageID
+                INNER JOIN deleted  del ON i.WastageID = del.WastageID
+                WHERE i.IsPosted = 1 AND del.IsPosted = 0
+                GROUP BY D.WastageID
+            )
+            INSERT INTO [Accounting].[JournalEntries]
+                (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                 AccountID, DebitAmount, CreditAmount, Description, UserID)
+            SELECT
+                m.EntryNo, i.WastageDate, 'Wastage', i.WastageID,
+                @WastageExpenseAcc,
+                wc.TotalCost, 0,
+                N'هالك رقم ' + CAST(i.WastageID AS NVARCHAR) +
+                    CASE WHEN i.Notes IS NOT NULL AND LEN(LTRIM(i.Notes)) > 0
+                         THEN N' - ' + i.Notes ELSE N'' END,
+                i.UserID
+            FROM inserted i
+            INNER JOIN deleted          del ON i.WastageID  = del.WastageID
+            INNER JOIN @WastageEntryMap m   ON m.WastageID  = i.WastageID
+            INNER JOIN WastageCost      wc  ON wc.WastageID = i.WastageID
+            WHERE i.IsPosted = 1 AND del.IsPosted = 0 AND wc.TotalCost > 0;
+
+            -- الطرف الثاني: دائن / حساب المخزن
+            ;WITH WastageCost AS (
+                SELECT D.WastageID, SUM(D.Quantity * D.CostPrice) AS TotalCost
+                FROM [Inventory].[WastageDetails] D
+                INNER JOIN inserted i   ON D.WastageID = i.WastageID
+                INNER JOIN deleted  del ON i.WastageID = del.WastageID
+                WHERE i.IsPosted = 1 AND del.IsPosted = 0
+                GROUP BY D.WastageID
+            )
+            INSERT INTO [Accounting].[JournalEntries]
+                (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                 AccountID, DebitAmount, CreditAmount, Description, UserID)
+            SELECT
+                m.EntryNo, i.WastageDate, 'Wastage', i.WastageID,
+                ISNULL(w.AccountID, @InventoryFallbackAcc),
+                0, wc.TotalCost,
+                N'هالك رقم ' + CAST(i.WastageID AS NVARCHAR) +
+                    CASE WHEN i.Notes IS NOT NULL AND LEN(LTRIM(i.Notes)) > 0
+                         THEN N' - ' + i.Notes ELSE N'' END,
+                i.UserID
+            FROM inserted i
+            INNER JOIN deleted             del ON i.WastageID  = del.WastageID
+            INNER JOIN @WastageEntryMap    m   ON m.WastageID  = i.WastageID
+            INNER JOIN WastageCost         wc  ON wc.WastageID = i.WastageID
+            LEFT JOIN  [Settings].[Warehouses] w ON w.WarehouseID = i.WarehouseID
+            WHERE i.IsPosted = 1 AND del.IsPosted = 0 AND wc.TotalCost > 0;
+
+        END -- نهاية قسم الترحيل
+
+        -- ══════════════════════════════════════════════════════════════
+        -- القسم الثاني: إلغاء الترحيل (IsPosted: 1 → 0)
+        -- ══════════════════════════════════════════════════════════════
+        IF EXISTS (
+            SELECT 1 FROM inserted i
+            INNER JOIN deleted del ON i.WastageID = del.WastageID
+            WHERE i.IsPosted = 0 AND del.IsPosted = 1
+        )
+        BEGIN
+            -- 1A. إعادة الكمية (سجلات موجودة)
+            UPDATE S
+            SET S.CurrentQty = S.CurrentQty + D.Quantity
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN [Inventory].[WastageDetails] D   ON S.ProductID  = D.ProductID
+            INNER JOIN inserted                     i   ON D.WastageID  = i.WastageID
+            INNER JOIN deleted                      del ON i.WastageID  = del.WastageID
+            WHERE i.IsPosted = 0 AND del.IsPosted = 1
+              AND S.WarehouseID = i.WarehouseID;
+
+            -- 1B. إدراج سجل إيجابي إذا لم يكن موجوداً
+            INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+            SELECT D.ProductID, i.WarehouseID, SUM(D.Quantity), 0
+            FROM [Inventory].[WastageDetails] D
+            INNER JOIN inserted i   ON D.WastageID = i.WastageID
+            INNER JOIN deleted  del ON i.WastageID = del.WastageID
+            WHERE i.IsPosted = 0 AND del.IsPosted = 1
+              AND NOT EXISTS (
+                  SELECT 1 FROM [Inventory].[ProductStock] S2
+                  WHERE S2.ProductID = D.ProductID AND S2.WarehouseID = i.WarehouseID
+              )
+            GROUP BY D.ProductID, i.WarehouseID;
+
+            -- 2. حذف القيود المحاسبية
+            DELETE JE
+            FROM [Accounting].[JournalEntries] JE
+            INNER JOIN inserted i   ON JE.ReferenceID = i.WastageID
+            INNER JOIN deleted  del ON i.WastageID    = del.WastageID
+            WHERE JE.ReferenceType = 'Wastage'
+              AND i.IsPosted = 0 AND del.IsPosted = 1;
+
+        END -- نهاية قسم إلغاء الترحيل
+
+    END TRY
+    BEGIN CATCH
+        -- التراجع الكامل عن كل التغييرات في حالة أي خطأ
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW; -- إعادة رفع الخطأ للـ caller
+    END CATCH
+
+END
+GO
+
+PRINT N'✅ تم إنشاء Trigger ترحيل الهالك: trg_Wastage_Post (مع Transaction)';
+GO
+IF OBJECT_ID('[Inventory].[sp_Wastage_Report]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_Report];
+GO
+CREATE PROCEDURE [Inventory].[sp_Wastage_Report]
+    @StartDate DATE,
+    @EndDate   DATE,
+    @WarehouseID INT = NULL,
+    @ProductID   INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        h.WastageID,
+        h.WastageDate,
+        h.Notes,
+        h.IsPosted,
+        w.WarehouseName,
+        p.ProductName,
+        ISNULL(p.Barcode, CAST(p.ProductID AS NVARCHAR)) AS ProductCode,
+        d.Quantity,
+        d.CostPrice,
+        d.Quantity * d.CostPrice AS TotalCost
+    FROM [Inventory].[WastageHeader] h
+    INNER JOIN [Inventory].[WastageDetails] d ON h.WastageID = d.WastageID
+    LEFT JOIN  [Settings].[Warehouses]      w ON h.WarehouseID = w.WarehouseID
+    LEFT JOIN  [Inventory].[Products]       p ON d.ProductID   = p.ProductID
+    WHERE CAST(h.WastageDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (@WarehouseID IS NULL OR h.WarehouseID = @WarehouseID)
+      AND (@ProductID   IS NULL OR d.ProductID   = @ProductID)
+    ORDER BY h.WastageDate DESC, h.WastageID;
+END
+GO
+
+-- 1. إضافة عمود الرصيد قبل الهالك لجدول التفاصيل
+IF NOT EXISTS (
+    SELECT * FROM sys.columns 
+    WHERE Name = N'StockBefore' AND Object_ID = Object_ID(N'[Inventory].[WastageDetails]')
+)
+BEGIN
+    ALTER TABLE [Inventory].[WastageDetails] ADD StockBefore DECIMAL(18,3) NOT NULL DEFAULT 0;
+    PRINT N'✅ تم إضافة عمود StockBefore بنجاح';
+END
+GO
+-- 2. تحديث إجراء جلب تفاصيل الهالك ليعرض الرصيد كـ AvailableQuantity
+IF OBJECT_ID('[Inventory].[sp_Wastage_GetDetails]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_GetDetails];
+GO
+CREATE PROCEDURE [Inventory].[sp_Wastage_GetDetails]
+    @WastageID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.DetailID,
+        d.WastageID,
+        d.ProductID,
+        ISNULL(p.Barcode, CAST(p.ProductID AS NVARCHAR)) AS ProductCode,
+        p.ProductName,
+        d.Quantity,
+        d.CostPrice,
+        d.TotalCost,
+        d.StockBefore AS AvailableQuantity -- <== الخدعة: نعرضه بهذا الاسم ليتعرف عليه الـ Dapper مباشرة
+    FROM [Inventory].[WastageDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    WHERE d.WastageID = @WastageID;
+END
+GO
+PRINT N'✅ تم تحديث الإجراء [Inventory].[sp_Wastage_GetDetails]';
+GO
+-- 3. تحديث إجراء حفظ الهالك لقراءة الرصيد من الـ XML وحفظه
+IF OBJECT_ID('[Inventory].[sp_Wastage_Save_XML]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Wastage_Save_XML];
+GO
+CREATE PROCEDURE [Inventory].[sp_Wastage_Save_XML]
+    @WastageID INT OUTPUT,
+    @WastageDate DATETIME,
+    @UserID INT,
+    @ShiftID INT = NULL,
+    @WarehouseID INT = 1,
+    @TotalValue DECIMAL(18,3),
+    @Notes NVARCHAR(500),
+    @DetailsXml XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        IF @WastageID = 0 OR @WastageID IS NULL
+        BEGIN
+            INSERT INTO [Inventory].[WastageHeader] 
+                (WastageDate, UserID, ShiftID, WarehouseID, TotalValue, Notes, CreatedAt, IsPosted)
+            VALUES 
+                (@WastageDate, @UserID, @ShiftID, @WarehouseID, @TotalValue, @Notes, GETDATE(), 0);
+            
+            SET @WastageID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            UPDATE [Inventory].[WastageHeader]
+            SET WastageDate = @WastageDate,
+                UserID = @UserID,
+                ShiftID = @ShiftID,
+                WarehouseID = @WarehouseID,
+                TotalValue = @TotalValue,
+                Notes = @Notes
+            WHERE WastageID = @WastageID;
+            
+            -- حذف التفاصيل القديمة
+            DELETE FROM [Inventory].[WastageDetails] WHERE WastageID = @WastageID;
+        END
+        -- إدراج التفاصيل الجديدة مع حفظ الـ StockBefore
+        INSERT INTO [Inventory].[WastageDetails] (WastageID, ProductID, Quantity, CostPrice, StockBefore)
+        SELECT 
+            @WastageID,
+            x.item.value('@ProductID', 'INT'),
+            x.item.value('@Quantity', 'DECIMAL(18,3)'),
+            x.item.value('@CostPrice', 'DECIMAL(18,3)'),
+            ISNULL(x.item.value('@StockBefore', 'DECIMAL(18,3)'), 0)
+        FROM @DetailsXml.nodes('/Details/Item') AS x(item);
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم تحديث الإجراء [Inventory].[sp_Wastage_Save_XML]';
+GO
+
+
+-- 1. إضافة عمود WarehouseID لجدول StockTakeHeader
+IF NOT EXISTS (
+    SELECT * FROM sys.columns 
+    WHERE Name = N'WarehouseID' AND Object_ID = Object_ID(N'[Inventory].[StockTakeHeader]')
+)
+BEGIN
+    ALTER TABLE [Inventory].[StockTakeHeader] ADD WarehouseID INT NOT NULL DEFAULT 1;
+    PRINT N'✅ تم إضافة عمود WarehouseID بنجاح';
+END
+GO
+-- 2. إجراء جلب كل مسودات وسجلات الجرد (GetAll)
+IF OBJECT_ID('[Inventory].[sp_StockTake_GetAll]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_StockTake_GetAll];
+GO
+CREATE PROCEDURE [Inventory].[sp_StockTake_GetAll]
+    @PageNumber INT = 1,
+    @PageSize INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+    -- Count total records
+    SELECT COUNT(*) AS TotalCount 
+    FROM [Inventory].[StockTakeHeader];
+    -- Get paginated records
+    SELECT 
+        h.StockTakeID,
+        h.StockTakeDate,
+        h.UserID,
+        h.WarehouseID,
+        h.Status,
+        h.TotalDifferenceValue,
+        h.Notes,
+        h.CreatedAt,
+        h.ApprovedBy,
+        h.ApprovedAt,
+        u.FullName AS UserName,
+        w.WarehouseName
+    FROM [Inventory].[StockTakeHeader] h
+    LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
+    LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+    ORDER BY h.StockTakeDate DESC, h.StockTakeID DESC
+    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+PRINT N'✅ تم إنشاء [Inventory].[sp_StockTake_GetAll]';
+GO
+-- 3. إجراء جلب تفاصيل الجرد (GetDetails)
+IF OBJECT_ID('[Inventory].[sp_StockTake_GetDetails]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_StockTake_GetDetails];
+GO
+CREATE PROCEDURE [Inventory].[sp_StockTake_GetDetails]
+    @StockTakeID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.DetailID,
+        d.StockTakeID,
+        d.ProductID,
+        ISNULL(p.Barcode, CAST(p.ProductID AS NVARCHAR)) AS ProductCode,
+        p.ProductName,
+        d.SystemQuantity,
+        d.ActualQuantity,
+        d.DifferenceQuantity,
+        d.CostPrice,
+        d.DifferenceValue
+    FROM [Inventory].[StockTakeDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    WHERE d.StockTakeID = @StockTakeID;
+END
+GO
+PRINT N'✅ تم إنشاء [Inventory].[sp_StockTake_GetDetails]';
+GO
+-- 4. إجراء حفظ الجرد كمسودة باستخدام XML (Save_XML)
+IF OBJECT_ID('[Inventory].[sp_StockTake_Save_XML]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_StockTake_Save_XML];
+GO
+CREATE PROCEDURE [Inventory].[sp_StockTake_Save_XML]
+    @StockTakeID INT OUTPUT,
+    @StockTakeDate DATETIME,
+    @UserID INT,
+    @WarehouseID INT = 1,
+    @TotalDifferenceValue DECIMAL(18,3),
+    @Notes NVARCHAR(500),
+    @DetailsXml XML
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        IF @StockTakeID = 0 OR @StockTakeID IS NULL
+        BEGIN
+            INSERT INTO [Inventory].[StockTakeHeader] 
+                (StockTakeDate, UserID, WarehouseID, TotalDifferenceValue, Notes, CreatedAt, Status)
+            VALUES 
+                (@StockTakeDate, @UserID, @WarehouseID, @TotalDifferenceValue, @Notes, GETDATE(), 'Pending');
+            
+            SET @StockTakeID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            UPDATE [Inventory].[StockTakeHeader]
+            SET StockTakeDate = @StockTakeDate,
+                UserID = @UserID,
+                WarehouseID = @WarehouseID,
+                TotalDifferenceValue = @TotalDifferenceValue,
+                Notes = @Notes
+            WHERE StockTakeID = @StockTakeID AND Status = 'Pending';
+            
+            -- حذف التفاصيل القديمة
+            DELETE FROM [Inventory].[StockTakeDetails] WHERE StockTakeID = @StockTakeID;
+        END
+        -- إدراج التفاصيل الجديدة
+        INSERT INTO [Inventory].[StockTakeDetails] (StockTakeID, ProductID, SystemQuantity, ActualQuantity, CostPrice)
+        SELECT 
+            @StockTakeID,
+            x.item.value('@ProductID', 'INT'),
+            x.item.value('@SystemQuantity', 'DECIMAL(18,3)'),
+            x.item.value('@ActualQuantity', 'DECIMAL(18,3)'),
+            x.item.value('@CostPrice', 'DECIMAL(18,3)')
+        FROM @DetailsXml.nodes('/Details/Item') AS x(item);
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم إنشاء [Inventory].[sp_StockTake_Save_XML]';
+GO
+-- 5. إجراء الاعتماد وتعديل الكميات (Approve)
+
+IF OBJECT_ID('[Inventory].[sp_StockTake_Approve]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_StockTake_Approve];
+GO
+CREATE PROCEDURE [Inventory].[sp_StockTake_Approve]
+    @StockTakeID INT,
+    @ApprovedBy INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @Status NVARCHAR(50);
+        DECLARE @WarehouseID INT;
+        DECLARE @StockTakeDate DATETIME;
+        DECLARE @Notes NVARCHAR(500);
+        SELECT @Status = Status, @WarehouseID = WarehouseID, @StockTakeDate = StockTakeDate, @Notes = Notes 
+        FROM [Inventory].[StockTakeHeader] 
+        WHERE StockTakeID = @StockTakeID;
+        IF @Status = 'Approved'
+            THROW 50000, N'تم اعتماد الجرد مسبقاً ولا يمكن اعتماده مرة أخرى.', 1;
+        -- 1. تعديل حالة المستند
+        UPDATE [Inventory].[StockTakeHeader] 
+        SET Status = 'Approved', 
+            ApprovedBy = @ApprovedBy, 
+            ApprovedAt = GETDATE() 
+        WHERE StockTakeID = @StockTakeID;
+        -- 2. تحديث الكميات في جدول ProductStock (المخزون حسب المستودع)
+        -- إضافة الفرق (DifferenceQuantity) إلى الرصيد الحالي
+        UPDATE S
+        SET S.CurrentQty = S.CurrentQty + D.DifferenceQuantity
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN [Inventory].[StockTakeDetails] D ON S.ProductID = D.ProductID
+        WHERE D.StockTakeID = @StockTakeID AND S.WarehouseID = @WarehouseID;
+        -- إدراج سجل جديد للأصناف التي ليس لها رصيد سابق في هذا المستودع وكان فيها زيادة
+        INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+        SELECT D.ProductID, @WarehouseID, D.DifferenceQuantity, D.CostPrice
+        FROM [Inventory].[StockTakeDetails] D
+        WHERE D.StockTakeID = @StockTakeID 
+          AND D.DifferenceQuantity <> 0
+          AND NOT EXISTS (
+              SELECT 1 FROM [Inventory].[ProductStock] S2
+              WHERE S2.ProductID = D.ProductID AND S2.WarehouseID = @WarehouseID
+          );
+        -- 3. تسجيل القيود المحاسبية
+        -- حساب التسويات/الهالك (64xx) وحساب المخزون (13xx)
+        DECLARE @AdjExpenseAcc INT = ISNULL(
+            (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '64%' AND IsTransactional = 1 ORDER BY AccountCode),
+            (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '5%'  AND IsTransactional = 1 ORDER BY AccountCode DESC)
+        );
+        DECLARE @InventoryAcc INT = ISNULL(
+            (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '13%' AND IsTransactional = 1 ORDER BY AccountCode),
+            (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '13')
+        );
+        -- حساب إجمالي العجز (Difference < 0) وإجمالي الزيادة (Difference > 0)
+        DECLARE @TotalDeficitValue DECIMAL(18,3) = 0; -- عجز (مدين مصروف)
+        DECLARE @TotalSurplusValue DECIMAL(18,3) = 0; -- زيادة (دائن إيراد/مصروف بالسالب)
+        SELECT 
+            @TotalDeficitValue = ISNULL(SUM(ABS(DifferenceValue)), 0)
+        FROM [Inventory].[StockTakeDetails] 
+        WHERE StockTakeID = @StockTakeID AND DifferenceQuantity < 0;
+        SELECT 
+            @TotalSurplusValue = ISNULL(SUM(DifferenceValue), 0)
+        FROM [Inventory].[StockTakeDetails] 
+        WHERE StockTakeID = @StockTakeID AND DifferenceQuantity > 0;
+        -- إنشاء رقم قيد جديد
+        DECLARE @EntryNo INT = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+        DECLARE @Desc NVARCHAR(500) = N'تسوية جرد رقم ' + CAST(@StockTakeID AS NVARCHAR) + 
+                                      CASE WHEN LEN(ISNULL(@Notes, '')) > 0 THEN N' - ' + @Notes ELSE N'' END;
+        -- أ) تسجيل قيد العجز (نقص في المخزون -> مصروف مدين، المخزون دائن)
+        IF @TotalDeficitValue > 0
+        BEGIN
+            -- الطرف المدين: مصروف التسوية (عجز)
+            INSERT INTO [Accounting].[JournalEntries] 
+                (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            VALUES 
+                (@EntryNo, @StockTakeDate, 'StockTake', @StockTakeID, @AdjExpenseAcc, @TotalDeficitValue, 0, @Desc + N' (عجز)', @ApprovedBy);
+            -- الطرف الدائن: المخزون
+            INSERT INTO [Accounting].[JournalEntries] 
+                (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            VALUES 
+                (@EntryNo, @StockTakeDate, 'StockTake', @StockTakeID, @InventoryAcc, 0, @TotalDeficitValue, @Desc + N' (عجز)', @ApprovedBy);
+        END
+        -- ب) تسجيل قيد الزيادة (زيادة في المخزون -> المخزون مدين، إيراد أو عكس المصفوف دائن)
+        IF @TotalSurplusValue > 0
+        BEGIN
+            -- الطرف المدين: المخزون
+            INSERT INTO [Accounting].[JournalEntries] 
+                (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            VALUES 
+                (@EntryNo, @StockTakeDate, 'StockTake', @StockTakeID, @InventoryAcc, @TotalSurplusValue, 0, @Desc + N' (زيادة)', @ApprovedBy);
+            -- الطرف الدائن: مصروف التسوية (زيادة)
+            INSERT INTO [Accounting].[JournalEntries] 
+                (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            VALUES 
+                (@EntryNo, @StockTakeDate, 'StockTake', @StockTakeID, @AdjExpenseAcc, 0, @TotalSurplusValue, @Desc + N' (زيادة)', @ApprovedBy);
+        END
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+PRINT N'✅ تم تحديث [Inventory].[sp_StockTake_Approve] بالقيود وتحديث المستودع';
 GO

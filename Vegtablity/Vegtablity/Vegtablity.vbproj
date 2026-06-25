@@ -145,6 +145,8 @@
     <Compile Include="Models\PurchaseQuoteDetail.vb" />
     <Compile Include="Models\PurchaseQuoteHeader.vb" />
     <Compile Include="Models\Shift.vb" />
+    <Compile Include="Models\StockTakeModel.vb" />
+    <Compile Include="Models\WastageModel.vb" />
     <Compile Include="My Project\AssemblyInfo.vb">
       <SubType>Code</SubType>
     </Compile>
@@ -205,6 +207,7 @@
     <Compile Include="Services\LicenseService.vb" />
     <Compile Include="Services\Session.vb" />
     <Compile Include="Services\ShiftService.vb" />
+    <Compile Include="Services\StockTakeService.vb" />
     <Compile Include="Services\UserService.vb" />
     <Compile Include="Services\UserManagementService.vb" />
     <Compile Include="Services\InventoryService.vb" />
@@ -218,12 +221,14 @@
     <Compile Include="Services\ProductService.vb" />
     <Compile Include="Services\DashboardService.vb" />
     <Compile Include="Services\WarehouseService.vb" />
+    <Compile Include="Services\WastageService.vb" />
     <Compile Include="ViewModels\BaseViewModel.vb" />
     <Compile Include="ViewModels\LicenseViewModel.vb" />
     <Compile Include="ViewModels\LoginViewModel.vb" />
     <Compile Include="ViewModels\DashboardViewModel.vb" />
     <Compile Include="ViewModels\PurchaseQuoteViewModel.vb" />
     <Compile Include="ViewModels\ShiftsViewModel.vb" />
+    <Compile Include="ViewModels\StockTakeViewModel.vb" />
     <Compile Include="ViewModels\UserManagementViewModel.vb" />
     <Compile Include="ViewModels\SettingsViewModel.vb" />
     <Compile Include="ViewModels\InventoryViewModel.vb" />
@@ -236,6 +241,7 @@
     <Compile Include="ViewModels\TrialBalanceViewModel.vb" />
     <Compile Include="ViewModels\BalanceSheetViewModel.vb" />
     <Compile Include="ViewModels\ProfitLossViewModel.vb" />
+    <Compile Include="ViewModels\WastageViewModel.vb" />
     <Compile Include="ViewModels\YearEndCloseViewModel.vb" />
     <Compile Include="ViewModels\PurchaseInvoiceViewModel.vb" />
     <Compile Include="ViewModels\SalesInvoiceViewModel.vb" />
@@ -271,6 +277,9 @@
     </Compile>
     <Compile Include="Views\ShiftsPage.xaml.vb">
       <DependentUpon>ShiftsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\StockTakePage.xaml.vb">
+      <DependentUpon>StockTakePage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\UnknownProductsDialog.xaml.vb">
       <DependentUpon>UnknownProductsDialog.xaml</DependentUpon>
@@ -326,6 +335,9 @@
     <Compile Include="Views\BalanceSheetPage.xaml.vb">
       <DependentUpon>BalanceSheetPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\WastagePage.xaml.vb">
+      <DependentUpon>WastagePage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\YearEndClosePage.xaml.vb">
       <DependentUpon>YearEndClosePage.xaml</DependentUpon>
     </Compile>
@@ -369,6 +381,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\ShiftsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\StockTakePage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -439,6 +455,10 @@
     <Page Include="Views\BalanceSheetPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\WastagePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\YearEndClosePage.xaml">
       <SubType>Designer</SubType>

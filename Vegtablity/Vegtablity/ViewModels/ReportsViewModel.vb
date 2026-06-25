@@ -35,6 +35,7 @@ Namespace ViewModels
             CustomerSalesSummary = New ObservableCollection(Of ReportCustomerSalesSummary)()
             CustomerInvoicesDetail = New ObservableCollection(Of ReportCustomerInvoiceDetail)()
             CustomerProductSales = New ObservableCollection(Of ReportCustomerProductSale)()
+            WastageReport = New ObservableCollection(Of ReportWastageItem)()
 
             NextReportPageCommand = New RelayCommand(Sub() ReportPage += 1, Function() CanGoNextReport)
             PrevReportPageCommand = New RelayCommand(Sub() ReportPage -= 1, Function() CanGoPrevReport)
@@ -326,6 +327,16 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _wastageReport As ObservableCollection(Of ReportWastageItem)
+        Public Property WastageReport As ObservableCollection(Of ReportWastageItem)
+            Get
+                Return _wastageReport
+            End Get
+            Set(value As ObservableCollection(Of ReportWastageItem))
+                SetProperty(_wastageReport, value)
+            End Set
+        End Property
+
         ' =======================================================
         ' Totals (Bound to UI summary cards)
         ' =======================================================
@@ -346,6 +357,16 @@ Namespace ViewModels
             End Get
             Set(value As Decimal)
                 SetProperty(_totalInventoryValue, value)
+            End Set
+        End Property
+
+        Private _totalWastageValue As Decimal
+        Public Property TotalWastageValue As Decimal
+            Get
+                Return _totalWastageValue
+            End Get
+            Set(value As Decimal)
+                SetProperty(_totalWastageValue, value)
             End Set
         End Property
 
@@ -416,6 +437,7 @@ Namespace ViewModels
                 CustomerSalesSummary.Clear()
                 CustomerInvoicesDetail.Clear()
                 CustomerProductSales.Clear()
+                WastageReport.Clear()
 
                 Select Case SelectedReportTab
                     Case 0
@@ -469,6 +491,10 @@ Namespace ViewModels
                     Case 12
                         For Each item In pageItems.Cast(Of ReportCustomerProductSale)()
                             CustomerProductSales.Add(item)
+                        Next
+                    Case 13
+                        For Each item In pageItems.Cast(Of ReportWastageItem)()
+                            WastageReport.Add(item)
                         Next
                 End Select
 
@@ -593,6 +619,15 @@ Namespace ViewModels
                         For Each item In data
                             _allReportData.Add(item)
                             TotalNetProfit += item.NetProfit
+                        Next
+
+                    Case 13 ' تقرير الهالك
+                        Dim whId As Integer? = If(SelectedWarehouseID = 0, Nothing, CType(SelectedWarehouseID, Integer?))
+                        Dim data = _reportService.GetWastageReport(SelectedStartDate, SelectedEndDate, whId)
+                        TotalWastageValue = 0
+                        For Each item In data
+                            _allReportData.Add(item)
+                            TotalWastageValue += item.TotalCost
                         Next
                 End Select
 

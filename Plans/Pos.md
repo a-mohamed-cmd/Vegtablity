@@ -650,3 +650,113 @@
   * إضافة زر **"➕ إضافة عميل"** في الترويسة العلوية لتبويب العملاء.
   * إضافة زر **"➕ إضافة مورد"** في الترويسة العلوية لتبويب الموردين.
 * **الاستجابة الفورية:** ترتبط هذه الأزرار بالأوامر `NewCustomerCommand` و `NewSupplierCommand` لتقوم بتصفير الحقول وفتح اللوحة الجانبية الجاهزة للإدخال مباشرة، مما يحل مشكلة الإضافة السريعة دون الحاجة للبحث أو تحديد شريك موجود مسبقاً.
+
+
+---
+
+## 18. نظام إدارة الهوالك والتوالف (يونيو 2026 - Wastage Management)
+
+تم بناء نظام متكامل لإدارة هوالك البضاعة والتوالف يشمل واجهة المستخدم وطبقة الخدمات وقاعدة البيانات والمحاسبة بشكل كامل.
+
+### أ- هيكل ملفات الوحدة (Module Structure):
+
+| النوع | الملف | الوصف |
+|---|---|---|
+| **Model** | `Models/WastageModel.vb` | يحتوي على `WastageHeader` و `WastageDetails` |
+| **ViewModel** | `ViewModels/WastageViewModel.vb` | منطق العمل الكامل لصفحة الهالك |
+| **View XAML** | `Views/WastagePage.xaml` | واجهة المستخدم (MVVM Binding) |
+| **Code-Behind** | `Views/WastagePage.xaml.vb` | معالجة أحداث لوحة المفاتيح والـ Visual Tree |
+| **Service** | `Services/WastageService.vb` | طبقة الوصول لقاعدة البيانات عبر Dapper |
+
+### ب- الإجراءات المخزنة (Stored Procedures):
+
+| الإجراء | الوصف |
+|---|---|
+| `[Inventory].[sp_Wastage_GetAll]` | جلب سجلات الهالك مع Pagination |
+| `[Inventory].[sp_Wastage_GetDetails]` | جلب تفاصيل الأصناف مع كود الصنف |
+| `[Inventory].[sp_Wastage_Save_XML]` | حفظ/تعديل مستند الهالك (XML للتفاصيل) |
+| `[Inventory].[sp_Wastage_Post]` | اعتماد الهالك (IsPosted = 1) |
+| `[Inventory].[sp_Wastage_Unpost]` | إلغاء الاعتماد (IsPosted = 0) |
+
+### ج- الـ Trigger المحاسبي:
+
+**`[Inventory].[trg_Wastage_Post]`** يعمل على AFTER UPDATE لجدول WastageHeader:
+
+- **ترحيل (0→1):** خصم الكمية من ProductStock + قيد مدين حساب 6401 / دائن حساب المخزن
+- **إلغاء (1→0):** إعادة الكمية + حذف قيود ReferenceType = 'Wastage'
+- محاط بـ BEGIN TRY/CATCH مع ROLLBACK لضمان الـ Atomicity
+
+### د- الأوامر (Commands) في WastageViewModel:
+
+| الأمر | الشرط | الوصف |
+|---|---|---|
+| `PostCommand` | Not IsPosted AND WastageID > 0 | اعتماد وخصم المخزون |
+| `UnpostCommand` | IsPosted AND CanUnpostAllowed | إلغاء الاعتماد (بصلاحية CanDelete) |
+| `SaveCommand` | Not IsPosted | حفظ كمسودة أو حفظ التعديلات |
+
+### هـ- وظائف Code-Behind (WastagePage.xaml.vb):
+
+| الدالة | الوصف |
+|---|---|
+| `ShowSnackbar` | إشعار سفلي مع إخفاء تلقائي بعد 3 ثوان |
+| `FocusLastRowBarcode` | تحريك التركيز لخانة الكود في آخر صف |
+| `Barcode_PreviewKeyDown` | Enter في الكود → بحث + انتقال للكمية |
+| `ProductComboBox_DropDownClosed` | اختيار الصنف → تعبئة الكود + انتقال |
+| `Quantity_PreviewKeyDown` | Enter في الكمية → صف جديد + تركيز |
+| `MoveFocusToNextColumn` | تنقل بين الأعمدة بصرياً عبر Visual Tree |
+| `FindVisualChild<T>` | بحث نزولاً في الشجرة البصرية |
+| `FindVisualParent<T>` | بحث صعوداً في الشجرة البصرية |
+
+### و- حسابات شجرة الحسابات المضافة:
+
+| الكود | الاسم | النوع |
+|---|---|---|
+| `64` | مصروف الهالك والتوالف | رئيسي (Expenses) |
+| `6401` | هالك وتوالف بضاعة | تفصيلي - قابل للترحيل |
+
+### ز- نظام الصلاحيات لصفحة الهالك:
+
+| صلاحية RolePermissions | الوظيفة |
+|---|---|
+| `CanView` | عرض الصفحة |
+| `CanAdd` | إضافة هالك جديد |
+| `CanEdit` | تعديل المسودات |
+| `CanDelete` | إلغاء الترحيل (زر إلغاء الترحيل) |
+
+### ح- ثوابت StoredProcedures.vb المضافة:
+
+| الثابت | القيمة |
+|---|---|
+| `SP_WASTAGE_GETALL` | `[Inventory].[sp_Wastage_GetAll]` |
+| `SP_WASTAGE_GETDETAILS` | `[Inventory].[sp_Wastage_GetDetails]` |
+| `SP_WASTAGE_SAVE_XML` | `[Inventory].[sp_Wastage_Save_XML]` |
+| `SP_WASTAGE_POST` | `[Inventory].[sp_Wastage_Post]` |
+| `SP_WASTAGE_UNPOST` | `[Inventory].[sp_Wastage_Unpost]` |
+
+---
+
+## قاموس النظام (System Dictionary) — تحديث يونيو 2026
+
+### الجداول المضافة:
+
+| الجدول | المخطط | الوصف |
+|---|---|---|
+| `WastageHeader` | `[Inventory]` | رؤوس مستندات الهالك |
+| `WastageDetails` | `[Inventory]` | تفاصيل أصناف كل مستند |
+
+### الـ Triggers المضافة:
+
+| الـ Trigger | الجدول | الوصف |
+|---|---|---|
+| `trg_Wastage_Post` | `[Inventory].[WastageHeader]` | خصم المخزون + قيود محاسبية عند الترحيل وعكسهما عند الإلغاء |
+
+### الملفات المضافة (Desktop - VB.NET):
+
+| الملف | النوع | الوصف |
+|---|---|---|
+| `Models/WastageModel.vb` | Model | WastageHeader و WastageDetails |
+| `ViewModels/WastageViewModel.vb` | ViewModel | منطق العمل الكامل |
+| `Views/WastagePage.xaml` | UserControl | واجهة المستخدم |
+| `Views/WastagePage.xaml.vb` | Code-Behind | أحداث لوحة المفاتيح والـ Visual Tree |
+| `Services/WastageService.vb` | Service | CRUD عبر Dapper |
+

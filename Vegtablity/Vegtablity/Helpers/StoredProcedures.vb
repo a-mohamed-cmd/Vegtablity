@@ -227,5 +227,23 @@ Namespace Helpers
         Public Const SP_PURCHASEQUOTE_GETBYPARTNER As String = "[Purchases].[sp_PurchaseQuote_GetByPartner]"
         Public Const SP_PURCHASEQUOTE_DELETE As String = "[Purchases].[sp_PurchaseQuote_Delete]"
         Public Const SP_PURCHASEQUOTE_GETITEMPRICE As String = "[Purchases].[sp_Purchases_quoteItems_Price]"
+
+        ' =============================================
+        ' Inventory Schema - Wastage
+        ' =============================================
+        Public Const SP_WASTAGE_GETALL As String = "[Inventory].[sp_Wastage_GetAll]"
+        Public Const SP_WASTAGE_GETDETAILS As String = "[Inventory].[sp_Wastage_GetDetails]"
+        Public Const SP_WASTAGE_SAVE_XML As String = "[Inventory].[sp_Wastage_Save_XML]"
+        Public Const SP_WASTAGE_POST As String = "[Inventory].[sp_Wastage_Post]"
+        Public Const SP_WASTAGE_UNPOST As String = "[Inventory].[sp_Wastage_Unpost]"
+        Public Const SP_WASTAGE_REPORT As String = "[Inventory].[sp_Wastage_Report]"
+
+        ' =============================================
+        ' Inventory Schema - StockTake
+        ' =============================================
+        Public Const SP_STOCKTAKE_GETALL As String = "[Inventory].[sp_StockTake_GetAll]"
+        Public Const SP_STOCKTAKE_GETDETAILS As String = "[Inventory].[sp_StockTake_GetDetails]"
+        Public Const SP_STOCKTAKE_SAVE_XML As String = "[Inventory].[sp_StockTake_Save_XML]"
+        Public Const SP_STOCKTAKE_APPROVE As String = "[Inventory].[sp_StockTake_Approve]"
     End Class
 End Namespace

@@ -2204,5 +2204,319 @@ Namespace Helpers
             Return result
         End Function
 
+        ' ===================================================
+        ' Export Single Wastage Voucher to PDF (طباعة مستند الهالك)
+        ' ===================================================
+        Public Shared Sub ExportWastageVoucherToPdf(header As WastageHeader)
+            Try
+                If header Is Nothing Then Return
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "حفظ مستند الهالك كـ PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                dlg.FileName = "هالك_" & header.WastageID & "_" & header.WastageDate.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                doc.Info.Title = "مستند هالك رقم " & header.WastageID
+
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                page.Orientation = PdfSharp.PageOrientation.Portrait
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim margin = 35.0
+                Dim pageW = page.Width.Point - margin * 2
+                Dim currentY = margin
+
+                ' --- Company Header ---
+                DrawReportHeader(gfx, company, page, currentY, margin, pageW, 1)
+                Dim y = currentY
+
+                ' --- Document Title ---
+                y += 8
+                Dim titleTxt = ArabicTextHelper.Fix("مستند هالك / توالف بضاعة")
+                gfx.DrawString(titleTxt, New XFont("Arial", 15, XFontStyle.Bold), XBrushes.DarkRed,
+                               New XRect(margin, y, pageW, 25), XStringFormats.TopCenter)
+                y += 30
+
+                ' --- Status Stamp ---
+                Dim stampBrush = If(header.IsPosted, New XSolidBrush(XColor.FromArgb(39, 174, 96)), New XSolidBrush(XColor.FromArgb(211, 84, 0)))
+                Dim stampTxt = If(header.IsPosted, ArabicTextHelper.Fix("مرحّل ✔"), ArabicTextHelper.Fix("مسودة"))
+                Dim stampRect As New XRect(margin + pageW - 100, y - 28, 95, 22)
+                gfx.DrawRectangle(stampBrush, stampRect)
+                gfx.DrawString(stampTxt, New XFont("Arial", 9, XFontStyle.Bold), XBrushes.White, stampRect, XStringFormats.Center)
+
+                ' --- Header Info Grid ---
+                Dim labelFont = New XFont("Arial", 9, XFontStyle.Bold)
+                Dim valueFont = New XFont("Arial", 9, XFontStyle.Regular)
+                Dim col1X = margin
+                Dim col2X = margin + pageW / 2
+
+                gfx.DrawString(ArabicTextHelper.Fix("رقم المستند:"), labelFont, XBrushes.DarkGray, col1X, y)
+                gfx.DrawString(header.WastageID.ToString(), valueFont, XBrushes.Black, col1X + 80, y)
+                gfx.DrawString(ArabicTextHelper.Fix("التاريخ:"), labelFont, XBrushes.DarkGray, col2X, y)
+                gfx.DrawString(header.WastageDate.ToString("yyyy/MM/dd"), valueFont, XBrushes.Black, col2X + 60, y)
+                y += 18
+
+                If Not String.IsNullOrEmpty(header.WarehouseName) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("المستودع:"), labelFont, XBrushes.DarkGray, col1X, y)
+                    gfx.DrawString(ArabicTextHelper.Fix(header.WarehouseName), valueFont, XBrushes.Black, col1X + 80, y)
+                End If
+                If Not String.IsNullOrEmpty(header.Notes) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("الملاحظات:"), labelFont, XBrushes.DarkGray, col2X, y)
+                    Dim notesText = If(header.Notes.Length > 40, header.Notes.Substring(0, 40) & "...", header.Notes)
+                    gfx.DrawString(ArabicTextHelper.Fix(notesText), valueFont, XBrushes.Black, col2X + 70, y)
+                End If
+                y += 22
+
+                gfx.DrawLine(XPens.DarkGray, margin, y, margin + pageW, y)
+                y += 8
+
+                ' --- Table Header ---
+                Dim colWidths() As Double = {pageW * 0.12, pageW * 0.38, pageW * 0.15, pageW * 0.17, pageW * 0.18}
+                Dim colHeaders() As String = {"الكود", "اسم الصنف", "الكمية", "سعر التكلفة", "الإجمالي"}
+                Dim headerBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
+                Dim x = margin
+                gfx.DrawRectangle(headerBrush, margin, y, pageW, 20)
+                For i = 0 To colHeaders.Length - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(colHeaders(i)), New XFont("Arial", 8, XFontStyle.Bold), XBrushes.White,
+                                   New XRect(x + 2, y + 3, colWidths(i) - 4, 16), XStringFormats.Center)
+                    x += colWidths(i)
+                Next
+                y += 20
+
+                ' --- Table Rows ---
+                Dim totalValue As Decimal = 0
+                Dim altBrush As New XSolidBrush(XColor.FromArgb(248, 249, 250))
+                Dim rowIdx = 0
+                For Each d In header.Details
+                    If rowIdx Mod 2 = 0 Then gfx.DrawRectangle(altBrush, margin, y, pageW, 18)
+                    x = margin
+                    Dim lineTotal = d.Quantity * d.CostPrice
+                    totalValue += lineTotal
+                    Dim rowData() As String = {
+                        If(d.ProductCode, ""),
+                        If(d.ProductName, ""),
+                        d.Quantity.ToString("N3"),
+                        d.CostPrice.ToString("N3"),
+                        lineTotal.ToString("N3")
+                    }
+                    For i = 0 To rowData.Length - 1
+                        Dim brush = If(i = 4, New XSolidBrush(XColor.FromArgb(192, 57, 43)), XBrushes.Black)
+                        gfx.DrawString(ArabicTextHelper.Fix(rowData(i)), New XFont("Arial", 8, XFontStyle.Regular), brush,
+                                       New XRect(x + 3, y + 2, colWidths(i) - 6, 14),
+                                       If(i = 0 OrElse i >= 2, XStringFormats.Center, XStringFormats.TopLeft))
+                        x += colWidths(i)
+                    Next
+                    gfx.DrawRectangle(XPens.LightGray, margin, y, pageW, 18)
+                    y += 18
+                    rowIdx += 1
+
+                    If y > page.Height.Point - margin - 60 Then
+                        page = doc.AddPage()
+                        gfx = XGraphics.FromPdfPage(page)
+                        y = margin + 10
+                    End If
+                Next
+
+                ' --- Totals Row ---
+                y += 5
+                Dim totalBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
+                gfx.DrawRectangle(totalBrush, margin, y, pageW, 22)
+                gfx.DrawString(ArabicTextHelper.Fix("إجمالي قيمة الهالك:"), New XFont("Arial", 9, XFontStyle.Bold), XBrushes.White,
+                               New XRect(margin + 5, y + 4, pageW * 0.6, 16), XStringFormats.TopLeft)
+                gfx.DrawString(totalValue.ToString("N3"), New XFont("Arial", 10, XFontStyle.Bold), XBrushes.Yellow,
+                               New XRect(margin + pageW - 120, y + 4, 115, 16), XStringFormats.TopRight)
+                y += 40
+
+                ' --- Signatures ---
+                gfx.DrawString(ArabicTextHelper.Fix("أعده:  ............................."), valueFont, XBrushes.Black, margin, y)
+                gfx.DrawString(ArabicTextHelper.Fix("اعتمده:  ............................."), valueFont, XBrushes.Black, margin + pageW - 180, y)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء طباعة مستند الهالك: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Wastage Report to PDF (تقرير الهالك)
+        ' ===================================================
+        Public Shared Sub ExportWastageReportToPdf(items As List(Of ReportWastageItem), title As String)
+            Try
+                If items Is Nothing OrElse items.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات ليتم تصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير تقرير الهالك إلى PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                dlg.FileName = "تقرير_الهالك_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                doc.Info.Title = title
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                Dim pageIndex = 0
+                Dim margin = 25.0
+
+                Dim createPage = Function() As XGraphics
+                    Dim pg = doc.AddPage()
+                    pg.Orientation = PdfSharp.PageOrientation.Landscape
+                    Dim g = XGraphics.FromPdfPage(pg)
+                    pageIndex += 1
+                    Dim cH = margin
+                    Dim pW = pg.Width.Point - margin * 2
+                    DrawReportHeader(g, company, pg, cH, margin, pW, pageIndex)
+                    Return g
+                End Function
+
+                Dim gfx = createPage()
+                Dim page = doc.Pages(0)
+                Dim pageW = page.Width.Point - margin * 2
+                Dim y As Double = 110
+
+                ' Title
+                gfx.DrawString(ArabicTextHelper.Fix(title), _fontTitle, XBrushes.DarkRed,
+                               New XRect(margin, y, pageW, 28), XStringFormats.TopCenter)
+                y += 35
+
+                ' Column widths
+                Dim cols() As Double = {pageW * 0.07, pageW * 0.11, pageW * 0.18, pageW * 0.1, pageW * 0.25, pageW * 0.1, pageW * 0.1, pageW * 0.09}
+                Dim heads() As String = {"م.الهالك", "التاريخ", "المستودع", "الكود", "الصنف", "الكمية", "التكلفة", "الإجمالي"}
+
+                ' Header row
+                Dim hdrBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
+                Dim x = margin
+                gfx.DrawRectangle(hdrBrush, margin, y, pageW, 22)
+                For i = 0 To heads.Length - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(heads(i)), New XFont("Arial", 8, XFontStyle.Bold), XBrushes.White,
+                                   New XRect(x + 2, y + 4, cols(i) - 4, 16), XStringFormats.Center)
+                    x += cols(i)
+                Next
+                y += 22
+
+                ' Data rows
+                Dim altBr As New XSolidBrush(XColor.FromArgb(248, 249, 250))
+                Dim rowI = 0
+                Dim grandTotal As Decimal = 0
+                For Each item In items
+                    If y > page.Height.Point - 55 Then
+                        gfx = createPage()
+                        page = doc.Pages(pageIndex - 1)
+                        y = 110
+                        x = margin
+                        gfx.DrawRectangle(hdrBrush, margin, y, pageW, 22)
+                        For i = 0 To heads.Length - 1
+                            gfx.DrawString(ArabicTextHelper.Fix(heads(i)), New XFont("Arial", 8, XFontStyle.Bold), XBrushes.White,
+                                           New XRect(x + 2, y + 4, cols(i) - 4, 16), XStringFormats.Center)
+                            x += cols(i)
+                        Next
+                        y += 22
+                    End If
+
+                    If rowI Mod 2 = 0 Then gfx.DrawRectangle(altBr, margin, y, pageW, 18)
+                    grandTotal += item.TotalCost
+                    Dim statusBrush = If(item.IsPosted, New XSolidBrush(XColor.FromArgb(39, 174, 96)), New XSolidBrush(XColor.FromArgb(211, 84, 0)))
+                    Dim rowData() As String = {
+                        item.WastageID.ToString(),
+                        item.WastageDate.ToString("yyyy/MM/dd"),
+                        If(item.WarehouseName, ""),
+                        If(item.ProductCode, ""),
+                        If(item.ProductName, ""),
+                        item.Quantity.ToString("N3"),
+                        item.CostPrice.ToString("N3"),
+                        item.TotalCost.ToString("N3")
+                    }
+                    x = margin
+                    For i = 0 To rowData.Length - 1
+                        Dim br = If(i = 7, New XSolidBrush(XColor.FromArgb(192, 57, 43)), XBrushes.Black)
+                        gfx.DrawString(ArabicTextHelper.Fix(rowData(i)), New XFont("Arial", 7.5, XFontStyle.Regular), br,
+                                       New XRect(x + 2, y + 2, cols(i) - 4, 14), XStringFormats.Center)
+                        x += cols(i)
+                    Next
+                    gfx.DrawRectangle(XPens.LightGray, margin, y, pageW, 18)
+                    y += 18
+                    rowI += 1
+                Next
+
+                ' Grand Total
+                y += 5
+                Dim totalBr As New XSolidBrush(XColor.FromArgb(44, 62, 80))
+                gfx.DrawRectangle(totalBr, margin, y, pageW, 22)
+                gfx.DrawString(ArabicTextHelper.Fix("إجمالي الهالك:"), New XFont("Arial", 9, XFontStyle.Bold), XBrushes.White,
+                               New XRect(margin + 5, y + 4, pageW * 0.7, 16), XStringFormats.TopLeft)
+                gfx.DrawString(grandTotal.ToString("N3"), New XFont("Arial", 10, XFontStyle.Bold), XBrushes.Yellow,
+                               New XRect(margin + pageW - 120, y + 4, 115, 16), XStringFormats.TopRight)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير تقرير الهالك: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Wastage Report to CSV
+        ' ===================================================
+        Public Shared Sub ExportWastageReportToCsv(items As List(Of ReportWastageItem), title As String)
+            Try
+                If items Is Nothing OrElse items.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات ليتم تصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير تقرير الهالك إلى CSV"
+                dlg.Filter = "CSV Files (*.csv)|*.csv"
+                dlg.FileName = "تقرير_الهالك_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, New System.Text.UTF8Encoding(True))
+                    sw.WriteLine(title)
+                    sw.WriteLine("تاريخ الاستخراج: " & DateTime.Now.ToString("yyyy/MM/dd HH:mm"))
+                    sw.WriteLine()
+                    sw.WriteLine("م.الهالك,التاريخ,المستودع,الكود,الصنف,الكمية,سعر التكلفة,الإجمالي,الحالة")
+
+                    Dim grandTotal As Decimal = 0
+                    For Each item In items
+                        grandTotal += item.TotalCost
+                        Dim row = {
+                            item.WastageID.ToString(),
+                            item.WastageDate.ToString("yyyy/MM/dd"),
+                            """" & If(item.WarehouseName, "") & """",
+                            If(item.ProductCode, ""),
+                            """" & If(item.ProductName, "") & """",
+                            item.Quantity.ToString("N3"),
+                            item.CostPrice.ToString("N3"),
+                            item.TotalCost.ToString("N3"),
+                            item.StatusText
+                        }
+                        sw.WriteLine(String.Join(",", row))
+                    Next
+                    sw.WriteLine()
+                    sw.WriteLine(",,,,,,,الإجمالي," & grandTotal.ToString("N3"))
+                End Using
+
+                If Global.System.IO.File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير CSV: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
     End Class
 End Namespace
