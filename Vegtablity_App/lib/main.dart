@@ -9,6 +9,8 @@ import 'providers/voucher_provider.dart';
 import 'providers/account_provider.dart';
 import 'providers/license_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/wastage_provider.dart';
+import 'providers/stocktake_provider.dart';
 import 'screens/license_check_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/language_viewmodel.dart';
@@ -44,6 +46,12 @@ void main() {
         ChangeNotifierProvider<SettingsProvider>(
           create: (context) => SettingsProvider(apiService)..fetchSettings(),
         ),
+        ChangeNotifierProvider<WastageProvider>(
+          create: (context) => WastageProvider(apiService),
+        ),
+        ChangeNotifierProvider<StockTakeProvider>(
+          create: (context) => StockTakeProvider(apiService),
+        ),
         ChangeNotifierProvider<LanguageViewModel>(
           create: (context) => LanguageViewModel(),
         ),
@@ -51,6 +59,7 @@ void main() {
       child: const MyApp(),
     ),
   );
+
 }
 
 class MyApp extends StatelessWidget {

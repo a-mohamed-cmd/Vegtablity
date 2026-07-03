@@ -11,6 +11,9 @@ class AuthProvider extends ChangeNotifier {
   String? _errorMessage;
 
   AuthProvider(this._apiService) {
+    _apiService.onUnauthorized = () {
+      logout();
+    };
     _tryAutoLogin();
   }
 
@@ -25,9 +28,24 @@ class AuthProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.containsKey('token') && prefs.containsKey('username')) {
-        _token = prefs.getString('token');
-        _username = prefs.getString('username');
-        _apiService.updateToken(_token);
+        final savedToken = prefs.getString('token');
+        final savedUsername = prefs.getString('username');
+        if (savedToken != null && savedToken.isNotEmpty) {
+          _apiService.updateToken(savedToken);
+          try {
+            await _apiService.getActiveShift();
+            // Token is valid
+            _token = savedToken;
+            _username = savedUsername;
+          } catch (e) {
+            // If onUnauthorized was triggered, _token is now null.
+            // Otherwise (e.g. network timeout or 404 active shift not found), keep the token.
+            if (_apiService.getToken() == savedToken) {
+              _token = savedToken;
+              _username = savedUsername;
+            }
+          }
+        }
       }
     } catch (e) {
       // Handle error quietly

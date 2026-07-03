@@ -7,8 +7,19 @@ class ApiService {
     receiveTimeout: const Duration(seconds: 10),
   ));
 
+  void Function()? onUnauthorized;
+
   ApiService() {
-    // Add default headers or logging if necessary
+    _dio.interceptors.add(InterceptorsWrapper(
+      onError: (DioException e, handler) {
+        if (e.response?.statusCode == 401) {
+          if (onUnauthorized != null) {
+            onUnauthorized!();
+          }
+        }
+        return handler.next(e);
+      },
+    ));
   }
 
   // Method to set or clear the auth token for all subsequent requests
@@ -18,6 +29,14 @@ class ApiService {
     } else {
       _dio.options.headers.remove('Authorization');
     }
+  }
+
+  String? getToken() {
+    final authHeader = _dio.options.headers['Authorization'] as String?;
+    if (authHeader != null && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7);
+    }
+    return null;
   }
 
   Future<Response> getCompanySettings() async {
@@ -244,6 +263,31 @@ class ApiService {
   /// جلب الفواتير المسددة داخل السند (لإعادة الطباعة)
   Future<Response> getVoucherAllocations(int voucherId) async {
     return await _dio.get('/vouchers/$voucherId/allocations');
+  }
+
+  // ─── Inventory (الهالك والجرد) ──────────────────────────────────────────
+  
+  /// حفظ مسودة إهلاك بضاعة
+  Future<Response> saveWastage(Map<String, dynamic> wastageData) async {
+    return await _dio.post('/inventory/wastage', data: wastageData);
+  }
+
+  /// حفظ مسودة جرد مخزني
+  Future<Response> saveStockTake(Map<String, dynamic> stockTakeData) async {
+    return await _dio.post('/inventory/stocktake', data: stockTakeData);
+  }
+
+  /// جلب مخزون وتكلفة صنف معين في مستودع محدد
+  Future<Response> getProductStockCost(int productId, int warehouseId) async {
+    return await _dio.get('/inventory/stock-cost', queryParameters: {
+      'product_id': productId,
+      'warehouse_id': warehouseId,
+    });
+  }
+
+  /// جلب قائمة المستودعات
+  Future<Response> getWarehouses() async {
+    return await _dio.get('/settings/warehouses');
   }
 }
 

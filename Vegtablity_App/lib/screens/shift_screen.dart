@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/shift_provider.dart';
+import '../providers/auth_provider.dart';
 import '../core/localization/app_localizations.dart';
 import 'home_screen.dart';
+import 'login_screen.dart';
 
 class ShiftScreen extends StatefulWidget {
   const ShiftScreen({super.key});
@@ -132,7 +134,26 @@ class _ShiftScreenState extends State<ShiftScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('shift_new_title')), centerTitle: true),
+      appBar: AppBar(
+        title: Text(context.tr('shift_new_title')),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.redAccent),
+            tooltip: context.tr('home_logout'),
+            onPressed: () async {
+              await Provider.of<AuthProvider>(context, listen: false).logout();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           child: Container(

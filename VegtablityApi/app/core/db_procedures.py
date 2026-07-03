@@ -66,6 +66,13 @@ class StoredProcedures:
     # Retrieves a specific product using its barcode
     PRODUCT_GET_BY_BARCODE = "{CALL [Inventory].[sp_Product_GetByBarcode] (?)}"
 
+    # Retrieves product stock for a specific warehouse
+    PRODUCT_STOCK_GET = "EXEC [Inventory].[sp_Stock_GetByProduct] @ProductID=?, @WarehouseID=?"
+    
+    # Retrieves average cost of a product for a specific warehouse
+    PRODUCT_AVGCOST_GET = "EXEC [Inventory].[sp_Inventory_GetAvgCostByProduct] @ProductID=?, @WarehouseID=?"
+
+
     # =========================================================================
     # Partners (Customers & Vendors)
     # =========================================================================
@@ -184,3 +191,41 @@ class StoredProcedures:
     
     # Retrieves printer settings for a specific POS hardware ID
     SETTINGS_PRINTER_GET = "{CALL [Settings].[sp_PrinterSettings_Get] (?)}"
+
+    # Retrieves all warehouses from settings
+    WAREHOUSE_GETALL = "EXEC [Settings].[sp_Warehouse_GetAll]"
+
+
+    # =========================================================================
+    # Inventory Operations (Wastage & Stock Take)
+    # =========================================================================
+    
+    # Saves a wastage document (draft/pending) with details using XML
+    WASTAGE_SAVE_XML = """
+        DECLARE @WastageID INT = ?;
+        EXEC [Inventory].[sp_Wastage_Save_XML]
+            @WastageID = @WastageID OUTPUT,
+            @WastageDate = ?,
+            @UserID = ?,
+            @ShiftID = ?,
+            @WarehouseID = ?,
+            @TotalValue = ?,
+            @Notes = ?,
+            @DetailsXml = ?;
+        SELECT @WastageID as WastageID;
+    """
+
+    # Saves a stocktake document (draft/pending) with details using XML
+    STOCKTAKE_SAVE_XML = """
+        DECLARE @StockTakeID INT = ?;
+        EXEC [Inventory].[sp_StockTake_Save_XML]
+            @StockTakeID = @StockTakeID OUTPUT,
+            @StockTakeDate = ?,
+            @UserID = ?,
+            @WarehouseID = ?,
+            @TotalDifferenceValue = ?,
+            @Notes = ?,
+            @DetailsXml = ?;
+        SELECT @StockTakeID as StockTakeID;
+    """
+

@@ -18,6 +18,8 @@ import 'receipt_voucher_screen.dart';
 import 'payment_voucher_screen.dart';
 import 'general_receipt_voucher_screen.dart';
 import 'general_payment_voucher_screen.dart';
+import 'inventory/stocktake_screen.dart';
+import 'inventory/wastage_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -203,6 +205,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const Divider(),
             ListTile(
+              leading: const Icon(Icons.inventory_outlined, color: Colors.teal),
+              title: const Text('جرد المخزون (مسودة)', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const StockTakeScreen()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_sweep_outlined, color: Colors.teal),
+              title: const Text('إهلاك بضاعة (الهالك)', style: TextStyle(fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (context) => const WastageScreen()));
+              },
+            ),
+            const Divider(),
+            ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.redAccent),
               title: Text(context.tr('home_logout')),
               onTap: () async {
@@ -356,7 +375,24 @@ class _HomeScreenState extends State<HomeScreen> {
               () {
             // Action for sales quotes
           }),
+          _buildActionCard(
+              context, 'جرد المخزون', Icons.inventory, Colors.teal,
+              () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const StockTakeScreen()));
+          }),
+          _buildActionCard(
+              context, 'إهلاك بضاعة', Icons.delete_sweep, Colors.amber[800]!,
+              () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const WastageScreen()));
+          }),
         ],
+
       ),
     );
   }

@@ -41,3 +41,17 @@ async def get_printer_settings(machine_hwid: str):
             detail=f"خطأ أثناء جلب إعدادات الطابعة للجهاز: {str(e)}"
         )
 
+from typing import List
+
+@router.get("/warehouses", response_model=List[dict])
+async def get_warehouses():
+    service = SettingsService()
+    try:
+        return service.get_warehouses()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطأ أثناء جلب المستودعات: {str(e)}"
+        )
+
+

@@ -80,3 +80,17 @@ class SettingsService:
         finally:
             conn.close()
 
+    def get_warehouses(self) -> list:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.WAREHOUSE_GETALL)
+            columns = [column[0] for column in cursor.description]
+            warehouses = []
+            for row in cursor.fetchall():
+                warehouses.append(dict(zip(columns, row)))
+            return warehouses
+        finally:
+            conn.close()
+
+

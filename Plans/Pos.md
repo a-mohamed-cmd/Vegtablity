@@ -760,3 +760,110 @@
 | `Views/WastagePage.xaml.vb` | Code-Behind | أحداث لوحة المفاتيح والـ Visual Tree |
 | `Services/WastageService.vb` | Service | CRUD عبر Dapper |
 
+---
+
+## 19. نظام الجرد والهالك لتطبيق الموبايل والـ APIs (FastAPI & Flutter - يونيو 2026)
+
+تم بنجاح ربط وتفعيل نظام **الجرد (Stock Take)** و **الهالك (Wastage)** لتطبيق الهاتف المحمول (`Vegtablity_App`) والواجهة الخلفية الموحدة (`VegtablityApi`). تضمن التعديلات حفظ المستندات كـ **مسودات معلقة** فقط مع إتاحة طباعتها حرارياً.
+
+### أ- هيكل ملفات السيرفر الخلفي (FastAPI Backend Structure):
+
+| المسار | النوع | الوصف |
+|---|---|---|
+| [schemas/inventory.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/inventory.py) | Schema (Pydantic) | نماذج التحقق للمستندات وتفاصيلها (`WastageSaveRequest`, `StockTakeSaveRequest`) |
+| [services/inventory_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/inventory_service.py) | Service | بناء الـ XML والتواصل مع قاعدة البيانات عبر `pyodbc` |
+| [routes/inventory.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/inventory.py) | Route | مسارات الـ API لحفظ الجرد والهالك وجلب كمية مخزون وتكلفة المواد |
+| [core/db_procedures.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures.py) | Database Procedures | إضافة الثوابت النصية للاستدعاء المركزي للإجراءات المخزنة |
+
+### ب- الإجراءات المخزنة والمسارات المفعلة (SP & APIs Mapping):
+
+| نوع العملية | مسار الـ API | الإجراء المخزن (Stored Procedure) |
+|---|---|---|
+| **حفظ الهالك** | `POST /inventory/wastage` | `[Inventory].[sp_Wastage_Save_XML]` |
+| **حفظ الجرد** | `POST /inventory/stocktake` | `[Inventory].[sp_StockTake_Save_XML]` |
+| **معلومات المادة** | `GET /inventory/stock-cost` | `[Inventory].[sp_Stock_GetByProduct]` و `[Inventory].[sp_Inventory_GetAvgCostByProduct]` |
+| **المستودعات** | `GET /settings/warehouses` | `[Settings].[sp_Warehouse_GetAll]` |
+
+### ج- هيكل ملفات تطبيق الموبايل (Flutter POS App Structure):
+
+| المسار | النوع | الوصف |
+|---|---|---|
+| [models/inventory_model.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/models/inventory_model.dart) | Model | تمثيل بيانات الأصناف المحسوبة بالهالك والجرد (`WastageItem`, `StockTakeItem`) |
+| [providers/wastage_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/wastage_provider.dart) | Provider (State) | إدارة السلة واحتساب التكاليف وحفظ البيانات احتياطياً أوفلاين |
+| [providers/stocktake_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/stocktake_provider.dart) | Provider (State) | إدارة السلة واحتساب الفروقات والكميات الدفترية والفعلية أوفلاين |
+| [widgets/product_entry_scanner.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/product_entry_scanner.dart) | Widget | شريط إدخال مدمج يدعم الكاميرا والبحث اليدوي والكتالوج |
+| [screens/inventory/wastage_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/wastage_screen.dart) | UI Screen | شاشة إعداد وحفظ مسودة الهالك وتعديل التكلفة والكميات |
+| [screens/inventory/stocktake_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/stocktake_screen.dart) | UI Screen | شاشة إعداد وحفظ مسودة جرد المخزون الفعلي ومقارنته بالدفترية |
+| [services/printer_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) | Service | إضافة دوال الطباعة الحرارية للمسودات (`printWastageReceipt`, `printStockTakeReceipt`) |
+
+### د- قواعد وضوابط الجرد والهالك المعتمدة بالهاتف:
+1. **قفل المستودع المالي:** يمنع التطبيق تغيير مستودع الجرد أو الهالك بمجرد البدء بإضافة صنف واحد داخل السلة لضمان تماسك البيانات.
+2. **استجلاب المخزون والتكلفة ديناميكياً:** يرتبط التطبيق بمسار جلب معلومات المادة لجلب الكمية الدفترية الحالية للفرع والـ Average Cost بناءً على المستودع المحدد.
+3. **طباعة المسودات:** عند إتمام الحفظ، يتم استدعاء أوامر الطباعة الحرارية (طابعة Sunmi أو طابعة الشبكة) تلقائياً لطباعة إيصال مخصص وموسوم بـ `"مسودة معلقة للاعتماد"` أو `"مسودة إهلاك بضاعة"`.
+
+---
+
+## 20. تحسينات وتعديلات نظام الجرد والهالك وإصلاحات الطباعة (يوليو 2026)
+
+تم إجراء مجموعة من التحسينات الفنية والبرمجية لضمان تماسك البيانات وسلامة مخرجات الطباعة واستقرار واجهة مستخدم الجرد والهالك:
+
+### أ- تدفق حفظ رصيد الصنف قبل الهالك (StockBefore):
+لضمان دقة الرصد المحاسبي وحفظ كمية الصنف المتوفرة في المستودع لحظة إهلاك البضاعة، تم إدراج وحفظ حقل `StockBefore` في كافة طبقات النظام وفق التسلسل التالي:
+
+1. **قاعدة البيانات (SQL Server):**
+   * تم تعديل جدول تفاصيل الهوالك `[Inventory].[WastageDetails]` بإضافة عمود `StockBefore DECIMAL(18,3) NULL`.
+   * تم تحديث الإجراء المخزن `[Inventory].[sp_Wastage_Save_XML]` ليقوم باستخراج وتخزين قيمة `@StockBefore` من عقد الـ XML الممررة كالتالي:
+     ```sql
+     INSERT INTO [Inventory].[WastageDetails] (WastageID, ProductID, Quantity, CostPrice, StockBefore)
+     SELECT @WastageID,
+            x.item.value('@ProductID', 'INT'),
+            x.item.value('@Quantity', 'DECIMAL(18,3)'),
+            x.item.value('@CostPrice', 'DECIMAL(18,3)'),
+            ISNULL(x.item.value('@StockBefore', 'DECIMAL(18,3)'), 0)
+     FROM @DetailsXml.nodes('/Details/Item') AS x(item);
+     ```
+
+2. **الواجهة الخلفية (FastAPI API):**
+   * تحديث نموذج التحقق للبيانات في [schemas/inventory.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/inventory.py) لدعم الحقل:
+     ```python
+     class WastageDetailRequest(BaseModel):
+         ProductID: int
+         Quantity: float
+         CostPrice: float
+         StockBefore: float = 0.0
+     ```
+   * تحديث بناء الـ XML في [services/inventory_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/inventory_service.py) لإدراج السمة التلقائية في التفاصيل:
+     ```python
+     "StockBefore": f"{detail.StockBefore:.3f}"
+     ```
+
+3. **تطبيق الموبايل (Flutter App):**
+   * **تحديث النموذج:** إضافة حقل `stockBefore` إلى كلاس `WastageItem` داخل [inventory_model.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/models/inventory_model.dart) وتجهيز عمليات التحويل من وإلى JSON.
+   * **الاستعلام التلقائي:** تحديث منطق إضافة الأصناف بالـ Barcode أو الاختيار اليدوي في `WastageProvider` ليستدعي API جلب الكمية والتكلفة بالخلفية للفرع المحدد، وتعبئة حقل `stockBefore` بالقيمة المرتجعة من قاعدة البيانات (`StockQuantity`).
+
+---
+
+### ب- إصلاح احتساب فروقات الجرد الإجمالية بالطباعة:
+* **المشكلة:** عند طباعة إيصال مسودة الجرد، كان يظهر إجمالي الفروقات بقيمة `0.00 KWD` بالرغم من احتواء السلة على أصناف بفروقات مالية.
+* **السبب:** كان التطبيق يستدعي حفظ البيانات أولاً والذي يقوم بتصفير عناصر السلة في الـ Provider عند النجاح، ومن ثم يتم جلب قيمة الفروقات الإجمالية للطباعة من السلة الفارغة.
+* **الحل:** تم تحديث الكود في [stocktake_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/stocktake_screen.dart) ليقوم بالتقاط وتخزين قيمة `provider.totalDifferenceValue` في متغير مؤقت `totalDiffValue` **قبل** استدعاء دالة الحفظ وتصفير القائمة، وتمرير القيمة المخزنة للطباعة.
+
+---
+
+### ج- تنسيق العملات في طباعة المسودة:
+* **المشكلة:** ظهور رمز العملة بجانب فروقات كل صنف فردي في الإيصال كان يسبب تكدس النصوص وصعوبة قراءتها.
+* **التعديل:** تم تعديل منطق صياغة الإيصال الحراري في [printer_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) (لطابعات Sunmi والـ Network) لإزالة رمز العملة `_currencySymbol` من سطر تفاصيل الصنف الواحد والإبقاء عليه فقط في سطر إجمالي الفروقات النهائي كالتالي:
+  * **سطر الصنف:** `الفرق: 2.00 حبه (قيمة: 5.00)`
+  * **سطر الإجمالي:** `إجمالي قيمة الفرق: 5.00 KWD`
+
+---
+
+### د- تحسينات التصميم والتمرير (Scroll & UI Layout):
+* **المشكلة:** كانت شاشات الجرد والهالك تتوقف وتسبب أخطاء تجاوز الأبعاد المرئية (RenderFlex Overflow) بسبب استخدام `Expanded` لقائمة الأصناف داخل شاشات تحتوي على مدخلات وحقول ملاحظات متعددة.
+* **الحل:**
+  1. قمنا بالتخلص من عناصر الـ `Expanded` حول الـ `ListView` الخاصة بالسلة.
+  2. تم دمج كافة مكونات الصفحة (المستودع، حقل المسح، قائمة السلة، وحقل الملاحظات مع زر الحفظ) داخل `SingleChildScrollView` رئيسي واحد ممتد.
+  3. إعداد الـ `ListView.builder` لتأخذ الخواص التالية لمنع تعارض التمرير:
+     * `shrinkWrap: true` لتمتد القائمة ديناميكياً بحسب حجم العناصر.
+     * `physics: const NeverScrollableScrollPhysics()` لإسناد مهمة التمرير الكلي للـ `ScrollView` الخارجي.
+  4. إصلاح خلل تطابق الأقواس المفقودة في نهاية إرجاع خلايا الـ `Card` و `Padding` لاستعادة إمكانية البناء بنجاح.

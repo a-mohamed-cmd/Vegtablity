@@ -934,4 +934,223 @@ class PrinterService with ChangeNotifier {
       return false;
     }
   }
+
+  /// طباعة مسودة إهلاك بضاعة (الهالك)
+  Future<bool> printWastageReceipt(Map<String, dynamic> data) async {
+    final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
+    final String address = _companySettings?['Address'] ?? 'العارضيه';
+    final String phone = _companySettings?['Phone'] ?? '55381505';
+
+    final int id = data['WastageID'] ?? 0;
+    final String idStr = id != 0 ? '#$id' : 'مسودة جديدة';
+    final String warehouseName = data['WarehouseName'] ?? 'المستودع الرئيسي';
+    final double totalValue = (data['TotalValue'] as num?)?.toDouble() ?? 0.0;
+    final String notes = data['Notes'] ?? '';
+
+    DateTime printDateTime;
+    try {
+      printDateTime = data['WastageDate'] != null ? DateTime.parse(data['WastageDate']) : DateTime.now();
+    } catch (_) {
+      printDateTime = DateTime.now();
+    }
+
+    final String dateStr = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
+    final String timeStr = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}';
+
+    final items = data['items'] as List<dynamic>? ?? [];
+
+    try {
+      if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('العنوان: $address', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('الهاتف: $phone', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText('مسودة إهلاك بضاعة (هالك)', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('المستند: $idStr', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('المستودع: $warehouseName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('التاريخ: $dateStr $timeStr', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        for (final item in items) {
+          final String name = item['ProductName'] ?? 'صنف غير معروف';
+          final double qty = (item['Quantity'] as num).toDouble();
+          final double price = (item['CostPrice'] as num).toDouble();
+          final double total = qty * price;
+          final String unit = item['UnitName'] ?? 'حبه';
+          
+          await SunmiPrinter.printText(name, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+          await SunmiPrinter.printText('  ${_formatQuantity(qty, unit)} x ${_formatCurrency(price)} = ${_formatCurrency(total)} ${_currencySymbol}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        }
+        
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('إجمالي التكلفة: ${_formatCurrency(totalValue)} ${_currencySymbol}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        if (notes.isNotEmpty) {
+          await SunmiPrinter.printText('ملاحظات: $notes', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        }
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('حالة المستند: مسودة غير مرحلة', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.lineWrap(4);
+        await SunmiPrinter.cutPaper();
+      }
+
+      if (_connectionType == 'Network') {
+        try {
+          final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
+          socket.add([0x1B, 0x40]);
+          socket.add([0x1B, 0x61, 0x01]);
+          socket.write('================================\n');
+          socket.write('  $companyName\n');
+          socket.write('  العنوان: $address\n');
+          socket.write('  الهاتف: $phone\n');
+          socket.write('================================\n');
+          socket.write('  مسودة إهلاك بضاعة (هالك)\n');
+          socket.add([0x1B, 0x61, 0x02]);
+          socket.write('المستند: $idStr\n');
+          socket.write('المستودع: $warehouseName\n');
+          socket.write('التاريخ: $dateStr $timeStr\n');
+          socket.write('--------------------------------\n');
+          for (final item in items) {
+            final String name = item['ProductName'] ?? 'صنف غير معروف';
+            final double qty = (item['Quantity'] as num).toDouble();
+            final double price = (item['CostPrice'] as num).toDouble();
+            final double total = qty * price;
+            final String unit = item['UnitName'] ?? 'حبه';
+            socket.write('$name\n');
+            socket.write('  ${_formatQuantity(qty, unit)} x ${_formatCurrency(price)} = ${_formatCurrency(total)} ${_currencySymbol}\n');
+          }
+          socket.write('--------------------------------\n');
+          socket.write('إجمالي التكلفة: ${_formatCurrency(totalValue)} ${_currencySymbol}\n');
+          if (notes.isNotEmpty) {
+            socket.write('ملاحظات: $notes\n');
+          }
+          socket.write('================================\n');
+          socket.add([0x1B, 0x61, 0x01]);
+          socket.write('حالة المستند: مسودة غير مرحلة\n');
+          socket.add([0x1D, 0x56, 0x42, 0x00]);
+          await socket.flush();
+          await socket.close();
+        } catch (_) {
+          return false;
+        }
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// طباعة مسودة جرد مخزني
+  Future<bool> printStockTakeReceipt(Map<String, dynamic> data) async {
+    final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
+    final String address = _companySettings?['Address'] ?? 'العارضيه';
+    final String phone = _companySettings?['Phone'] ?? '55381505';
+
+    final int id = data['StockTakeID'] ?? 0;
+    final String idStr = id != 0 ? '#$id' : 'مسودة جديدة';
+    final String warehouseName = data['WarehouseName'] ?? 'المستودع الرئيسي';
+    final double totalDiff = (data['TotalDifferenceValue'] as num?)?.toDouble() ?? 0.0;
+    final String notes = data['Notes'] ?? '';
+
+    DateTime printDateTime;
+    try {
+      printDateTime = data['StockTakeDate'] != null ? DateTime.parse(data['StockTakeDate']) : DateTime.now();
+    } catch (_) {
+      printDateTime = DateTime.now();
+    }
+
+    final String dateStr = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
+    final String timeStr = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}';
+
+    final items = data['items'] as List<dynamic>? ?? [];
+
+    try {
+      if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('العنوان: $address', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('الهاتف: $phone', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        await SunmiPrinter.printText('مسودة جرد مخزني', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('مستند الجرد: $idStr', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('المستودع: $warehouseName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('التاريخ: $dateStr $timeStr', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        
+        for (final item in items) {
+          final String name = item['ProductName'] ?? 'صنف غير معروف';
+          final double sysQty = (item['SystemQuantity'] as num).toDouble();
+          final double actQty = (item['ActualQuantity'] as num).toDouble();
+          final double diffQty = (item['DifferenceQuantity'] as num).toDouble();
+          final double diffVal = (item['DifferenceValue'] as num).toDouble();
+          final String unit = item['UnitName'] ?? 'حبه';
+          
+          await SunmiPrinter.printText(name, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+          await SunmiPrinter.printText('  الدفترية: ${sysQty.toStringAsFixed(2)} | الفعلية: ${actQty.toStringAsFixed(2)}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+          await SunmiPrinter.printText('  الفرق: ${diffQty.toStringAsFixed(2)} $unit (قيمة: ${_formatCurrency(diffVal)})', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        }
+        
+        await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('إجمالي قيمة الفرق: ${_formatCurrency(totalDiff)} ${_currencySymbol}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        if (notes.isNotEmpty) {
+          await SunmiPrinter.printText('ملاحظات: $notes', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        }
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText('حالة الجرد: مسودة معلقة للاعتماد', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.lineWrap(4);
+        await SunmiPrinter.cutPaper();
+      }
+
+      if (_connectionType == 'Network') {
+        try {
+          final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
+          socket.add([0x1B, 0x40]);
+          socket.add([0x1B, 0x61, 0x01]);
+          socket.write('================================\n');
+          socket.write('  $companyName\n');
+          socket.write('  العنوان: $address\n');
+          socket.write('  الهاتف: $phone\n');
+          socket.write('================================\n');
+          socket.write('  مسودة جرد مخزني\n');
+          socket.add([0x1B, 0x61, 0x02]);
+          socket.write('مستند الجرد: $idStr\n');
+          socket.write('المستودع: $warehouseName\n');
+          socket.write('التاريخ: $dateStr $timeStr\n');
+          socket.write('--------------------------------\n');
+          for (final item in items) {
+            final String name = item['ProductName'] ?? 'صنف غير معروف';
+            final double sysQty = (item['SystemQuantity'] as num).toDouble();
+            final double actQty = (item['ActualQuantity'] as num).toDouble();
+            final double diffQty = (item['DifferenceQuantity'] as num).toDouble();
+            final double diffVal = (item['DifferenceValue'] as num).toDouble();
+            final String unit = item['UnitName'] ?? 'حبه';
+            socket.write('$name\n');
+            socket.write('  الدفترية: ${sysQty.toStringAsFixed(2)} | الفعلية: ${actQty.toStringAsFixed(2)}\n');
+            socket.write('  الفرق: ${diffQty.toStringAsFixed(2)} $unit (قيمة: ${_formatCurrency(diffVal)})\n');
+          }
+          socket.write('--------------------------------\n');
+          socket.write('إجمالي قيمة الفرق: ${_formatCurrency(totalDiff)} ${_currencySymbol}\n');
+          if (notes.isNotEmpty) {
+            socket.write('ملاحظات: $notes\n');
+          }
+          socket.write('================================\n');
+          socket.add([0x1B, 0x61, 0x01]);
+          socket.write('حالة الجرد: مسودة معلقة للاعتماد\n');
+          socket.add([0x1D, 0x56, 0x42, 0x00]);
+          await socket.flush();
+          await socket.close();
+        } catch (_) {
+          return false;
+        }
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
+
