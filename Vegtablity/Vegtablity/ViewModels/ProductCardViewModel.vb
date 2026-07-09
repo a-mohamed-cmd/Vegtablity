@@ -23,6 +23,7 @@ Namespace ViewModels
             _ExportCsvCommand = New RelayCommand(AddressOf ExecuteExportCsv)
             _ExportPdfCommand = New RelayCommand(AddressOf ExecuteExportPdf)
             LoadMoreCommand = New RelayCommand(AddressOf ExecuteNextPage, Function(o) CurrentPage < TotalPages)
+            NextPageCommand = LoadMoreCommand
             PrevPageCommand = New RelayCommand(AddressOf ExecutePrevPage, Function(o) CurrentPage > 1)
             FilterMovementsCommand = New RelayCommand(AddressOf ExecuteFilterMovements)
             ChartPeriodCommand = New RelayCommand(AddressOf ExecuteChartPeriod)
@@ -173,8 +174,19 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _currencySymbol As String = "KWD"
+        Public Property CurrencySymbol As String
+            Get
+                Return _currencySymbol
+            End Get
+            Set(value As String)
+                _currencySymbol = value
+                OnPropertyChanged(NameOf(CurrencySymbol))
+            End Set
+        End Property
+
         ' ── Server-Side Pagination ────────────────────────────────────────────────
-        Private Const _pageSize As Integer = 15
+        Private Const _pageSize As Integer = 20
 
         Private _currentPage As Integer = 1
         Public Property CurrentPage As Integer
@@ -313,6 +325,7 @@ Namespace ViewModels
 
         ' Pagination
         Public Property LoadMoreCommand As ICommand ' Renamed from NextPageCommand
+        Public Property NextPageCommand As ICommand
         Public Property PrevPageCommand As RelayCommand ' Re-added based on context
         Public Property ChartPeriodCommand As RelayCommand
 
@@ -338,6 +351,21 @@ Namespace ViewModels
             If ProductID = 0 Then Return
 
             Try
+                ' Load Currency Symbol from Database Settings
+                Try
+                    Dim settingsSvc As New Services.SettingsService()
+                    Dim companyInfo = settingsSvc.GetCompanyInfo()
+                    If companyInfo IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(companyInfo.CurrencySymbol) Then
+                        If companyInfo.CurrencySymbol.Contains("/") Then
+                            CurrencySymbol = companyInfo.CurrencySymbol.Split("/"c)(0).Trim()
+                        Else
+                            CurrencySymbol = companyInfo.CurrencySymbol.Trim()
+                        End If
+                    End If
+                Catch
+                    CurrencySymbol = "KWD"
+                End Try
+
                 ' Load Summary
                 Summary = _inventoryService.GetProductCardSummary(ProductID)
 
@@ -531,9 +559,20 @@ Namespace ViewModels
         Private Sub ExecuteOpenInvoice(obj As Object)
             Dim movement As ProductMovement = TryCast(obj, ProductMovement)
             If movement IsNot Nothing AndAlso RequestNavigateToInvoiceAction IsNot Nothing Then
-                ' Navigate: pass InvID and 1 for Sales, 2 for Purchase (mapped from string)
-                Dim typeCode As Integer = If(movement.InvType = "Sales", 1, 2)
-                RequestNavigateToInvoiceAction.Invoke(movement.InvID, typeCode)
+                Dim typeCode As Integer = 0
+                If movement.InvType = "Sales" Then
+                    typeCode = 1
+                ElseIf movement.InvType = "Purchase" Then
+                    typeCode = 2
+                ElseIf movement.InvType = "Wastage" Then
+                    typeCode = 3
+                ElseIf movement.InvType = "StockTake" Then
+                    typeCode = 4
+                End If
+                
+                If typeCode > 0 Then
+                    RequestNavigateToInvoiceAction.Invoke(movement.InvID, typeCode)
+                End If
             End If
         End Sub
 #End Region

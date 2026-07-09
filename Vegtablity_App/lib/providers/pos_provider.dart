@@ -67,7 +67,7 @@ class PosProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final product = response.data;
         
-        final rawPrice = product['price'];
+        final rawPrice = product['SalePrice'] ?? product['price'];
         double priceValue = 0.0;
         if (rawPrice is num) {
           priceValue = rawPrice.toDouble();
@@ -81,8 +81,9 @@ class PosProvider extends ChangeNotifier {
           _invoiceItems[existingIndex]['total'] = _invoiceItems[existingIndex]['price'] * _invoiceItems[existingIndex]['quantity'];
         } else {
           _invoiceItems.add({
-            'barcode': barcode,
-            'name': product['name'] ?? 'منتج غير معروف',
+            'ProductID': product['ProductID'] ?? product['product_id'] ?? 1,
+            'barcode': product['Barcode'] ?? product['barcode'] ?? barcode,
+            'name': product['ProductName'] ?? product['name'] ?? 'منتج غير معروف',
             'price': priceValue,
             'quantity': 1,
             'total': priceValue,
@@ -97,8 +98,7 @@ class PosProvider extends ChangeNotifier {
         _errorMessage = 'المنتج غير موجود أو حدثت مشكلة في الاسترجاع';
       }
     } catch (e) {
-      // Offline/Fallback: Add mockup product automatically
-      _addMockupProduct(barcode);
+      _errorMessage = 'فشل الاتصال بالخادم أو الصنف غير متوفر';
     }
 
     _isLoading = false;
@@ -106,21 +106,37 @@ class PosProvider extends ChangeNotifier {
     return false;
   }
 
-  void _addMockupProduct(String barcode) {
-    final existingIndex = _invoiceItems.indexWhere((item) => item['barcode'] == barcode);
+  void addProductToCart(Map<String, dynamic> product) {
+    final int productId = product['ProductID'] ?? product['product_id'] ?? 1;
+    final String barcode = product['Barcode'] ?? product['barcode'] ?? '';
+    final String name = product['ProductName'] ?? product['name'] ?? 'منتج غير معروف';
+    
+    final rawPrice = product['SalePrice'] ?? product['price'] ?? 0.0;
+    double priceValue = 0.0;
+    if (rawPrice is num) {
+      priceValue = rawPrice.toDouble();
+    } else if (rawPrice is String) {
+      priceValue = double.tryParse(rawPrice) ?? 0.0;
+    }
+
+    final String unitName = product['UnitName'] ?? product['unit_name'] ?? product['unit'] ?? '';
+
+    final existingIndex = _invoiceItems.indexWhere((item) => item['ProductID'] == productId);
     if (existingIndex != -1) {
-      _invoiceItems[existingIndex]['quantity'] += 1;
+      _invoiceItems[existingIndex]['quantity'] += 1.0;
       _invoiceItems[existingIndex]['total'] = _invoiceItems[existingIndex]['price'] * _invoiceItems[existingIndex]['quantity'];
     } else {
       _invoiceItems.add({
+        'ProductID': productId,
         'barcode': barcode,
-        'name': 'صنف تجريبي ($barcode)',
-        'price': 15.0,
-        'quantity': 1,
-        'total': 15.0,
-        'UnitName': 'حبه',
+        'name': name,
+        'price': priceValue,
+        'quantity': 1.0,
+        'total': priceValue,
+        'UnitName': unitName,
       });
     }
+    notifyListeners();
   }
 
   void updateQuantity(int index, num newQuantity) {
@@ -141,7 +157,7 @@ class PosProvider extends ChangeNotifier {
   }
 
 
-  Future<int?> saveInvoice(String invoiceType) async {
+  Future<int?> saveInvoice(String invoiceType, {int? paymentAccountId, int? partnerId, bool isCash = true}) async {
     if (_invoiceItems.isEmpty) {
       _errorMessage = 'السلة فارغة، يرجى إضافة منتجات أولاً';
       notifyListeners();
@@ -153,11 +169,56 @@ class PosProvider extends ChangeNotifier {
     _successMessage = null;
     notifyListeners();
 
+    final prefs = await SharedPreferences.getInstance();
+    final warehouseId = prefs.getInt('selected_warehouse_id') ?? 1;
+    final finalPartnerId = partnerId ?? prefs.getInt('general_partner_id') ?? 1;
+
+    int? resolvedPaymentAccountId = paymentAccountId;
+    if (resolvedPaymentAccountId == null && isCash) {
+      try {
+        final String? cachedAccJson = prefs.getString('cached_accounts');
+        if (cachedAccJson != null) {
+          final List<dynamic> decoded = json.decode(cachedAccJson);
+          final cashAcc = decoded.firstWhere(
+            (acc) => (acc['AccountName']?.toString() ?? '').contains('صندوق') || (acc['AccountName']?.toString() ?? '').contains('كاش'),
+            orElse: () => null,
+          );
+          if (cashAcc != null) {
+            resolvedPaymentAccountId = cashAcc['AccountID'];
+          }
+        }
+      } catch (_) {}
+    }
+
+    final details = _invoiceItems.map((item) {
+      final double qty = (item['quantity'] as num).toDouble();
+      final double price = (item['price'] as num).toDouble();
+      return {
+        'ProductID': item['ProductID'] ?? 1,
+        'UnitPrice': price,
+        'Quantity': qty,
+        'TotalPrice': price * qty,
+        'CostPrice': price,
+      };
+    }).toList();
+
+    final double paid = isCash ? totalAmount : 0.0;
+    final double remainder = isCash ? 0.0 : totalAmount;
+
     final invoiceData = {
-      'type': invoiceType,
-      'items': List<Map<String, dynamic>>.from(_invoiceItems),
-      'total_amount': totalAmount,
-      'created_at': DateTime.now().toIso8601String(),
+      'InvType': invoiceType == 'Sales' ? 'Sales' : 'Purchase',
+      'InvDate': DateTime.now().toIso8601String(),
+      'PartnerID': finalPartnerId,
+      'WarehouseID': warehouseId,
+      'TotalAmount': totalAmount,
+      'Discount': 0.0,
+      'NetAmount': totalAmount,
+      'PaidAmount': paid,
+      'Remainder': remainder,
+      'Notes': invoiceType == 'Sales' ? 'مبيعات نقطة البيع المحمولة' : 'مشتريات نقطة البيع المحمولة',
+      'IsPosted': false,
+      'Details': details,
+      if (isCash && resolvedPaymentAccountId != null) 'PaymentAccountID': resolvedPaymentAccountId,
     };
 
     try {
@@ -170,8 +231,6 @@ class PosProvider extends ChangeNotifier {
         notifyListeners();
         return newInvId;
       } else {
-        // Even if the server returns non-200/201 status, we fall back to offline storage
-        // so the cashier can print the receipt and transaction is saved locally.
         _offlineInvoices.add(invoiceData);
         await _saveOfflineInvoices();
         _successMessage = 'تم الحفظ محلياً (حدث خطأ في استجابة الخادم: ${response.statusCode})';
@@ -181,15 +240,53 @@ class PosProvider extends ChangeNotifier {
         return 0;
       }
     } catch (e) {
-      // Network or API offline error: fallback to local SharedPreferences storage
       _offlineInvoices.add(invoiceData);
       await _saveOfflineInvoices();
       _successMessage = 'تم الحفظ محلياً بنجاح (وضع العمل دون اتصال)';
       _invoiceItems.clear();
       _isLoading = false;
       notifyListeners();
-      return 0; // Return 0 as it was safely cached locally for the user
+      return 0;
     }
+  }
+
+  Future<Map<String, dynamic>?> quickAddUnrecognizedProduct(String barcode, double salePrice) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final payload = {
+        'Barcode': barcode,
+        'ProductName': 'صنف عام - $barcode',
+        'SalePrice': salePrice,
+        'PurchasePrice': 0.0,
+      };
+      
+      final response = await _apiService.quickAddProduct(payload);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final int newProductId = response.data['ProductID'] ?? 0;
+        final productMap = {
+          'ProductID': newProductId,
+          'ProductName': 'صنف عام - $barcode',
+          'Barcode': barcode,
+          'SalePrice': salePrice,
+          'UnitName': 'حبه',
+        };
+        addProductToCart(productMap);
+        _isLoading = false;
+        notifyListeners();
+        return productMap;
+      } else {
+        _errorMessage = 'فشل تسجيل الصنف في خادم البيانات';
+      }
+    } catch (e) {
+      _errorMessage = 'حدث خطأ بالاتصال بالسيرفر أثناء تسجيل الصنف';
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return null;
   }
 
   Future<bool> syncOfflineInvoices() async {

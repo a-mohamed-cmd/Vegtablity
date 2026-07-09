@@ -27,7 +27,8 @@ Namespace Services
                         .Email = info.Email,
                         .Logo = info.Logo,
                         .CurrencySymbol = info.CurrencySymbol,
-                        .UnifiedPartnerSearch = info.UnifiedPartnerSearch
+                        .UnifiedPartnerSearch = info.UnifiedPartnerSearch,
+                        .UseDetailedInvoiceDesign = info.UseDetailedInvoiceDesign
                     },
                     commandType:=CommandType.StoredProcedure
                 )

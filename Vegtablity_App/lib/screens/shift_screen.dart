@@ -36,9 +36,12 @@ class _ShiftScreenState extends State<ShiftScreen> {
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       } else {
-        setState(() {
-          _isChecking = false;
-        });
+        await shiftProvider.loadWarehouses();
+        if (mounted) {
+          setState(() {
+            _isChecking = false;
+          });
+        }
       }
     }
   }
@@ -64,6 +67,16 @@ class _ShiftScreenState extends State<ShiftScreen> {
     }
 
     final shiftProvider = Provider.of<ShiftProvider>(context, listen: false);
+    if (shiftProvider.selectedWarehouseId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('shift_warehouse_error'), textAlign: TextAlign.right),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final success = await shiftProvider.openShift(startingCash);
 
     if (mounted) {
@@ -164,6 +177,35 @@ class _ShiftScreenState extends State<ShiftScreen> {
               children: [
                 Text(context.tr('shift_confirm_cash'), style: const TextStyle(fontSize: 20)),
                 const SizedBox(height: 32),
+                
+                // Dropdown to select warehouse
+                DropdownButtonFormField<int>(
+                  value: shiftProvider.selectedWarehouseId,
+                  decoration: InputDecoration(
+                    labelText: context.tr('shift_warehouse_label'),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  alignment: Alignment.centerRight,
+                  items: shiftProvider.warehouses.map((wh) {
+                    return DropdownMenuItem<int>(
+                      value: wh['WarehouseID'] as int,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        wh['WarehouseName']?.toString() ?? '',
+                        style: const TextStyle(fontFamily: 'Outfit'),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      final selected = shiftProvider.warehouses.firstWhere((w) => w['WarehouseID'] == val);
+                      shiftProvider.selectWarehouse(val, selected['WarehouseName']?.toString() ?? '');
+                    }
+                  },
+                ),
+                const SizedBox(height: 20),
+                
                 TextField(
                   controller: _cashController,
                   keyboardType: TextInputType.number,

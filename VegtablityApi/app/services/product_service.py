@@ -45,3 +45,23 @@ class ProductService:
         finally:
             conn.close()
 
+    def quick_add_product(self, barcode: str, name: str, purchase_price: float, sale_price: float) -> int:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "EXEC [Inventory].[sp_Product_QuickAdd] ?, ?, ?, ?",
+                (barcode, name, purchase_price, sale_price)
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise Exception("Failed to insert quick product")
+            conn.commit()
+            return row[0]
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
+
+

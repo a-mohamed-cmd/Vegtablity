@@ -9,6 +9,8 @@ class Product(BaseModel):
     PurchasePrice: float
     UnitName: Optional[str] = None
     StockQuantity: float = 0.0
+    CategoryID: Optional[int] = None
+    CatName: Optional[str] = None
 
 class ProductSearchResponse(BaseModel):
     products: List[Product]

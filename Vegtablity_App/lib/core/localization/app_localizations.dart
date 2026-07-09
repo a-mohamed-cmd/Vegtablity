@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class AppLocalizations {
   final Locale locale;
@@ -59,6 +59,9 @@ class AppLocalizations {
       'shift_confirm_cash': 'تأكيد العهدة الافتتاحية للكاشير',
       'shift_cash_label': 'الرقم (الكاش)',
       'shift_open_button': 'فتح الوردية وبدء العمل',
+      'shift_select_warehouse': 'اختر المستودع للوردية',
+      'shift_warehouse_label': 'المستودع',
+      'shift_warehouse_error': 'يرجى اختيار المستودع قبل فتح الوردية',
       // Home Screen
       'home_title': 'نظام الكاشير الذكي (POS)',
       'home_server_status': 'حالة السيرفر: ',
@@ -505,6 +508,9 @@ class AppLocalizations {
       'shift_confirm_cash': 'Confirm Cashier Starting Cash',
       'shift_cash_label': 'Amount (Cash)',
       'shift_open_button': 'Open Shift & Start Work',
+      'shift_select_warehouse': 'Select Warehouse for Shift',
+      'shift_warehouse_label': 'Warehouse',
+      'shift_warehouse_error': 'Please select a warehouse before opening the shift',
       // Home Screen
       'home_title': 'Smart Cashier System (POS)',
       'home_server_status': 'Server Status: ',

@@ -36,19 +36,23 @@ class InvoiceService:
         try:
             # 1. Resolve default cash PaymentAccountID if None
             if payment_account_id is None:
-                cursor.execute("""
-                    SELECT TOP 1 AccountID 
-                    FROM [Accounting].[ChartOfAccounts] 
-                    WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1
-                """)
+                cursor.execute("SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = 30 AND IsTransactional = 1")
                 row = cursor.fetchone()
                 if row:
                     payment_account_id = row[0]
                 else:
-                    # Fallback to any transactional account
-                    cursor.execute("SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE IsTransactional = 1")
+                    cursor.execute("""
+                        SELECT TOP 1 AccountID 
+                        FROM [Accounting].[ChartOfAccounts] 
+                        WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1
+                    """)
                     row = cursor.fetchone()
-                    payment_account_id = row[0] if row else 1
+                    if row:
+                        payment_account_id = row[0]
+                    else:
+                        cursor.execute("SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE IsTransactional = 1")
+                        row = cursor.fetchone()
+                        payment_account_id = row[0] if row else 1
 
             # 2. Call sp_Invoice_AddPayment_pos
             cursor.execute(
@@ -103,6 +107,28 @@ class InvoiceService:
 
         conn = get_db_connection()
         cursor = conn.cursor()
+
+        # Resolve fallback PaymentAccountID if PaidAmount > 0 and PaymentAccountID is None
+        resolved_payment_account_id = invoice.PaymentAccountID
+        if invoice.PaidAmount > 0 and resolved_payment_account_id is None:
+            cursor.execute("SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = 30 AND IsTransactional = 1")
+            fallback_row = cursor.fetchone()
+            if fallback_row:
+                resolved_payment_account_id = fallback_row[0]
+            else:
+                cursor.execute("""
+                    SELECT TOP 1 AccountID 
+                    FROM [Accounting].[ChartOfAccounts] 
+                    WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1
+                """)
+                fallback_row2 = cursor.fetchone()
+                if fallback_row2:
+                    resolved_payment_account_id = fallback_row2[0]
+                else:
+                    cursor.execute("SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE IsTransactional = 1")
+                    fallback_row3 = cursor.fetchone()
+                    resolved_payment_account_id = fallback_row3[0] if fallback_row3 else 1
+
         # ✨ جلب ShiftID من الكاش مباشرة (صفر roundtrip إضافي)
         active_shift_id = _shift_service.get_active_shift_id(user_id)
         try:
@@ -120,7 +146,7 @@ class InvoiceService:
                 invoice.Notes,
                 invoice.IsPosted,
                 invoice.ReferenceNo,
-                invoice.PaymentAccountID,
+                resolved_payment_account_id,
                 active_shift_id,
                 details_xml
             ))

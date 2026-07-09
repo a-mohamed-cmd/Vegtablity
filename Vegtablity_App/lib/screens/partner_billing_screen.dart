@@ -1,5 +1,7 @@
+import 'dart:convert';
 import '../providers/settings_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -34,12 +36,37 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   List<Map<String, dynamic>> _filteredAllowedItems = [];
   bool _isLoading = false;
+  List<Map<String, dynamic>> _accounts = [];
+  int? _selectedAccountId;
 
   @override
   void initState() {
     super.initState();
     _filteredAllowedItems = widget.allowedItems;
     _focusNode.requestFocus();
+    _loadPaymentAccounts();
+  }
+
+  Future<void> _loadPaymentAccounts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? cachedAccJson = prefs.getString('cached_accounts');
+      if (cachedAccJson != null) {
+        final List<dynamic> decoded = json.decode(cachedAccJson);
+        setState(() {
+          _accounts = List<Map<String, dynamic>>.from(decoded);
+          final cashAcc = _accounts.firstWhere(
+            (acc) => (acc['AccountName']?.toString() ?? '').contains('صندوق') || (acc['AccountName']?.toString() ?? '').contains('كاش'),
+            orElse: () => <String, dynamic>{},
+          );
+          if (cashAcc.isNotEmpty) {
+            _selectedAccountId = cashAcc['AccountID'];
+          } else if (_accounts.isNotEmpty) {
+            _selectedAccountId = _accounts.first['AccountID'];
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -213,28 +240,42 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
   }
 
   void _openCameraScanner() {
+    final Map<String, DateTime> lastScanned = {};
+    String? statusMessage;
+    Color statusColor = Colors.teal;
+    List<String> sessionItems = [];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.black,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (context, setSheetState) {
             return Container(
-              height: MediaQuery.of(context).size.height * 0.7,
+              height: MediaQuery.of(context).size.height * 0.8,
               child: Column(
                 children: [
                   AppBar(
                     title: Text(context.tr('pb_scan_camera_title'),
                         style: const TextStyle(color: Colors.white)),
-                    backgroundColor: Colors.transparent,
+                    backgroundColor: Colors.grey[900],
                     elevation: 0,
                     leading: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
+                      icon: const Icon(Icons.check, color: Colors.greenAccent),
                       onPressed: () {
                         Navigator.pop(context);
                       },
                     ),
+                    actions: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.close, color: Colors.redAccent),
+                        label: const Text('إنهاء', style: TextStyle(color: Colors.white)),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                      )
+                    ],
                   ),
                   Expanded(
                     child: Stack(
@@ -242,36 +283,147 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                       children: [
                         MobileScanner(
                           controller: MobileScannerController(
-                            detectionSpeed: DetectionSpeed.noDuplicates,
+                            detectionSpeed: DetectionSpeed.normal,
                           ),
                           onDetect: (BarcodeCapture capture) {
                             final List<Barcode> barcodes = capture.barcodes;
                             for (final barcode in barcodes) {
                               final String code = barcode.rawValue ?? '';
-                              if (code.isNotEmpty) {
-                                Navigator.pop(context); // Close sheet
-                                _handleBarcodeScanned(code);
-                                break;
+                              final String trimmed = code.trim();
+                              if (trimmed.isEmpty) continue;
+
+                              // Debounce: prevent duplicate scan within 2 seconds
+                              final now = DateTime.now();
+                              if (lastScanned.containsKey(trimmed) &&
+                                  now.difference(lastScanned[trimmed]!).inSeconds < 2) {
+                                continue;
                               }
+                              lastScanned[trimmed] = now;
+
+                              // Process barcode locally
+                              final allowedItem = widget.allowedItems.firstWhere(
+                                (item) => (item['Barcode'] ?? '').toString().trim() == trimmed,
+                                orElse: () => {},
+                              );
+
+                              if (allowedItem.isNotEmpty) {
+                                _addOrIncrementProduct(allowedItem);
+                                final String prodName = allowedItem['ProductName'] ?? trimmed;
+                                
+                                SystemSound.play(SystemSoundType.click);
+                                HapticFeedback.mediumImpact();
+
+                                setSheetState(() {
+                                  statusMessage = 'تمت إضافة: $prodName';
+                                  statusColor = Colors.green;
+                                  if (!sessionItems.contains(prodName)) {
+                                    sessionItems.insert(0, prodName);
+                                  }
+                                });
+                              } else {
+                                SystemSound.play(SystemSoundType.click);
+                                HapticFeedback.heavyImpact();
+
+                                setSheetState(() {
+                                  statusMessage = 'صنف غير مدرج في العرض/الطلب!';
+                                  statusColor = Colors.red;
+                                });
+                              }
+
+                              // Auto clear status message after 1.5 seconds
+                              Future.delayed(const Duration(milliseconds: 1500), () {
+                                if (context.mounted) {
+                                  setSheetState(() {
+                                    statusMessage = null;
+                                  });
+                                }
+                              });
+                              break;
                             }
                           },
                         ),
-                        // Scanner overlay grid
+                        // Scanner box
                         Container(
                           width: 250,
                           height: 250,
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.teal, width: 3),
+                            border: Border.all(color: statusColor, width: 3),
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        // Animated scanner line
+                        
+                        // Status Overlay Message (SnapMessage)
+                        if (statusMessage != null)
+                          Positioned(
+                            top: 20,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Text(
+                                statusMessage!,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+
+                        // Scan Instructions
                         Positioned(
-                          top: 150,
+                          bottom: 140,
                           child: Text(context.tr('pb_scan_camera_hint'),
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 16)),
-                        )
+                              style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                        ),
+
+                        // List of scanned items in this session
+                        if (sessionItems.isNotEmpty)
+                          Positioned(
+                            bottom: 10,
+                            left: 10,
+                            right: 10,
+                            height: 110,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'المنتجات المضافة في هذه الجلسة:',
+                                    style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Expanded(
+                                    child: ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: sessionItems.length,
+                                      itemBuilder: (ctx, index) {
+                                        return Container(
+                                          margin: const EdgeInsets.only(right: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.teal[900]?.withOpacity(0.8),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: Colors.teal, width: 0.5),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            sessionItems[index],
+                                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -286,7 +438,87 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     });
   }
 
-  Future<void> _submitInvoice(bool isCash) async {
+  void _showCashPaymentDialog() {
+    int? dialogSelectedAccountId = _selectedAccountId;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: const Text(
+                'تأكيد السداد النقدي',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.right,
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'المبلغ المطلوب: ${_netAmount.toStringAsFixed(2)} د.ك',
+                    style: const TextStyle(color: Colors.tealAccent, fontSize: 16, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.right,
+                  ),
+                  const SizedBox(height: 15),
+                  if (_accounts.isNotEmpty) ...[
+                    const Text(
+                      'طريقة الدفع / حساب السداد:',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                      textAlign: TextAlign.right,
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      dropdownColor: Colors.grey[850],
+                      value: dialogSelectedAccountId,
+                      decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        border: OutlineInputBorder(),
+                        fillColor: Colors.white,
+                        filled: true,
+                      ),
+                      items: _accounts.map((acc) {
+                        return DropdownMenuItem<int>(
+                          value: acc['AccountID'],
+                          child: Text(
+                            acc['AccountName']?.toString() ?? '',
+                            style: const TextStyle(color: Colors.black, fontSize: 14),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          dialogSelectedAccountId = val;
+                        });
+                      },
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('إلغاء', style: TextStyle(color: Colors.red)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _submitInvoice(true, paymentAccountId: dialogSelectedAccountId);
+                  },
+                  child: const Text('تأكيد وحفظ', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitInvoice(bool isCash, {int? paymentAccountId}) async {
     if (_cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -301,6 +533,9 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     setState(() {
       _isLoading = true;
     });
+
+    final prefs = await SharedPreferences.getInstance();
+    final warehouseId = prefs.getInt('selected_warehouse_id') ?? 1;
 
     final double total = _subtotal;
     final double discount = _discount;
@@ -325,7 +560,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'InvType': widget.type == 'Sales' ? 'Sales' : 'Purchase',
       'InvDate': DateTime.now().toIso8601String(),
       'PartnerID': widget.partner['PartnerID'],
-      'WarehouseID': 1, // Default warehouse
+      'WarehouseID': warehouseId,
       'TotalAmount': total,
       'Discount': discount,
       'NetAmount': net,
@@ -334,6 +569,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'Notes': '${context.tr('pb_offer_notes')}${widget.quoteId}',
       'IsPosted': false,
       'Details': details,
+      if (isCash && (paymentAccountId ?? _selectedAccountId) != null)
+        'PaymentAccountID': paymentAccountId ?? _selectedAccountId,
     };
 
     try {
@@ -425,7 +662,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       onKeyEvent: (KeyEvent event) {
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.f12 && !_isLoading) {
-            _submitInvoice(true); // Cash on F12
+            _showCashPaymentDialog();
           }
         }
       },
@@ -793,7 +1030,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed:
-                      _cartItems.isEmpty ? null : () => _submitInvoice(true),
+                      _cartItems.isEmpty ? null : () => _showCashPaymentDialog(),
                   icon: const Icon(Icons.payment),
                   label: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -932,7 +1169,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               Expanded(
                 child: ElevatedButton(
                   onPressed:
-                      _cartItems.isEmpty ? null : () => _submitInvoice(true),
+                      _cartItems.isEmpty ? null : () => _showCashPaymentDialog(),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white),

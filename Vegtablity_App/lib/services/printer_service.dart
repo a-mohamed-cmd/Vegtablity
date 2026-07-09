@@ -192,6 +192,9 @@ class PrinterService with ChangeNotifier {
     final bool isVirtual = _connectionType == 'None';
     final String actualConnectionType = isVirtual ? 'Virtual Printer (Console Simulator)' : _connectionType;
 
+    final prefs = await SharedPreferences.getInstance();
+    final String? openWarehouseName = prefs.getString('selected_warehouse_name');
+
     // Get company settings with default fallbacks
     final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
     final String address = _companySettings?['Address'] ?? 'العارضيه';
@@ -274,6 +277,12 @@ class PrinterService with ChangeNotifier {
             'فاتورة $typeName جديدة',
             style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
           );
+          if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+            await SunmiPrinter.printText(
+              'المستودع: $openWarehouseName',
+              style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
+            );
+          }
           await SunmiPrinter.printText(
             'رقم الفاتورة: $invIdStr',
             style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
@@ -316,7 +325,7 @@ class PrinterService with ChangeNotifier {
               style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
             );
             await SunmiPrinter.printText(
-              '  $qtyFormatted x ${_formatCurrency(price)} ${_currencySymbol} = ${_formatCurrency(total)} ${_currencySymbol}',
+              '  $qtyFormatted x ${_formatCurrency(price)} = ${_formatCurrency(total)}',
               style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
             );
           }
@@ -399,6 +408,9 @@ class PrinterService with ChangeNotifier {
           // Body (Right aligned)
           socket.add([0x1B, 0x61, 0x02]);
           socket.write('فاتورة $typeName جديدة\n');
+          if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+            socket.write('المستودع: $openWarehouseName\n');
+          }
           socket.write('رقم الفاتورة: $invIdStr\n');
           socket.write('الشريك: $partnerName\n');
           socket.write('التاريخ: $shortDate\n');
@@ -416,7 +428,7 @@ class PrinterService with ChangeNotifier {
             final String qtyFormatted = _formatQuantity(qty, unitName);
             
             socket.write('$name\n');
-            socket.write('  $qtyFormatted x ${_formatCurrency(price)} ${_currencySymbol} = ${_formatCurrency(total)} ${_currencySymbol}\n');
+            socket.write('  $qtyFormatted x ${_formatCurrency(price)} = ${_formatCurrency(total)}\n');
           }
           
           socket.write('--------------------------------\n');
@@ -477,6 +489,9 @@ class PrinterService with ChangeNotifier {
     required List<dynamic> purchaseInvoices,
     required double endingCash,
   }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? openWarehouseName = prefs.getString('selected_warehouse_name');
+
     final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
     final String address    = _companySettings?['Address'] ?? 'العارضيه';
     final String phone      = _companySettings?['Phone'] ?? '55381505';
@@ -553,6 +568,9 @@ class PrinterService with ChangeNotifier {
         await _printLine('الهاتف: $phone', center: true);
         await _printLine('================================', center: true);
         await _printLine('تقرير إغلاق الوردية', bold: true, center: true);
+        if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+          await _printLine('المستودع: $openWarehouseName', center: true);
+        }
         await _printLine('--------------------------------');
         await _printLine('الكاشير: $userName');
         await _printLine('بداية الوردية: $startStr');
@@ -653,6 +671,9 @@ class PrinterService with ChangeNotifier {
           socket.write('================================\n');
           socket.write('  $companyName\n');
           socket.write('  تقرير إغلاق الوردية\n');
+          if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+            socket.write('  المستودع: $openWarehouseName\n');
+          }
           socket.write('================================\n');
           // Right
           socket.add([0x1B, 0x61, 0x02]);
@@ -716,6 +737,9 @@ class PrinterService with ChangeNotifier {
     final bool isVirtual = _connectionType == 'None';
     final String actualConnectionType = isVirtual ? 'Virtual Printer (Console Simulator)' : _connectionType;
 
+    final prefs = await SharedPreferences.getInstance();
+    final String? openWarehouseName = prefs.getString('selected_warehouse_name');
+
     // Get company settings
     final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
     final String address = _companySettings?['Address'] ?? 'العارضيه';
@@ -749,6 +773,9 @@ class PrinterService with ChangeNotifier {
         await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
         await SunmiPrinter.printText(vType, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+          await SunmiPrinter.printText('المستودع: $openWarehouseName', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        }
         await SunmiPrinter.printText('رقم السند: #$vId', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText('التاريخ: $vDate $vTime', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
@@ -795,6 +822,9 @@ class PrinterService with ChangeNotifier {
           socket.write('  الهاتف: $phone\n');
           socket.write('================================\n');
           socket.write('  $vType\n');
+          if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+            socket.write('  المستودع: $openWarehouseName\n');
+          }
           socket.write('رقم السند: #$vId\n');
           socket.write('التاريخ: $vDate $vTime\n');
           socket.write('--------------------------------\n');
@@ -844,6 +874,9 @@ class PrinterService with ChangeNotifier {
   }
 
   Future<bool> printGeneralVoucher(Map<String, dynamic> voucher, String targetAccountName, String cashAccountName) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? openWarehouseName = prefs.getString('selected_warehouse_name');
+
     // Get company settings
     final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
     final String address = _companySettings?['Address'] ?? 'العارضيه';
@@ -876,6 +909,9 @@ class PrinterService with ChangeNotifier {
         await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
         await SunmiPrinter.printText(vType, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+          await SunmiPrinter.printText('المستودع: $openWarehouseName', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        }
         await SunmiPrinter.printText('رقم السند: #$vId', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText('التاريخ: $vDate $vTime', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         
@@ -906,6 +942,9 @@ class PrinterService with ChangeNotifier {
           socket.write('  الهاتف: $phone\n');
           socket.write('================================\n');
           socket.write('  $vType\n');
+          if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
+            socket.write('  المستودع: $openWarehouseName\n');
+          }
           socket.write('رقم السند: #$vId\n');
           socket.write('التاريخ: $vDate $vTime\n');
           socket.write('--------------------------------\n');
@@ -981,7 +1020,7 @@ class PrinterService with ChangeNotifier {
           final String unit = item['UnitName'] ?? 'حبه';
           
           await SunmiPrinter.printText(name, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-          await SunmiPrinter.printText('  ${_formatQuantity(qty, unit)} x ${_formatCurrency(price)} = ${_formatCurrency(total)} ${_currencySymbol}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+          await SunmiPrinter.printText('  ${_formatQuantity(qty, unit)} x ${_formatCurrency(price)} = ${_formatCurrency(total)}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
         }
         
         await SunmiPrinter.printText('--------------------------------', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
@@ -1019,7 +1058,7 @@ class PrinterService with ChangeNotifier {
             final double total = qty * price;
             final String unit = item['UnitName'] ?? 'حبه';
             socket.write('$name\n');
-            socket.write('  ${_formatQuantity(qty, unit)} x ${_formatCurrency(price)} = ${_formatCurrency(total)} ${_currencySymbol}\n');
+            socket.write('  ${_formatQuantity(qty, unit)} x ${_formatCurrency(price)} = ${_formatCurrency(total)}\n');
           }
           socket.write('--------------------------------\n');
           socket.write('إجمالي التكلفة: ${_formatCurrency(totalValue)} ${_currencySymbol}\n');

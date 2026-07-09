@@ -67,9 +67,14 @@
 
                                 <!-- System Preferences: Partner Mode -->
                                 <TextBlock Text="تفضيلات النظام" FontSize="16" FontWeight="SemiBold" Foreground="#34495e" Margin="0,15,0,10"/>
-                                <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15">
-                                    <CheckBox IsChecked="{Binding UnifiedPartnerSearch}" Content="تفعيل البحث الموحد (دمج العملاء والموردين معاً في شاشات الفواتير)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
-                                </Border>
+                                <StackPanel>
+                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                                        <CheckBox IsChecked="{Binding UnifiedPartnerSearch}" Content="تفعيل البحث الموحد (دمج العملاء والموردين معاً في شاشات الفواتير)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
+                                    </Border>
+                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15">
+                                        <CheckBox IsChecked="{Binding UseDetailedInvoiceDesign}" Content="تفعيل طباعة الفواتير بالتصميم التفصيلي (الجدول ورأس الفاتورة الموحد)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
+                                    </Border>
+                                </StackPanel>
                             </StackPanel>
 
                             <!-- Logo Section -->

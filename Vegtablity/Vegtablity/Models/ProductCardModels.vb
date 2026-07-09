@@ -212,6 +212,39 @@ Public Class WarehouseStock
         End Set
     End Property
 
+    Private _incomingQty As Decimal
+    Public Property IncomingQty As Decimal
+        Get
+            Return _incomingQty
+        End Get
+        Set(value As Decimal)
+            _incomingQty = value
+            OnPropertyChanged(NameOf(IncomingQty))
+        End Set
+    End Property
+
+    Private _outgoingQty As Decimal
+    Public Property OutgoingQty As Decimal
+        Get
+            Return _outgoingQty
+        End Get
+        Set(value As Decimal)
+            _outgoingQty = value
+            OnPropertyChanged(NameOf(OutgoingQty))
+        End Set
+    End Property
+
+    Private _wastageQty As Decimal
+    Public Property WastageQty As Decimal
+        Get
+            Return _wastageQty
+        End Get
+        Set(value As Decimal)
+            _wastageQty = value
+            OnPropertyChanged(NameOf(WastageQty))
+        End Set
+    End Property
+
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
     Protected Overridable Sub OnPropertyChanged(propertyName As String)
         RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propertyName))

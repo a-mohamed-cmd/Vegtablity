@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class ShiftProvider extends ChangeNotifier {
@@ -11,7 +12,54 @@ class ShiftProvider extends ChangeNotifier {
   int? _shiftId;
   Map<String, dynamic>? _shiftSummary;
 
+  List<Map<String, dynamic>> _warehouses = [];
+  int? _selectedWarehouseId;
+  String? _selectedWarehouseName;
+
   ShiftProvider(this._apiService);
+
+  List<Map<String, dynamic>> get warehouses => _warehouses;
+  int? get selectedWarehouseId => _selectedWarehouseId;
+  String? get selectedWarehouseName => _selectedWarehouseName;
+
+  Future<void> loadWarehouses() async {
+    try {
+      final response = await _apiService.getWarehouses();
+      if (response.statusCode == 200) {
+        _warehouses = List<Map<String, dynamic>>.from(response.data);
+        if (_warehouses.isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          final savedId = prefs.getInt('selected_warehouse_id');
+          if (savedId != null && _warehouses.any((w) => w['WarehouseID'] == savedId)) {
+            _selectedWarehouseId = savedId;
+            _selectedWarehouseName = _warehouses.firstWhere((w) => w['WarehouseID'] == savedId)['WarehouseName'];
+          } else {
+            final defaultWh = _warehouses.first;
+            _selectedWarehouseId = defaultWh['WarehouseID'];
+            _selectedWarehouseName = defaultWh['WarehouseName'];
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      _warehouses = [
+        {'WarehouseID': 1, 'WarehouseName': 'المستودع الرئيسي'},
+        {'WarehouseID': 2, 'WarehouseName': 'مستودع الخضار'},
+      ];
+      _selectedWarehouseId = 1;
+      _selectedWarehouseName = 'المستودع الرئيسي';
+      notifyListeners();
+    }
+  }
+
+  void selectWarehouse(int id, String name) async {
+    _selectedWarehouseId = id;
+    _selectedWarehouseName = name;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selected_warehouse_id', id);
+    await prefs.setString('selected_warehouse_name', name);
+    notifyListeners();
+  }
 
   bool get isLoading => _isLoading;
   bool get isShiftOpen => _isShiftOpen;
@@ -27,6 +75,12 @@ class ShiftProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (_selectedWarehouseId != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('selected_warehouse_id', _selectedWarehouseId!);
+        await prefs.setString('selected_warehouse_name', _selectedWarehouseName!);
+      }
+
       final response = await _apiService.openShift(startingCash);
       if (response.statusCode == 200 || response.statusCode == 201) {
         _isShiftOpen = true;
@@ -54,6 +108,10 @@ class ShiftProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _selectedWarehouseId = prefs.getInt('selected_warehouse_id');
+      _selectedWarehouseName = prefs.getString('selected_warehouse_name');
+
       final response = await _apiService.getActiveShift();
       if (response.statusCode == 200) {
         _isShiftOpen = true;

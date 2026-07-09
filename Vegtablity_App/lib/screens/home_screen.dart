@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
+import '../providers/account_provider.dart';
 import '../viewmodels/language_viewmodel.dart';
 import '../core/localization/app_localizations.dart';
 import '../models/language_model.dart';
@@ -20,6 +21,7 @@ import 'general_receipt_voucher_screen.dart';
 import 'general_payment_voucher_screen.dart';
 import 'inventory/stocktake_screen.dart';
 import 'inventory/wastage_screen.dart';
+import 'supplier_selection_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // Refresh offline cache in background
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<VoucherProvider>(context, listen: false).refreshCache();
+      Provider.of<AccountProvider>(context, listen: false).fetchGeneralPartnerId();
     });
   }
 
@@ -355,10 +358,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Layout 1: The Classic Grid Layout
   Widget _buildClassicLayout(BuildContext context) {
-    return Center(
-      child: Wrap(
-        spacing: 20,
-        runSpacing: 20,
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final int crossAxisCount = screenWidth > 600 ? 3 : 2;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: GridView.count(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.2,
         children: [
           _buildActionCard(
               context, context.tr('home_classic_new_invoice'), Icons.point_of_sale, Colors.blue,
@@ -368,12 +377,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(
                     builder: (context) => const PosScreen(type: 'Sales')));
           }),
-          _buildActionCard(context, context.tr('home_classic_manage_partners'), Icons.people,
-              Colors.orange, () {}),
           _buildActionCard(
-              context, context.tr('home_classic_sales_quote'), Icons.receipt_long, Colors.purple,
+              context, 'فاتورة مشتريات جديدة', Icons.shopping_basket, Colors.orange[800]!,
               () {
-            // Action for sales quotes
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const PartnerSelectionScreen(type: 'Purchase')));
           }),
           _buildActionCard(
               context, 'جرد المخزون', Icons.inventory, Colors.teal,
@@ -392,7 +402,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (context) => const WastageScreen()));
           }),
         ],
-
       ),
     );
   }
@@ -516,19 +525,20 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Card(
         elevation: 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: 200,
-          height: 150,
-          padding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 60, color: color),
-              const SizedBox(height: 16),
-              Text(title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
+              Icon(icon, size: 48, color: color),
+              const SizedBox(height: 12),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
             ],
           ),
         ),

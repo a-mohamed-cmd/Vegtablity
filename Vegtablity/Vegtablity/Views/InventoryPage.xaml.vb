@@ -3,6 +3,8 @@ Imports System.Windows.Controls
 Imports System.Windows.Input
 Imports System.Windows.Media.Animation
 Imports System.Text.RegularExpressions
+Imports Vegtablity.Models
+
 
 Namespace Views
     Partial Public Class InventoryPage
@@ -131,10 +133,24 @@ Namespace Views
                                                             Dim vm = TryCast(page.DataContext, ViewModels.SalesInvoiceViewModel)
                                                             vm?.LoadInvoice(invID)
                                                             parent.NavigateTo(page, keepCurrentInStack:=True)
-                                                        Else                     ' Purchase
+                                                        ElseIf invTypeCode = 2 Then                     ' Purchase
                                                             Dim page = New PurchaseInvoicePage()
                                                             Dim vm = TryCast(page.DataContext, ViewModels.PurchaseInvoiceViewModel)
                                                             vm?.LoadInvoice(invID)
+                                                            parent.NavigateTo(page, keepCurrentInStack:=True)
+                                                        ElseIf invTypeCode = 3 Then                     ' Wastage
+                                                            Dim page = New WastagePage()
+                                                            Dim vm = TryCast(page.DataContext, ViewModels.WastageViewModel)
+                                                            If vm IsNot Nothing Then
+                                                                vm.SelectedWastage = New WastageHeader() With {.WastageID = invID}
+                                                            End If
+                                                            parent.NavigateTo(page, keepCurrentInStack:=True)
+                                                        ElseIf invTypeCode = 4 Then                     ' StockTake
+                                                            Dim page = New StockTakePage()
+                                                            Dim vm = TryCast(page.DataContext, ViewModels.StockTakeViewModel)
+                                                            If vm IsNot Nothing Then
+                                                                vm.SelectedStockTake = New StockTakeHeader() With {.StockTakeID = invID}
+                                                            End If
                                                             parent.NavigateTo(page, keepCurrentInStack:=True)
                                                         End If
                                                     End Sub

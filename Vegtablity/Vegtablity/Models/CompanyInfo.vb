@@ -7,5 +7,6 @@ Namespace Models
         Public Property Logo As Byte()
         Public Property CurrencySymbol As String
         Public Property UnifiedPartnerSearch As Boolean = True
+        Public Property UseDetailedInvoiceDesign As Boolean = False
     End Class
 End Namespace

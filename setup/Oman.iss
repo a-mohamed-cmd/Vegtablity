@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
-#define MyAppName "OmanApp"
+#define MyAppName "VegtablityApp"
 #define MyAppVersion "16"
 #define MyAppPublisher "Mohamed Ragab"
 #define MyAppURL "www.mohamedRagab.com"
@@ -29,7 +29,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=D:\VB.NET\backup\Vegtablity\setup\Output
-OutputBaseFilename=OmanApp_SetupV16
+OutputBaseFilename=Oman_SetupV16
 SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\lettuce.ico
 SolidCompression=yes
 WizardStyle=modern dynamic

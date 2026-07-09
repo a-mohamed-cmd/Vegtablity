@@ -157,6 +157,10 @@ class ApiService {
     return await _dio.get('/products/barcode/$barcode');
   }
 
+  Future<Response> quickAddProduct(Map<String, dynamic> productData) async {
+    return await _dio.post('/products/quick-add', data: productData);
+  }
+
   Future<Response> getInvoices({required String type, String? search, int? shiftId}) async {
     return await _dio.get('/invoices/', queryParameters: {
       'type': type,

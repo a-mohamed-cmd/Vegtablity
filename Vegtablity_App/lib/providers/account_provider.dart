@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class AccountProvider extends ChangeNotifier {
@@ -69,11 +70,21 @@ class AccountProvider extends ChangeNotifier {
     // تحقق من الكاش: إذا كان موجوداً أعده مباشرة بدون استدعاء جديد
     if (_generalPartnerId != null) return _generalPartnerId;
 
-    // ليس مخزّناً → استدعاء الـ API
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getInt('general_partner_id');
+      if (savedId != null) {
+        _generalPartnerId = savedId;
+        return _generalPartnerId;
+      }
+
+      // ليس مخزّناً → استدعاء الـ API
       final response = await _apiService.getGeneralPartner();
       if (response.statusCode == 200) {
         _generalPartnerId = response.data['PartnerID'] as int?;
+        if (_generalPartnerId != null) {
+          await prefs.setInt('general_partner_id', _generalPartnerId!);
+        }
         return _generalPartnerId;
       }
     } catch (e) {

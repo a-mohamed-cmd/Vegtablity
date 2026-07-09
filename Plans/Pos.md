@@ -6,6 +6,21 @@
 
 ---
 
+## 📌 الفهرس العام للصفحات والملفات والكلاسات المضافة حديثاً (Index of Recent Additions)
+
+### 1. الصفحات الجديدة والمعدلة (Added & Modified Pages / Screens):
+*   **شاشة اختيار الشركاء والموردين (جديدة):** [PartnerSelectionScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart) - شاشة للبحث واختيار العملاء/الموردين عند بدء فاتورة جديدة أو التعديل من الـ POS.
+*   **شاشة نقطة البيع (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) - دمج خيار الدفع (نقدي/آجل) وتبديل الشريك ديناميكياً.
+*   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة.
+
+### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **كود التحكم بالطباعة المكتبي:** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة.
+*   **نموذج بيانات الشركة:** [CompanyInfo](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) - إضافة خاصية `UseDetailedInvoiceDesign`.
+*   **متحكم صفحة الإعدادات:** [CompanySettingsViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) - إدارة وتمرير حالة تصميم الطباعة لقاعدة البيانات.
+*   **مزود حالة المبيعات والمشتريات:** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - حساب قيم المدفوع والمتبقي وتنسيق حفظ الفاتورة الآجلة.
+
+---
+
 ## 1. الهيكل المعماري (System Architecture)
 يتم الربط بين تطبيق Flutter وقاعدة البيانات الحالية من خلال API موحد مبني بـ FastAPI، مما يضمن أمان البيانات وتوحيد العمليات الحسابية مع نظام الـ Desktop الحالي.
 
@@ -867,3 +882,108 @@
      * `shrinkWrap: true` لتمتد القائمة ديناميكياً بحسب حجم العناصر.
      * `physics: const NeverScrollableScrollPhysics()` لإسناد مهمة التمرير الكلي للـ `ScrollView` الخارجي.
   4. إصلاح خلل تطابق الأقواس المفقودة في نهاية إرجاع خلايا الـ `Card` و `Padding` لاستعادة إمكانية البناء بنجاح.
+
+---
+
+## 21. دمج الجرد والهلاك في حركة الصنف (Product Card) وتنسيق الصفحة والعملات (يوليو 2026)
+
+تم دمج حركات الجرد المخزني وهلاك البضاعة بشكل كامل داخل واجهة **بطاقة الصنف (Product Card)** لتتبع الكميات بدقة، بالإضافة لتحديث المظهر البصري لبطاقة الصنف وتهيئة العملة ديناميكياً:
+
+### أ- دمج حركات الجرد والهلاك في سجل حركة الصنف:
+1. **قاعدة البيانات (SQL Server Stored Procedures):**
+   * تحديث `[Inventory].[sp_ProductCard_GetSummary]`: تم دمج كميات الجرد بالزيادة ضمن "إجمالي الوارد"، وتضمين كميات الجرد بالعجز وكميات الهلاك ضمن "إجمالي الصادر" لتحديث قيم متوسط التكلفة وحسابات الأرباح الإجمالية بدقة.
+   * تحديث `[Inventory].[sp_ProductCard_GetStockByWarehouse]`: لحساب إجمالي الوارد، الصادر، والهالك الخاص بالصنف مفرزاً لكل مستودع بشكل مستقل.
+   * تحديث `[Inventory].[sp_ProductCard_GetMovements]`: تم استخدام `UNION ALL` لضم حركات الهوالك المرحلة والجرود المعتمدة في كشف حركات الصنف الموحد، مع جلب رقم الفاتورة `InvID` مباشرة كـ `ReferenceNo` لعرضه للمستخدم في عمود "رقم السند".
+   * تحديث `[Inventory].[sp_ProductCard_GetChartData]`: لتضمين كميات الجرد والهلاك في الرسم البياني للرصيد التراكمي وتحديث التقارير.
+2. **النماذج وطبقة منطق العمل (VB.NET):**
+   * تحديث [ProductCardModels.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ProductCardModels.vb): إدراج الحقول `IncomingQty` و `OutgoingQty` و `WastageQty` ضمن كلاس `WarehouseStock`.
+   * تحديث [ProductCardViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ProductCardViewModel.vb):
+     * تحديث الدالة `ExecuteOpenInvoice` لتوجيه المستخدم لصفحة الجرد أو الهالك الأصلية (الكود 3 للهلاك والكود 4 للجرد).
+     * زيادة حجم الصفحة الافتراضي `_pageSize` إلى 20 حركة، مع تهيئة الكوماند `NextPageCommand` للتنقل السلس.
+     * تعريف حقل `CurrencySymbol` واستدعاء `GetCompanyInfo` عبر الـ `SettingsService` لتمرير الرمز للواجهة ديناميكياً.
+   * تحديث [InventoryPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/InventoryPage.xaml.vb): استيراد مساحة الأسماء `Vegtablity.Models` وتوسيع معالج `RequestNavigateToInvoiceAction` للتوجيه وعرض تفاصيل مستندات الهالك والجرد المحددة.
+
+### ب- التنسيق البصري وعرض العملات الديناميكية:
+1. **المظهر الرأسي الممتد (UI Layout):**
+   * في [ProductCardControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProductCardControl.xaml), تم إعادة توزيع العناصر لتنصيف الصفحة عمودياً:
+     * تم وضع **الرسم البياني (Cumulative Chart)** ممتداً بعرض الصفحة بالكامل في الجزء العلوي لتسهيل التتبع والتحليل.
+     * تم وضع **جدول الحركات (DataGrid)** ممتداً بعرض الصفحة بالكامل في الجزء السفلي أسفل الرسم البياني لتوفير عرض مريح وخالٍ من الانضغاط لكافة أعمدة الحركات.
+2. **العملة الديناميكية من إعدادات قاعدة البيانات:**
+   * تم استبدال رمز العملة الثابت `KWD` في واجهة بطاقة الصنف بالرابط ديناميكياً `{Binding CurrencySymbol}` بجميع بطاقات الإحصائيات (متوسط سعر التكلفة، آخر سعر شراء، إجمالي قيمة الوارد، وإجمالي قيمة الصادر).
+
+---
+
+## 22. ربط وتعميم المستودعات في الوردية وتطوير الطباعة وواجهة التقرير اليومي بالـ Flutter (يوليو 2026)
+
+تم إدخال تحديثات جوهرية على تطبيق الهاتف المحمول (Flutter) لتعزيز التحكم بالمستودعات، وتسهيل الفوترة، وتحسين المظهر البصري لتقارير الفواتير اليومية وإيصالات الطباعة:
+
+### أ- ربط المستودع بالوردية وتعميمه في الفواتير (Warehouse & Shift Integration):
+1. **مزود الوردية ([shift_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart)):**
+   * إدخال دوال تحميل وتخزين المستودعات `loadWarehouses()` عبر الـ API.
+   * ربط اختيار المستودع بذاكرة الجهاز المؤقتة والدائمة `SharedPreferences` تحت مفاتيح `selected_warehouse_id` و `selected_warehouse_name` ليبقى المستودع فعالاً طوال فترة فتح الوردية.
+   * استرجاع المستودع تلقائياً عند فحص حالة الوردية الفعالة `checkActiveShiftStatus()`.
+2. **واجهة فتح الوردية ([shift_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/shift_screen.dart)):**
+   * إضافة قائمة منسدلة (DropdownButtonFormField) لاختيار المستودع المناسب قبل فتح الوردية، ومنع المستخدم من فتح الوردية دون تحديد المستودع.
+3. **مزود الحسابات ([account_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/account_provider.dart)):**
+   * تحديث دالة `fetchGeneralPartnerId()` لحفظ معرف العميل العام (كاش / سند مباشر) في الـ `SharedPreferences` بعد جلبه من الـ API، مع استدعائها في الخلفية فور تحميل الصفحة الرئيسية ([home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)).
+4. **مزود نقطة البيع ([pos_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart)):**
+   * تعديل منطق مسح الأصناف للاحتفاظ بالمعرف الحقيقي للصنف `ProductID` قادماً من السيرفر.
+   * إعادة تصميم دالة `saveInvoice` لبناء حزمة بيانات كاملة متوافقة 100% مع نموذج التحقق بالـ Backend (`InvoiceCreate` Schema)، لتضمين المستودع الفعال للوردية ومعرف العميل كاش والكميات وتفاصيل الأسعار بشكل سليم.
+5. **شاشة فواتير الشركاء ([partner_billing_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart)):**
+   * تعديل حقل المستودع لقراءة معرف المستودع ديناميكياً من الـ `SharedPreferences` بدلاً من استخدام القيمة الثابتة (`1`).
+
+### ب- تطوير تقرير إيصال الطباعة الموحد (Receipt Print Layout Updates):
+1. **ترويسة المستودع المفتوح ([printer_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart)):**
+   * إضافة كود قراءة اسم المستودع المختار للوردية وطباعته بوضوح في رأس التقارير للفواتير (`printReceipt`)، وتقرير إغلاق الوردية اليومي (`printDailyReport`)، وسندات القبض والصرف الفردية والعامة (`printVoucher` و `printGeneralVoucher`).
+2. **تبسيط وحذف تكرار العملة:**
+   * تعديل أسطر تفاصيل الأصناف المطبوعة وحذف تكرار رمز العملة (`د.ك` أو `KWD`) من جانب أسعار الوحدات وإجماليات السطور في الفواتير ومسودات الهالك (`printWastageReceipt`)، والاكتفاء فقط بعرض رمز العملة في تذييل التقرير والمجاميع المالية النهائية لسهولة القراءة وترتيب التصميم.
+
+### ج- تنظيم واجهة تقرير الفواتير اليومية وتخطيط الوضع الكلاسيكي:
+1. **شاشة تقرير الفواتير اليومية ([daily_invoices_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart)):**
+   * التخلص من تكرار رمز العملة بجوار كل معاملة فردية في قوائم المبيعات والمشتريات والسندات، والإبقاء عليها فقط في الإجماليات وملخصات الصندوق والتدفق النقدي أسفل الشاشة لإراحة عين المستخدم.
+2. **ترتيب وتناسق الوضع الكلاسيكي ([home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)):**
+   * إعادة بناء واجهة الوضع الكلاسيكي بالكامل لتعمل بنظام شبكي متجاوب (`GridView.count`) بدلاً من الـ `Wrap` القديم.
+   * تترتب البطاقات تلقائياً بجانب بعضها البعض كصفين متتاليين (2 في كل صف على الهواتف، و3 في كل صف على الأجهزة اللوحية الكبيرة).
+   * إلغاء كرت "إدارة الموردين / العملاء" وكرت "استدعاء عرض مبيعات" بالكامل لتبسيط الواجهة وتركيز العمل على المبيعات الجديدة، والجرد، والهالك.
+
+
+
+---
+
+## 23. تطوير نظام السداد في الوردية وبدء المشتريات وتفصيل نموذج الفاتورة المكتبي (يوليو 2026)
+
+تم تصميم وتطوير الميزات التالية لضمان تلبية طلبات التحكم بطرق السداد في شاشة الوردية والـ POS بالـ Flutter، ودعم نموذج طباعة تفصيلي للفواتير A4 بالـ WPF المكتبي:
+
+### أ- خيار نوع السداد (نقدي / آجل) بالـ POS والـ Flutter:
+1. **مزود نقطة البيع ([pos_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart)):**
+   * إدخال معامل نوع الدفع (`paymentType` بـ 'Cash' أو 'Credit').
+   * تعديل حساب المدفوع (`PaidAmount`) والمتبقي (`RemainingAmount`) ديناميكياً بناءً على الخيار المختار.
+   * إرسال معالم الدفع للـ API بطريقة صحيحة لحفظ السندات والحركات بشكل دقيق.
+2. **واجهة نقطة البيع ([pos_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart)):**
+   * إدراج `ChoiceChip` للتبديل السريع والواضح بين مبيعات كاش ومبيعات آجلة.
+   * التحكم في إظهار وإخفاء قائمة الخزائن وحسابات السداد تبعاً لنوع السداد لمنع إدخال خاطئ.
+   * إدراج زر ديناميكي لتغيير العميل أو المورد المختار حالياً للفاتورة مباشرة من شاشة الـ POS لتسجيل الفاتورة على حسابه الآجل.
+
+### ب- واجهة الموردين وبدء المشتريات من الوضع الكلاسيكي:
+1. **شاشة اختيار الشركاء والموردين ([partner_selection_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart)) - [جديدة]:**
+   * ملف جديد تماماً يعرض قائمة للعملاء والموردين ويدعم البحث الفوري بالاسم أو برقم الحساب.
+   * تحتوي الشاشة على باني يقبل متغير `isSelectionOnly` و `type`.
+     - **الحالة الأولى (`isSelectionOnly = false`):** عند النقر على المشتريات بالوضع الكلاسيكي، تفتح الشاشة لاختيار المورد، وعند اختياره توجه المستخدم تلقائياً لـ `PosScreen` الخاص بالمشتريات لبدء الفوترة محملة بالـ `partnerID` والاسم.
+     - **الحالة الثانية (`isSelectionOnly = true`):** عند النقر لتغيير العميل/المورد من داخل شاشة الـ POS، تعود الشاشة بالـ `Pop` محملة بالبيانات فقط لتحديث حالة الـ POS النشط.
+
+### ج- نموذج الفاتورة التفصيلي الجديد بالـ WPF (Desktop App):
+1. **إعدادات قاعدة البيانات (Stored Procedures):**
+   * تم إدراج العمود الجديد `UseDetailedInvoiceDesign` بقيمة افتراضية `0` في جدول `CompanySettings`.
+   * تحديث إجراء الجلب `[Settings].[sp_CompanySettings_Get]` لترقية قراءة الحقل الجديد صراحةً.
+   * تحديث إجراء الحفظ `[Settings].[sp_CompanySettings_Save]` لحفظ حالة التفعيل في النظام.
+2. **تعديل الـ Models والـ ViewModels:**
+   * **[CompanyInfo.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb):** إضافة الخاصية `UseDetailedInvoiceDesign`.
+   * **[CompanySettingsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb):** إدارة تحميل وتخزين الخاصية وربطها بالواجهة.
+   * **[CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml):** إضافة CheckBox بالواجهة للسماح للمستخدم بتفعيل أو إلغاء تفعيل التصميم التفصيلي للفاتورة.
+3. **تطوير محرك الطباعة المكتبي ([InvoicePrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb)):**
+   * يدعم المحرك فحص حالة `UseDetailedInvoiceDesign`:
+     * **حالة False:** رسم الفاتورة بالتصميم الكلاسيكي القديم لضمان ثباته بالكامل.
+     * **حالة True:** تشغيل التصميم التفصيلي الجديد:
+       - **ترويسة مكررة:** رسم شعار الشركة موسطاً بالأعلى، تحته اسم وعنوان الشركة موسطين، ثم عنوان الفاتورة وصناديق معلومات العميل والفاتورة الموحدة في رأس **كل صفحة**.
+       - **حدود الجدول (Gridlines):** رسم خطوط الجدول الرأسية والأفقية التي تقسم وتحدد خانات الأصناف السبعة بجمالية عالية.
+       - **تذييل مكرر:** رسم معلومات التواصل (الهاتف والإيميل) موسطة بالأسفل مع أرقام الصفحات ورقم الفاتورة في أسفل **كل صفحة**.

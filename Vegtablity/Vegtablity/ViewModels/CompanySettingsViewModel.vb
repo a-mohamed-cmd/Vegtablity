@@ -89,6 +89,17 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _useDetailedInvoiceDesign As Boolean = False
+        Public Property UseDetailedInvoiceDesign As Boolean
+            Get
+                Return _useDetailedInvoiceDesign
+            End Get
+            Set(value As Boolean)
+                _useDetailedInvoiceDesign = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
         ' === Commands ===
         Public Property SaveCommand As RelayCommand
         Public Property SelectLogoCommand As RelayCommand
@@ -110,6 +121,7 @@ Namespace ViewModels
                     Logo = info.Logo
                     CurrencySymbol = info.CurrencySymbol
                     UnifiedPartnerSearch = info.UnifiedPartnerSearch
+                    UseDetailedInvoiceDesign = info.UseDetailedInvoiceDesign
                 End If
             Catch ex As Exception
                 ' Error handling
@@ -133,7 +145,8 @@ Namespace ViewModels
                     .Email = Email,
                     .Logo = Logo,
                     .CurrencySymbol = CurrencySymbol,
-                    .UnifiedPartnerSearch = UnifiedPartnerSearch
+                    .UnifiedPartnerSearch = UnifiedPartnerSearch,
+                    .UseDetailedInvoiceDesign = UseDetailedInvoiceDesign
                 }
                 _settingsService.SaveCompanyInfo(info)
                 MessageBox.Show("تم حفظ الإعدادات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)

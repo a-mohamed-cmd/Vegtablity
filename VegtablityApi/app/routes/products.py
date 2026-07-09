@@ -28,3 +28,24 @@ async def get_product_by_barcode(
         )
     return product
 
+@router.post("/quick-add", response_model=dict)
+async def quick_add_product(
+    payload: dict,
+    user_id: int = Depends(get_current_user_id)
+):
+    barcode = payload.get("Barcode")
+    name = payload.get("ProductName")
+    sale_price = payload.get("SalePrice", 0.0)
+    purchase_price = payload.get("PurchasePrice", 0.0)
+    
+    if not barcode or not name:
+        raise HTTPException(status_code=400, detail="الباركود واسم المنتج مطلوبان")
+        
+    service = ProductService()
+    try:
+        product_id = service.quick_add_product(barcode, name, purchase_price, sale_price)
+        return {"ProductID": product_id, "message": "تمت إضافة المنتج بنجاح"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+

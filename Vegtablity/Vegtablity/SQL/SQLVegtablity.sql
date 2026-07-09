@@ -1625,7 +1625,7 @@ CREATE PROCEDURE [Accounting].[sp_Setup_InitialAccounts]
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT,@profit int ,@banckandcash int,@costcode int,@firstbalance int ,@capital int ,@RevenueIDchild int;
+    DECLARE @AssetsID INT, @LiabilitiesID INT, @EquityID INT, @RevenueID INT, @ExpensesID INT,@profit int ,@banckandcash int,@costcode int,@firstbalance int ,@capital int ,@RevenueIDchild int ,@Customers int;
 
     -- 1. الحسابات الرئيسية (Level 0)
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1')
@@ -1688,6 +1688,17 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
         VALUES ('12', N'العملاء / الذمم المدينة', @AssetsID, 'Assets', 1, 0);
+     SELECT @Customers = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12';
+
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1201')
+        INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES ('1201', N'مبيعات مباشره', @Customers, 'Assets', 2, 0);
+
+    IF NOT EXISTS (SELECT 1 FROM [Sales].[Partners] WHERE PartnerName = N'سند مباشر')
+    BEGIN
+               INSERT INTO [Sales].[Partners] ( PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID)
+        VALUES ( N'سند مباشر', 'Other', NULL, NULL, 0.00, 1, (SELECT AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1201'));
+       END
 
     IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '13')
         INSERT INTO [Accounting].[ChartOfAccounts] (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
@@ -8725,4 +8736,691 @@ BEGIN
 END
 GO
 PRINT N'✅ تم تحديث [Inventory].[sp_StockTake_Approve] بالقيود وتحديث المستودع';
+GO
+
+
+-- =============================================
+-- 1. تحديث ملخص بطاقة الصنف
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetSummary]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_ProductCard_GetSummary];
+GO
+create PROCEDURE [Inventory].[sp_ProductCard_GetSummary]
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Balance           DECIMAL(18,2) = 0;
+    DECLARE @AvgCost           DECIMAL(18,2) = 0;
+    DECLARE @TotalInQty        DECIMAL(18,2) = 0;
+    DECLARE @TotalInValue      DECIMAL(18,2) = 0;
+    DECLARE @TotalOutQty       DECIMAL(18,2) = 0;
+    DECLARE @TotalOutValue     DECIMAL(18,2) = 0;
+    DECLARE @LastPurchasePrice DECIMAL(18,2) = 0;
+    DECLARE @ProfitRate        DECIMAL(18,2) = 0;
+    DECLARE @AlertQty          DECIMAL(18,2) = 0;
+    DECLARE @Barcode           NVARCHAR(50) = '';
+    DECLARE @SalePrice         DECIMAL(18,2) = 0;
+
+    -- معلومات الصنف
+    SELECT 
+        @AlertQty  = ISNULL(AlertQty, 0),
+        @Barcode   = ISNULL(Barcode, ''),
+        @SalePrice = ISNULL(SalePrice, 0)
+    FROM [Inventory].[Products]
+    WHERE ProductID = @ProductID;
+
+    -- الرصيد الحالي التراكمي
+    SELECT @Balance = ISNULL(SUM(CurrentQty), 0)
+    FROM [Inventory].[ProductStock]
+    WHERE ProductID = @ProductID;
+
+    -- 1. إجمالي الوارد = فواتير الشراء
+    SELECT
+        @TotalInQty   = ISNULL(SUM(d.Quantity), 0),
+        @TotalInValue = ISNULL(SUM(d.TotalPrice), 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Purchase';
+
+    -- إضافة زيادة الجرد المعتمدة
+    DECLARE @StockTakeInQty DECIMAL(18,2) = 0;
+    DECLARE @StockTakeInValue DECIMAL(18,2) = 0;
+    SELECT 
+        @StockTakeInQty = ISNULL(SUM(d.DifferenceQuantity), 0),
+        @StockTakeInValue = ISNULL(SUM(d.DifferenceValue), 0)
+    FROM [Inventory].[StockTakeDetails] d
+    INNER JOIN [Inventory].[StockTakeHeader] h ON d.StockTakeID = h.StockTakeID
+    WHERE d.ProductID = @ProductID
+      AND h.Status = 'Approved'
+      AND d.DifferenceQuantity > 0;
+
+    SET @TotalInQty = @TotalInQty + @StockTakeInQty;
+    SET @TotalInValue = @TotalInValue + @StockTakeInValue;
+
+    -- 2. إجمالي الصادر = فواتير البيع
+    SELECT
+        @TotalOutQty   = ISNULL(SUM(d.Quantity), 0),
+        @TotalOutValue = ISNULL(SUM(d.TotalPrice), 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Sales';
+
+    -- إضافة الهوالك المرحلة
+    DECLARE @WastageOutQty DECIMAL(18,2) = 0;
+    DECLARE @WastageOutValue DECIMAL(18,2) = 0;
+    SELECT
+        @WastageOutQty = ISNULL(SUM(d.Quantity), 0),
+        @WastageOutValue = ISNULL(SUM(d.Quantity * d.CostPrice), 0)
+    FROM [Inventory].[WastageDetails] d
+    INNER JOIN [Inventory].[WastageHeader] h ON d.WastageID = h.WastageID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted = 1;
+
+    -- إضافة عجز الجرد المعتمد
+    DECLARE @StockTakeOutQty DECIMAL(18,2) = 0;
+    DECLARE @StockTakeOutValue DECIMAL(18,2) = 0;
+    SELECT
+        @StockTakeOutQty = ISNULL(SUM(ABS(d.DifferenceQuantity)), 0),
+        @StockTakeOutValue = ISNULL(SUM(ABS(d.DifferenceValue)), 0)
+    FROM [Inventory].[StockTakeDetails] d
+    INNER JOIN [Inventory].[StockTakeHeader] h ON d.StockTakeID = h.StockTakeID
+    WHERE d.ProductID = @ProductID
+      AND h.Status = 'Approved'
+      AND d.DifferenceQuantity < 0;
+
+    SET @TotalOutQty = @TotalOutQty + @WastageOutQty + @StockTakeOutQty;
+    SET @TotalOutValue = @TotalOutValue + @WastageOutValue + @StockTakeOutValue;
+
+    -- آخر سعر شراء
+    SELECT TOP 1 @LastPurchasePrice = ISNULL(d.UnitPrice, 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+    WHERE d.ProductID = @ProductID
+      AND h.IsPosted  = 1
+      AND h.InvType   = 'Purchase'
+    ORDER BY h.InvDate DESC, h.InvID DESC;
+
+    -- متوسط سعر التكلفة
+    IF @TotalInQty > 0
+        SET @AvgCost = @TotalInValue / @TotalInQty;
+
+    -- معدل الربح التقريبي
+    IF @TotalOutQty > 0 AND @AvgCost > 0
+    BEGIN
+        DECLARE @TotalCostOfSales DECIMAL(18,2) = @TotalOutQty * @AvgCost;
+        IF @TotalCostOfSales > 0
+            SET @ProfitRate = ((@TotalOutValue - @TotalCostOfSales) / @TotalCostOfSales) * 100;
+        ELSE
+            SET @ProfitRate = 100;
+    END
+
+    SELECT
+        @Balance            AS Balance,
+        @AvgCost            AS AvgCost,
+        @TotalInQty         AS TotalInQty,
+        @TotalInValue       AS TotalInValue,
+        @TotalOutQty        AS TotalOutQty,
+        @TotalOutValue      AS TotalOutValue,
+        @LastPurchasePrice  AS LastPurchasePrice,
+        @ProfitRate         AS ProfitRate,
+        @AlertQty           AS AlertQty,
+        @Barcode            AS Barcode,
+        @SalePrice          AS SalePrice;
+END
+GO
+
+-- =============================================
+-- 2. تحديث أرصدة المستودعات مع إحصائيات الوارد والصادر والهالك
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetStockByWarehouse]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_ProductCard_GetStockByWarehouse];
+GO
+create PROCEDURE [Inventory].[sp_ProductCard_GetStockByWarehouse]
+    @ProductID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @AlertQty DECIMAL(18,2) = 0;
+    SELECT @AlertQty = ISNULL(AlertQty, 0)
+    FROM [Inventory].[Products]
+    WHERE ProductID = @ProductID;
+
+    SELECT 
+        w.WarehouseID,
+        w.WarehouseName,
+        ISNULL(s.CurrentQty, 0) AS CurrentQty,
+        @AlertQty AS AlertQty,
+        
+        -- إجمالي الوارد (مشتريات للمستودع + زيادة الجرد)
+        ISNULL((
+            SELECT SUM(id.Quantity)
+            FROM [Sales].[InvoiceDetails] id
+            INNER JOIN [Sales].[InvoiceHeader] ih ON id.InvID = ih.InvID
+            WHERE id.ProductID = @ProductID 
+              AND ih.IsPosted = 1 
+              AND ih.InvType = 'Purchase' 
+              AND ih.WarehouseID = w.WarehouseID
+        ), 0) +
+        ISNULL((
+            SELECT SUM(std.DifferenceQuantity)
+            FROM [Inventory].[StockTakeDetails] std
+            INNER JOIN [Inventory].[StockTakeHeader] sth ON std.StockTakeID = sth.StockTakeID
+            WHERE std.ProductID = @ProductID 
+              AND sth.Status = 'Approved' 
+              AND sth.WarehouseID = w.WarehouseID
+              AND std.DifferenceQuantity > 0
+        ), 0) AS IncomingQty,
+
+        -- إجمالي المنصرف (مبيعات للمستودع + هالك + عجز جرد)
+        ISNULL((
+            SELECT SUM(id.Quantity)
+            FROM [Sales].[InvoiceDetails] id
+            INNER JOIN [Sales].[InvoiceHeader] ih ON id.InvID = ih.InvID
+            WHERE id.ProductID = @ProductID 
+              AND ih.IsPosted = 1 
+              AND ih.InvType = 'Sales' 
+              AND ih.WarehouseID = w.WarehouseID
+        ), 0) +
+        ISNULL((
+            SELECT SUM(wd.Quantity)
+            FROM [Inventory].[WastageDetails] wd
+            INNER JOIN [Inventory].[WastageHeader] wh ON wd.WastageID = wh.WastageID
+            WHERE wd.ProductID = @ProductID 
+              AND wh.IsPosted = 1 
+              AND wh.WarehouseID = w.WarehouseID
+        ), 0) +
+        ISNULL((
+            SELECT SUM(ABS(std.DifferenceQuantity))
+            FROM [Inventory].[StockTakeDetails] std
+            INNER JOIN [Inventory].[StockTakeHeader] sth ON std.StockTakeID = sth.StockTakeID
+            WHERE std.ProductID = @ProductID 
+              AND sth.Status = 'Approved' 
+              AND sth.WarehouseID = w.WarehouseID
+              AND std.DifferenceQuantity < 0
+        ), 0) AS OutgoingQty,
+
+        -- إجمالي الهالك الخاص بالمستودع
+        ISNULL((
+            SELECT SUM(wd.Quantity)
+            FROM [Inventory].[WastageDetails] wd
+            INNER JOIN [Inventory].[WastageHeader] wh ON wd.WastageID = wh.WastageID
+            WHERE wd.ProductID = @ProductID 
+              AND wh.IsPosted = 1 
+              AND wh.WarehouseID = w.WarehouseID
+        ), 0) AS WastageQty
+
+    FROM [Settings].[Warehouses] w
+    LEFT JOIN [Inventory].[ProductStock] s ON s.WarehouseID = w.WarehouseID AND s.ProductID = @ProductID
+    ORDER BY w.WarehouseName;
+END
+GO
+
+-- =============================================
+-- 3. تحديث جلب حركات الصنف الموحدة
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetMovements]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_ProductCard_GetMovements];
+GO
+create PROCEDURE [Inventory].[sp_ProductCard_GetMovements]
+    @ProductID   INT,
+    @FilterType  NVARCHAR(10) = 'ALL',  -- 'ALL' | 'IN' | 'OUT'
+    @PageNumber  INT          = 1,
+    @PageSize    INT          = 15
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    WITH AllMovements AS (
+        -- أ. الفواتير
+        SELECT
+            h.InvID,
+            CAST(h.InvID AS NVARCHAR(50)) AS ReferenceNo,
+            h.InvDate,
+            h.InvType,
+            CASE WHEN h.InvType = 'Purchase' THEN 'IN' ELSE 'OUT' END AS MovementDirection,
+            CASE WHEN h.InvType = 'Purchase' THEN N'فاتورة شراء' ELSE N'فاتورة بيع' END AS InvTypeName,
+            d.Quantity,
+            d.UnitPrice,
+            d.TotalPrice,
+            p.PartnerName
+        FROM [Sales].[InvoiceDetails] d
+        INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+        LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+        WHERE d.ProductID = @ProductID
+          AND h.IsPosted = 1
+
+        UNION ALL
+
+        -- ب. الهوالك (منصرف دائمًا)
+        SELECT
+            h.WastageID AS InvID,
+            N'W-' + CAST(h.WastageID AS NVARCHAR(50)) AS ReferenceNo,
+            h.WastageDate AS InvDate,
+            'Wastage' AS InvType,
+            'OUT' AS MovementDirection,
+            N'إهلاك بضاعة' AS InvTypeName,
+            d.Quantity,
+            d.CostPrice AS UnitPrice,
+            d.Quantity * d.CostPrice AS TotalPrice,
+            w.WarehouseName AS PartnerName
+        FROM [Inventory].[WastageDetails] d
+        INNER JOIN [Inventory].[WastageHeader] h ON d.WastageID = h.WastageID
+        LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+        WHERE d.ProductID = @ProductID
+          AND h.IsPosted = 1
+
+        UNION ALL
+
+        -- ج. الجرود (تسوية زيادة أو عجز)
+        SELECT
+            h.StockTakeID AS InvID,
+            N'ST-' + CAST(h.StockTakeID AS NVARCHAR(50)) AS ReferenceNo,
+            h.StockTakeDate AS InvDate,
+            'StockTake' AS InvType,
+            CASE WHEN d.DifferenceQuantity > 0 THEN 'IN' ELSE 'OUT' END AS MovementDirection,
+            CASE WHEN d.DifferenceQuantity > 0 THEN N'تسوية جرد (زيادة)' ELSE N'تسوية جرد (عجز)' END AS InvTypeName,
+            ABS(d.DifferenceQuantity) AS Quantity,
+            d.CostPrice AS UnitPrice,
+            ABS(d.DifferenceQuantity * d.CostPrice) AS TotalPrice,
+            w.WarehouseName AS PartnerName
+        FROM [Inventory].[StockTakeDetails] d
+        INNER JOIN [Inventory].[StockTakeHeader] h ON d.StockTakeID = h.StockTakeID
+        LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+        WHERE d.ProductID = @ProductID
+          AND h.Status = 'Approved'
+          AND d.DifferenceQuantity <> 0
+    )
+    SELECT 
+        InvID,
+        ReferenceNo,
+        InvDate,
+        InvType,
+        MovementDirection,
+        InvTypeName,
+        Quantity,
+        UnitPrice,
+        TotalPrice,
+        PartnerName,
+        COUNT(*) OVER () AS TotalCount
+    FROM AllMovements
+    WHERE (
+            @FilterType = 'ALL'
+         OR (@FilterType = 'IN' AND MovementDirection = 'IN')
+         OR (@FilterType = 'OUT' AND MovementDirection = 'OUT')
+          )
+    ORDER BY InvDate DESC, InvID DESC
+    OFFSET (@PageNumber - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- =============================================
+-- 4. تحديث الرسم البياني
+-- =============================================
+IF OBJECT_ID('[Inventory].[sp_ProductCard_GetChartData]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_ProductCard_GetChartData];
+GO
+create PROCEDURE [Inventory].[sp_ProductCard_GetChartData]
+    @ProductID  INT,
+    @MonthsBack INT = 12
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @FromDate DATE = DATEADD(MONTH, -@MonthsBack, CAST(GETDATE() AS DATE));
+
+    WITH DailyTransactions AS (
+        -- الفواتير
+        SELECT
+            CAST(h.InvDate AS DATE) AS MovementDate,
+            CASE WHEN h.InvType = 'Purchase' THEN d.Quantity ELSE 0 END AS InQty,
+            CASE WHEN h.InvType = 'Sales' THEN d.Quantity ELSE 0 END AS OutQty
+        FROM [Sales].[InvoiceDetails] d
+        INNER JOIN [Sales].[InvoiceHeader] h ON d.InvID = h.InvID
+        WHERE d.ProductID = @ProductID
+          AND h.IsPosted = 1
+          AND CAST(h.InvDate AS DATE) >= @FromDate
+
+        UNION ALL
+
+        -- الهوالك
+        SELECT
+            CAST(h.WastageDate AS DATE) AS MovementDate,
+            0 AS InQty,
+            d.Quantity AS OutQty
+        FROM [Inventory].[WastageDetails] d
+        INNER JOIN [Inventory].[WastageHeader] h ON d.WastageID = h.WastageID
+        WHERE d.ProductID = @ProductID
+          AND h.IsPosted = 1
+          AND CAST(h.WastageDate AS DATE) >= @FromDate
+
+        UNION ALL
+
+        -- الجرود
+        SELECT
+            CAST(h.StockTakeDate AS DATE) AS MovementDate,
+            CASE WHEN d.DifferenceQuantity > 0 THEN d.DifferenceQuantity ELSE 0 END AS InQty,
+            CASE WHEN d.DifferenceQuantity < 0 THEN ABS(d.DifferenceQuantity) ELSE 0 END AS OutQty
+        FROM [Inventory].[StockTakeDetails] d
+        INNER JOIN [Inventory].[StockTakeHeader] h ON d.StockTakeID = h.StockTakeID
+        WHERE d.ProductID = @ProductID
+          AND h.Status = 'Approved'
+          AND d.DifferenceQuantity <> 0
+          AND CAST(h.StockTakeDate AS DATE) >= @FromDate
+    )
+    SELECT
+        CASE WHEN @MonthsBack <= 1 THEN MovementDate ELSE EOMONTH(MovementDate) END AS MovementDate,
+        SUM(InQty) AS DailyInQty,
+        SUM(OutQty) AS DailyOutQty,
+        SUM(InQty - OutQty) AS NetDayMovement
+    FROM DailyTransactions
+    GROUP BY CASE WHEN @MonthsBack <= 1 THEN MovementDate ELSE EOMONTH(MovementDate) END
+    ORDER BY MovementDate ASC;
+END
+GO
+
+
+IF OBJECT_ID('[Inventory].[sp_Product_QuickAdd]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Product_QuickAdd];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Product_QuickAdd]
+    @Barcode      NVARCHAR(50),
+    @ProductName  NVARCHAR(200),
+    @PurchasePrice DECIMAL(18,3) = 0,
+    @SalePrice     DECIMAL(18,3) = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @NewID INT;
+
+    INSERT INTO [Inventory].[Products] (
+        ProductName,
+        Barcode,
+        CategoryID, -- الافتراضي 1 (غير محدد)
+        UnitID,     -- الافتراضي 1 (حبة/قطعة)
+        PurchasePrice,
+        SalePrice,
+        AlertQty,
+        IsActive
+    )
+    VALUES (
+        @ProductName,
+        @Barcode,
+        1,
+        1,
+        @PurchasePrice,
+        @SalePrice,
+        0,
+        1
+    );
+
+    SET @NewID = SCOPE_IDENTITY();
+    SELECT @NewID AS ProductID;
+END
+GO
+
+
+IF OBJECT_ID('[Sales].[sp_Invoice_Post]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Invoice_Post];
+GO
+create PROCEDURE [Sales].[sp_Invoice_Post]
+    @InvID INT,
+    @UserID INT
+AS
+BEGIN
+    UPDATE [Sales].[InvoiceHeader]
+    SET IsPosted = 1, UserID = @UserID
+    WHERE InvID = @InvID;
+END;
+GO
+
+IF OBJECT_ID('[Sales].[sp_Invoice_Unpost]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Invoice_Unpost];
+GO
+create PROCEDURE [Sales].[sp_Invoice_Unpost]
+    @InvID INT,
+    @UserID INT
+AS
+BEGIN
+    UPDATE [Sales].[InvoiceHeader]
+    SET IsPosted = 0
+    WHERE InvID = @InvID;
+END;
+go
+ 
+ IF OBJECT_ID('[Sales].[trg_Invoice_Post]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_Invoice_Post];
+GO
+ create TRIGGER [Sales].[trg_Invoice_Post]
+ON [Sales].[InvoiceHeader]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- الفلترة الأساسية: العمل فقط عند تغير حالة IsPosted
+    IF NOT UPDATE(IsPosted) RETURN;
+
+    -- 1. متغيرات الحسابات الافتراضية
+    DECLARE @InventoryAcc INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '13%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @SalesAcc     INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '41%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @COGSAcc      INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '51%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @CustomerAcc  INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '12%' AND IsTransactional = 1 ORDER BY AccountCode);
+    DECLARE @VendorAcc    INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '21%' AND IsTransactional = 1 ORDER BY AccountCode);
+
+    -- ==========================================================
+    -- أولاً: حالة الترحيل (POSTING: 0 -> 1)
+    -- ==========================================================
+    IF EXISTS (SELECT 1 FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 1 AND d.IsPosted = 0)
+    BEGIN
+        
+        -- أ. تحديث متوسط التكلفة (للمشتريات فقط)
+        UPDATE S
+        SET S.AvgCostPrice = CASE 
+            WHEN (S.CurrentQty + T.TotalQty) > 0 
+            THEN (S.CurrentQty * ISNULL(S.AvgCostPrice, 0) + T.TotalSum) / (S.CurrentQty + T.TotalQty)
+            ELSE T.WeightedPrice END
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN (
+            SELECT D.ProductID, i.WarehouseID, SUM(D.Quantity) as TotalQty, SUM(D.Quantity * D.UnitPrice) as TotalSum,
+                   SUM(D.Quantity * D.UnitPrice) / NULLIF(SUM(D.Quantity), 0) as WeightedPrice
+            FROM [Sales].[InvoiceDetails] D
+            JOIN inserted i ON D.InvID = i.InvID
+            JOIN deleted d_old ON i.InvID = d_old.InvID
+            WHERE i.IsPosted = 1 AND d_old.IsPosted = 0 AND i.InvType = 'Purchase'
+            GROUP BY D.ProductID, i.WarehouseID
+        ) T ON S.ProductID = T.ProductID AND S.WarehouseID = T.WarehouseID;
+
+        -- ب. تحديث الكميات (مشتريات تزيد / مبيعات تنقص)
+        UPDATE S
+        SET S.CurrentQty = S.CurrentQty + (CASE WHEN i.InvType = 'Purchase' THEN T.Qty ELSE -T.Qty END)
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN (
+            SELECT D.ProductID, D.InvID, SUM(D.Quantity) as Qty 
+            FROM [Sales].[InvoiceDetails] D GROUP BY D.ProductID, D.InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN inserted i ON T.InvID = i.InvID
+        INNER JOIN deleted d_old ON i.InvID = d_old.InvID
+        WHERE i.IsPosted = 1 AND d_old.IsPosted = 0 AND S.WarehouseID = i.WarehouseID;
+
+        -- ج. تسجيل التكلفة في تفاصيل الفاتورة (للمبيعات) لضبط الربحية
+        UPDATE D
+        SET D.CostPrice = ISNULL(S.AvgCostPrice, 0)
+        FROM [Sales].[InvoiceDetails] D
+        JOIN inserted i ON D.InvID = i.InvID
+        JOIN [Inventory].[ProductStock] S ON D.ProductID = S.ProductID AND S.WarehouseID = i.WarehouseID
+        WHERE i.IsPosted = 1 AND i.InvType = 'Sales';
+
+        -- د. القيود المحاسبية (Journals)
+        DECLARE @EntryMap TABLE (InvID INT, EntryNo INT);
+        INSERT INTO @EntryMap SELECT i.InvID, NEXT VALUE FOR [Accounting].[seq_EntryNo] 
+        FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 1 AND d.IsPosted = 0;
+
+        -- قيد الفاتورة (مشتريات/مبيعات)
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        -- المشتريات: مخزن (مدين) / مورد (دائن)
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(w.AccountID, @InventoryAcc), i.NetAmount, 0, N'مشتريات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID WHERE i.InvType = 'Purchase'
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(p.AccountID, @VendorAcc), 0, i.NetAmount, N'مشتريات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.InvType = 'Purchase'
+        -- المبيعات: عميل (مدين) / مبيعات (دائن) + تكلفة (مدين) / مخزن (دائن)
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(p.AccountID, @CustomerAcc), i.NetAmount, 0, N'مبيعات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.InvType = 'Sales'
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, @SalesAcc, 0, i.NetAmount, N'مبيعات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID WHERE i.InvType = 'Sales';
+
+		-- ----------------------------------------------------------------
+-- و. قيد تكلفة البضاعة المباعة (للمبيعات فقط)
+-- Dr COGS / Cr Inventory
+-- ----------------------------------------------------------------
+;WITH InvoiceCOGS AS (
+    SELECT d.InvID, SUM(d.CostPrice * d.Quantity) AS TotalCost
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN inserted i ON d.InvID = i.InvID
+    WHERE i.InvType = 'Sales'
+    GROUP BY d.InvID
+)
+INSERT INTO [Accounting].[JournalEntries] 
+    (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+-- الطرف المدين: حساب تكلفة البضاعة المباعة
+SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, @COGSAcc, cogs.TotalCost, 0, 
+       N'تكلفة البضاعة المباعة فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+FROM inserted i
+JOIN @EntryMap m ON i.InvID = m.InvID
+JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+WHERE i.InvType = 'Sales' AND cogs.TotalCost > 0
+
+UNION ALL
+
+-- الطرف الدائن: حساب المخزن (الخاص بالمستودع)
+SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(w.AccountID, @InventoryAcc), 0, cogs.TotalCost, 
+       N'تكلفة البضاعة المباعة فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+FROM inserted i
+JOIN @EntryMap m ON i.InvID = m.InvID
+JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
+WHERE i.InvType = 'Sales' AND cogs.TotalCost > 0;
+        -- هـ. قيود السداد (Payments)
+        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN ISNULL(p.AccountID, @VendorAcc) ELSE i.PaymentAccountID END, i.PaidAmount, 0, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+        UNION ALL
+        SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN i.PaymentAccountID ELSE ISNULL(p.AccountID, @CustomerAcc) END, 0, i.PaidAmount, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+        FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+    END
+	
+    -- ==========================================================
+    -- ثانياً: حالة إلغاء الترحيل (UNPOSTING: 1 -> 0)
+    -- ==========================================================
+    IF EXISTS (SELECT 1 FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 0 AND d.IsPosted = 1)
+    BEGIN
+        -- عكس تأثير المخزن (المبيعات تعيد للمخزن / المشتريات تخصم من المخزن)
+        -- تم توحيد هذا الجزء لضمان عدم التكرار
+        UPDATE S
+        SET S.CurrentQty = S.CurrentQty + (CASE WHEN d_old.InvType = 'Sales' THEN T.Qty ELSE -T.Qty END)
+        FROM [Inventory].[ProductStock] S
+        INNER JOIN (
+            SELECT D.ProductID, D.InvID, SUM(D.Quantity) as Qty 
+            FROM [Sales].[InvoiceDetails] D GROUP BY D.ProductID, D.InvID
+        ) T ON S.ProductID = T.ProductID
+        INNER JOIN deleted d_old ON T.InvID = d_old.InvID
+        INNER JOIN inserted i ON d_old.InvID = i.InvID
+        WHERE i.IsPosted = 0 AND d_old.IsPosted = 1 AND S.WarehouseID = d_old.WarehouseID;
+
+        -- حذف القيود المحاسبية بالكامل
+        DELETE JE FROM [Accounting].[JournalEntries] JE
+        INNER JOIN deleted d_old ON JE.ReferenceID = d_old.InvID
+        WHERE JE.ReferenceType IN ('Invoice', 'Payment') AND d_old.IsPosted = 1;
+    END
+END
+
+go
+
+ IF OBJECT_ID('[Sales].[trg_PreventDeletePostedInvoice]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_PreventDeletePostedInvoice]
+GO
+create TRIGGER [Sales].[trg_PreventDeletePostedInvoice] 
+ON [Sales].[InvoiceHeader] 
+FOR DELETE
+ AS
+  BEGIN 
+  IF EXISTS (SELECT * FROM deleted WHERE IsPosted = 1) BEGIN RAISERROR ('لا يمكن حذف فاتورة مرحلة محاسبياً', 16, 1); ROLLBACK TRANSACTION;
+   END ;
+   END
+   go
+
+   -- 1. إضافة العمود لجدول الإعدادات بقيمة افتراضية False تلقائياً
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'UseDetailedInvoiceDesign')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD UseDetailedInvoiceDesign BIT NOT NULL DEFAULT 0;
+END
+GO
+
+ IF OBJECT_ID('[Settings].[sp_CompanySettings_Get]', 'P') IS NOT NULL
+    DROP procedure [Settings].[sp_CompanySettings_Get]
+GO
+-- 2. تحديث إجراء جلب البيانات (Get SP) ليشمل الحقل الجديد صراحة
+create PROCEDURE [Settings].[sp_CompanySettings_Get]
+AS
+BEGIN
+    SELECT TOP 1 
+        SettingID, 
+        CompanyName, 
+        Address, 
+        Phone, 
+        Email, 
+        Logo, 
+        UnifiedPartnerSearch, 
+        CurrencySymbol,
+        UseDetailedInvoiceDesign
+    FROM [Settings].[CompanySettings];
+END
+GO
+
+ IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL
+    DROP procedure [Settings].[sp_CompanySettings_Save]
+GO
+-- 3. تحديث إجراء حفظ البيانات (Save SP) ليشمل الحقل الجديد
+create PROCEDURE [Settings].[sp_CompanySettings_Save]
+    @CompanyName NVARCHAR(200),
+    @Address NVARCHAR(255) = NULL,
+    @Phone NVARCHAR(50) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Logo VARBINARY(MAX) = NULL,
+    @UnifiedPartnerSearch BIT = 1,
+    @CurrencySymbol NVARCHAR(100) = NULL,
+    @UseDetailedInvoiceDesign BIT = 0
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
+    BEGIN
+        UPDATE [Settings].[CompanySettings]
+        SET CompanyName = @CompanyName,
+            Address = @Address,
+            Phone = @Phone,
+            Email = @Email,
+            Logo = @Logo,
+            UnifiedPartnerSearch = @UnifiedPartnerSearch,
+            CurrencySymbol = @CurrencySymbol,
+            UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign
+        WHERE SettingID = 1;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign);
+    END
+END
 GO
