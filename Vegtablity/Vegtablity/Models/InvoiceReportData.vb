@@ -14,6 +14,9 @@ Namespace Models
         Public Property PartnerName As String
         Public Property AccountCode As String
         Public Property Notes As String
+        Public Property Remainder As Decimal
+        Public Property PaidAmount As Decimal
+        Public Property NetAmount As Decimal
     End Class
 
     Public Class InvoiceReportItem

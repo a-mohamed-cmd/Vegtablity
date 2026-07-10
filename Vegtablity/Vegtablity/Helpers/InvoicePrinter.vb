@@ -171,12 +171,18 @@ Public Class InvoicePrinter
                     g.DrawRectangle(p1, 10.0F, 50.0F, 92.5F, 20.0F)
                     g.DrawRectangle(p1, 107.5F, 50.0F, 92.5F, 20.0F)
 
-                    ' اليسار: اسم العميل/المورد والملحوظات (محاذاة لليمين)
-                    Dim rectCustName As New RectangleF(12.0F, 52.0F, 88.5F, 6.0F)
-                    g.DrawString("العميل/المورد: " & If(_reportData.Header.PartnerName, ""), _printFontBold, brush, rectCustName, fRight)
+                    ' اليسار: اسم العميل والنوع والملحوظات (محاذاة لليمين)
+                    Dim rectCustName As New RectangleF(12.0F, 52.0F, 88.5F, 5.0F)
+                    g.DrawString("العميل: " & If(_reportData.Header.PartnerName, ""), _printFontBold, brush, rectCustName, fRight)
+
+                    ' نوع الفاتورة / (cash أو credit)
+                    Dim isCash As Boolean = (_reportData.Header.Remainder <= 0)
+                    Dim paymentTypeText As String = If(isCash, "cash", "credit")
+                    Dim rectPaymentType As New RectangleF(12.0F, 57.0F, 88.5F, 5.0F)
+                    g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType, fRight)
 
                     If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
-                        Dim rectNotesText As New RectangleF(12.0F, 58.0F, 88.5F, 11.0F)
+                        Dim rectNotesText As New RectangleF(12.0F, 62.0F, 88.5F, 7.0F)
                         g.DrawString("ملاحظات: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotesText, fRight)
                     End If
 
