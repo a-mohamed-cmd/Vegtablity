@@ -1639,6 +1639,192 @@ Namespace Helpers
         End Sub
 
         ' ===================================================
+        ' Export Invoice to PDF (PdfSharp)
+        ' ===================================================
+        Public Shared Sub ExportInvoiceToPdf(reportData As Models.InvoiceReportData, isPurchase As Boolean)
+            Try
+                If reportData Is Nothing OrElse reportData.Header Is Nothing OrElse reportData.Details Is Nothing OrElse reportData.Details.Count = 0 Then
+                    MessageBox.Show("لا يوجد بيانات لتصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                Dim titleText As String = If(isPurchase, "فاتورة مشتريات", "فاتورة مبيعات")
+                dlg.Title = "تصدير " & titleText & " - PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                
+                Dim partnerLabel As String = If(isPurchase, "المورد", "العميل")
+                Dim partnerName = If(reportData.Header.PartnerName, partnerLabel)
+                Dim safeName = partnerName
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = If(isPurchase, "فاتورة_مشتريات_", "فاتورة_مبيعات_") & safeName & "_" & reportData.Header.InvDate.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                doc.Info.Title = titleText & " - " & partnerName
+                doc.Info.Author = "Vegtablity ERP"
+
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                Dim margin As Double = 35
+                Dim pageCount As Integer = 0
+
+                ' ── Initial page ──
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim pageWidth = page.Width.Point - margin * 2
+                Dim currentY As Double = margin
+                pageCount += 1
+                DrawReportHeader(gfx, company, page, currentY, margin, pageWidth, pageCount)
+                Dim y As Double = currentY
+
+                ' ── Title ──
+                Dim titleFont = New XFont("Arial", 16, XFontStyle.Bold)
+                gfx.DrawString(ArabicTextHelper.Fix(titleText), titleFont, XBrushes.Black,
+                               New XRect(margin, y, pageWidth, 25), XStringFormats.TopCenter)
+                y += 30
+
+                ' ── Info card (background box) ──
+                Dim infoH As Double = If(String.IsNullOrWhiteSpace(reportData.Header.Notes), 42, 56)
+                gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(241, 245, 249)), margin, y, pageWidth, infoH)
+                gfx.DrawRectangle(XPens.LightGray, margin, y, pageWidth, infoH)
+
+                Dim lbf = New XFont("Arial", 9, XFontStyle.Bold)
+                Dim lvf = New XFont("Arial", 9, XFontStyle.Regular)
+                Dim col1 As Double = margin + 5
+                Dim col2 As Double = margin + pageWidth / 2 + 5
+
+                ' Row 1
+                gfx.DrawString(ArabicTextHelper.Fix(partnerLabel & ":"), lbf, XBrushes.DarkGray, col1, y + 8)
+                gfx.DrawString(ArabicTextHelper.Fix(partnerName), New XFont("Arial", 9, XFontStyle.Bold), XBrushes.Black, col1 + 45, y + 8)
+
+                gfx.DrawString(ArabicTextHelper.Fix("رقم الفاتورة:"), lbf, XBrushes.DarkGray, col2, y + 8)
+                gfx.DrawString(reportData.Header.InvID.ToString(), lvf, XBrushes.Black, col2 + 65, y + 8)
+
+                ' Row 2
+                gfx.DrawString(ArabicTextHelper.Fix("تاريخ الفاتورة:"), lbf, XBrushes.DarkGray, col1, y + 22)
+                gfx.DrawString(reportData.Header.InvDate.ToString("dd/MM/yyyy"), lvf, XBrushes.Black, col1 + 55, y + 22)
+
+                gfx.DrawString(ArabicTextHelper.Fix("الحساب:"), lbf, XBrushes.DarkGray, col2, y + 22)
+                gfx.DrawString(If(reportData.Header.AccountCode, ""), lvf, XBrushes.Black, col2 + 65, y + 22)
+
+                ' Row 3 - notes
+                If Not String.IsNullOrWhiteSpace(reportData.Header.Notes) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("ملاحظات:"), lbf, XBrushes.DarkGray, col1, y + 36)
+                    gfx.DrawString(ArabicTextHelper.Fix(reportData.Header.Notes), lvf, XBrushes.Black, col1 + 45, y + 36)
+                End If
+                y += infoH + 10
+
+                ' ── Table header ──
+                Dim colW() As Double = {pageWidth * 0.05, pageWidth * 0.40, pageWidth * 0.15, pageWidth * 0.12, pageWidth * 0.13, pageWidth * 0.15}
+                Dim colHdr() As String = {"م", "اسم الصنف", "الوحدة", "الكمية", "السعر", "الإجمالي"}
+                Dim rowH As Double = 16
+                Dim headerBrush As New XSolidBrush(XColor.FromArgb(79, 70, 229))
+
+                Dim hx As Double = margin
+                gfx.DrawRectangle(headerBrush, margin, y, pageWidth, rowH)
+                For c = 0 To colHdr.Length - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(colHdr(c)), lbf, XBrushes.White,
+                                   New XRect(hx + 2, y + 2, colW(c) - 4, rowH - 4), XStringFormats.TopCenter)
+                    hx += colW(c)
+                Next
+                y += rowH
+
+                ' ── Table rows ──
+                Dim altBrush As New XSolidBrush(XColor.FromArgb(248, 250, 252))
+                For i = 0 To reportData.Details.Count - 1
+                    ' New page if needed
+                    If y > page.Height.Point - margin - 50 Then
+                        page = doc.AddPage()
+                        page.Size = PdfSharp.PageSize.A4
+                        gfx = XGraphics.FromPdfPage(page)
+                        currentY = margin
+                        pageCount += 1
+                        DrawReportHeader(gfx, company, page, currentY, margin, pageWidth, pageCount)
+                        y = currentY
+                        ' Redraw header
+                        hx = margin
+                        gfx.DrawRectangle(headerBrush, margin, y, pageWidth, rowH)
+                        For c = 0 To colHdr.Length - 1
+                            gfx.DrawString(ArabicTextHelper.Fix(colHdr(c)), lbf, XBrushes.White,
+                                           New XRect(hx + 2, y + 2, colW(c) - 4, rowH - 4), XStringFormats.TopCenter)
+                            hx += colW(c)
+                        Next
+                        y += rowH
+                    End If
+
+                    Dim d = reportData.Details(i)
+                    If i Mod 2 = 1 Then gfx.DrawRectangle(altBrush, margin, y, pageWidth, rowH)
+                    gfx.DrawLine(XPens.LightGray, margin, y + rowH, margin + pageWidth, y + rowH)
+
+                    Dim cells() As String = {
+                        (i + 1).ToString(),
+                        If(d.ProductName, ""),
+                        If(d.UnitName, ""),
+                        d.Quantity.ToString("N2"),
+                        d.UnitPrice.ToString("N3"),
+                        d.TotalPrice.ToString("N3")
+                    }
+                    Dim cx As Double = margin
+                    For c = 0 To cells.Length - 1
+                        gfx.DrawString(ArabicTextHelper.Fix(cells(c)), lvf, XBrushes.Black,
+                                       New XRect(cx + 2, y + 2, colW(c) - 4, rowH - 4), XStringFormats.TopCenter)
+                        cx += colW(c)
+                    Next
+                    y += rowH
+                Next
+
+                ' ── Net Amount & Tafqeet ──
+                If y > page.Height.Point - margin - 80 Then
+                    page = doc.AddPage()
+                    page.Size = PdfSharp.PageSize.A4
+                    gfx = XGraphics.FromPdfPage(page)
+                    currentY = margin
+                    pageCount += 1
+                    DrawReportHeader(gfx, company, page, currentY, margin, pageWidth, pageCount)
+                    y = currentY
+                End If
+
+                y += 10
+                Dim footerBg = New XSolidBrush(XColor.FromArgb(241, 245, 249))
+                gfx.DrawRectangle(footerBg, margin, y, pageWidth, 30)
+                gfx.DrawRectangle(XPens.LightGray, margin, y, pageWidth, 30)
+
+                Dim currencySym As String = "دينار كويتي"
+                If company IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(company.CurrencySymbol) Then
+                    currencySym = company.CurrencySymbol
+                End If
+                Dim netText As String = $"الصافي الإجمالي: {reportData.Header.TotalAmount.ToString("N3")} {currencySym}"
+                Dim tafqeet As String = CurrencyToLetters.Convert(reportData.Header.TotalAmount, currencySym, "", 3)
+                Dim tafqeetText As String = $"فقط {tafqeet} لا غير"
+
+                gfx.DrawString(ArabicTextHelper.Fix(netText), New XFont("Arial", 10, XFontStyle.Bold), XBrushes.Black,
+                               New XRect(margin + 10, y + 5, pageWidth - 20, 12), XStringFormats.TopRight)
+                gfx.DrawString(ArabicTextHelper.Fix(tafqeetText), New XFont("Arial", 9, XFontStyle.Regular), XBrushes.DarkGray,
+                               New XRect(margin + 10, y + 17, pageWidth - 20, 12), XStringFormats.TopRight)
+
+                y += 35
+                gfx.DrawString(ArabicTextHelper.Fix($"إجمالي الأصناف: {reportData.Details.Count} صنف"),
+                               lbf, XBrushes.Black, New XRect(margin, y, pageWidth, 16), XStringFormats.TopLeft)
+                gfx.DrawString($"صفحة {pageCount}",
+                               lvf, XBrushes.DarkGray, New XRect(margin, y, pageWidth, 16), XStringFormats.TopRight)
+
+                doc.Save(dlg.FileName)
+                If Global.System.IO.File.Exists(dlg.FileName) Then
+                    Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير PDF: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
         ' Generate Empty Excel Template for Quote Import
         ' Uses DocumentFormat.OpenXml (no extra DLL deps)
         ' ===================================================

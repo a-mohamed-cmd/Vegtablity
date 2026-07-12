@@ -135,6 +135,7 @@ Namespace ViewModels
         Public Property UnpostInvoiceCommand As ICommand
         Public Property ImportExcelCommand As ICommand
         Public Property DownloadTemplateCommand As ICommand
+        Public Property ExportPdfCommand As ICommand
 
         ' --- Invoice Details: Memory-backed client-side pagination ---
         Private _allInvoiceDetails As New List(Of InvoiceDetail)()
@@ -179,6 +180,7 @@ Namespace ViewModels
             UnpostInvoiceCommand = New RelayCommand(AddressOf ExecuteUnpostInvoice, AddressOf CanExecuteUnpostInvoice)
             ImportExcelCommand = New RelayCommand(AddressOf ExecuteImportExcel, AddressOf CanExecuteImportExcel)
             DownloadTemplateCommand = New RelayCommand(Sub(p) ExcelImporter.DownloadTemplate())
+            ExportPdfCommand = New RelayCommand(AddressOf ExecuteExportPdf, AddressOf CanExecuteExportPdf)
 
             NextDetailsPageCommand = New RelayCommand(Sub() DetailsPage += 1, Function() CanGoNextDetails)
             PrevDetailsPageCommand = New RelayCommand(Sub() DetailsPage -= 1, Function() CanGoPrevDetails)
@@ -623,6 +625,24 @@ Namespace ViewModels
 
             Catch ex As Exception
                 System.Windows.MessageBox.Show("خطأ أثناء الاستيراد: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Function CanExecuteExportPdf(parameter As Object) As Boolean
+            Return CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.InvID > 0
+        End Function
+
+        Private Sub ExecuteExportPdf(parameter As Object)
+            Try
+                Dim reportData = _invoiceService.GetInvoiceForReport(CurrentInvoice.InvID)
+                If reportData Is Nothing OrElse reportData.Header Is Nothing Then
+                    RaiseEvent RequestSnackbar("⚠️ لا يمكن تحميل بيانات التصدير، تأكد من حفظ الفاتورة أولاً")
+                    Return
+                End If
+                Helpers.ReportExporter.ExportInvoiceToPdf(reportData, isPurchase:=True)
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("خطأ أثناء تحضير التصدير: " & ex.Message, "خطأ",
+                                               System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
             End Try
         End Sub
 

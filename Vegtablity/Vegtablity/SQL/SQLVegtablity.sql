@@ -15,12 +15,6 @@
 --GO
 
 -- =============================================
--- 00. كود تنظيف (حذف) القديم - Cleanup Script
--- (استخدم هذا الكود لحذف الجداول القديمة التي بدون Schema لإعادة إنشائها بالشكل الجديد)
--- =============================================
- 
-
--- =============================================
 -- 0. إنشاء المخططات (Schemas)
 -- =============================================
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Security') EXEC('CREATE SCHEMA [Security]');
@@ -3415,7 +3409,22 @@ BEGIN
     WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID;
 END
 GO
-
+-- ============================================================
+-- STEP 2: إضافة VoucherPaidAmount لجدول رؤوس الفواتير
+-- ============================================================
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('[Sales].[InvoiceHeader]')
+      AND name = 'VoucherPaidAmount'
+)
+BEGIN
+    ALTER TABLE [Sales].[InvoiceHeader]
+    ADD VoucherPaidAmount DECIMAL(18,3) NOT NULL DEFAULT 0;
+    PRINT N'✅ تم إضافة VoucherPaidAmount إلى [Sales].[InvoiceHeader]';
+END
+ELSE
+    PRINT N'⚠️ العمود VoucherPaidAmount موجود مسبقاً في [Sales].[InvoiceHeader]';
+GO
 -- =============================================
 -- 9. sp_Invoice_GetFiltered  (Dashboard List with Pagination)
 -- =============================================
@@ -5945,7 +5954,20 @@ BEGIN
 END
 GO
 
-
+-- إضافة عمود ShiftID كعمود اختياري (NULL)
+IF NOT EXISTS (SELECT * FROM sys.columns 
+               WHERE object_id = OBJECT_ID('[Sales].[InvoiceHeader]') 
+               AND name = 'ShiftID')
+BEGIN
+    ALTER TABLE [Sales].[InvoiceHeader] ADD ShiftID INT NULL;
+    PRINT 'Column ShiftID added successfully.';
+END
+ELSE
+BEGIN
+    PRINT 'Column ShiftID already exists.';
+END
+GO
+ 
 IF OBJECT_ID('[Sales].[sp_Invoice_Save_XML]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save_XML];
 GO
 
@@ -6188,19 +6210,6 @@ BEGIN
 END
 GO
 
--- إضافة عمود ShiftID كعمود اختياري (NULL)
-IF NOT EXISTS (SELECT * FROM sys.columns 
-               WHERE object_id = OBJECT_ID('[Sales].[InvoiceHeader]') 
-               AND name = 'ShiftID')
-BEGIN
-    ALTER TABLE [Sales].[InvoiceHeader] ADD ShiftID INT NULL;
-    PRINT 'Column ShiftID added successfully.';
-END
-ELSE
-BEGIN
-    PRINT 'Column ShiftID already exists.';
-END
-GO
 
 IF NOT EXISTS (SELECT * FROM sys.foreign_keys 
                WHERE object_id = OBJECT_ID('[Sales].[FK_InvoiceHeader_Shifts]') 
@@ -6997,22 +7006,7 @@ END
 ELSE
     PRINT N'⚠️ العمود ShiftID موجود مسبقاً في [Accounting].[Vouchers]';
 GO
--- ============================================================
--- STEP 2: إضافة VoucherPaidAmount لجدول رؤوس الفواتير
--- ============================================================
-IF NOT EXISTS (
-    SELECT 1 FROM sys.columns
-    WHERE object_id = OBJECT_ID('[Sales].[InvoiceHeader]')
-      AND name = 'VoucherPaidAmount'
-)
-BEGIN
-    ALTER TABLE [Sales].[InvoiceHeader]
-    ADD VoucherPaidAmount DECIMAL(18,3) NOT NULL DEFAULT 0;
-    PRINT N'✅ تم إضافة VoucherPaidAmount إلى [Sales].[InvoiceHeader]';
-END
-ELSE
-    PRINT N'⚠️ العمود VoucherPaidAmount موجود مسبقاً في [Sales].[InvoiceHeader]';
-GO
+
 -- ============================================================
 -- STEP 3: sp_Partner_GetUnpaidInvoices
 -- جلب الفواتير المُرحّلة وغير المسدّدة بالكامل للشريك

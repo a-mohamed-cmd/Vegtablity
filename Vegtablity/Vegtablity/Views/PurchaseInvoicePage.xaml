@@ -73,6 +73,10 @@
                             Style="{DynamicResource ModernButtonStyle}" Background="#0891B2" Margin="0,0,10,0"
                             ToolTip="تنزيل قالب Excel للتعبئة"/>
 
+                    <Button Content="📄 تصدير PDF" Command="{Binding ExportPdfCommand}"
+                            Style="{DynamicResource ModernButtonStyle}" Background="#9333EA" Margin="0,0,10,0"
+                            ToolTip="تصدير الفاتورة إلى ملف PDF"/>
+
                     <Button Content="➕ فاتورة جديدة" Command="{Binding NewCommand}" Click="NewInvoiceButton_Click"
                             Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="0,0,10,0"
                             IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
