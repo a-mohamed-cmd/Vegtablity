@@ -12,12 +12,18 @@
 *   **شاشة اختيار الشركاء والموردين (جديدة):** [PartnerSelectionScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart) - شاشة للبحث واختيار العملاء/الموردين عند بدء فاتورة جديدة أو التعديل من الـ POS.
 *   **شاشة نقطة البيع (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) - دمج خيار الدفع (نقدي/آجل) وتبديل الشريك ديناميكياً.
 *   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة.
+*   **صفحة فاتورة المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - إضافة زر "تصدير PDF" في شريط الأدوات العلوي.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
-*   **كود التحكم بالطباعة المكتبي:** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة.
+*   **كود التحكم بالطباعة المكتبي:** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة ونوع الفاتورة.
 *   **نموذج بيانات الشركة:** [CompanyInfo](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) - إضافة خاصية `UseDetailedInvoiceDesign`.
 *   **متحكم صفحة الإعدادات:** [CompanySettingsViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) - إدارة وتمرير حالة تصميم الطباعة لقاعدة البيانات.
 *   **مزود حالة المبيعات والمشتريات:** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - حساب قيم المدفوع والمتبقي وتنسيق حفظ الفاتورة الآجلة.
+*   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة ومعالجة أمر تصدير الفاتورة لـ PDF.
+*   **كلاس تصدير التقارير (معدل):** [ReportExporter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - إضافة دالة `ExportInvoiceToPdf` المخصصة لتصدير المبيعات والمشتريات بهيكل PDF احترافي.
+*   **نموذج بيانات طباعة الفاتورة (معدل):** [InvoiceReportHeader](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/InvoiceReportData.vb) - إضافة حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
+*   **ملف الـ Trigger لقاعدة البيانات (معدل):** [14_Invoices_Post_Trigger.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/14_Invoices_Post_Trigger.sql) - ترحيل المخازن والحسابات بأمان مع معالجة السجلات المفقودة وإعادة احتساب متوسط التكلفة عند إلغاء ترحيل المشتريات.
+*   **سكربت تحديث الإجراء المخزن (جديد):** [29_sp_Report_InvoicePrint_Update.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/29_sp_Report_InvoicePrint_Update.sql) - جلب حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
 
 ---
 
@@ -603,20 +609,6 @@
 * **التطبيق:** استبدال `.toStringAsFixed(2)` في كل المجاميع بـ `_formatCurrency()` عبر جميع دوال الطباعة.
 
 ### ب- دالة تنسيق الكمية `_formatQuantity` في `printer_service.dart`:
-* الكمية الصحيحة (مثل `5.0`) تُطبع `5` بدون عشري.
-* الكمية العشرية (مثل `2.5`) تُطبع `2.5` بمنزلة عشرية واحدة.
-* يُضاف `UnitName` أمام الكمية في المطبوع (مثال: `كيلو 2.5`، `حبة 10`).
-* مطبقة على: `printReceipt`، `printDailyReport`، `printVoucher`، `printPaymentReceipt`.
-
-### ج- تحديث بيانات الطباعة في الشاشات:
-* **`pos_provider.dart`:** إضافة `UnitName` لكل عنصر في السلة من بيانات الـ API.
-* **`daily_invoices_screen.dart`:** تمرير `quantity` كـ `double` و`UnitName` عند إعادة الطباعة من تفاصيل الفاتورة.
-* **`partner_billing_screen.dart`:** تصحيح بيانات الطباعة ليمرر `quantity` كـ `double` و`UnitName` من `_cartItems`.
-
----
-
-## 16. إعادة بناء نافذة تفاصيل الفاتورة (Bottom Sheet) (مايو 2026 - المرحلة السادسة عشرة)
-
 تم إعادة بناء `_InvoiceDetailsBottomSheet` بالكامل لإصلاح الـ Overflow وتحسين التجربة.
 
 ### أ- إصلاح مشكلة الـ Overflow:
