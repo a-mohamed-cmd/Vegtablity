@@ -89,14 +89,7 @@ class VoucherService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("""
-                SELECT AccountID, AccountCode, AccountName
-                FROM [Accounting].[ChartOfAccounts]
-                WHERE IsTransactional = 1
-                  AND (AccountName LIKE N'%صندوق%' OR AccountName LIKE N'%بنك%'
-                       OR AccountName LIKE N'%كاش%')
-                ORDER BY AccountCode
-            """)
+            cursor.execute(SP.VOUCHER_GET_ACCOUNTS)
             columns = [col[0] for col in cursor.description]
             return [dict(zip(columns, row)) for row in cursor.fetchall()]
         finally:

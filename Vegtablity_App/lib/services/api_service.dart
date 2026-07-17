@@ -2,7 +2,8 @@ import 'package:dio/dio.dart';
 
 class ApiService {
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://192.168.43.129:8000', // Update with actual API URL
+    //baseUrl: 'http://192.168.43.129:8000', // Update with actual API URL
+    baseUrl: 'http://185.216.203.50:8000', // Update with actual API URL
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
   ));
@@ -108,9 +109,10 @@ class ApiService {
     }
   }
 
-  Future<Response> getPartners({required String type, String search = ''}) async {
+  Future<Response> getPartners(
+      {required String type, String search = ''}) async {
     return await _dio.get('/partners/', queryParameters: {
-      'type':   type,
+      'type': type,
       'search': search,
     });
   }
@@ -161,7 +163,8 @@ class ApiService {
     return await _dio.post('/products/quick-add', data: productData);
   }
 
-  Future<Response> getInvoices({required String type, String? search, int? shiftId}) async {
+  Future<Response> getInvoices(
+      {required String type, String? search, int? shiftId}) async {
     return await _dio.get('/invoices/', queryParameters: {
       'type': type,
       if (search != null && search.isNotEmpty) 'search': search,
@@ -169,7 +172,8 @@ class ApiService {
     });
   }
 
-  Future<Response> payInvoice(int invId, double amount, {int? accountId}) async {
+  Future<Response> payInvoice(int invId, double amount,
+      {int? accountId}) async {
     return await _dio.post('/invoices/$invId/pay', data: {
       'PaymentAmount': amount,
       if (accountId != null) 'PaymentAccountID': accountId,
@@ -254,11 +258,11 @@ class ApiService {
     String description = '',
   }) async {
     return await _dio.post('/vouchers/bulk_pay', data: {
-      'PartnerID':   partnerId,
+      'PartnerID': partnerId,
       'VoucherType': voucherType,
       'TotalAmount': totalAmount,
-      'AccountID':   accountId,
-      'ShiftID':     shiftId,
+      'AccountID': accountId,
+      'ShiftID': shiftId,
       'Description': description,
       'Allocations': allocations,
     });
@@ -270,7 +274,7 @@ class ApiService {
   }
 
   // ─── Inventory (الهالك والجرد) ──────────────────────────────────────────
-  
+
   /// حفظ مسودة إهلاك بضاعة
   Future<Response> saveWastage(Map<String, dynamic> wastageData) async {
     return await _dio.post('/inventory/wastage', data: wastageData);
@@ -296,8 +300,7 @@ class ApiService {
 
   /// جلب الطلبات اليومية للتوصيل بالتاريخ
   Future<Response> getDailyOrders(String date) async {
-    return await _dio.get('/invoices/daily-orders', queryParameters: {'date': date});
+    return await _dio
+        .get('/invoices/daily-orders', queryParameters: {'date': date});
   }
 }
-
-

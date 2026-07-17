@@ -321,6 +321,7 @@
                                                       DropDownOpened="ProductComboBox_DropDownOpened"
                                                       DropDownClosed="ProductComboBox_DropDownClosed"
                                                       LostFocus="ProductComboBox_LostFocus"
+                                                      SelectionChanged="ProductComboBox_SelectionChanged"
                                                       IsEnabled="{Binding DataContext.IsEditAllowed, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                       BorderThickness="0" Background="Transparent"
                                                       Padding="5,0"/>

@@ -142,16 +142,10 @@ Namespace Views
 
         Private Sub ProductComboBox_DropDownClosed(sender As Object, e As EventArgs)
             Dim cmb = TryCast(sender, ComboBox)
-            If cmb IsNot Nothing AndAlso cmb.SelectedValue IsNot Nothing Then
-                ' A valid selection was made (often by mouse click)
+            If cmb IsNot Nothing Then
                 ' Clear the filter immediately
                 Dim view As System.ComponentModel.ICollectionView = cmb.Items
                 If view IsNot Nothing Then view.Filter = Nothing
-
-                ' Give priority to the view update, then jump to Quantity column
-                Dispatcher.BeginInvoke(New Action(Sub()
-                                                      MoveFocusToNextColumn(cmb, 1)
-                                                  End Sub), System.Windows.Threading.DispatcherPriority.Input)
             End If
         End Sub
 
@@ -289,6 +283,20 @@ Namespace Views
                 ' Force the binding update since we set UpdateSourceTrigger=Explicit to prevent WPF from coercing the Barcode String to the Integer Property
                 Dim binding = cmb.GetBindingExpression(ComboBox.SelectedValueProperty)
                 If binding IsNot Nothing Then binding.UpdateSource()
+            End If
+        End Sub
+
+        Private Sub ProductComboBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
+            Dim cmb = TryCast(sender, ComboBox)
+            If cmb IsNot Nothing AndAlso cmb.IsLoaded AndAlso cmb.SelectedValue IsNot Nothing Then
+                If cmb.IsDropDownOpen OrElse cmb.IsFocused Then
+                    Dim view As System.ComponentModel.ICollectionView = cmb.Items
+                    If view IsNot Nothing Then view.Filter = Nothing
+                    
+                    Dispatcher.BeginInvoke(New Action(Sub()
+                        MoveFocusToNextColumn(cmb, 1)
+                    End Sub), System.Windows.Threading.DispatcherPriority.Input)
+                End If
             End If
         End Sub
 

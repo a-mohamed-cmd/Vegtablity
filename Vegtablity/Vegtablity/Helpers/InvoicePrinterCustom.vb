@@ -20,8 +20,8 @@ Public Class InvoicePrinterCustom
     Private _useDetailedDesign As Boolean = False
 
     ' ─── ثوابت التخطيط (سنتيمتر → مم بضربها × 10) ──
-    Private Const ITEM_START_CM As Single = 8.0F   ' بداية جدول الأصناف
-    Private Const ITEM_END_CM As Single = 22.0F    ' نهاية جدول الأصناف
+    Private Const ITEM_START_CM As Single = 7.0F   ' بداية جدول الأصناف
+    Private Const ITEM_END_CM As Single = 20.0F    ' نهاية جدول الأصناف
     Private Const ROW_H_MM As Single = 5.0F        ' ارتفاع الصف
     Private Const PAGE_W_MM As Single = 210.0F     ' عرض الصفحة (21 سم)
 
@@ -357,13 +357,13 @@ Public Class InvoicePrinterCustom
                            gl As Func(Of Single, Single), gt As Func(Of Single, Single))
 
         ' اسم العميل (عربي - RTL) (تمت إضافة بادئة اسم العميل وزيادة الإحداثي بمقدار 1 سم)
-        Dim rectCust As New RectangleF(gl(2.0F), gt(3.0F), 80.0F, 8.0F)
+        Dim rectCust As New RectangleF(gl(2.0F), gt(3.5F), 80.0F, 8.0F)
         g.DrawString("اسم العميل / " & If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fRight)
 
         ' نوع الفاتورة / Payment Type (تحت اسم العميل مباشرة - زيادة الإحداثي بمقدار 1 سم)
         Dim isCash As Boolean = (_reportData.Header.Remainder <= 0)
         Dim paymentTypeText As String = If(isCash, "cash", "credit")
-        Dim rectPaymentType As New RectangleF(gl(2.0F), gt(4.0F), 80.0F, 8.0F)
+        Dim rectPaymentType As New RectangleF(gl(2.0F), gt(4.25F), 80.0F, 8.0F)
         g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType, fRight)
 
         ' الملاحظات (عربي - RTL) (زيادة الإحداثي بمقدار 1 سم)
@@ -373,12 +373,12 @@ Public Class InvoicePrinterCustom
         End If
 
         ' رقم الفاتورة (إزاحة لليسار بمقدار 2 سم وزيادة الإحداثي بمقدار 1 سم)
-        g.DrawString("Invoice No:", _printFontNormal, brush, gl(12.5F), gt(3.0F), fLeft)
-        g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(16.0F), gt(3.0F), fLeft)
+        g.DrawString("Invoice No:", _printFontNormal, brush, gl(12.5F), gt(3.5F), fLeft)
+        g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(16.0F), gt(3.5F), fLeft)
 
         ' التاريخ (إزاحة لليسار بمقدار 2 سم وزيادة الإحداثي بمقدار 1 سم)
-        g.DrawString("Invoice Date:", _printFontNormal, brush, gl(12.0F), gt(4.0F), fLeft)
-        g.DrawString(_reportData.Header.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, gl(16.0F), gt(4.0F), fLeft)
+        g.DrawString("Invoice Date:", _printFontNormal, brush, gl(12.0F), gt(4.25F), fLeft)
+        g.DrawString(_reportData.Header.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, gl(16.0F), gt(4.25F), fLeft)
 
         ' رقم الحساب (إزاحة لليسار بمقدار 2 سم وزيادة الإحداثي بمقدار 1 سم)
         g.DrawString("Account No:", _printFontNormal, brush, gl(12.0F), gt(5F), fLeft)

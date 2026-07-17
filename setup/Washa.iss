@@ -2,8 +2,8 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
-#define MyAppName "OmanApp"
-#define MyAppVersion "20"
+#define MyAppName "WhashaApp"
+#define MyAppVersion "1"
 #define MyAppPublisher "Mohamed Ragab"
 #define MyAppURL "www.mohamedRagab.com"
 #define MyAppExeName "Vegtablity.exe"
@@ -14,8 +14,8 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{A760CC7E-3358-4684-A9D1-E1D8AB395E27}
-AppName="OmanApp"
+AppId={{94CC087F-F2D0-4444-A01D-87C84431BF44}
+AppName="WhashaApp"
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -29,7 +29,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=D:\VB.NET\backup\Vegtablity\setup\Output
-OutputBaseFilename=Oman_SetupV20
+OutputBaseFilename=WhashaApp_SetupV1
 SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\lettuce.ico
 SolidCompression=yes
 WizardStyle=modern dynamic

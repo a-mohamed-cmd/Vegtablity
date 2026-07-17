@@ -44,6 +44,7 @@ class StoredProcedures:
     # Accounting
     ACCOUNT_REVENUE = "EXEC [Accounting].[sp_Account_Revenue]"
     ACCOUNT_EXPENSES = "EXEC [Accounting].[sp_Account_Expenses]"
+    VOUCHER_GET_ACCOUNTS = "EXEC [Accounting].[sp_GetPaymentAccounts]"
     SP_GET_PARTNER_GENERAL = "EXEC [Sales].[sp_GetCode_PartnerGeneral]"  # جلب بيانات العميل الثابت 'سند مباشر'
     VOUCHER_SAVE = """
         EXEC [Accounting].[sp_Voucher_Save]

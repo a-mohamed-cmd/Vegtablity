@@ -11,7 +11,7 @@ call .\.venv\Scripts\activate.bat
 :: >> log.txt يحفظ الرسائل العادية
 :: 2>> error.txt يحفظ رسائل الخطأ فقط
 echo Starting Server at %DATE% %TIME% >> log.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 >> log.txt 2>> error.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --workers 4 >> log.txt 2>> error.txt
 
 :: لمنع الشاشة من الإغلاق مباشرة في حال حدوث خطأ قبل تشغيل السيرفر
 pause
