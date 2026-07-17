@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/wastage_provider.dart';
 import '../../services/printer_service.dart';
 import '../../widgets/product_entry_scanner.dart';
+import '../../core/localization/app_localizations.dart';
 
 class WastageScreen extends StatefulWidget {
   const WastageScreen({super.key});
@@ -23,8 +24,8 @@ class _WastageScreenState extends State<WastageScreen> {
   Future<void> _handleSaveAndPrint(WastageProvider provider) async {
     if (provider.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى إضافة أصناف أولاً', textAlign: TextAlign.right),
+        SnackBar(
+          content: Text(context.tr('wt_empty_cart_error'), textAlign: TextAlign.right),
           backgroundColor: Colors.orange,
         ),
       );
@@ -74,8 +75,8 @@ class _WastageScreenState extends State<WastageScreen> {
           SnackBar(
             content: Text(
               showWarning
-                  ? 'تم حفظ الهالك بنجاح برقم ($id) ولكن فشلت الطباعة'
-                  : 'تم حفظ الهالك بنجاح برقم ($id) وجاري الطباعة',
+                  ? context.tr('wt_save_success_print_failed').replaceAll('{id}', id.toString())
+                  : context.tr('wt_save_success_printing').replaceAll('{id}', id.toString()),
               textAlign: TextAlign.right,
             ),
             backgroundColor: showWarning ? Colors.orange : Colors.green,
@@ -88,7 +89,7 @@ class _WastageScreenState extends State<WastageScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              provider.errorMessage ?? 'فشل حفظ الهالك كمسودة',
+              provider.errorMessage ?? context.tr('wt_save_failed'),
               textAlign: TextAlign.right,
             ),
             backgroundColor: Colors.red,
@@ -107,13 +108,13 @@ class _WastageScreenState extends State<WastageScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إهلاك بضاعة (الهالك)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(context.tr('wt_screen_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep, color: Colors.red),
-            tooltip: 'مسح القائمة',
+            tooltip: context.tr('wt_clear_tooltip'),
             onPressed: items.isEmpty ? null : () => provider.clear(),
           )
         ],
@@ -128,9 +129,9 @@ class _WastageScreenState extends State<WastageScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'المستودع المالي:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Text(
+                    context.tr('wt_warehouse_label'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   DropdownButton<int>(
                     value: provider.selectedWarehouseId,
@@ -158,11 +159,11 @@ class _WastageScreenState extends State<WastageScreen> {
             ),
 
             if (isLocked)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  'تم قفل تعديل المستودع بسبب وجود عناصر في السلة',
-                  style: TextStyle(
+                  context.tr('wt_warehouse_locked_warn'),
+                  style: const TextStyle(
                       color: Colors.red,
                       fontSize: 12,
                       fontWeight: FontWeight.bold),
@@ -206,12 +207,11 @@ class _WastageScreenState extends State<WastageScreen> {
               const LinearProgressIndicator(color: Colors.green),
 
             // Items Cart Table List
-            // Items Cart Table List
             items.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32.0),
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32.0),
                     child: Center(
-                        child: Text('السلة فارغة. ابدأ بمسح أو إضافة أصناف')),
+                        child: Text(context.tr('wt_cart_empty_hint'))),
                   )
                 : ListView.builder(
                     shrinkWrap: true,
@@ -252,7 +252,7 @@ class _WastageScreenState extends State<WastageScreen> {
                               ),
                               // Barcode & Unit
                               Text(
-                                'الباركود: ${item.barcode} | الوحدة: ${item.unitName}',
+                                '${context.tr('wt_item_barcode')}${item.barcode}${context.tr('wt_item_unit')}${item.unitName}',
                                 style: const TextStyle(
                                     color: Colors.grey, fontSize: 12),
                               ),
@@ -267,8 +267,8 @@ class _WastageScreenState extends State<WastageScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text('سعر التكلفة',
-                                          style: TextStyle(
+                                      Text(context.tr('wt_cost_price'),
+                                          style: const TextStyle(
                                               color: Colors.grey,
                                               fontSize: 11)),
                                       const SizedBox(height: 4),
@@ -307,8 +307,8 @@ class _WastageScreenState extends State<WastageScreen> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('الكمية',
-                                          style: TextStyle(
+                                      Text(context.tr('wt_quantity'),
+                                          style: const TextStyle(
                                               color: Colors.grey,
                                               fontSize: 11)),
                                       const SizedBox(height: 4),
@@ -377,8 +377,8 @@ class _WastageScreenState extends State<WastageScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('إجمالي التكلفة:',
-                                      style: TextStyle(
+                                  Text(context.tr('wt_total_cost'),
+                                      style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14)),
                                   Text('${item.totalCost.toStringAsFixed(3)} ',
@@ -417,9 +417,9 @@ class _WastageScreenState extends State<WastageScreen> {
                             fontWeight: FontWeight.bold,
                             color: Colors.green),
                       ),
-                      const Text(
-                        'إجمالي قيمة الهالك:',
-                        style: TextStyle(
+                      Text(
+                        context.tr('wt_total_wastage_value'),
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -428,11 +428,11 @@ class _WastageScreenState extends State<WastageScreen> {
                   TextField(
                     controller: _notesController,
                     textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'ملاحظات إضافية...',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: context.tr('wt_notes_hint'),
+                      border: const OutlineInputBorder(),
                       contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -441,10 +441,10 @@ class _WastageScreenState extends State<WastageScreen> {
                         ? null
                         : () => _handleSaveAndPrint(provider),
                     icon: const Icon(Icons.print),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('حفظ وطباعة المسودة',
-                          style: TextStyle(
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Text(context.tr('wt_save_print_btn'),
+                          style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                     style: ElevatedButton.styleFrom(

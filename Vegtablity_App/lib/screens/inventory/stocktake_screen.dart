@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/stocktake_provider.dart';
 import '../../services/printer_service.dart';
 import '../../widgets/product_entry_scanner.dart';
+import '../../core/localization/app_localizations.dart';
 
 class StockTakeScreen extends StatefulWidget {
   const StockTakeScreen({super.key});
@@ -23,8 +24,8 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
   Future<void> _handleSaveAndPrint(StockTakeProvider provider) async {
     if (provider.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى إضافة أصناف أولاً', textAlign: TextAlign.right),
+        SnackBar(
+          content: Text(context.tr('st_empty_cart_error'), textAlign: TextAlign.right),
           backgroundColor: Colors.orange,
         ),
       );
@@ -76,8 +77,8 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
           SnackBar(
             content: Text(
               showWarning
-                  ? 'تم حفظ الجرد بنجاح برقم ($id) ولكن فشلت الطباعة'
-                  : 'تم حفظ الجرد بنجاح برقم ($id) وجاري الطباعة',
+                  ? context.tr('st_save_success_print_failed').replaceAll('{id}', id.toString())
+                  : context.tr('st_save_success_printing').replaceAll('{id}', id.toString()),
               textAlign: TextAlign.right,
             ),
             backgroundColor: showWarning ? Colors.orange : Colors.green,
@@ -90,7 +91,7 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              provider.errorMessage ?? 'فشل حفظ الجرد كمسودة',
+              provider.errorMessage ?? context.tr('st_save_failed'),
               textAlign: TextAlign.right,
             ),
             backgroundColor: Colors.red,
@@ -109,13 +110,13 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('جرد المخزون (مسودة)',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(context.tr('st_screen_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep, color: Colors.red),
-            tooltip: 'مسح القائمة',
+            tooltip: context.tr('st_clear_tooltip'),
             onPressed: items.isEmpty ? null : () => provider.clear(),
           )
         ],
@@ -130,9 +131,9 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'مستودع الجرد:',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Text(
+                    context.tr('st_warehouse_label'),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   DropdownButton<int>(
                     value: provider.selectedWarehouseId,
@@ -160,11 +161,11 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
             ),
 
             if (isLocked)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
-                  'تم قفل تعديل مستودع الجرد بسبب وجود عناصر في السلة',
-                  style: TextStyle(
+                  context.tr('st_warehouse_locked_warn'),
+                  style: const TextStyle(
                       color: Colors.red,
                       fontSize: 12,
                       fontWeight: FontWeight.bold),
@@ -214,10 +215,10 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
 
             // Items Cart Table List
             items.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32.0),
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32.0),
                     child: Center(
-                        child: Text('السلة فارغة. ابدأ بمسح أو إضافة أصناف')),
+                        child: Text(context.tr('st_cart_empty_hint'))),
                   )
                 : ListView.builder(
                     shrinkWrap: true,
@@ -261,7 +262,7 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                               ),
                               // Barcode & Unit & Cost
                               Text(
-                                'الباركود: ${item.barcode} | الوحدة: ${item.unitName} | التكلفة: ${item.costPrice.toStringAsFixed(3)} ',
+                                '${context.tr('st_item_barcode')}${item.barcode}${context.tr('st_item_unit')}${item.unitName}${context.tr('st_item_cost')}${item.costPrice.toStringAsFixed(3)} ',
                                 style: const TextStyle(
                                     color: Colors.grey, fontSize: 12),
                               ),
@@ -277,8 +278,8 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text('الكمية الدفترية',
-                                          style: TextStyle(
+                                      Text(context.tr('st_system_qty'),
+                                          style: const TextStyle(
                                               color: Colors.grey,
                                               fontSize: 11)),
                                       const SizedBox(height: 4),
@@ -292,8 +293,8 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('الكمية الفعلية',
-                                          style: TextStyle(
+                                      Text(context.tr('st_actual_qty'),
+                                          style: const TextStyle(
                                               color: Colors.grey,
                                               fontSize: 11)),
                                       const SizedBox(height: 4),
@@ -367,8 +368,8 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text('قيمة الفرق',
-                                          style: TextStyle(
+                                      Text(context.tr('st_diff_value'),
+                                          style: const TextStyle(
                                               color: Colors.grey,
                                               fontSize: 11)),
                                       const SizedBox(height: 4),
@@ -383,8 +384,8 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Text('الفرق',
-                                          style: TextStyle(
+                                      Text(context.tr('st_difference'),
+                                          style: const TextStyle(
                                               color: Colors.grey,
                                               fontSize: 11)),
                                       const SizedBox(height: 4),
@@ -429,9 +430,9 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                                     ? Colors.red
                                     : Colors.grey)),
                       ),
-                      const Text(
-                        'إجمالي قيمة الفروقات:',
-                        style: TextStyle(
+                      Text(
+                        context.tr('st_total_diff_value'),
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -440,11 +441,11 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                   TextField(
                     controller: _notesController,
                     textAlign: TextAlign.right,
-                    decoration: const InputDecoration(
-                      hintText: 'ملاحظات الجرد الإضافية...',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: context.tr('st_notes_hint'),
+                      border: const OutlineInputBorder(),
                       contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -453,10 +454,10 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
                         ? null
                         : () => _handleSaveAndPrint(provider),
                     icon: const Icon(Icons.print),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('حفظ وطباعة مسودة الجرد',
-                          style: TextStyle(
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Text(context.tr('st_save_print_btn'),
+                          style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                     ),
                     style: ElevatedButton.styleFrom(

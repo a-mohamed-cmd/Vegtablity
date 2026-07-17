@@ -92,6 +92,27 @@ class InvoiceService:
         finally:
             conn.close()
 
+    def get_daily_orders(self, delivery_date: str):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.TEMPORDER_GETDAILYDELIVERIES, (delivery_date,))
+            columns = [column[0] for column in cursor.description]
+            orders = []
+            for row in cursor.fetchall():
+                ord_dict = dict(zip(columns, row))
+                # Fetch details/items for this order/invoice
+                cursor.execute(SP.INVOICE_DETAILS_GET, (ord_dict["InvID"],))
+                detail_columns = [col[0] for col in cursor.description]
+                details = []
+                for d_row in cursor.fetchall():
+                    details.append(dict(zip(detail_columns, d_row)))
+                ord_dict["Details"] = details
+                orders.append(ord_dict)
+            return orders
+        finally:
+            conn.close()
+
     def save_invoice(self, invoice: InvoiceCreate, user_id: int):
         # Build XML for details
         root = ET.Element("Details")
@@ -148,7 +169,12 @@ class InvoiceService:
                 invoice.ReferenceNo,
                 resolved_payment_account_id,
                 active_shift_id,
-                details_xml
+                details_xml,
+                invoice.TempCustomerName,
+                invoice.TempPhone,
+                invoice.TempAddress,
+                invoice.TempDeliveryDate,
+                invoice.TempDeliveryTime,
             ))
             
             row = cursor.fetchone()

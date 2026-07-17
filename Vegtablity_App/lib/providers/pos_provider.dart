@@ -157,7 +157,18 @@ class PosProvider extends ChangeNotifier {
   }
 
 
-  Future<int?> saveInvoice(String invoiceType, {int? paymentAccountId, int? partnerId, bool isCash = true}) async {
+  Future<int?> saveInvoice(
+    String invoiceType, {
+    int? paymentAccountId,
+    int? partnerId,
+    bool isCash = true,
+    String? tempCustomerName,
+    String? tempPhone,
+    String? tempAddress,
+    String? tempDeliveryDate,
+    String? tempDeliveryTime,
+    String? tempNotes,
+  }) async {
     if (_invoiceItems.isEmpty) {
       _errorMessage = 'السلة فارغة، يرجى إضافة منتجات أولاً';
       notifyListeners();
@@ -215,8 +226,13 @@ class PosProvider extends ChangeNotifier {
       'NetAmount': totalAmount,
       'PaidAmount': paid,
       'Remainder': remainder,
-      'Notes': invoiceType == 'Sales' ? 'مبيعات نقطة البيع المحمولة' : 'مشتريات نقطة البيع المحمولة',
+      'Notes': tempNotes ?? (invoiceType == 'Sales' ? 'مبيعات نقطة البيع المحمولة' : 'مشتريات نقطة البيع المحمولة'),
       'IsPosted': false,
+      'TempCustomerName': tempCustomerName,
+      'TempPhone': tempPhone,
+      'TempAddress': tempAddress,
+      'TempDeliveryDate': tempDeliveryDate,
+      'TempDeliveryTime': tempDeliveryTime,
       'Details': details,
       if (isCash && resolvedPaymentAccountId != null) 'PaymentAccountID': resolvedPaymentAccountId,
     };

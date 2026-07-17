@@ -160,6 +160,11 @@ Namespace Helpers
         Public Const SP_INVOICE_UNPOST As String = "[Sales].[sp_Invoice_Unpost]"
 
         ' =============================================
+        ' Sales Schema - Temp Orders
+        ' =============================================
+        Public Const SP_TEMPORDER_GETDAILYDELIVERIES As String = "[Sales].[sp_TempOrder_GetDailyDeliveries]"
+
+        ' =============================================
         ' Sales Schema - Quotations
         ' =============================================
         Public Const SP_QUOTATION_GETALL As String = "[Sales].[sp_Quotations_GetAll]"

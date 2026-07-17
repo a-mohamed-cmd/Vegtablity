@@ -22,6 +22,7 @@ import 'general_payment_voucher_screen.dart';
 import 'inventory/stocktake_screen.dart';
 import 'inventory/wastage_screen.dart';
 import 'supplier_selection_screen.dart';
+import 'daily_orders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +34,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _homeLayout = 'classic';
   bool _isLoadingLayout = true;
+
+  bool _showNewInvoice = true;
+  bool _showNewPurchase = true;
+  bool _showCustomerSales = true;
+  bool _showSupplierPurchases = true;
+  bool _showCustomerReceipts = true;
+  bool _showSupplierPayments = true;
+  bool _showStockTake = true;
+  bool _showWastage = true;
+  bool _showDailyOrders = true;
 
   @override
   void initState() {
@@ -51,6 +62,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
         _homeLayout = prefs.getString('pref_home_layout') ?? 'classic';
+        _showNewInvoice = prefs.getBool('show_new_invoice') ?? true;
+        _showNewPurchase = prefs.getBool('show_new_purchase') ?? true;
+        _showCustomerSales = prefs.getBool('show_customer_sales') ?? true;
+        _showSupplierPurchases = prefs.getBool('show_supplier_purchases') ?? true;
+        _showCustomerReceipts = prefs.getBool('show_customer_receipts') ?? true;
+        _showSupplierPayments = prefs.getBool('show_supplier_payments') ?? true;
+        _showStockTake = prefs.getBool('show_stocktake') ?? true;
+        _showWastage = prefs.getBool('show_wastage') ?? true;
+        _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
         _isLoadingLayout = false;
       });
     } catch (e) {
@@ -347,9 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Active Home Screen Layout Design
                 Expanded(
-                  child: _homeLayout == 'partners_offers'
-                      ? _buildPartnersOffersLayout(context)
-                      : _buildClassicLayout(context),
+                  child: _buildClassicLayout(context),
                 ),
               ],
             ),
@@ -358,6 +376,124 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Layout 1: The Classic Grid Layout
   Widget _buildClassicLayout(BuildContext context) {
+    final List<Widget> cards = [];
+
+    // 1. Sales & POS group
+    if (_showNewInvoice) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_classic_new_invoice'), Icons.point_of_sale, Colors.blue,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const PartnerSelectionScreen(type: 'Sales')));
+      }));
+    }
+    if (_showCustomerSales) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_premium_customer_sales'), Icons.local_offer, Colors.indigo,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const PartnerOffersScreen(type: 'Sales')));
+      }));
+    }
+
+    // 2. Purchases group
+    if (_showNewPurchase) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_classic_new_purchase'), Icons.shopping_basket, Colors.orange[800]!,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const PartnerSelectionScreen(type: 'Purchase')));
+      }));
+    }
+    if (_showSupplierPurchases) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_premium_supplier_purchases'), Icons.local_offer_outlined, Colors.deepOrange,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const PartnerOffersScreen(type: 'Purchases')));
+      }));
+    }
+
+    // 3. Treasury / Vouchers group
+    if (_showCustomerReceipts) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_premium_customer_receipts'), Icons.arrow_circle_down_rounded, Colors.green[700]!,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ReceiptVoucherScreen()));
+      }));
+    }
+    if (_showSupplierPayments) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_premium_supplier_payments'), Icons.arrow_circle_up_rounded, Colors.red[700]!,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PaymentVoucherScreen()));
+      }));
+    }
+
+    // 4. Inventory group
+    if (_showStockTake) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_classic_stocktake'), Icons.inventory, Colors.teal,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const StockTakeScreen()));
+      }));
+    }
+    if (_showWastage) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_classic_wastage'), Icons.delete_sweep, Colors.amber[800]!,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const WastageScreen()));
+      }));
+    }
+    if (_showDailyOrders) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_daily_orders'), Icons.local_shipping, Colors.purple,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const DailyOrdersScreen()));
+      }));
+    }
+
+    if (cards.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.dashboard_customize_outlined, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                context.tr('home_no_enabled_cards_warn'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final double screenWidth = MediaQuery.of(context).size.width;
     final int crossAxisCount = screenWidth > 600 ? 3 : 2;
 
@@ -368,150 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
         childAspectRatio: 1.2,
-        children: [
-          _buildActionCard(
-              context, context.tr('home_classic_new_invoice'), Icons.point_of_sale, Colors.blue,
-              () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const PosScreen(type: 'Sales')));
-          }),
-          _buildActionCard(
-              context, 'فاتورة مشتريات جديدة', Icons.shopping_basket, Colors.orange[800]!,
-              () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const PartnerSelectionScreen(type: 'Purchase')));
-          }),
-          _buildActionCard(
-              context, 'جرد المخزون', Icons.inventory, Colors.teal,
-              () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const StockTakeScreen()));
-          }),
-          _buildActionCard(
-              context, 'إهلاك بضاعة', Icons.delete_sweep, Colors.amber[800]!,
-              () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const WastageScreen()));
-          }),
-        ],
-      ),
-    );
-  }
-
-  // Layout 2: The New Premium Partners Offers Layout (Fully Independent UI)
-  Widget _buildPartnersOffersLayout(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(height: 16),
-
-              // Two Beautiful, Massive Modern Cards
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 1. Sales Card (Customer Offers)
-                  Expanded(
-                    child: _buildGlowCard(
-                      context,
-                      title: context.tr('home_premium_customer_sales'),
-                      subtitle: '',
-                      icon: Icons.point_of_sale_rounded,
-                      color1: Colors.blue[700]!,
-                      color2: Colors.teal[500]!,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const PartnerOffersScreen(type: 'Sales'),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-
-                  // 2. Purchases Card (Supplier Offers)
-                  Expanded(
-                    child: _buildGlowCard(
-                      context,
-                      title: context.tr('home_premium_supplier_purchases'),
-                      subtitle: '',
-                      icon: Icons.shopping_basket_rounded,
-                      color1: Colors.orange[700]!,
-                      color2: Colors.deepOrange[400]!,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const PartnerOffersScreen(type: 'Purchases'),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              
-              // Second Row of Cards (Receipts & Payments)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 3. Receipts (Customer Collection)
-                  Expanded(
-                    child: _buildGlowCard(
-                      context,
-                      title: context.tr('home_premium_customer_receipts'),
-                      subtitle: context.tr('home_premium_receipts_sub'),
-                      icon: Icons.arrow_circle_down_rounded,
-                      color1: Colors.green[700]!,
-                      color2: Colors.lightGreen[500]!,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ReceiptVoucherScreen()),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-
-                  // 4. Payments (Supplier Payment)
-                  Expanded(
-                    child: _buildGlowCard(
-                      context,
-                      title: context.tr('home_premium_supplier_payments'),
-                      subtitle: context.tr('home_premium_payments_sub'),
-                      icon: Icons.arrow_circle_up_rounded,
-                      color1: Colors.red[700]!,
-                      color2: Colors.orangeAccent[400]!,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const PaymentVoucherScreen()),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        children: cards,
       ),
     );
   }
@@ -541,75 +534,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  // Glow Card for Partners Offers Layout
-  Widget _buildGlowCard(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color1,
-    required Color color2,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        height: 190,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [color1, color2],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color1.withOpacity(0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            )
-          ],
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 38, color: Colors.white),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            if (subtitle.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.white70,
-                ),
-              ),
-            ],
-          ],
         ),
       ),
     );

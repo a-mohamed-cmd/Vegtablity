@@ -4,7 +4,7 @@ Imports System.Windows
 Imports Vegtablity.Models
 Imports Vegtablity.Helpers
 
-Public Class InvoicePrinter
+Public Class InvoicePrinterCustom
 
     Private _reportData As Models.InvoiceReportData
     Private _printFontNormal As Font
@@ -20,7 +20,7 @@ Public Class InvoicePrinter
     Private _useDetailedDesign As Boolean = False
 
     ' ─── ثوابت التخطيط (سنتيمتر → مم بضربها × 10) ──
-    Private Const ITEM_START_CM As Single = 7.0F   ' بداية جدول الأصناف
+    Private Const ITEM_START_CM As Single = 8.0F   ' بداية جدول الأصناف
     Private Const ITEM_END_CM As Single = 22.0F    ' نهاية جدول الأصناف
     Private Const ROW_H_MM As Single = 5.0F        ' ارتفاع الصف
     Private Const PAGE_W_MM As Single = 210.0F     ' عرض الصفحة (21 سم)
@@ -193,7 +193,7 @@ Public Class InvoicePrinter
 
                     ' 5. ترويسة الجدول ورسم حدود الجدول للأصناف (ارتفاع الرأس 10 مم بدلاً من 5 مم)
                     Dim tableHeaderY As Single = gt(7.5F)
-                    Dim limitY As Single = gt(ITEM_END_CM) ' 220.0 mm
+                    Dim limitY As Single = gt(ITEM_END_CM + 1.0F) ' 220.0 mm
                     Dim headerHeight As Single = 10.0F
                     g.FillRectangle(Brushes.WhiteSmoke, 10.0F, tableHeaderY, 190.0F, headerHeight)
 
@@ -215,7 +215,7 @@ Public Class InvoicePrinter
                     g.DrawString("الإجمالي / Total", _printFontNormal, brush, New RectangleF(180.0F, tableHeaderY, 20.0F, headerHeight), fCtr)
 
                     ' 6. رسم الأصناف بالجدول التفصيلي (الأسطر تبدأ بعد 10 مم من ترويسة الجدول)
-                    Dim itemsLimitY As Single = limitY - ROW_H_MM ' 215.0 mm
+                    Dim itemsLimitY As Single = limitY - ROW_H_MM 
                     Dim curY As Single = gt(8.5F) ' 85.0 mm
                     Dim hasMore As Boolean = False
 
@@ -236,11 +236,11 @@ Public Class InvoicePrinter
                     g.DrawRectangle(p1, 10.4F, tableHeaderY + 0.4F, 189.2F, tableHeight - 0.8F)
 
                     ' 7.1. رسم خط أفقي لصف الإجمالي أسفل الجدول (عند 215.0 مم)
-                    Dim totalRowY As Single = limitY - ROW_H_MM ' 215.0 mm
+                    Dim totalRowY As Single = limitY - ROW_H_MM 
                     g.DrawLine(p1, 10.0F, totalRowY, 200.0F, totalRowY)
 
                     ' كتابة المجموع داخل الصف الأخير من الجدول
-                    Dim rectTotalLabel As New RectangleF(10.0F, totalRowY, 170.0F, ROW_H_MM)
+                    Dim rectTotalLabel As New RectangleF(10.0F, totalRowY, 150.0F, ROW_H_MM)
                     If Not hasMore Then
                         g.DrawString("الإجمالي / TOTAL", _printFontBold, brush, rectTotalLabel, fRight)
                         g.DrawString(_reportData.Header.TotalAmount.ToString("N3"), _printFontBold, brush, New RectangleF(180.0F, totalRowY, 20.0F, ROW_H_MM), fCtr)
@@ -251,7 +251,6 @@ Public Class InvoicePrinter
                     ' 8. رسم المجموع والتفقيط في نهاية الصفحة الأخيرة
                     If Not hasMore Then
                         Dim totalBoxY As Single = gt(ITEM_END_CM + 0.2F)
-                        g.FillRectangle(Brushes.WhiteSmoke, 10.0F, totalBoxY, 190.0F, 12.0F)
 
                         ' إطار مزدوج لصندوق الإجماليات
                         g.DrawRectangle(p1, 10.0F, totalBoxY, 190.0F, 12.0F)
@@ -322,18 +321,18 @@ Public Class InvoicePrinter
                         _currentItemIndex += 1
                     End While
 
-                    Dim footerY As Single = gt(22.5F)
+                    Dim footerY As Single = gt(21.0F)
                     If Not hasMore Then
                         g.DrawString(_reportData.Header.TotalAmount.ToString("N3"),
                                      _printFontBold, brush, gl(18.0F), footerY, fLeft)
                         Dim tafqeet As String = CurrencyToLetters.Convert(
-                            _reportData.Header.TotalAmount, _currencySymbol, "", 3)
+                             _reportData.Header.TotalAmount, _currencySymbol, "", 3)
                         Dim rectTafq As New RectangleF(gl(2.5F), footerY, 150.0F, 8.0F)
                         g.DrawString(tafqeet, _printFontBold, brush, rectTafq, fRight)
                     End If
 
                     Dim pageText As String = $"Invoice No: {_reportData.Header.InvID}    |    صفحة {_currentPageNumber} من {_totalPages}"
-                    Dim pageRect As New RectangleF(0, gt(24.7F), PAGE_W_MM, 8.0F)
+                    Dim pageRect As New RectangleF(0, gt(24.5F), PAGE_W_MM, 8.0F)
                     g.DrawString(pageText, _printFontNormal, brush, pageRect, fCtr)
 
                     If hasMore Then
@@ -357,33 +356,33 @@ Public Class InvoicePrinter
     Private Sub DrawHeader(g As Graphics, brush As SolidBrush, fLeft As StringFormat, fRight As StringFormat,
                            gl As Func(Of Single, Single), gt As Func(Of Single, Single))
 
-        ' اسم العميل (عربي - RTL)
+        ' اسم العميل (عربي - RTL) (تمت إضافة بادئة اسم العميل وزيادة الإحداثي بمقدار 1 سم)
         Dim rectCust As New RectangleF(gl(2.0F), gt(3.0F), 80.0F, 8.0F)
-        g.DrawString(If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fRight)
+        g.DrawString("اسم العميل / " & If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fRight)
 
-        ' نوع الفاتورة / Payment Type (تحت اسم العميل مباشرة)
+        ' نوع الفاتورة / Payment Type (تحت اسم العميل مباشرة - زيادة الإحداثي بمقدار 1 سم)
         Dim isCash As Boolean = (_reportData.Header.Remainder <= 0)
         Dim paymentTypeText As String = If(isCash, "cash", "credit")
         Dim rectPaymentType As New RectangleF(gl(2.0F), gt(4.0F), 80.0F, 8.0F)
         g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType, fRight)
 
-        ' الملاحظات (عربي - RTL) (نزلت سطر لتحت)
+        ' الملاحظات (عربي - RTL) (زيادة الإحداثي بمقدار 1 سم)
         If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
-            Dim rectNotes As New RectangleF(gl(2.0F), gt(5.0F), 100.0F, 8.0F)
+            Dim rectNotes As New RectangleF(gl(2.0F), gt(5), 100.0F, 8.0F)
             g.DrawString("ملاحظات: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes, fRight)
         End If
 
-        ' رقم الفاتورة
-        g.DrawString("Invoice No:", _printFontNormal, brush, gl(14.5F), gt(3.0F), fLeft)
-        g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(18.0F), gt(3.0F), fLeft)
+        ' رقم الفاتورة (إزاحة لليسار بمقدار 2 سم وزيادة الإحداثي بمقدار 1 سم)
+        g.DrawString("Invoice No:", _printFontNormal, brush, gl(12.5F), gt(3.0F), fLeft)
+        g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(16.0F), gt(3.0F), fLeft)
 
-        ' التاريخ
-        g.DrawString("Invoice Date:", _printFontNormal, brush, gl(14.0F), gt(4.0F), fLeft)
-        g.DrawString(_reportData.Header.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, gl(18.0F), gt(4.0F), fLeft)
+        ' التاريخ (إزاحة لليسار بمقدار 2 سم وزيادة الإحداثي بمقدار 1 سم)
+        g.DrawString("Invoice Date:", _printFontNormal, brush, gl(12.0F), gt(4.0F), fLeft)
+        g.DrawString(_reportData.Header.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, gl(16.0F), gt(4.0F), fLeft)
 
-        ' رقم الحساب
-        g.DrawString("Account No:", _printFontNormal, brush, gl(14.0F), gt(5.0F), fLeft)
-        g.DrawString(If(_reportData.Header.AccountCode, ""), _printFontNormal, brush, gl(18.0F), gt(5.0F), fLeft)
+        ' رقم الحساب (إزاحة لليسار بمقدار 2 سم وزيادة الإحداثي بمقدار 1 سم)
+        g.DrawString("Account No:", _printFontNormal, brush, gl(12.0F), gt(5F), fLeft)
+        g.DrawString(If(_reportData.Header.AccountCode, ""), _printFontNormal, brush, gl(16.0F), gt(5.0F), fLeft)
     End Sub
 
     ' ══════════════════════════════════════════════════════
@@ -407,17 +406,17 @@ Public Class InvoicePrinter
         g.DrawString(arName, _printFontNormal, brush, rectAR, fRight)
 
         ' الوحدة (عربي - RTL)
-        Dim rectUnit As New RectangleF(gl(10.7F), y, 20.0F, ROW_H_MM)
+        Dim rectUnit As New RectangleF(gl(11.7F), y, 20.0F, ROW_H_MM)
         g.DrawString(If(item.UnitName, ""), _printFontNormal, brush, rectUnit, fRight)
 
         ' الكمية
-        g.DrawString(item.Quantity.ToString("N2"), _printFontNormal, brush, gl(13.2F), y, fLeft)
+        g.DrawString(item.Quantity.ToString("N2"), _printFontNormal, brush, gl(13.7F), y, fLeft)
 
         ' السعر
-        g.DrawString(item.UnitPrice.ToString("N3"), _printFontNormal, brush, gl(15.4F), y, fLeft)
+        g.DrawString(item.UnitPrice.ToString("N3"), _printFontNormal, brush, gl(15.9F), y, fLeft)
 
         ' الإجمالي
-        g.DrawString(item.TotalPrice.ToString("N3"), _printFontNormal, brush, gl(18.5F), y, fLeft)
+        g.DrawString(item.TotalPrice.ToString("N3"), _printFontNormal, brush, gl(18.0F), y, fLeft)
     End Sub
 
     Private Sub DrawDetailedItemRow(g As Graphics, brush As SolidBrush, fLeft As StringFormat, fRight As StringFormat, fCtr As StringFormat,
@@ -447,4 +446,3 @@ Public Class InvoicePrinter
     End Sub
 
 End Class
-

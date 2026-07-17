@@ -387,6 +387,7 @@ Namespace ViewModels
 
             allItems.Add(New MenuItem With {.Title = "العملاء والموردين", .Icon = "👥", .FormName = "Partners", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "لوحة الفواتير", .Icon = "🧾", .FormName = "InvoiceDashboard", .IsVisible = True})
+            allItems.Add(New MenuItem With {.Title = "الطلبات اليومية", .Icon = "🚚", .FormName = "DailyOrders", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "التقارير", .Icon = "📈", .FormName = "Reports", .IsVisible = True})
 
             ' === قسم الإعدادات (قابل للتوسيع) ===
@@ -643,6 +644,10 @@ Namespace ViewModels
 
                     Case "Shifts"
                         CurrentPage = New Views.ShiftsPage()
+                        IsHomePage = False
+
+                    Case "DailyOrders"
+                        CurrentPage = New Views.DailyOrdersPage()
                         IsHomePage = False
 
                     Case Else

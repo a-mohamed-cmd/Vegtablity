@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
 import 'api_service.dart';
+import 'receipt_designer.dart';
 
 import 'package:flutter/foundation.dart';
 
@@ -32,13 +35,27 @@ class PrinterService with ChangeNotifier {
   String _ipAddress = '192.168.1.100';
   int _port = 9100;
   String _bluetoothDevice = '';
+  int _paperSize = 80; // 58 or 80
   bool _isSynced = false;
 
   String get connectionType => _connectionType;
   String get ipAddress => _ipAddress;
   int get port => _port;
   String get bluetoothDevice => _bluetoothDevice;
+  int get paperSize => _paperSize;
   bool get isSynced => _isSynced;
+
+  String get _separator {
+    return _paperSize == 80
+        ? '================================================'
+        : '================================';
+  }
+
+  String get _dashedSeparator {
+    return _paperSize == 80
+        ? '------------------------------------------------'
+        : '--------------------------------';
+  }
 
   PrinterService([this._apiService]) {
     _loadSettings();
@@ -81,11 +98,11 @@ class PrinterService with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // 1. Load local settings as immediate fallback
       _connectionType = prefs.getString('printer_connection_type') ?? 'None';
       _ipAddress = prefs.getString('printer_ip') ?? '192.168.1.100';
       _port = prefs.getInt('printer_port') ?? 9100;
       _bluetoothDevice = prefs.getString('printer_bluetooth') ?? '';
+      _paperSize = prefs.getInt('printer_paper_size') ?? 80;
       _isSynced = false;
       
       // 2. Fetch or generate MachineHWID
@@ -138,12 +155,14 @@ class PrinterService with ChangeNotifier {
     required String ipAddress,
     int port = 9100,
     required String bluetoothDevice,
+    int paperSize = 80,
   }) async {
     try {
       _connectionType = connectionType;
       _ipAddress = ipAddress;
       _port = port;
       _bluetoothDevice = bluetoothDevice;
+      _paperSize = paperSize;
       _isSynced = false;
 
       final prefs = await SharedPreferences.getInstance();
@@ -151,6 +170,7 @@ class PrinterService with ChangeNotifier {
       await prefs.setString('printer_ip', ipAddress);
       await prefs.setInt('printer_port', port);
       await prefs.setString('printer_bluetooth', bluetoothDevice);
+      await prefs.setInt('printer_paper_size', paperSize);
       
       String? hwid = prefs.getString('machine_hwid');
       if (hwid == null) {
@@ -189,270 +209,31 @@ class PrinterService with ChangeNotifier {
   }
 
   Future<bool> printReceipt(Map<String, dynamic> invoice) async {
-    final bool isVirtual = _connectionType == 'None';
-    final String actualConnectionType = isVirtual ? 'Virtual Printer (Console Simulator)' : _connectionType;
-
     final prefs = await SharedPreferences.getInstance();
     final String? openWarehouseName = prefs.getString('selected_warehouse_name');
 
-    // Get company settings with default fallbacks
-    final String companyName = _companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
-    final String address = _companySettings?['Address'] ?? 'العارضيه';
-    final String phone = _companySettings?['Phone'] ?? '55381505';
-
-    final String invType = invoice['type'] ?? 'Sales';
-    final String typeName = (invType == 'Sales' || invType == 'Sale') ? 'مبيعات' : 'مشتريات';
-
-    final int? invId = invoice['InvID'] ?? invoice['invoice_id'] ?? invoice['id'];
-    final String invIdStr = invId != null && invId != 0 ? '#$invId' : 'جديدة (غير محفوظة)';
-    final String partnerName = invoice['PartnerName'] ?? invoice['partner_name'] ?? (typeName == 'مبيعات' ? 'عميل نقدي' : 'مورد نقدي');
-
-    final double totalAmount       = (invoice['total_amount']        as num?)?.toDouble() ?? 0.0;
-    final double paidAtCreate       = (invoice['paid_amount']         as num?)?.toDouble() ?? 0.0;
-    final double voucherPaidAmount  = (invoice['voucher_paid_amount'] as num?)?.toDouble() ?? 0.0;
-    final double remainder          = (invoice['remainder']           as num?)?.toDouble() ?? 0.0;
-
-    // إجمالي المسدّد = ما دُفع عند الإنشاء + ما سُدّد عبر سند لاحق
-    final double totalPaid = paidAtCreate + voucherPaidAmount;
-
-    // Custom formatting to 0,000.00
-    final String formattedTotal     = _formatCurrency(totalAmount);
-    final String formattedPaid      = _formatCurrency(totalPaid);
-    final String formattedRemainder = _formatCurrency(remainder);
-    // يظهر قسم السداد إذا كان المدفوع أقل من الإجمالي أو هناك متبقٍ
-    final bool hasSplitPayment = remainder > 0.001 || totalPaid < totalAmount - 0.001;
-    // يظهر بند السند منفصلاً إذا كان هناك سداد عبر سند
-    final bool hasVoucherPayment = voucherPaidAmount > 0.001;
-
-    DateTime printDateTime;
     try {
-      if (invoice['created_at'] != null) {
-        printDateTime = DateTime.parse(invoice['created_at']);
-      } else if (invoice['InvDate'] != null) {
-        printDateTime = DateTime.parse(invoice['InvDate']);
-      } else {
-        printDateTime = DateTime.now();
-      }
-    } catch (_) {
-      printDateTime = DateTime.now();
-    }
-
-    final String shortDate = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
-    final String timeStr = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}:${printDateTime.second.toString().padLeft(2, '0')}';
-    final List<String> arDays = ['الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'];
-    final String dayName = arDays[printDateTime.weekday - 1];
-
-    try {
-      final items = invoice['items'] as List<dynamic>? ?? [];
-
-      // 1. Physical Printing for Sunmi Built-in Printer (Bluetooth or Simulator Fallback)
-
-      // Since it's a Sunmi terminal, we can attempt to print directly
+      // 1. Sunmi Internal Printer (Bluetooth or Simulator Fallback)
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
-        try {
-          // Print Header (Centered)
-          await SunmiPrinter.printText(
-            '================================',
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
-          );
-          await SunmiPrinter.printText(
-            companyName,
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true),
-          );
-          await SunmiPrinter.printText(
-            'العنوان: $address',
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
-          );
-          await SunmiPrinter.printText(
-            'الهاتف: $phone',
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
-          );
-          await SunmiPrinter.printText(
-            '================================',
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
-          );
-          
-          // Print Body (Right Aligned for Arabic)
-          await SunmiPrinter.printText(
-            'فاتورة $typeName جديدة',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
-          );
-          if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
-            await SunmiPrinter.printText(
-              'المستودع: $openWarehouseName',
-              style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-            );
-          }
-          await SunmiPrinter.printText(
-            'رقم الفاتورة: $invIdStr',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          await SunmiPrinter.printText(
-            'الشريك: $partnerName',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          await SunmiPrinter.printText(
-            'التاريخ: $shortDate',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          await SunmiPrinter.printText(
-            'الوقت: $timeStr',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          await SunmiPrinter.printText(
-            'اليوم: $dayName',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          await SunmiPrinter.printText(
-            'نوع العملية: ${invoice['type']}',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          await SunmiPrinter.printText(
-            '--------------------------------',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          
-          for (final item in items) {
-            final String name = item['name'];
-            final double price = (item['price'] as num).toDouble();
-            final double qty = (item['quantity'] as num).toDouble();
-            final double total = (item['total'] as num).toDouble();
-            final String unitName = item['UnitName'] ?? item['unit'] ?? item['unit_name'] ?? '';
-            final String qtyFormatted = _formatQuantity(qty, unitName);
-            
-            await SunmiPrinter.printText(
-              name,
-              style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-            );
-            await SunmiPrinter.printText(
-              '  $qtyFormatted x ${_formatCurrency(price)} = ${_formatCurrency(total)}',
-              style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-            );
-          }
-          
-          await SunmiPrinter.printText(
-            '--------------------------------',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          await SunmiPrinter.printText(
-            'الإجمالي الكلي: $formattedTotal ${_currencySymbol}',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
-          );
-          if (hasSplitPayment) {
-            if (hasVoucherPayment) {
-              await SunmiPrinter.printText(
-                'نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} ${_currencySymbol}',
-                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-              );
-              await SunmiPrinter.printText(
-                'عبر سند:          ${_formatCurrency(voucherPaidAmount)} ${_currencySymbol}',
-                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-              );
-              await SunmiPrinter.printText(
-                'إجمالي المدفوع:   $formattedPaid ${_currencySymbol}',
-                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
-              );
-            } else {
-              await SunmiPrinter.printText(
-                'المدفوع:          $formattedPaid ${_currencySymbol}',
-                style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-              );
-            }
-            await SunmiPrinter.printText(
-              'المتبقي آجل:     $formattedRemainder ${_currencySymbol}',
-              style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true),
-            );
-          }
-          await SunmiPrinter.printText(
-            '================================',
-            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
-          );
-          
-          // Footer (Centered)
-          await SunmiPrinter.printText(
-            'شكراً لزيارتكم! طبعت عبر نظام POS',
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
-          );
-          await SunmiPrinter.printText(
-            '================================',
-            style: SunmiTextStyle(align: SunmiPrintAlign.CENTER),
-          );
-          
-          // Feed paper and cut
-          await SunmiPrinter.lineWrap(4);
-          await SunmiPrinter.cutPaper();
-        } catch (sunmiError) {
-          print('خطأ أثناء الطباعة عبر طابعة Sunmi: $sunmiError');
-          if (_connectionType == 'Bluetooth') {
-            return false;
-          }
-        }
+        await ReceiptDesigner.printSunmiInvoice(
+          invoice: invoice,
+          companySettings: _companySettings,
+          paperSize: _paperSize,
+          openWarehouseName: openWarehouseName,
+        );
       }
 
-      // 2. Physical Printing for Network (IP) Printer
+      // 2. Network (IP) Printer
       if (_connectionType == 'Network') {
         try {
           final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
-          
-          // Initialize printer: ESC @ (0x1B, 0x40)
-          socket.add([0x1B, 0x40]);
-          
-          // Header (Center aligned)
-          socket.add([0x1B, 0x61, 0x01]);
-          socket.write('================================\n');
-          socket.write('   $companyName\n');
-          socket.write('   العنوان: $address\n');
-          socket.write('   الهاتف: $phone\n');
-          socket.write('================================\n');
-          
-          // Body (Right aligned)
-          socket.add([0x1B, 0x61, 0x02]);
-          socket.write('فاتورة $typeName جديدة\n');
-          if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
-            socket.write('المستودع: $openWarehouseName\n');
-          }
-          socket.write('رقم الفاتورة: $invIdStr\n');
-          socket.write('الشريك: $partnerName\n');
-          socket.write('التاريخ: $shortDate\n');
-          socket.write('الوقت: $timeStr\n');
-          socket.write('اليوم: $dayName\n');
-          socket.write('نوع العملية: ${invoice['type']}\n');
-          socket.write('--------------------------------\n');
-          
-          for (final item in items) {
-            final String name = item['name'];
-            final double price = (item['price'] as num).toDouble();
-            final double qty = (item['quantity'] as num).toDouble();
-            final double total = (item['total'] as num).toDouble();
-            final String unitName = item['UnitName'] ?? item['unit'] ?? item['unit_name'] ?? '';
-            final String qtyFormatted = _formatQuantity(qty, unitName);
-            
-            socket.write('$name\n');
-            socket.write('  $qtyFormatted x ${_formatCurrency(price)} = ${_formatCurrency(total)}\n');
-          }
-          
-          socket.write('--------------------------------\n');
-          socket.write('الإجمالي الكلي: $formattedTotal ${_currencySymbol}\n');
-          if (hasSplitPayment) {
-            if (hasVoucherPayment) {
-              socket.write('نقداً عند الإنشاء: ${_formatCurrency(paidAtCreate)} ${_currencySymbol}\n');
-              socket.write('عبر سند:         ${_formatCurrency(voucherPaidAmount)} ${_currencySymbol}\n');
-              socket.write('إجمالي المدفوع:  $formattedPaid ${_currencySymbol}\n');
-            } else {
-              socket.write('المدفوع:         $formattedPaid ${_currencySymbol}\n');
-            }
-            socket.write('المتبقي آجل:     $formattedRemainder ${_currencySymbol}\n');
-          }
-          socket.write('================================\n');
-          
-          // Footer (Center aligned)
-          socket.add([0x1B, 0x61, 0x01]);
-          socket.write('شكراً لزيارتكم! طبعت عبر نظام POS\n');
-          socket.write('================================\n');
-          
-          // Feed paper and cut (GS V 66 0)
-          socket.add([0x1D, 0x56, 0x42, 0x00]);
-          
+          final List<int> printBytes = await ReceiptDesigner.buildNetworkInvoiceBytes(
+            invoice: invoice,
+            companySettings: _companySettings,
+            paperSize: _paperSize,
+            openWarehouseName: openWarehouseName,
+          );
+          socket.add(printBytes);
           await socket.flush();
           await socket.close();
         } catch (socketError) {
@@ -463,6 +244,7 @@ class PrinterService with ChangeNotifier {
 
       return true;
     } catch (e) {
+      print('خطأ عام في طباعة الفاتورة: $e');
       return false;
     }
   }
@@ -560,6 +342,16 @@ class PrinterService with ChangeNotifier {
 
     try {
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        final String? logoBase64 = _companySettings?['Logo'];
+        if (logoBase64 != null && logoBase64.isNotEmpty) {
+          try {
+            final Uint8List logoBytes = base64Decode(logoBase64);
+            await SunmiPrinter.printImage(logoBytes, align: SunmiPrintAlign.CENTER);
+            await SunmiPrinter.printText(' ');
+          } catch (e) {
+            print('Error printing Sunmi logo in shift summary: $e');
+          }
+        }
 
         // ── الرأس ──────────────────────────────────────────
         await _printLine('================================', center: true);
@@ -666,6 +458,18 @@ class PrinterService with ChangeNotifier {
         try {
           final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
           socket.add([0x1B, 0x40]);
+
+          final String? logoBase64 = _companySettings?['Logo'];
+          if (logoBase64 != null && logoBase64.isNotEmpty) {
+            final int targetWidth = _paperSize == 80 ? 300 : 200;
+            final List<int> logoBytes = await ReceiptDesigner.convertImageToEscPos(logoBase64, targetWidth: targetWidth);
+            if (logoBytes.isNotEmpty) {
+              socket.add([0x1B, 0x61, 0x01]);
+              socket.add(logoBytes);
+              socket.write('\n');
+            }
+          }
+
           // Center
           socket.add([0x1B, 0x61, 0x01]);
           socket.write('================================\n');
@@ -765,6 +569,16 @@ class PrinterService with ChangeNotifier {
     try {
       
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        final String? logoBase64 = _companySettings?['Logo'];
+        if (logoBase64 != null && logoBase64.isNotEmpty) {
+          try {
+            final Uint8List logoBytes = base64Decode(logoBase64);
+            await SunmiPrinter.printImage(logoBytes, align: SunmiPrintAlign.CENTER);
+            await SunmiPrinter.printText(' ');
+          } catch (e) {
+            print('Error printing Sunmi logo in voucher: $e');
+          }
+        }
         // Sunmi Print
         await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
@@ -814,6 +628,18 @@ class PrinterService with ChangeNotifier {
         try {
           final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
           socket.add([0x1B, 0x40]);
+
+          final String? logoBase64 = _companySettings?['Logo'];
+          if (logoBase64 != null && logoBase64.isNotEmpty) {
+            final int targetWidth = _paperSize == 80 ? 300 : 200;
+            final List<int> logoBytes = await ReceiptDesigner.convertImageToEscPos(logoBase64, targetWidth: targetWidth);
+            if (logoBytes.isNotEmpty) {
+              socket.add([0x1B, 0x61, 0x01]);
+              socket.add(logoBytes);
+              socket.write('\n');
+            }
+          }
+
           // Center
           socket.add([0x1B, 0x61, 0x01]);
           socket.write('================================\n');
@@ -902,6 +728,16 @@ class PrinterService with ChangeNotifier {
     try {
       if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
         await SunmiPrinter.initPrinter(); // Ensure printer is ready
+        final String? logoBase64 = _companySettings?['Logo'];
+        if (logoBase64 != null && logoBase64.isNotEmpty) {
+          try {
+            final Uint8List logoBytes = base64Decode(logoBase64);
+            await SunmiPrinter.printImage(logoBytes, align: SunmiPrintAlign.CENTER);
+            await SunmiPrinter.printText(' ');
+          } catch (e) {
+            print('Error printing Sunmi logo in general voucher: $e');
+          }
+        }
         await SunmiPrinter.printText('================================', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
         await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
         await SunmiPrinter.printText('العنوان: $address', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
@@ -935,6 +771,18 @@ class PrinterService with ChangeNotifier {
         try {
           final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
           socket.add([0x1B, 0x40]);
+
+          final String? logoBase64 = _companySettings?['Logo'];
+          if (logoBase64 != null && logoBase64.isNotEmpty) {
+            final int targetWidth = _paperSize == 80 ? 300 : 200;
+            final List<int> logoBytes = await ReceiptDesigner.convertImageToEscPos(logoBase64, targetWidth: targetWidth);
+            if (logoBytes.isNotEmpty) {
+              socket.add([0x1B, 0x61, 0x01]);
+              socket.add(logoBytes);
+              socket.write('\n');
+            }
+          }
+
           socket.add([0x1B, 0x61, 0x01]);
           socket.write('================================\n');
           socket.write('  $companyName\n');

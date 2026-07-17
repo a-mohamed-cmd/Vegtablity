@@ -121,6 +121,9 @@ class StoredProcedures:
     # Retrieves the line items for a specific invoice
     INVOICE_DETAILS_GET = "{CALL [Sales].[sp_InvoiceDetails_GetByInvID] (?)}"
     
+    # Retrieves daily delivery orders by date
+    TEMPORDER_GETDAILYDELIVERIES = "EXEC [Sales].[sp_TempOrder_GetDailyDeliveries] @DeliveryDate=?"
+    
     # Saves a new invoice and its line items using XML format
     INVOICE_SAVE_XML = """
         DECLARE @InvID INT = 0;
@@ -141,7 +144,12 @@ class StoredProcedures:
             @ReferenceNo = ?,
             @PaymentAccountID = ?,
             @ShiftID = ?,
-            @DetailsXml = ?;
+            @DetailsXml = ?,
+            @TempCustomerName = ?,
+            @TempPhone = ?,
+            @TempAddress = ?,
+            @TempDeliveryDate = ?,
+            @TempDeliveryTime = ?;
         SELECT @InvID as InvID;
     """
 

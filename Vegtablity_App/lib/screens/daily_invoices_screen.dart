@@ -1215,6 +1215,14 @@ class _InvoiceDetailsBottomSheetState
       'paid_amount':         _parseDouble(data['PaidAmount']),
       'voucher_paid_amount': _parseDouble(data['VoucherPaidAmount']),
       'remainder':           _parseDouble(data['Remainder']),
+      
+      // Temporary Customer / Delivery details
+      'temp_customer_name': data['TempCustomerName'] ?? data['temp_customer_name'],
+      'temp_phone':        data['TempPhone'] ?? data['temp_phone'],
+      'temp_address':      data['TempAddress'] ?? data['temp_address'],
+      'temp_delivery_date': data['TempDeliveryDate'] ?? data['temp_delivery_date'],
+      'temp_delivery_time': data['TempDeliveryTime'] ?? data['temp_delivery_time'],
+
       'items': dbDetails
           .map((item) => {
                 'name': item['ProductName'] ?? '',

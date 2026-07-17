@@ -8,6 +8,8 @@ class Partner(BaseModel):
     Phone: Optional[str] = None
     Address: Optional[str] = None
     CurrentBalance: Optional[float] = 0.0
+    AccountID: Optional[int] = None
+    AccountCode: Optional[str] = None
 
 class PartnerSearchResponse(BaseModel):
     partners: List[Partner]

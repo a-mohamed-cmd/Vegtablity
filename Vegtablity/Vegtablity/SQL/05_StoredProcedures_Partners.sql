@@ -16,10 +16,11 @@ CREATE PROCEDURE [Sales].[sp_Partner_GetAll]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive, AccountID
-    FROM [Sales].[Partners]
-    WHERE IsActive = 1 AND PartnerType = @PartnerType
-    ORDER BY PartnerID;
+    SELECT p.PartnerID, p.PartnerName, p.PartnerType, p.Phone, p.Address, p.CurrentBalance, p.IsActive, p.AccountID, c.AccountCode
+    FROM [Sales].[Partners] p
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON p.AccountID = c.AccountID
+    WHERE p.IsActive = 1 AND p.PartnerType = @PartnerType
+    ORDER BY p.PartnerID;
 END
 GO
 

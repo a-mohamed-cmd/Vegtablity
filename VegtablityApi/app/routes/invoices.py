@@ -40,6 +40,17 @@ async def pay_invoice(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+@router.get("/daily-orders", response_model=List[dict])
+async def get_daily_orders(
+    date: str,
+    user_id: int = Depends(get_current_user_id)
+):
+    service = InvoiceService()
+    try:
+        return service.get_daily_orders(date)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/{inv_id}", response_model=dict)
 async def get_invoice(
     inv_id: int,

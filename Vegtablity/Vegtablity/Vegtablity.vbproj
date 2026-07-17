@@ -1,4 +1,4 @@
-﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -228,6 +228,9 @@
     <Compile Include="ViewModels\DashboardViewModel.vb" />
     <Compile Include="ViewModels\PurchaseQuoteViewModel.vb" />
     <Compile Include="ViewModels\ShiftsViewModel.vb" />
+    <Compile Include="ViewModels\DailyOrdersViewModel.vb" />
+    <Compile Include="Services\OrderService.vb" />
+    <Compile Include="Models\DailyOrder.vb" />
     <Compile Include="ViewModels\StockTakeViewModel.vb" />
     <Compile Include="ViewModels\UserManagementViewModel.vb" />
     <Compile Include="ViewModels\SettingsViewModel.vb" />
@@ -268,6 +271,7 @@
     <Compile Include="Helpers\StringToVisibilityConverter.vb" />
     <Compile Include="Helpers\ProfitColorConverter.vb" />
     <Compile Include="Helpers\InvoicePrinter.vb" />
+    <Compile Include="Helpers\InvoicePrinterCustom.vb" />
     <Compile Include="Helpers\ExcelImporter.vb" />
     <Compile Include="Views\LicenseWindow.xaml.vb">
       <DependentUpon>LicenseWindow.xaml</DependentUpon>
@@ -277,6 +281,9 @@
     </Compile>
     <Compile Include="Views\ShiftsPage.xaml.vb">
       <DependentUpon>ShiftsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\DailyOrdersPage.xaml.vb">
+      <DependentUpon>DailyOrdersPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\StockTakePage.xaml.vb">
       <DependentUpon>StockTakePage.xaml</DependentUpon>
@@ -381,6 +388,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\ShiftsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\DailyOrdersPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

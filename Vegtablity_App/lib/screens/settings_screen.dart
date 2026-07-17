@@ -13,8 +13,18 @@ class GeneralSettingsScreen extends StatefulWidget {
 }
 
 class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
-  String _selectedLayout = 'classic';
+  String _selectedSalesMode = 'direct';
   bool _isLoading = true;
+
+  bool _showNewInvoice = true;
+  bool _showNewPurchase = true;
+  bool _showCustomerSales = true;
+  bool _showSupplierPurchases = true;
+  bool _showCustomerReceipts = true;
+  bool _showSupplierPayments = true;
+  bool _showStockTake = true;
+  bool _showWastage = true;
+  bool _showDailyOrders = true;
 
   @override
   void initState() {
@@ -26,7 +36,16 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _selectedLayout = prefs.getString('pref_home_layout') ?? 'classic';
+        _selectedSalesMode = prefs.getString('cash_sale_mode') ?? 'direct';
+        _showNewInvoice = prefs.getBool('show_new_invoice') ?? true;
+        _showNewPurchase = prefs.getBool('show_new_purchase') ?? true;
+        _showCustomerSales = prefs.getBool('show_customer_sales') ?? true;
+        _showSupplierPurchases = prefs.getBool('show_supplier_purchases') ?? true;
+        _showCustomerReceipts = prefs.getBool('show_customer_receipts') ?? true;
+        _showSupplierPayments = prefs.getBool('show_supplier_payments') ?? true;
+        _showStockTake = prefs.getBool('show_stocktake') ?? true;
+        _showWastage = prefs.getBool('show_wastage') ?? true;
+        _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
         _isLoading = false;
       });
     } catch (e) {
@@ -36,15 +55,15 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     }
   }
 
-  Future<void> _saveSettings(String layout) async {
+  Future<void> _saveSalesMode(String mode) async {
     setState(() {
       _isLoading = true;
     });
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('pref_home_layout', layout);
+      await prefs.setString('cash_sale_mode', mode);
       setState(() {
-        _selectedLayout = layout;
+        _selectedSalesMode = mode;
         _isLoading = false;
       });
       if (mounted) {
@@ -67,6 +86,46 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _saveBoolSetting(String key, bool value) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(key, value);
+      setState(() {
+        switch (key) {
+          case 'show_new_invoice':
+            _showNewInvoice = value;
+            break;
+          case 'show_new_purchase':
+            _showNewPurchase = value;
+            break;
+          case 'show_customer_sales':
+            _showCustomerSales = value;
+            break;
+          case 'show_supplier_purchases':
+            _showSupplierPurchases = value;
+            break;
+          case 'show_customer_receipts':
+            _showCustomerReceipts = value;
+            break;
+          case 'show_supplier_payments':
+            _showSupplierPayments = value;
+            break;
+          case 'show_stocktake':
+            _showStockTake = value;
+            break;
+          case 'show_wastage':
+            _showWastage = value;
+            break;
+          case 'show_daily_orders':
+            _showDailyOrders = value;
+            break;
+        }
+      });
+    } catch (e) {
+      // Ignore
     }
   }
 
@@ -93,46 +152,40 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20.0),
                 children: [
-                  Text(
-                    context.tr('settings_layout_title'),
-                    style: const TextStyle(
+                  const Text(
+                    'نظام التوصيل ومواعيد التسليم',
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.teal,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    context.tr('settings_layout_desc'),
-                    style: const TextStyle(
+                  const Text(
+                    'اختر ما إذا كنت ترغب بتطبيق نظام توصيل وتسجيل مواعيد شحن الطلبات للعملاء أو تفضل البيع المباشر الفوري.',
+                    style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  
-                  // Classic Layout Card Option
-                  _buildLayoutCard(
-                    title: context.tr('settings_classic_title'),
-                    description: context.tr('settings_classic_desc'),
-                    layoutValue: 'classic',
-                    icon: Icons.grid_view_rounded,
-                    color: Colors.blue,
-                  ),
                   const SizedBox(height: 16),
-
-                  // Partner Offers Layout Card Option
-                  _buildLayoutCard(
-                    title: context.tr('settings_premium_title'),
-                    description: context.tr('settings_premium_desc'),
-                    layoutValue: 'partners_offers',
-                    icon: Icons.people_alt_rounded,
-                    color: Colors.orange,
+                  DropdownButtonFormField<String>(
+                    value: _selectedSalesMode,
+                    alignment: AlignmentDirectional.centerEnd,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: const [
+                      DropdownMenuItem(value: 'direct', child: Text('بيع مباشر بدون توصيل', textAlign: TextAlign.right)),
+                      DropdownMenuItem(value: 'temp_order', child: Text('تطبيق نظام التوصيل', textAlign: TextAlign.right)),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        _saveSalesMode(val);
+                      }
+                    },
                   ),
                   const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 16),
-                  
                   Text(
                     context.tr('language'),
                     style: const TextStyle(
@@ -168,85 +221,83 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       );
                     },
                   ),
-                ],
-              ),
-            ),
-    );
-  }
-
-  Widget _buildLayoutCard({
-    required String title,
-    required String description,
-    required String layoutValue,
-    required IconData icon,
-    required Color color,
-  }) {
-    final bool isSelected = _selectedLayout == layoutValue;
-
-    return InkWell(
-      onTap: () => _saveSettings(layoutValue),
-      borderRadius: BorderRadius.circular(16),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.teal.withOpacity(0.05) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.teal : Colors.grey.withOpacity(0.2),
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          ],
-        ),
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 36, color: color),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
                   Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
+                    context.tr('settings_home_modules_title'),
+                    style: const TextStyle(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.teal[800] : Colors.black87,
+                      color: Colors.teal,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
-                    description,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      height: 1.4,
+                    context.tr('settings_home_modules_desc'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: Text(context.tr('home_classic_new_invoice')),
+                    value: _showNewInvoice,
+                    onChanged: (val) => _saveBoolSetting('show_new_invoice', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_premium_customer_sales')),
+                    value: _showCustomerSales,
+                    onChanged: (val) => _saveBoolSetting('show_customer_sales', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_classic_new_purchase')),
+                    value: _showNewPurchase,
+                    onChanged: (val) => _saveBoolSetting('show_new_purchase', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_premium_supplier_purchases')),
+                    value: _showSupplierPurchases,
+                    onChanged: (val) => _saveBoolSetting('show_supplier_purchases', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_premium_customer_receipts')),
+                    value: _showCustomerReceipts,
+                    onChanged: (val) => _saveBoolSetting('show_customer_receipts', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_premium_supplier_payments')),
+                    value: _showSupplierPayments,
+                    onChanged: (val) => _saveBoolSetting('show_supplier_payments', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_classic_stocktake')),
+                    value: _showStockTake,
+                    onChanged: (val) => _saveBoolSetting('show_stocktake', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_classic_wastage')),
+                    value: _showWastage,
+                    onChanged: (val) => _saveBoolSetting('show_wastage', val),
+                    activeColor: Colors.teal,
+                  ),
+                  SwitchListTile(
+                    title: Text(context.tr('home_daily_orders')),
+                    value: _showDailyOrders,
+                    onChanged: (val) => _saveBoolSetting('show_daily_orders', val),
+                    activeColor: Colors.teal,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: isSelected ? Colors.teal : Colors.grey,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -1,8 +1,11 @@
+// Imports
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../core/localization/app_localizations.dart';
 import 'partner_billing_screen.dart';
+import 'temp_order_screen.dart';
 
 class PartnerOffersScreen extends StatefulWidget {
   final String type; // 'Sales' or 'Purchases'
@@ -172,8 +175,27 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
         return;
       }
 
-      // Navigate to Billing Screen with the quote details
+      // Navigate to Billing Screen or Temporary Order Screen with the quote details
       if (mounted) {
+        if (widget.type == 'Sales') {
+          final prefs = await SharedPreferences.getInstance();
+          final mode = prefs.getString('cash_sale_mode') ?? 'direct';
+          if (mode == 'temp_order') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TemporaryOrderScreen(
+                  type: widget.type,
+                  partner: partner,
+                  quoteId: activeQuoteId!,
+                  allowedItems: List<Map<String, dynamic>>.from(quoteDetails),
+                ),
+              ),
+            );
+            return;
+          }
+        }
+
         Navigator.push(
           context,
           MaterialPageRoute(

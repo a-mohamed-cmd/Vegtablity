@@ -662,8 +662,25 @@ Namespace ViewModels
                     RaiseEvent RequestSnackbar("⚠️ لا يمكن تحميل بيانات الطباعة، تأكد من حفظ الفاتورة أولاً")
                     Return
                 End If
-                Dim printer As New InvoicePrinter()
-                printer.PrintSalesInvoice(reportData)
+
+                Dim useCustomDesign As Boolean = False
+                Try
+                    Dim svc As New Services.SettingsService()
+                    Dim company = svc.GetCompanyInfo()
+                    If company IsNot Nothing Then
+                        useCustomDesign = company.UseCustomInvoiceDesign
+                    End If
+                Catch ex As Exception
+                    ' Fallback if DB is not ready
+                End Try
+
+                If useCustomDesign Then
+                    Dim printer As New InvoicePrinterCustom()
+                    printer.PrintSalesInvoice(reportData)
+                Else
+                    Dim printer As New InvoicePrinter()
+                    printer.PrintSalesInvoice(reportData)
+                End If
             Catch ex As Exception
                 System.Windows.MessageBox.Show("خطأ أثناء تحضير الطباعة: " & ex.Message, "خطأ",
                                                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)

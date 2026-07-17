@@ -8,5 +8,6 @@ Namespace Models
         Public Property CurrencySymbol As String
         Public Property UnifiedPartnerSearch As Boolean = True
         Public Property UseDetailedInvoiceDesign As Boolean = False
+        Public Property UseCustomInvoiceDesign As Boolean = False
     End Class
 End Namespace

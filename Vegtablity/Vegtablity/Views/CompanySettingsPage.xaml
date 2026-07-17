@@ -71,8 +71,11 @@
                                     <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                                         <CheckBox IsChecked="{Binding UnifiedPartnerSearch}" Content="تفعيل البحث الموحد (دمج العملاء والموردين معاً في شاشات الفواتير)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
                                     </Border>
-                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15">
+                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                                         <CheckBox IsChecked="{Binding UseDetailedInvoiceDesign}" Content="تفعيل طباعة الفواتير بالتصميم التفصيلي (الجدول ورأس الفاتورة الموحد)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
+                                    </Border>
+                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15">
+                                        <CheckBox IsChecked="{Binding UseCustomInvoiceDesign}" Content="تفعيل طباعة الفواتير بالتصميم المخصص (الجديد)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
                                     </Border>
                                 </StackPanel>
                             </StackPanel>

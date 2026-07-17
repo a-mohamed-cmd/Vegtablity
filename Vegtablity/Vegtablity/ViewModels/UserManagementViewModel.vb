@@ -69,7 +69,8 @@ Namespace ViewModels
                 {"CompanySettings", "بيانات الشركة"},
                 {"UserManagement", "إدارة المستخدمين"},
                 {"Wastage", "إدارة التوالف والهوالك"},
-                {"StockTaking", "إدارة الجرد الآلي"}
+                {"StockTaking", "إدارة الجرد الآلي"},
+                {"DailyOrders", "الطلبات اليومية"}
             }
             LoadData()
         End Sub

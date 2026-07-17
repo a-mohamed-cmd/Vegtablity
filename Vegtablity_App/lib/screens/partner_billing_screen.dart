@@ -14,6 +14,12 @@ class PartnerBillingScreen extends StatefulWidget {
   final String type; // 'Sales' or 'Purchases'
   final int quoteId;
   final List<Map<String, dynamic>> allowedItems;
+  final String? tempCustomerName;
+  final String? tempPhone;
+  final String? tempAddress;
+  final String? tempDeliveryDate;
+  final String? tempDeliveryTime;
+  final String? tempNotes;
 
   const PartnerBillingScreen({
     super.key,
@@ -21,6 +27,12 @@ class PartnerBillingScreen extends StatefulWidget {
     required this.type,
     required this.quoteId,
     required this.allowedItems,
+    this.tempCustomerName,
+    this.tempPhone,
+    this.tempAddress,
+    this.tempDeliveryDate,
+    this.tempDeliveryTime,
+    this.tempNotes,
   });
 
   @override
@@ -566,11 +578,16 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'NetAmount': net,
       'PaidAmount': paid,
       'Remainder': remainder,
-      'Notes': '${context.tr('pb_offer_notes')}${widget.quoteId}',
+      'Notes': '${context.tr('pb_offer_notes')}${widget.quoteId}${widget.tempNotes != null && widget.tempNotes!.isNotEmpty ? " | " + widget.tempNotes! : ""}',
       'IsPosted': false,
       'Details': details,
       if (isCash && (paymentAccountId ?? _selectedAccountId) != null)
         'PaymentAccountID': paymentAccountId ?? _selectedAccountId,
+      'TempCustomerName': widget.tempCustomerName,
+      'TempPhone': widget.tempPhone,
+      'TempAddress': widget.tempAddress,
+      'TempDeliveryDate': widget.tempDeliveryDate,
+      'TempDeliveryTime': widget.tempDeliveryTime,
     };
 
     try {
@@ -592,6 +609,11 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           'total_amount': net,
           'paid_amount':  paid,
           'remainder':    remainder,
+          'temp_customer_name': widget.tempCustomerName,
+          'temp_phone':        widget.tempPhone,
+          'temp_address':      widget.tempAddress,
+          'temp_delivery_date': widget.tempDeliveryDate,
+          'temp_delivery_time': widget.tempDeliveryTime,
           'items': _cartItems
               .map((c) => {
                     'name': c['name'],

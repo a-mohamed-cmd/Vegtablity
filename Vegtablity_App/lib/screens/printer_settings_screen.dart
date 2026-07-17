@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/printer_service.dart';
 import '../core/localization/app_localizations.dart';
 
@@ -16,6 +17,8 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   final _ipController = TextEditingController();
   final _portController = TextEditingController();
   final _bluetoothController = TextEditingController();
+  int _selectedPaperSize = 80;
+  String _selectedSalesMode = 'direct';
   bool _isSaving = false;
   bool _isScanning = false;
   bool _isLoading = false;
@@ -57,6 +60,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
         _ipController.text = _printerService.ipAddress;
         _portController.text = _printerService.port.toString();
         _bluetoothController.text = _printerService.bluetoothDevice;
+        _selectedPaperSize = _printerService.paperSize;
         _isLoading = false;
       });
     }
@@ -79,6 +83,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       ipAddress: _ipController.text.trim(),
       port: port,
       bluetoothDevice: _bluetoothController.text.trim(),
+      paperSize: _selectedPaperSize,
     );
 
     if (mounted) {
@@ -215,6 +220,23 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       onChanged: (val) {
                         if (val != null) {
                           setState(() => _selectedConnectionType = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('حجم ورق الطباعة الحراري', textAlign: TextAlign.right, style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      value: _selectedPaperSize,
+                      alignment: AlignmentDirectional.centerEnd,
+                      decoration: const InputDecoration(border: OutlineInputBorder()),
+                      items: const [
+                        DropdownMenuItem(value: 58, child: Text('58 ملم (Mobile/Sunmi)', textAlign: TextAlign.right)),
+                        DropdownMenuItem(value: 80, child: Text('80 ملم (Desktop/Standard)', textAlign: TextAlign.right)),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _selectedPaperSize = val);
                         }
                       },
                     ),

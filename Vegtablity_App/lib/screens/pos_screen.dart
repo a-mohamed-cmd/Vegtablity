@@ -15,7 +15,24 @@ import 'supplier_selection_screen.dart';
 class PosScreen extends StatefulWidget {
   final String type; // 'Sales' or 'Purchase'
   final Map<String, dynamic>? partner; // Optional selected partner (for purchases)
-  const PosScreen({super.key, required this.type, this.partner});
+  final String? tempCustomerName;
+  final String? tempPhone;
+  final String? tempAddress;
+  final String? tempDeliveryDate;
+  final String? tempDeliveryTime;
+  final String? tempNotes;
+
+  const PosScreen({
+    super.key,
+    required this.type,
+    this.partner,
+    this.tempCustomerName,
+    this.tempPhone,
+    this.tempAddress,
+    this.tempDeliveryDate,
+    this.tempDeliveryTime,
+    this.tempNotes,
+  });
 
   @override
   State<PosScreen> createState() => _PosScreenState();
@@ -30,14 +47,68 @@ class _PosScreenState extends State<PosScreen> {
   bool _isCash = true;
   Map<String, dynamic>? _selectedPartner;
 
+  // Catalog Products Caching Fields for Performance Optimization
+  bool _isLoadingProducts = false;
+  String? _productsError;
+  List<Map<String, dynamic>> _allProducts = [];
+  Map<String, List<Map<String, dynamic>>> _groupedProducts = {};
+  List<String> _categories = [];
+
   @override
   void initState() {
     super.initState();
     _selectedPartner = widget.partner;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
+      _fetchAndProcessProducts(); // Initial pre-fetch of catalog in background
     });
     _loadPaymentAccounts();
+  }
+
+  Future<void> _fetchAndProcessProducts({bool force = false}) async {
+    if (_allProducts.isNotEmpty && !force) {
+      return;
+    }
+    setState(() {
+      _isLoadingProducts = true;
+      _productsError = null;
+    });
+
+    try {
+      final response = await Provider.of<ApiService>(context, listen: false).getProducts();
+      if (response.statusCode == 200) {
+        final List<dynamic> rawList = response.data ?? [];
+        
+        // Map and group items once
+        final List<Map<String, dynamic>> mappedList = rawList.map((e) => Map<String, dynamic>.from(e)).toList();
+        
+        final Map<String, List<Map<String, dynamic>>> grouped = {};
+        for (var prod in mappedList) {
+          final String cat = prod['CatName']?.toString() ?? 'أخرى';
+          if (!grouped.containsKey(cat)) {
+            grouped[cat] = [];
+          }
+          grouped[cat]!.add(prod);
+        }
+
+        setState(() {
+          _allProducts = mappedList;
+          _groupedProducts = grouped;
+          _categories = grouped.keys.toList();
+          _isLoadingProducts = false;
+        });
+      } else {
+        setState(() {
+          _productsError = 'فشل تحميل قائمة المنتجات من السيرفر';
+          _isLoadingProducts = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _productsError = 'فشل تحميل قائمة المنتجات: $e';
+        _isLoadingProducts = false;
+      });
+    }
   }
 
   Future<void> _loadPaymentAccounts() async {
@@ -74,6 +145,11 @@ class _PosScreenState extends State<PosScreen> {
     String? statusMessage;
     Color statusColor = Colors.teal;
     List<String> sessionItems = [];
+
+    // Create the controller outside showModalBottomSheet so it persists across rebuilds of the sheet
+    final MobileScannerController scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+    );
 
     showModalBottomSheet(
       context: context,
@@ -112,9 +188,7 @@ class _PosScreenState extends State<PosScreen> {
                       alignment: Alignment.center,
                       children: [
                         MobileScanner(
-                          controller: MobileScannerController(
-                            detectionSpeed: DetectionSpeed.normal,
-                          ),
+                          controller: scannerController,
                           onDetect: (BarcodeCapture capture) async {
                             final List<Barcode> barcodes = capture.barcodes;
                             for (final barcode in barcodes) {
@@ -293,6 +367,8 @@ class _PosScreenState extends State<PosScreen> {
         );
       },
     ).then((_) {
+      // Dispose scanner controller when bottom sheet is closed to release camera hardware resources
+      scannerController.dispose();
       // Refresh screen when sheet is closed
       setState(() {});
     });
@@ -398,6 +474,156 @@ class _PosScreenState extends State<PosScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            Widget content;
+            if (_isLoadingProducts) {
+              content = const Center(
+                  child: CircularProgressIndicator(color: Colors.teal));
+            } else if (_productsError != null) {
+              content = Center(
+                child: Text(
+                  _productsError!,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              );
+            } else if (_allProducts.isEmpty) {
+              content = const Center(
+                child: Text(
+                  'لا توجد منتجات نشطة حالياً',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              );
+            } else {
+              const String allLabel = 'الكل';
+              final List<String> tabList = [allLabel, ..._categories];
+
+              _selectedCat ??= allLabel;
+              if (!tabList.contains(_selectedCat)) {
+                _selectedCat = allLabel;
+              }
+
+              List<Map<String, dynamic>> displayedProducts = [];
+              if (_selectedCat == allLabel) {
+                displayedProducts = _allProducts;
+              } else {
+                displayedProducts = _groupedProducts[_selectedCat] ?? [];
+              }
+
+              content = Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: 50,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: tabList.length,
+                      itemBuilder: (ctx, index) {
+                        final catName = tabList[index];
+                        final isSelected = catName == _selectedCat;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: ChoiceChip(
+                            label: Text(
+                              catName,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : Colors.white70,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: Colors.teal[700],
+                            backgroundColor: Colors.grey[800],
+                            onSelected: (selected) {
+                              if (selected) {
+                                setModalState(() {
+                                  _selectedCat = catName;
+                                });
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.0,
+                      ),
+                      itemCount: displayedProducts.length,
+                      itemBuilder: (ctx, index) {
+                        final prod = displayedProducts[index];
+                        final String name = prod['ProductName'] ?? '';
+                        final String unit = prod['UnitName'] ?? '';
+                        final double price = (prod['SalePrice'] as num?)?.toDouble() ?? 0.0;
+
+                        return Card(
+                          color: Colors.grey[850],
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          elevation: 4,
+                          child: InkWell(
+                            onTap: () {
+                              posProvider.addProductToCart(prod);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('تمت إضافة $name لسلة المشتريات', textAlign: TextAlign.right),
+                                  duration: const Duration(milliseconds: 700),
+                                  backgroundColor: Colors.teal[800],
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        name,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (unit.isNotEmpty)
+                                    Text(
+                                      unit,
+                                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${price.toStringAsFixed(2)} د.ك',
+                                    style: const TextStyle(
+                                        color: Colors.tealAccent,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            }
+
             return Container(
               height: MediaQuery.of(context).size.height * 0.8,
               padding: const EdgeInsets.all(16),
@@ -414,184 +640,29 @@ class _PosScreenState extends State<PosScreen> {
                             fontSize: 18,
                             fontWeight: FontWeight.bold),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        onPressed: () => Navigator.pop(context),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.refresh, color: Colors.tealAccent),
+                            tooltip: 'تحديث المنتجات',
+                            onPressed: () async {
+                              setModalState(() {
+                                _isLoadingProducts = true;
+                              });
+                              await _fetchAndProcessProducts(force: true);
+                              setModalState(() {});
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white70),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                   const Divider(color: Colors.white24),
-                  Expanded(
-                    child: FutureBuilder<Response>(
-                      future: Provider.of<ApiService>(context, listen: false).getProducts(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator(color: Colors.teal));
-                        }
-                        if (snapshot.hasError ||
-                            snapshot.data == null ||
-                            snapshot.data!.statusCode != 200) {
-                          return const Center(
-                            child: Text(
-                              'فشل تحميل قائمة المنتجات من السيرفر',
-                              style: TextStyle(color: Colors.redAccent, fontSize: 16),
-                            ),
-                          );
-                        }
-
-                        final List<dynamic> allProducts = snapshot.data!.data ?? [];
-                        if (allProducts.isEmpty) {
-                          return const Center(
-                            child: Text(
-                              'لا توجد منتجات نشطة حالياً',
-                              style: TextStyle(color: Colors.grey, fontSize: 16),
-                            ),
-                          );
-                        }
-
-                        final Map<String, List<Map<String, dynamic>>> grouped = {};
-                        for (var item in allProducts) {
-                          final Map<String, dynamic> prod = Map<String, dynamic>.from(item);
-                          final String cat = prod['CatName']?.toString() ?? 'أخرى';
-                          if (!grouped.containsKey(cat)) {
-                            grouped[cat] = [];
-                          }
-                          grouped[cat]!.add(prod);
-                        }
-
-                        final List<String> categories = grouped.keys.toList();
-                        const String allLabel = 'الكل';
-                        final List<String> tabList = [allLabel, ...categories];
-
-                        _selectedCat ??= allLabel;
-                        if (!tabList.contains(_selectedCat)) {
-                          _selectedCat = allLabel;
-                        }
-
-                        List<Map<String, dynamic>> displayedProducts = [];
-                        if (_selectedCat == allLabel) {
-                          displayedProducts = allProducts.map((e) => Map<String, dynamic>.from(e)).toList();
-                        } else {
-                          displayedProducts = grouped[_selectedCat] ?? [];
-                        }
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(
-                              height: 50,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: tabList.length,
-                                itemBuilder: (ctx, index) {
-                                  final catName = tabList[index];
-                                  final isSelected = catName == _selectedCat;
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                                    child: ChoiceChip(
-                                      label: Text(
-                                        catName,
-                                        style: TextStyle(
-                                          color: isSelected ? Colors.white : Colors.white70,
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                      selected: isSelected,
-                                      selectedColor: Colors.teal[700],
-                                      backgroundColor: Colors.grey[800],
-                                      onSelected: (selected) {
-                                        if (selected) {
-                                          setModalState(() {
-                                            _selectedCat = catName;
-                                          });
-                                        }
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Expanded(
-                              child: GridView.builder(
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 1.0,
-                                ),
-                                itemCount: displayedProducts.length,
-                                itemBuilder: (ctx, index) {
-                                  final prod = displayedProducts[index];
-                                  final String name = prod['ProductName'] ?? '';
-                                  final String unit = prod['UnitName'] ?? '';
-                                  final double price = (prod['SalePrice'] as num?)?.toDouble() ?? 0.0;
-
-                                  return Card(
-                                    color: Colors.grey[850],
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16)),
-                                    elevation: 4,
-                                    child: InkWell(
-                                      onTap: () {
-                                        posProvider.addProductToCart(prod);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('تمت إضافة $name لسلة المشتريات', textAlign: TextAlign.right),
-                                            duration: const Duration(milliseconds: 700),
-                                            backgroundColor: Colors.teal[800],
-                                          ),
-                                        );
-                                      },
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Expanded(
-                                              child: Center(
-                                                child: Text(
-                                                  name,
-                                                  textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 13,
-                                                      fontWeight: FontWeight.bold),
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            if (unit.isNotEmpty)
-                                              Text(
-                                                unit,
-                                                style: const TextStyle(
-                                                    color: Colors.white54, fontSize: 11),
-                                              ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '${price.toStringAsFixed(2)} د.ك',
-                                              style: const TextStyle(
-                                                  color: Colors.tealAccent,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
+                  Expanded(child: content),
                 ],
               ),
             );
@@ -894,9 +965,9 @@ class _PosScreenState extends State<PosScreen> {
             if (isTablet) _buildCheckoutPanel(posProvider),
           ],
         ),
-        // For mobile portrait, show checkout at bottom
+        // For mobile portrait, show compact checkout bar at bottom
         bottomNavigationBar:
-            !isTablet ? _buildCheckoutPanel(posProvider, isMobile: true) : null,
+            !isTablet ? _buildCompactBottomBar(posProvider) : null,
       ),
     );
   }
@@ -911,6 +982,12 @@ class _PosScreenState extends State<PosScreen> {
       'paid_amount':  _isCash ? total : 0.0,
       'remainder':    _isCash ? 0.0 : total,
       'items': List<Map<String, dynamic>>.from(posProvider.invoiceItems),
+      'temp_customer_name': widget.tempCustomerName,
+      'temp_phone': widget.tempPhone,
+      'temp_address': widget.tempAddress,
+      'temp_delivery_date': widget.tempDeliveryDate,
+      'temp_delivery_time': widget.tempDeliveryTime,
+      'temp_notes': widget.tempNotes,
     };
 
     // 2. Perform save (either online or offline local persistence fallback)
@@ -919,6 +996,12 @@ class _PosScreenState extends State<PosScreen> {
       paymentAccountId: _isCash ? _selectedAccountId : null, 
       partnerId: _selectedPartner?['PartnerID'],
       isCash: _isCash,
+      tempCustomerName: widget.tempCustomerName,
+      tempPhone: widget.tempPhone,
+      tempAddress: widget.tempAddress,
+      tempDeliveryDate: widget.tempDeliveryDate,
+      tempDeliveryTime: widget.tempDeliveryTime,
+      tempNotes: widget.tempNotes,
     );
 
     if (mounted) {
@@ -1088,6 +1171,244 @@ class _PosScreenState extends State<PosScreen> {
               disabledBackgroundColor: Colors.grey,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactBottomBar(PosProvider posProvider) {
+    final double total = posProvider.totalAmount;
+    final bool hasItems = posProvider.invoiceItems.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        boxShadow: [
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: const Offset(0, -2)),
+        ],
+      ),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'الإجمالي المستحق',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                  ),
+                  Text(
+                    '${total.toStringAsFixed(3)} KWD',
+                    style: const TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: !hasItems
+                  ? null
+                  : () {
+                      _showCheckoutBottomSheet(posProvider);
+                    },
+              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+              label: const Text(
+                'إنهاء الطلب',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCheckoutBottomSheet(PosProvider posProvider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: SingleChildScrollView(
+                child: _buildCheckoutSheetContent(posProvider, setSheetState),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCheckoutSheetContent(PosProvider posProvider, StateSetter setSheetState) {
+    final double total = posProvider.totalAmount;
+    final bool canPay = posProvider.invoiceItems.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            context.tr('pos_total'),
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
+            textAlign: TextAlign.right,
+          ),
+          Text(
+            '${total.toStringAsFixed(3)} KWD',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange,
+            ),
+            textAlign: TextAlign.right,
+          ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          const Text(
+            'نوع المعاملة',
+            style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.right,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(
+                    child: Text('آجل / ذمم', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  selected: !_isCash,
+                  selectedColor: Colors.orange[200],
+                  onSelected: (val) {
+                    setState(() {
+                      _isCash = !val;
+                    });
+                    setSheetState(() {});
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Center(
+                    child: Text('نقدي / كاش', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  selected: _isCash,
+                  selectedColor: Colors.green[200],
+                  onSelected: (val) {
+                    setState(() {
+                      _isCash = val;
+                    });
+                    setSheetState(() {});
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (_isCash && _accounts.isNotEmpty) ...[
+            const Text(
+              'طريقة الدفع / الحساب',
+              style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<int>(
+              dropdownColor: Colors.white,
+              value: _selectedAccountId,
+              decoration: const InputDecoration(
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                border: OutlineInputBorder(),
+                fillColor: Colors.white,
+                filled: true,
+              ),
+              items: _accounts.map((acc) {
+                return DropdownMenuItem<int>(
+                  value: acc['AccountID'],
+                  child: Text(
+                    acc['AccountName']?.toString() ?? '',
+                    style: const TextStyle(color: Colors.black87, fontSize: 14),
+                  ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                setState(() {
+                  _selectedAccountId = val;
+                });
+                setSheetState(() {});
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+          ElevatedButton.icon(
+            onPressed: (!canPay || posProvider.isLoading)
+                ? null
+                : () async {
+                    Navigator.pop(context); // Close bottom sheet
+                    await _handlePaymentAndPrint(posProvider, total);
+                  },
+            icon: Icon(widget.type == 'Sales' ? Icons.payment : Icons.save_alt),
+            label: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: posProvider.isLoading
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(
+                      widget.type == 'Sales' ? context.tr('pos_pay_print') : 'حفظ الفاتورة والطباعة',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: widget.type == 'Sales' ? Colors.green : Colors.deepOrange,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: Colors.grey,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
         ],
       ),
     );

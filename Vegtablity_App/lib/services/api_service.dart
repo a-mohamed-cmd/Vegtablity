@@ -293,6 +293,11 @@ class ApiService {
   Future<Response> getWarehouses() async {
     return await _dio.get('/settings/warehouses');
   }
+
+  /// جلب الطلبات اليومية للتوصيل بالتاريخ
+  Future<Response> getDailyOrders(String date) async {
+    return await _dio.get('/invoices/daily-orders', queryParameters: {'date': date});
+  }
 }
 
 

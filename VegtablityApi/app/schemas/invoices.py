@@ -23,6 +23,11 @@ class InvoiceCreate(BaseModel):
     IsPosted: bool = False
     ReferenceNo: Optional[str] = None
     PaymentAccountID: Optional[int] = None
+    TempCustomerName: Optional[str] = None
+    TempPhone: Optional[str] = None
+    TempAddress: Optional[str] = None
+    TempDeliveryDate: Optional[str] = None
+    TempDeliveryTime: Optional[str] = None
     Details: List[InvoiceDetail]
 
 class InvoiceResponse(BaseModel):

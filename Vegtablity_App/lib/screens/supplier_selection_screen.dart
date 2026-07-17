@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../core/localization/app_localizations.dart';
 import 'pos_screen.dart';
+import 'temp_order_screen.dart';
 
 class PartnerSelectionScreen extends StatefulWidget {
   final String type; // 'Sales' (Customer) or 'Purchase' (Supplier)
@@ -57,14 +59,14 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
       } else {
         setState(() {
           _errorMessage = widget.type == 'Sales'
-              ? 'فشل جلب قائمة العملاء من الخادم'
-              : 'فشل جلب قائمة الموردين من الخادم';
+              ? context.tr('ps_fetch_customer_failed')
+              : context.tr('ps_fetch_supplier_failed');
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'حدث خطأ في الاتصال بالشبكة: $e';
+        _errorMessage = '${context.tr('ps_conn_error')}$e';
         _isLoading = false;
       });
     }
@@ -93,23 +95,49 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
     });
   }
 
-  void _selectPartner(Map<String, dynamic> partner) {
+  void _selectPartner(Map<String, dynamic> partner) async {
     if (widget.isSelectionOnly) {
       // If we opened this screen as a sub-route to change the customer/supplier, we return the chosen partner!
       Navigator.pop(context, partner);
     } else {
+      // Check if temporary order mode is enabled for sales customers
+      if (widget.type == 'Sales') {
+        final prefs = await SharedPreferences.getInstance();
+        final mode = prefs.getString('cash_sale_mode') ?? 'direct';
+        if (mode == 'temp_order' && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TemporaryOrderScreen(
+                type: widget.type,
+                partner: partner,
+              ),
+            ),
+          ).then((_) {
+            if (mounted) {
+              _focusNode.requestFocus();
+            }
+          });
+          return;
+        }
+      }
+
       // Otherwise, open POS directly
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PosScreen(
-            type: widget.type,
-            partner: partner,
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PosScreen(
+              type: widget.type,
+              partner: partner,
+            ),
           ),
-        ),
-      ).then((_) {
-        _focusNode.requestFocus();
-      });
+        ).then((_) {
+          if (mounted) {
+            _focusNode.requestFocus();
+          }
+        });
+      }
     }
   }
 
@@ -118,7 +146,7 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
     final bool isSales = widget.type == 'Sales';
     return Scaffold(
       appBar: AppBar(
-        title: Text(isSales ? 'اختيار العميل' : 'اختيار المورد', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(isSales ? context.tr('ps_title_customer') : context.tr('ps_title_supplier'), style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -153,8 +181,8 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
                 textAlign: TextAlign.right,
                 decoration: InputDecoration(
                   hintText: isSales 
-                      ? 'البحث باسم العميل، الهاتف أو رقم الحساب...'
-                      : 'البحث باسم المورد، الهاتف أو رقم الحساب...',
+                      ? context.tr('ps_search_customer_hint')
+                      : context.tr('ps_search_supplier_hint'),
                   prefixIcon: Icon(Icons.search, color: isSales ? Colors.teal : Colors.orange),
                   border: InputBorder.none,
                 ),
@@ -177,18 +205,72 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
                             ElevatedButton(
                               onPressed: _fetchPartners,
                               style: ElevatedButton.styleFrom(backgroundColor: isSales ? Colors.teal : Colors.orange),
-                              child: const Text('إعادة المحاولة', style: TextStyle(color: Colors.white)),
+                              child: Text(context.tr('ps_retry'), style: const TextStyle(color: Colors.white)),
                             )
                           ],
                         ),
                       )
-                    : _filteredPartners.isEmpty
-                        ? Center(child: Text(isSales ? 'لا يوجد عملاء مطابقين للبحث' : 'لا يوجد موردين مطابقين للبحث', style: const TextStyle(fontSize: 16)))
+                    : (_filteredPartners.isEmpty && !isSales)
+                        ? Center(child: Text(context.tr('ps_no_results_supplier'), style: const TextStyle(fontSize: 16)))
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            itemCount: _filteredPartners.length,
+                            itemCount: _filteredPartners.length + (isSales ? 1 : 0),
                             itemBuilder: (context, index) {
-                              final Map<String, dynamic> partner = Map<String, dynamic>.from(_filteredPartners[index]);
+                              if (isSales && index == 0) {
+                                final Map<String, dynamic> generalCashPartner = {
+                                  'PartnerID': null,
+                                  'PartnerName': context.tr('ps_general_cash_label'),
+                                  'AccountCode': 'حساب عام',
+                                  'CurrentBalance': 0.0,
+                                  'Phone': '',
+                                };
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(vertical: 6),
+                                  elevation: 3,
+                                  color: Colors.teal.shade50,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    side: BorderSide(color: Colors.teal.shade200, width: 1),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    title: Text(
+                                      context.tr('ps_general_cash_label'),
+                                      textAlign: TextAlign.right,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.teal),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          context.tr('ps_general_cash_sub'),
+                                          style: TextStyle(color: Colors.teal.shade700, fontSize: 13),
+                                        ),
+                                      ],
+                                    ),
+                                    leading: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          '0.000 KWD',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        Text(context.tr('ps_general_cash_desc'), style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                      ],
+                                    ),
+                                    trailing: const Icon(Icons.flash_on, size: 20, color: Colors.teal),
+                                    onTap: () => _selectPartner(generalCashPartner),
+                                  ),
+                                );
+                              }
+
+                              final int actualIndex = isSales ? index - 1 : index;
+                              final Map<String, dynamic> partner = Map<String, dynamic>.from(_filteredPartners[actualIndex]);
                               final double balance = (partner['CurrentBalance'] as num?)?.toDouble() ?? 0.0;
                               return Card(
                                 margin: const EdgeInsets.symmetric(vertical: 6),
@@ -197,7 +279,7 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
                                 child: ListTile(
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   title: Text(
-                                    partner['PartnerName'] ?? 'شريك غير معروف',
+                                    partner['PartnerName'] ?? context.tr('ps_unknown_partner'),
                                     textAlign: TextAlign.right,
                                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                   ),
@@ -206,19 +288,19 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
                                     children: [
                                       const SizedBox(height: 4),
                                       Text(
-                                        'رقم الحساب المالي: ${partner['AccountCode'] ?? partner['AccountID'] ?? 'لا يوجد'}',
+                                        '${context.tr('ps_account_code_label')}${partner['AccountCode'] ?? partner['AccountID'] ?? context.tr('ps_no_account_code')}',
                                         style: TextStyle(color: Colors.grey[700], fontSize: 13),
                                       ),
                                       if (partner['Phone'] != null && partner['Phone'].toString().trim().isNotEmpty) ...[
                                         const SizedBox(height: 2),
                                         Text(
-                                          'الهاتف: ${partner['Phone']}',
+                                          '${context.tr('ps_phone_label')}${partner['Phone']}',
                                           style: TextStyle(color: Colors.grey[700], fontSize: 13),
                                         ),
                                       ],
                                     ],
                                   ),
-                                  leading: Column(
+                                   leading: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -226,12 +308,13 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
                                         '${balance.toStringAsFixed(3)} KWD',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
-                                          color: isSales
-                                              ? (balance > 0 ? Colors.green[700]! : Colors.red)
-                                              : (balance > 0 ? Colors.red : Colors.green[700]!),
+                                          color: balance >= 0 ? Colors.green[700]! : Colors.red,
                                         ),
                                       ),
-                                      Text(isSales ? 'مستحق له' : 'مستحق عليه', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                      Text(
+                                        balance >= 0 ? context.tr('ps_balance_credit') : context.tr('ps_balance_debit'),
+                                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                      ),
                                     ],
                                   ),
                                   trailing: Icon(Icons.arrow_back_ios, size: 16, color: isSales ? Colors.teal : Colors.orange),

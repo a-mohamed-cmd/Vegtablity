@@ -278,16 +278,18 @@ CREATE PROCEDURE [Sales].[sp_Partner_GetAll]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT PartnerID, PartnerName, PartnerType, Phone, Address, 
+    SELECT p.PartnerID, p.PartnerName, p.PartnerType, p.Phone, p.Address, 
 	  ISNULL((
             SELECT SUM(JE.DebitAmount - JE.CreditAmount) 
             FROM [Accounting].[JournalEntries] JE 
-            WHERE JE.AccountID = P.AccountID
+            WHERE JE.AccountID = p.AccountID
         ), 0) AS CurrentBalance,
-		 IsActive, AccountID
+		 p.IsActive, p.AccountID,
+		 c.AccountCode
     FROM [Sales].[Partners] p
-    WHERE IsActive = 1 AND (@PartnerType = 'All' OR PartnerType = @PartnerType)
-    ORDER BY PartnerID;
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON p.AccountID = c.AccountID
+    WHERE p.IsActive = 1 AND (@PartnerType = 'All' OR p.PartnerType = @PartnerType)
+    ORDER BY p.PartnerID;
 END
 GO
 
@@ -9703,3 +9705,345 @@ BEGIN
     END CATCH
 END
 GO
+-- 1. إضافة العمود لجدول الإعدادات
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'UseCustomInvoiceDesign')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD UseCustomInvoiceDesign BIT NOT NULL DEFAULT 0;
+END
+GO
+
+-- 2. تحديث إجراء جلب البيانات (Get SP)
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Get]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Get];
+GO
+
+create PROCEDURE [Settings].[sp_CompanySettings_Get]
+AS
+BEGIN
+    SELECT TOP 1 
+        SettingID, 
+        CompanyName, 
+        Address, 
+        Phone, 
+        Email, 
+        Logo, 
+        UnifiedPartnerSearch, 
+        CurrencySymbol,
+        UseDetailedInvoiceDesign,
+        UseCustomInvoiceDesign
+    FROM [Settings].[CompanySettings];
+END
+GO
+
+-- 3. تحديث إجراء حفظ البيانات (Save SP)
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Save];
+GO
+create PROCEDURE [Settings].[sp_CompanySettings_Save]
+    @CompanyName NVARCHAR(200),
+    @Address NVARCHAR(255) = NULL,
+    @Phone NVARCHAR(50) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Logo VARBINARY(MAX) = NULL,
+    @UnifiedPartnerSearch BIT = 1,
+    @CurrencySymbol NVARCHAR(100) = NULL,
+    @UseDetailedInvoiceDesign BIT = 0,
+    @UseCustomInvoiceDesign BIT = 0
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
+    BEGIN
+        UPDATE [Settings].[CompanySettings]
+        SET CompanyName = @CompanyName,
+            Address = @Address,
+            Phone = @Phone,
+            Email = @Email,
+            Logo = @Logo,
+            UnifiedPartnerSearch = @UnifiedPartnerSearch,
+            CurrencySymbol = @CurrencySymbol,
+            UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign,
+            UseCustomInvoiceDesign = @UseCustomInvoiceDesign
+        WHERE SettingID = 1;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign);
+    END
+END
+GO
+IF OBJECT_ID('[Sales].[sp_Report_InvoicePrint]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_InvoicePrint];
+GO
+create PROCEDURE [Sales].[sp_Report_InvoicePrint]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. بيانات رأس الفاتورة الضرورية فقط للطباعة (تم إضافة المتبقي والمدفوع والصافي لتحديد نوع الفاتورة)
+    SELECT 
+        H.InvID, 
+        H.InvDate, 
+        H.TotalAmount, 
+        P.PartnerName, 
+        CH.AccountCode,
+        H.Notes,
+        H.Remainder,
+        H.PaidAmount,
+        H.NetAmount
+    FROM [Sales].[InvoiceHeader] H
+    LEFT JOIN [Sales].[Partners] P ON H.PartnerID = P.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] CH ON P.[AccountID] = CH.[AccountID]
+    WHERE H.InvID = @InvID;
+
+    -- 2. بيانات الأصناف المطلوبة فقط للجدول
+    SELECT 
+        PR.ProductName, 
+        PR.ProductNameEn,
+        UN.UnitName,
+        D.Quantity, 
+        D.UnitPrice, 
+        D.TotalPrice
+    FROM [Sales].[InvoiceDetails] D
+    JOIN [Inventory].[Products] PR ON D.ProductID = PR.ProductID
+    LEFT JOIN [Settings].[Units] UN ON PR.UnitID = UN.UnitID
+    WHERE D.InvID = @InvID
+    ORDER BY D.DetID;
+END
+go
+-- ============================================================
+-- فحص وجود الجدول قبل إنشائه
+-- 'U' = User Table (نوع الكائن: جدول مستخدم)
+-- إذا كان موجوداً مسبقاً يتم التخطي بأمان دون حذف البيانات
+-- ============================================================
+IF OBJECT_ID('[Sales].[TempOrderInfo]', 'U') IS NOT NULL
+BEGIN
+    PRINT N'تنبيه: الجدول [Sales].[TempOrderInfo] موجود مسبقاً — تم تخطي الإنشاء للحفاظ على البيانات.';
+END
+ELSE
+BEGIN
+    -- جدول مستقل تماماً لا يؤثر على أي جدول أو إجراء موجود
+    CREATE TABLE [Sales].[TempOrderInfo] (
+        [TempOrderID]    INT           IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [InvID]          INT           NOT NULL UNIQUE,     -- ارتباط 1:1 مع رأس الفاتورة
+        [CustomerName]   NVARCHAR(150) NULL,
+        [Phone]          VARCHAR(20)   NULL,
+        [Address]        NVARCHAR(255) NULL,
+        [DeliveryDate]   DATE          NULL,
+        [DeliveryTime]   VARCHAR(50)   NULL,
+        [CreatedAt]      DATETIME      NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT [FK_TempOrderInfo_InvoiceHeader]
+            FOREIGN KEY ([InvID])
+            REFERENCES [Sales].[InvoiceHeader]([InvID])
+            ON DELETE CASCADE   -- حذف بيانات التوصيل تلقائياً عند حذف الفاتورة
+    );
+    PRINT N'تم إنشاء الجدول [Sales].[TempOrderInfo] بنجاح.';
+END
+GO
+
+-- ============================================================
+-- فحص وجود الإجراء المخزن قبل تعديله
+-- يتوقف الكود ويُظهر رسالة واضحة إذا لم يُعثر على الإصدار الصحيح
+-- ============================================================
+IF OBJECT_ID('[Sales].[sp_Invoice_Save_XML]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save_XML];
+GO
+
+create PROCEDURE [Sales].[sp_Invoice_Save_XML]
+    -- ═══════════════════════════════════════════
+    --  المعاملات الأصلية (17 معامل — لا تغيير)
+    -- ═══════════════════════════════════════════
+    @InvID            INT OUTPUT,
+    @InvType          NVARCHAR(20),
+    @InvDate          DATETIME,
+    @PartnerID        INT,
+    @WarehouseID      INT,
+    @TotalAmount      DECIMAL(18, 3),
+    @Discount         DECIMAL(18, 3),
+    @NetAmount        DECIMAL(18, 3),
+    @PaidAmount       DECIMAL(18, 3),
+    @Remainder        DECIMAL(18, 3),
+    @UserID           INT,
+    @Notes            NVARCHAR(255),
+    @IsPosted         BIT           = 0,
+    @ReferenceNo      NVARCHAR(50)  = NULL,
+    @PaymentAccountID INT           = NULL,
+    @ShiftID          INT           = NULL,   -- ← موجود في الإصدار الأخير
+    @DetailsXml       XML,
+    -- ═══════════════════════════════════════════
+    --  المعاملات الجديدة — جميعها NULL افتراضياً
+    --  لضمان التوافق الكامل مع كل استدعاء قديم
+    --  (إذا لم تُرسَل → لا يُكتب أي شيء في TempOrderInfo)
+    -- ═══════════════════════════════════════════
+    @TempCustomerName NVARCHAR(150) = NULL,
+    @TempPhone        VARCHAR(20)   = NULL,
+    @TempAddress      NVARCHAR(255) = NULL,
+    @TempDeliveryDate DATE          = NULL,
+    @TempDeliveryTime VARCHAR(50)   = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- ═══════════════════════════════════════════════════════════════
+    --  بداية الـ Transaction الموحدة التي تشمل مسار الحفظ القديم
+    --  والجديد معاً — إذا فشل أي جزء يتم التراجع عن الكل بأمان
+    -- ═══════════════════════════════════════════════════════════════
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+
+        -- ┌─────────────────────────────────────────────────────────┐
+        -- │  المسار القديم — يعمل بنفس الطريقة الحالية بلا أي تغيير │
+        -- │  سواء استُخدمت الطريقة الجديدة أم لا                   │
+        -- └─────────────────────────────────────────────────────────┘
+
+        -- حفظ أو تحديث رأس الفاتورة
+        IF @InvID = 0
+        BEGIN
+            INSERT INTO [Sales].[InvoiceHeader]
+                (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount,
+                 PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID, ShiftID)
+            VALUES
+                (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount,
+                 @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID, @ShiftID);
+
+            SET @InvID = CAST(SCOPE_IDENTITY() AS INT);
+
+            -- التحقق من نجاح الإدراج
+            IF @InvID IS NULL OR @InvID = 0
+                THROW 50001, N'فشل حفظ رأس الفاتورة الجديدة — لم يتم إرجاع InvID صالح.', 1;
+        END
+        ELSE
+        BEGIN
+            UPDATE [Sales].[InvoiceHeader]
+            SET InvType           = @InvType,
+                InvDate           = @InvDate,
+                PartnerID         = @PartnerID,
+                WarehouseID       = @WarehouseID,
+                TotalAmount       = @TotalAmount,
+                Discount          = @Discount,
+                NetAmount         = @NetAmount,
+                PaidAmount        = @PaidAmount,
+                Remainder         = @Remainder,
+                UserID            = @UserID,
+                Notes             = @Notes,
+                IsPosted          = @IsPosted,
+                ReferenceNo       = @ReferenceNo,
+                PaymentAccountID  = @PaymentAccountID,
+                ShiftID           = @ShiftID
+            WHERE InvID = @InvID;
+
+            -- التحقق من أن الفاتورة المراد تعديلها موجودة فعلاً
+            IF @@ROWCOUNT = 0
+                THROW 50002, N'فشل تحديث الفاتورة — لم يُعثر على InvID المطلوب في InvoiceHeader.', 1;
+
+            DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+        END
+
+        -- حفظ تفاصيل أصناف الفاتورة
+        INSERT INTO [Sales].[InvoiceDetails]
+            (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+        SELECT
+            @InvID,
+            T.Item.value('@ProductID', 'INT'),
+            T.Item.value('@UnitPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@Quantity', 'DECIMAL(18,3)'),
+            T.Item.value('@TotalPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@CostPrice', 'DECIMAL(18,3)')
+        FROM @DetailsXml.nodes('//Item') AS T(Item);
+
+        -- ┌─────────────────────────────────────────────────────────────────┐
+        -- │  المسار الجديد — يُنفَّذ فقط إذا أُرسلت بيانات الزبون المؤقت  │
+        -- │  وإلا يُتجاوز تماماً — صفر أثر على الفواتير العادية            │
+        -- └─────────────────────────────────────────────────────────────────┘
+        IF @TempCustomerName IS NOT NULL
+           OR @TempPhone      IS NOT NULL
+           OR @TempAddress    IS NOT NULL
+        BEGIN
+            -- حذف السجل القديم إن وُجد (لضمان التعديل النظيف)
+            DELETE FROM [Sales].[TempOrderInfo] WHERE InvID = @InvID;
+
+            INSERT INTO [Sales].[TempOrderInfo]
+                (InvID, CustomerName, Phone, Address, DeliveryDate, DeliveryTime)
+            VALUES
+                (@InvID, @TempCustomerName, @TempPhone, @TempAddress,
+                 @TempDeliveryDate, @TempDeliveryTime);
+        END
+        -- وإلا: لا يُكتب أي شيء في TempOrderInfo — الفاتورة العادية محفوظة بالكامل
+
+        -- إتمام الـ Transaction وإرجاع InvID الناتج
+        COMMIT TRANSACTION;
+        SELECT @InvID AS InvID;
+
+    END TRY
+    BEGIN CATCH
+        -- ═══════════════════════════════════════════════════════════
+        --  فحص حالة الـ Transaction قبل التراجع
+        --  XACT_STATE() = 1  → Transaction قابلة للتراجع → ROLLBACK
+        --  XACT_STATE() = -1 → Transaction محكومة بالفشل → ROLLBACK إلزامي
+        --  XACT_STATE() = 0  → لا توجد Transaction مفتوحة → لا حاجة للـ ROLLBACK
+        -- ═══════════════════════════════════════════════════════════
+        IF XACT_STATE() <> 0
+            ROLLBACK TRANSACTION;
+
+        -- إعادة إرسال الخطأ الأصلي بكامل تفاصيله للـ API
+        THROW;
+    END CATCH
+END
+GO
+-- 3. [Sales].[sp_Invoice_GetByID]
+-- نسخة مطورة تجلب بيانات الرأس مع اسم الشريك لضمان الظهور الصحيح في الواجهة
+IF OBJECT_ID('[Sales].[sp_Invoice_GetByID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_GetByID];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_GetByID]  
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        inv.*, 
+        par.PartnerName,
+        chart.AccountCode,
+        temp.CustomerName AS TempCustomerName,
+        temp.Phone AS TempPhone,
+        temp.Address AS TempAddress,
+        temp.DeliveryDate AS TempDeliveryDate,
+        temp.DeliveryTime AS TempDeliveryTime
+    FROM [Sales].[InvoiceHeader] inv
+    LEFT JOIN [Sales].[Partners] par ON inv.[PartnerID] = par.[PartnerID]
+    LEFT JOIN [Accounting].[ChartOfAccounts] chart ON par.[AccountID] = chart.[AccountID]
+    LEFT JOIN [Sales].[TempOrderInfo] temp ON inv.InvID = temp.InvID
+    WHERE inv.InvID = @InvID;
+END
+GO
+-- 1. إجراء مخزن لجلب طلبات التوصيل اليومية مع تفاصيل الفاتورة
+IF OBJECT_ID('[Sales].[sp_TempOrder_GetDailyDeliveries]', 'P') IS NOT NULL 
+    DROP PROCEDURE [Sales].[sp_TempOrder_GetDailyDeliveries];
+GO
+
+CREATE PROCEDURE [Sales].[sp_TempOrder_GetDailyDeliveries]
+    @DeliveryDate DATE
+	
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        t.InvID,
+        t.CustomerName,
+        t.Phone,
+        t.Address,
+        t.DeliveryDate,
+        t.DeliveryTime,
+        i.Notes,
+        i.NetAmount,
+        i.PaidAmount,
+        i.Remainder,
+        i.InvType
+    FROM [Sales].[TempOrderInfo] t
+    INNER JOIN [Sales].[InvoiceHeader] i ON t.InvID = i.InvID
+    WHERE CAST(t.DeliveryDate AS DATE) = @DeliveryDate
+    ORDER BY t.DeliveryTime ASC;
+END
+GO
+
+-- 2. إدراج الصلاحية الجديدة في جدول الشاشات المعتمد برمجياً إذا لزم الأمر
+-- (سيتم معالجتها في واجهة الصلاحيات بالتطبيق تلقائياً بعد إدراجها بالقاموس البرمجي)

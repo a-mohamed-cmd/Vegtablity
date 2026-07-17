@@ -1,4 +1,4 @@
-# خطة تطوير نظام POS (Point of Sale) المتكامل
+﻿# خطة تطوير نظام POS (Point of Sale) المتكامل
 ## التقنيات المستخدمة:
 *   **الواجهة الأمامية (Frontend):** Flutter (لضمان العمل على Android, iOS, Windows, and Web).
 *   **الواجهة الخلفية (Backend):** FastAPI (Python) لسرعة الأداء والتوافق مع الـ SQL Server.
@@ -10,22 +10,38 @@
 
 ### 1. الصفحات الجديدة والمعدلة (Added & Modified Pages / Screens):
 *   **شاشة اختيار الشركاء والموردين (جديدة):** [PartnerSelectionScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart) - شاشة للبحث واختيار العملاء/الموردين عند بدء فاتورة جديدة أو التعديل من الـ POS.
+*   **شاشة إدخال تفاصيل ومواعيد شحن وتوصيل الطلبات للعملاء (جديدة):** [TemporaryOrderScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) - تحديد موعد التسليم والملاحظات للعملاء، وتخصيصها ديناميكياً لإخفاء بطاقة الزبون المؤقت للعملاء المسجلين.
 *   **شاشة نقطة البيع (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) - دمج خيار الدفع (نقدي/آجل) وتبديل الشريك ديناميكياً.
-*   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة.
+*   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة خيار تخصيص معروضات الصفحة الرئيسية وخيارات تفعيل وتوجيه نظام التوصيل.
+*   **شاشة الصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - فلترة بطاقات الاختصارات ديناميكياً بناءً على رغبة المستخدم.
+*   **شاشة عروض مبيعات العملاء (معدلة):** [PartnerOffersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) - تكامل شاشة التوصيل قبل الفوترة لعروض العملاء.
+*   **شاشة الفوترة لعروض الشركاء (معدلة):** [PartnerBillingScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) - استقبال تفاصيل التوصيل وحفظها بقاعدة البيانات وطباعتها.
+*   **شاشة تقرير الفواتير اليومية (معدلة):** [DailyInvoicesScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart) - دعم إعادة طباعة تفاصيل ومواعيد التوصيل للعملاء.
+*   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة وتفعيل التصميم المخصص الجديد (UseCustomInvoiceDesign).
 *   **صفحة فاتورة المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - إضافة زر "تصدير PDF" في شريط الأدوات العلوي.
+*   **شاشة الطلبات اليومية للتوصيل (جديدة):** [DailyOrdersPage](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DailyOrdersPage.xaml) - شاشة سطح المكتب لعرض طلبات التوصيل اليومية وجدولة أوقات الشحن على هيئة كروت مطوية.
+*   **شاشة الطلبات اليومية للتوصيل للهاتف (جديدة):** [DailyOrdersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart) - شاشة تطبيق الموبايل لمتابعة شحنات التوصيل اليومية وإعادة طباعتها حرارياً.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **كلاس تصميم الإيصالات وتنسيق الطباعة الحرارية (جديد):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - كلاس تنسيق رأس وتذييل وأصناف الإيصال وتعديل حجم الورق وطباعة الشعار.
 *   **كود التحكم بالطباعة المكتبي:** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة ونوع الفاتورة.
-*   **نموذج بيانات الشركة:** [CompanyInfo](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) - إضافة خاصية `UseDetailedInvoiceDesign`.
-*   **متحكم صفحة الإعدادات:** [CompanySettingsViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) - إدارة وتمرير حالة تصميم الطباعة لقاعدة البيانات.
+*   **كلاس طابعة الفواتير المخصص الجديد (جديد):** [InvoicePrinterCustom](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinterCustom.vb) - كلاس طباعة مستقل مخصص لمحاكاة وتعديل مقاسات الفاتورة وتفقيطها وجدولها بمقدار 1 سم للأسفل للتصميم الرئيسي.
+*   **نموذج بيانات الشركة (معدل):** [CompanyInfo](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) - إضافة خاصيتي `UseDetailedInvoiceDesign` و `UseCustomInvoiceDesign`.
+*   **متحكم صفحة الإعدادات (معدل):** [CompanySettingsViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) - إدارة وتمرير حالتي تصميم الطباعة (المفصل والمخصص) لقاعدة البيانات.
+*   **خدمة إعدادات الشركة (معدلة):** [SettingsService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/SettingsService.vb) - تضمين حقل `UseCustomInvoiceDesign` في جمل الاستعلام والحفظ.
+*   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - توجيه عملية الطباعة إلى كلاس `InvoicePrinterCustom` عند اختيار التصميم المخصص من الإعدادات.
 *   **مزود حالة المبيعات والمشتريات:** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - حساب قيم المدفوع والمتبقي وتنسيق حفظ الفاتورة الآجلة.
 *   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة ومعالجة أمر تصدير الفاتورة لـ PDF.
 *   **كلاس تصدير التقارير (معدل):** [ReportExporter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - إضافة دالة `ExportInvoiceToPdf` المخصصة لتصدير المبيعات والمشتريات بهيكل PDF احترافي.
 *   **نموذج بيانات طباعة الفاتورة (معدل):** [InvoiceReportHeader](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/InvoiceReportData.vb) - إضافة حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
 *   **ملف الـ Trigger لقاعدة البيانات (معدل):** [14_Invoices_Post_Trigger.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/14_Invoices_Post_Trigger.sql) - ترحيل المخازن والحسابات بأمان مع معالجة السجلات المفقودة وإعادة احتساب متوسط التكلفة عند إلغاء ترحيل المشتريات.
 *   **سكربت تحديث الإجراء المخزن (جديد):** [29_sp_Report_InvoicePrint_Update.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/29_sp_Report_InvoicePrint_Update.sql) - جلب حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
+*   **ملف سكربت الـ SQL الرئيسي لقاعدة البيانات (معدل):** [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) - دمج جلب حقل المدفوع والمتبقي لتحديد نوع الفاتورة نقدي/آجل تلقائياً.
+*   **متحكم شاشة الطلبات اليومية (جديد):** [DailyOrdersViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/DailyOrdersViewModel.vb) - إدارة عمليات التصفية بالتاريخ وعرض الفاتورة وجلب البيانات.
+*   **خدمة جلب وإدارة الطلبات (جديد):** [OrderService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/OrderService.vb) - استدعاء إجراءات التوصيل والطلبات اليومية من قاعدة البيانات.
+*   **نموذج بيانات الطلبات المجدولة (جديد):** [DailyOrder](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/DailyOrder.vb) - تمثيل بيانات الشحن والتسجيل والتوصيل للعملاء.
+*   **خدمة الـ API للتطبيق المحمول (معدلة):** [ApiService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart) - إضافة دالة جلب الطلبات اليومية `getDailyOrders(String date)`.
 
----
 
 ## 1. الهيكل المعماري (System Architecture)
 يتم الربط بين تطبيق Flutter وقاعدة البيانات الحالية من خلال API موحد مبني بـ FastAPI، مما يضمن أمان البيانات وتوحيد العمليات الحسابية مع نظام الـ Desktop الحالي.
@@ -979,3 +995,290 @@
        - **ترويسة مكررة:** رسم شعار الشركة موسطاً بالأعلى، تحته اسم وعنوان الشركة موسطين، ثم عنوان الفاتورة وصناديق معلومات العميل والفاتورة الموحدة في رأس **كل صفحة**.
        - **حدود الجدول (Gridlines):** رسم خطوط الجدول الرأسية والأفقية التي تقسم وتحدد خانات الأصناف السبعة بجمالية عالية.
        - **تذييل مكرر:** رسم معلومات التواصل (الهاتف والإيميل) موسطة بالأسفل مع أرقام الصفحات ورقم الفاتورة في أسفل **كل صفحة**.
+
+
+
+---
+
+## 24. إضافة خيار تصميم الطباعة المخصص الجديد وتنسيق أبعاد الفاتورة (يوليو 2026)
+
+تم تصميم وتطوير وإدراج خيار جديد كلياً للطباعة المخصصة لتمكين إدارة وتخصيص هوامش وأبعاد فواتير المبيعات والمشتريات المكتبية بشكل منفصل وتفادي التأثير على التصميم القديم الثابت للبرنامج.
+
+### أ- التعديلات على مستوى قاعدة البيانات (SQL Server):
+1. **جدول الإعدادات:** تم إضافة عمود `UseCustomInvoiceDesign` من نوع `BIT` بقيمة افتراضية `0` في جدول الإعدادات.
+2. **الإجراءات المخزنة (SPs):**
+   * تحديث الإجراء `[Settings].[sp_CompanySettings_Get]` ليتضمن جلب الحقل الجديد.
+   * تحديث الإجراء `[Settings].[sp_CompanySettings_Save]` لحفظ حالة التفعيل في جدول الإعدادات.
+   * تحديث الإجراء `[Sales].[sp_Report_InvoicePrint]` ليقوم بجلب حقول `Remainder` 
+و `PaidAmount` لتحديد نوع الفاتورة تلقائياً (نقدي / آجل).
+
+### ب- التعديلات على كلاسات ونموذج الإعدادات (VB.NET):
+1. **الـ Model والـ Service:**
+   * تم تعديل [CompanyInfo.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) لإدراج الخاصية `UseCustomInvoiceDesign`.
+   * تم تعديل [SettingsService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/SettingsService.vb) لتضمين الحقل في جمل استعلام وحفظ بيانات الشركة عبر Dapper.
+2. **واجهة الإعدادات والـ ViewModel:**
+   * تم إضافة CheckBox مخصص بصفحة [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) لربط القيمة برمجياً بـ `UseCustomInvoiceDesign`.
+   * تم تحديث [CompanySettingsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) لإرسال واستقبل القيمة ومزامنتها مع الخادم.
+
+### ج- كلاس طابعة الفواتير المخصصة [InvoicePrinterCustom.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinterCustom.vb):
+تم إنشاء كلاس طابعة جديد ومستقل تماماً لحمل التصميم المخصص للفاتورة والتحكم بكافة أبعاده ومقاساته بدقة:
+1. **تعديل أبعاد الترويسة والصفحة بالكامل للأسفل بمقدار 1 سم:**
+   * أسطر الترويسة باليسار: اسم العميل (`gt(4.0F)`)، نوع الفاتورة (`gt(5.0F)`)، الملاحظات (`gt(6.0F)`).
+   * أسطر الترويسة باليمين: رقم الفاتورة (`gt(4.0F)`)، التاريخ (`gt(5.0F)`)، رقم الحساب (`gt(6.0F)`).
+   * بداية جدول الأصناف `ITEM_START_CM` تم تحديدها بـ `8.0F`.
+   * نهاية جدول الأصناف `ITEM_END_CM` تم تحديدها بـ `22.0F`.
+   * إزاحة سطر التفقيط الإجمالي والمجموع ليصبح عند الارتفاع `footerY = gt(21.0F)`.
+   * إزاحة سطر رقم الصفحة (السطر التالي) ليصبح عند الارتفاع `pageRect = gt(25F)`.
+2. **إزاحة نصوص الترويسة اليمين (رقم الفاتورة، التاريخ، رقم الحساب) إلى اليسار بمقدار 2 سم:**
+   * ملصق وقيمة رقم الفاتورة: `gl(12.5F)` و `gl(16.0F)`.
+   * ملصق وقيمة تاريخ الفاتورة: `gl(12.0F)` و `gl(16.0F)`.
+   * ملصق وقيمة رقم الحساب: `gl(12.0F)` و `gl(16.0F)`.
+3. **تحديث إحداثيات أعمدة الأصناف بجدول الأصناف:**
+   * **الوحدة:** إزاحة إلى اليمين بمقدار 1 سم لتصبح عند `gl(11.7F)`.
+   * **الكمية:** إزاحة إلى اليمين بمقدار 0.5 سم لتصبح عند `gl(13.7F)`.
+   * **السعر:** إزاحة إلى اليمين بمقدار 0.5 سم لتصبح عند `gl(15.9F)`.
+   * **الإجمالي:** إزاحة إلى اليسار بمقدار 0.5 سم لتصبح عند `gl(18.0F)`.
+4. **تحديد نوع الفاتورة تلقائياً:** يتم فحص المتبقي `Remainder` في الفاتورة؛ فإذا كان مساوياً أو أقل من الصفر يتم طباعة نوع الفاتورة كـ `cash` (نقدي)، وإلا يتم طباعتها كـ `credit` (آجل) بشكل ديناميكي مدمج تحت سطر اسم العميل.
+
+### د- توجيه منطق الطباعة بـ [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb):
+* تم تعديل تابع الطباعة `ExecutePrint` لفحص حالة الإعدادات:
+  * **إذا كان خيار التصميم المخصص نِشطاً:** يتم إنشاء كائن من `InvoicePrinterCustom` لطباعة الفاتورة بالتصميم الجديد.
+  * **إذا كان غير نشط:** يتم التراجع تلقائياً لتشغيل `InvoicePrinter` الكلاسيكي القديم لضمان عدم حدوث أي تغيير مفاجئ للمستخدمين الآخرين.
+
+
+
+---
+
+## 25. تعديل واجهة المورد والعميل ورقم الحساب المالي بالـ POS (يوليو 2026)
+
+تم حل مشكلة رصيد الشركاء وعرض أرقام الحسابات المالية الخاصة بهم كالتالي:
+
+### أ- جعل رصيد المورد/العميل ديناميكياً:
+- تم تعديل شاشة اختيار الشريك [supplier_selection_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/supplier_selection_screen.dart) في تطبيق الـ Flutter.
+- تم استبدال الكود الثابت للعلامة بحيث يفحص قيمة الرصيد `balance`:
+  - إذا كان الرصيد موجباً (`balance >= 0`): يعرض النص **"مستحق له"** باللون الأخضر.
+  - إذا كان الرصيد سالباً (`balance < 0`): يعرض النص **"مستحق عليه"** باللون الأحمر.
+
+### ب- عرض رقم الحساب المالي [AccountCode] من شجرة الحسابات:
+- **المشكلة:** كانت الواجهة تعرض معرف الحساب `AccountID` بدلاً من رقم الحساب المالي `AccountCode` عند فتح الواجهة لأول مرة (قبل البحث).
+- **السبب:** الإجراء المخزن `sp_Partner_GetAll` لم يكن يدمج جدول شجرة الحسابات `ChartOfAccounts` ولا يرجع الحقل `AccountCode` في جملة التحديد `SELECT`؛ كما أن الـ Schema الخاص بـ `Partner` في FastAPI لم يكن يحتوي على حقل `AccountCode` لتمثيل وتمرير البيانات.
+- **الحل:**
+  1. تحديث الإجراء المخزن `[Sales].[sp_Partner_GetAll]` في ملف السكربت الموحد [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) ليدمج جدول `[Accounting].[ChartOfAccounts]` ويرجع `c.AccountCode`.
+  2. تحديث الإجراء نفسه في ملف السكربت الفرعي [05_StoredProcedures_Partners.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/05_StoredProcedures_Partners.sql) لضمان اتساق السكربتات بجميع مجلدات المشروع.
+  3. تحديث الـ API Schema بملف [partners.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/partners.py) لإدراج الحقول `AccountID` و `AccountCode` لكي يقوم السيرفر بإرجاعها إلى التطبيق بنجاح.
+
+
+---
+
+## 26. دمج عروض وسندات الشركاء بالواجهة الكلاسيكية للشاشة الرئيسية (يوليو 2026)
+
+تم نقل شاشات عروض الشركاء وسندات الصرف والقبض إلى الواجهة الكلاسيكية الرئيسية في [home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) لتسهيل إدارتها:
+* **مجموعات البطاقات الجديدة بالشبكة (Classic Grid Layout):**
+  1. **مجموعة المبيعات ونقاط البيع:** 
+     - *فاتورة مبيعات جديدة* (`PosScreen(type: 'Sales')`)
+     - *مبيعات العملاء - عروض الأسعار* (`PartnerOffersScreen(type: 'Sales')`)
+  2. **مجموعة المشتريات:** 
+     - *فاتورة مشتريات جديدة* (`PartnerSelectionScreen(type: 'Purchase')`)
+     - *مشتريات الموردين - عروض الأسعار* (`PartnerOffersScreen(type: 'Purchases')`)
+  3. **مجموعة الصندوق والمالية:** 
+     - *تحصيل العملاء - سند قبض* (`ReceiptVoucherScreen`)
+     - *دفع الموردين - سند صرف* (`PaymentVoucherScreen`)
+  4. **مجموعة المخازن:** 
+     - *جرد المخزون* (`StockTakeScreen`)
+     - *إهلاك بضاعة* (`WastageScreen`)
+
+
+---
+
+## 27. إدارة المبيعات السريعة والمسجلة بنقاط البيع (يوليو 2026)
+
+تم تحسين تدفق بدء فاتورة مبيعات جديدة ليتيح اختيار العميل أولاً (بين المبيعات السريعة كاش أو العملاء المسجلين):
+* **توجيه شاشة المبيعات:** عند الضغط على "فاتورة مبيعات جديدة" بالشاشة الرئيسية، يتم توجيه الكاشير أولاً لشاشة اختيار الشريك `PartnerSelectionScreen(type: 'Sales')` عوضاً عن الدخول المباشر.
+* **البطاقة السريعة للعميل العام (نقدي عام):** تم إضافة بطاقة ثابتة ومميزة باللون الأخضر الفاتح لـ **"نقدي عام"** في مقدمة قائمة العملاء (تظهر كأول عنصر دائماً).
+* **دورة العمل المحسنة:**
+  - **مبيعات سريعة (walk-in):** يضغط الكاشير على بطاقة "نقدي عام" مباشرة للدخول لشاشة الـ POS وبدء الفوترة مباشرة.
+  - **مبيعات لعميل مسجل:** يبحث الكاشير عن اسم العميل أو هاتفه أو حسابه المالي بالأسفل ويختاره ليتم فتح الـ POS بالاسم المحدد للتسجيل المالي.
+
+
+---
+
+## 28. تسريع أداء شاشات نقاط البيع وتخفيض استهلاك المعالج والذاكرة (يوليو 2026)
+
+تم تنفيذ باقة تحسينات للأداء للتخلص من أي ثقل أو تباطؤ (Lag) وتخفيض حرارة واستهلاك طاقة أجهزة الأندرويد الضعيفة (مثل Sunmi V2s) كالتالي:
+* **تخزين كتالوج الأصناف بالذاكرة (Product Catalog Caching):**
+  - تم إزالة الـ `FutureBuilder` المباشر الذي كان يعيد تحميل الأصناف وفك ترميز JSON لآلاف الأصناف عند كل رسم للواجهة.
+  - تم إنشاء مصفوفة كاش بذاكرة الشاشة `_allProducts` وتحميل قائمة الأصناف وفرزها برمجياً لمرة واحدة فقط عند الدخول لشاشة الـ POS. أصبح رسم المنتجات يعتمد بالكامل على قراءة الذاكرة الفورية ($O(1)$) مما جعل التحرك والتصفح سلساً جداً وبدون استخدام للإنترنت أو الشبكة.
+* **زر تحديث المنتجات اليدوي (Refresh Catalog Button):**
+  - تم إضافة زر تحديث دائري مميز في ترويسة الكتالوج، يتيح للكاشير النقر عليه يدوياً لتحديث قائمة المنتجات والأسعار من السيرفر عند اللزوم (Force Refresh).
+* **إدارة دورة حياة كاميرا الباركود (Mobile Scanner Controller Management):**
+  - تم تعريف الـ `MobileScannerController` خارج البناء المستمر، وضمان عمل `dispose()` له فور إغلاق نافذة المسح لتحرير مستشعرات الكاميرا بالكامل وتوفير طاقة بطارية ومعالج الجهاز.
+* **تخفيف المعالجة وفك الترميز (Optimized JSON Processing):**
+  - بالاعتماد على معالجة الخلفية بـ Dio 5.4 (`BackgroundTransformer`) ونقل حلقات تصنيف وتجميع الأصناف لتتم مرة واحدة فقط عند استقبال البيانات، تم تحرير المسار الرسومي بالكامل (UI Thread) من أي عمليات جرد حسابية متكررة مما يوفر 60 إطاراً بالثانية (FPS) مستقرة.
+
+
+---
+
+## 29. نقل واجهة إجمالي ودفع الفواتير إلى نافذة منبثقة أسفل الشاشة (يوليو 2026)
+
+تم إعادة تصميم طريقة إنهاء الفواتير للمبيعات والمشتريات على الهواتف لتصبح أكثر انسيابية وتوفر مساحة عرض أكبر لقائمة أصناف السلة:
+* **شريط الإجمالي المضغوط (Compact Bottom Bar):** تم استبدال لوحة الدفع الثابتة الكبيرة بأسفل الشاشة بشريط مضغوط وأنيق يعرض فقط (الإجمالي الكلي بالدينار الكويتي) و(زر "إنهاء الطلب").
+* **نافذة الدفع المنبثقة (Checkout Popup BottomSheet):** عند الضغط على "إنهاء الطلب":
+  - تظهر نافذة منبثقة بتأثير حركي سلس من أسفل الشاشة.
+  - تعرض النافذة الإجمالي بوضوح، مع خيارات تحديد نوع الفاتورة (نقدي / آجل).
+  - عند اختيار "نقدي / كاش"، يظهر بشكل تفاعلي قائمة اختيار حساب الدفع / الصندوق.
+  - عند الضغط على زر الدفع النهائي بالنافذة، يتم إغلاقها تلقائياً ثم استدعاء دالة الحفظ والطباعة فوراً.
+* **التعميم الكامل:** تعمل هذه النافذة بشكل متوافق وتلقائي مع فواتير المبيعات وفواتير المشتريات على حد سواء، مع تلوين الأزرار والعمليات ديناميكياً لتطابق طبيعة الشاشة (أخضر للمبيعات، برتقالي للمشتريات).
+
+
+---
+
+## 30. إضافة دعم أحجام الورق الحراري (58 ملم و 80 ملم) لطباعة الفواتير (يوليو 2026)
+
+تم دعم ميزة اختيار حجم ورق الطباعة الحراري وتعديل أطوال الخطوط الفاصلة والمحتوى تلقائياً:
+* **تخزين الإعداد محلياً (Paper Size Preference):**
+  - تم إضافة الحقل `_paperSize` وقيمته الافتراضية `80`.
+  - يتم قراءة الإعداد محلياً من الذاكرة (`printer_paper_size`) وتحديث قيمته فور الحفظ.
+* **المرونة وتكامل الفواصل (Adaptive Separators):**
+  - تم تعريف خطوط فاصلة ديناميكية `_separator` و `_dashedSeparator` تتغير تلقائياً حسب حجم الورق المحدد:
+    * **80 ملم (Desktop/Standard):** يعطي فاصل بـ 48 حرفاً (`================================================`).
+    * **58 ملم (Mobile/Sunmi):** يعطي فاصل بـ 32 حرفاً (`================================`).
+* **شاشة إعدادات الطابعة (Printer Settings Screen):**
+  - تم إضافة حقل اختيار منسدل (Dropdown) لاختيار حجم الورق (58 ملم أو 80 ملم) أسفل خيار تحديد نوع الاتصال.
+  - يتم تحميل الخيار وحفظه وتطبيقه مباشرة على الطباعة الحرارية المتصلة بالشبكة أو البلوتوث.
+
+
+---
+
+## 31. تنفيذ ميزة طلبات الزبائن المؤقتة والتوصيل بنقاط البيع (يوليو 2026)
+
+تم تطبيق واجهة ودورة عمل متكاملة لحفظ طلبات الزبائن المؤقتة وتفاصيل التوصيل:
+* **التخزين وقاعدة البيانات (SQL Database):**
+  - تم إنشاء جدول مستقل `Sales.TempOrderInfo` لتخزين معلومات التوصيل والزبون المؤقت مع ربط `InvID` كـ `UNIQUE FOREIGN KEY` لحمايتها وتجنب تعديل جدول `InvoiceHeader` الأساسي.
+  - تم تحديث الإجراء المخزن `sp_Invoice_Save_XML` لإضافة المعاملات الجديدة بقيم افتراضية `NULL` لضمان التوافق المطلق، وحفظ البيانات بالجدول الجديد تحت نفس الـ Transaction بنهج `XACT_STATE` الآمن.
+* **الخادم الخلفي (FastAPI Backend):**
+  - تم تحديث مخطط `InvoiceCreate` في `app/schemas/invoices.py` لإضافة المعاملات الجديدة اختيارياً.
+  - تم تحديث ملفات `db_procedures.py` و`invoice_service.py` لتمرير المعطيات إلى الإجراء المخزن.
+* **تطبيق الموبايل (Flutter App):**
+  - تم إضافة خيار **نمط عمل العميل النقدي العام** في شاشة الإعدادات `printer_settings_screen.dart` لحفظ التفضيل محلياً بـ `SharedPreferences` (البيع المباشر الفوري أو طلب لزبون مؤقت وتوصيل).
+  - تم إنشاء شاشة `TemporaryOrderScreen` لجمع (الاسم، الهاتف، العنوان، تاريخ التوصيل، وقت التسليم، والملاحظات) مع توفير خيار للتخطي والمتابعة المباشرة.
+  - تم تحديث `supplier_selection_screen.dart` لتوجيه المستخدم للشاشة الجديدة عند النقر على "نقدي عام" وبشرط تفعيل الخيار من الإعدادات.
+  - تم تحديث `printer_service.dart` لطباعة تفاصيل الزبون والتوصيل ديناميكياً على الفواتير الحرارية (لـ Sunmi والشبكة).
+
+
+---
+
+## 32. تصميم الفاتورة الجديد وفصل التنسيق ودعم طباعة الشعار (يوليو 2026)
+
+تم تحسين وتسهيل صيانة كود الطباعة عبر إدخال كلاس تصميم فواتير مخصص وإدماج طباعة الشعارات:
+* **فصل التنسيق وتطوير ReceiptDesigner:**
+  - تم إنشاء كلاس مستقل `ReceiptDesigner` في `lib/services/receipt_designer.dart` ليحوي كامل منطق تنسيق وحساب المحاذاة والخطوط الفاصلة متأقلمة مع حجم الورقة المحددة (58 ملم أو 80 ملم).
+  - تم تقليص حجم ملف `printer_service.dart` بأكثر من 300 سطر وتفويض طباعة الفواتير بشكل كامل إلى الكلاس الجديد.
+* **دعم طباعة الشعار (Company Logo) تكيفياً:**
+  - **طابعات Sunmi:** قراءة الشعار الـ Base64 من إعدادات الشركة وفك تشفيره وطباعته بالمنتصف عبر `SunmiPrinter.printImage`.
+  - **طابعات الشبكة IP:** استخدام خوارزمية ذكية مدمجة لتحويل وفك تشفير وتحجيم الشعار باستخدام `dart:ui` والـ Canvas وإنتاج الأوامر النقطية الناتجة المتوافقة مع بروتوكول `ESC/POS` بأمر `GS v 0` ليعمل على كافة أجهزة الطباعة المكتبية بنجاح ودون مكاتب إضافية.
+  - تم تطبيق طباعة الشعار على الفواتير، وسندات المقبوضات والمدفوعات العامة، وملخص إغلاق الوردية وكافة المطبوعات.
+
+
+---
+
+## 33. إزالة نمط عروض الشركاء الجديد والصفحات التابعة له نهائياً (يوليو 2026)
+
+بناءً على طلب المستخدم، تم إيقاف وإلغاء ميزة نمط عروض الشركاء الجديد كلياً من الكود والواجهات:
+* **حذف خيارات التخصيص والواجهات:**
+  - تعديل شاشة الإعدادات العامة `settings_screen.dart` لإلغاء قسم "تخصيص الواجهة" بالكامل ليعود التطبيق إلى استخدام النمط الكلاسيكي الشبكي بشكل دائم ومستقر.
+  - إزالة خيارات وتوابع تخزين `pref_home_layout` وتطهير الكود منها.
+* **تنظيف الشاشة الرئيسية وحذف الملفات:**
+  - تعديل الشاشة الرئيسية `home_screen.dart` لإلغاء دالة بناء واجهة عروض الشركاء `_buildPartnersOffersLayout` ودالة البطاقات المتوهجة التابعة لها.
+  - إزالة أزرار عروض الأسعار النشطة للعملاء والموردين من الشبكة الكلاسيكية لعدم الحاجة إليها.
+  - حذف الملف البرمجي بالكامل من النظام: `lib/screens/partner_offers_screen.dart`.
+
+
+---
+
+## 33. إزالة نمط عروض الشركاء الجديد والصفحات التابعة له مع الحفاظ على بطاقات عروض الأسعار بالوضع الكلاسيكي (يوليو 2026)
+
+بناءً على طلب المستخدم، تم إيقاف وإلغاء ميزة نمط عروض الشركاء الجديد كلياً مع استعادة بطاقات العروض في النمط الكلاسيكي:
+* **تحديث شاشة الإعدادات العامة:**
+  - تعديل شاشة الإعدادات العامة `settings_screen.dart` لإلغاء قسم "تخصيص الواجهة" بالكامل ليعود التطبيق إلى استخدام النمط الكلاسيكي الشبكي بشكل دائم ومستقر.
+* **تنظيف الشاشة الرئيسية واستعادة شاشة العروض:**
+  - تعديل الشاشة الرئيسية `home_screen.dart` لإلغاء دالة بناء واجهة عروض الشركاء `_buildPartnersOffersLayout` ودالة البطاقات المتوهجة التابعة لها.
+  - إبقاء وإعادة بطاقتي "مبيعات عروض العملاء" و"مشتريات عروض الموردين" داخل واجهة الشبكة الكلاسيكية لتعمل بصورة طبيعية.
+  - استعادة ملف الشاشة [partner_offers_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) لضمان عدم وجود أخطاء في مسارات البطاقات.
+
+
+---
+
+## 34. إضافة قسم لتخصيص معروضات الصفحة الرئيسية في شاشة الإعدادات العامة (يوليو 2026)
+
+تم تمكين المستخدم من اختيار وتخصيص البطاقات والاختصارات التي تظهر في الصفحة الرئيسية بالتطبيق:
+* **تخزين وتعديل التفضيلات:**
+  - تعديل شاشة الإعدادات العامة `settings_screen.dart` لإضافة قسم جديد "تخصيص معروضات الصفحة الرئيسية" ويحتوي على مفاتيح تبديل (`SwitchListTile`) لكل بطاقة من بطاقات المظهر الكلاسيكي الثمانية.
+  - يتم حفظ وتخزين التفضيلات مباشرة في الذاكرة المحلية `SharedPreferences` باستخدام مفاتيح `show_new_invoice`, `show_new_purchase`, `show_customer_sales`, `show_supplier_purchases`, `show_customer_receipts`, `show_supplier_payments`, `show_stocktake`, `show_wastage` بقيمة افتراضية `true`.
+* **فلترة الصفحة الرئيسية ديناميكياً:**
+  - تعديل الشاشة الرئيسية `home_screen.dart` لتحميل التفضيلات ديناميكياً داخل دالة `_loadHomeLayout()`.
+  - تطبيق الفلترة البرمجية في `_buildClassicLayout()` لبناء مصفوفة البطاقات بشكل ديناميكي كامل.
+  - إظهار رسالة تحذيرية منسقة في حال قام المستخدم بتعطيل ظهور كافة البطاقات لإعلامه بالذهاب إلى الإعدادات العامة وتفعيل بطاقة واحدة على الأقل.
+
+
+---
+
+## 35. إعادة طباعة تفاصيل الزبون المؤقت والشحن في تقرير الفواتير اليومية (يوليو 2026)
+
+تم تعديل كود الخادم والتطبيق لإتاحة إعادة طباعة بيانات الزبون المؤقت والتوصيل عند معاينة أو إعادة طباعة الفاتورة من تقرير اليومية:
+* **الإجراء المخزن المحدث:**
+  - تعديل الإجراء المخزن `[Sales].[sp_Invoice_GetByID]` ليتضمن عملية ربط يساري `LEFT JOIN` مع جدول `[Sales].[TempOrderInfo]` لاستخراج حقول `CustomerName`, `Phone`, `Address`, `DeliveryDate`, `DeliveryTime` كأعمدة مستقلة في المخرجات في حال توفرها.
+* **تحديث تطبيق الهاتف (Flutter Application):**
+  - تعديل دالة إعادة الطباعة `_reprintInvoice()` في [daily_invoices_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart) لتأمين خريطة البيانات `printData` بالمتغيرات المستلمة من السيرفر كحقول مؤقتة (`temp_customer_name`, `temp_phone`, `temp_address`, `temp_delivery_date`, `temp_delivery_time`).
+  - في حال لم تتوفر هذه البيانات، يتابع البرنامج الطباعة العادية دون تغيير.
+
+
+---
+
+## 36. تعميم إدخال موعد وبيانات التوصيل لجميع العملاء وتكاملها مع عروض مبيعات الشركاء (يوليو 2026)
+
+تم تعميم شاشة تفاصيل وموعد التوصيل لتغطي كافة العملاء وتتكامل مع عروض مبيعات العملاء:
+* **تعديل التطبيق المحمول (Flutter Application):**
+  - تعديل [supplier_selection_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/supplier_selection_screen.dart) لتعميم التوجيه إلى شاشة التوصيل `TemporaryOrderScreen` عند اختيار أي عميل (وليس فقط الزبون النقدي العام) عند تفعيل خيار `temp_order` من الإعدادات.
+  - تعديل [temp_order_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) لملء وتعبئة الاسم والهاتف وعنوان التوصيل ديناميكياً ببيانات العميل المختار، وجعل خيارات التخطي والتسميات مرنة وتكيفية.
+  - تعديل [partner_offers_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) لتوجيه المستخدم لشاشة التوصيل قبل فتح شاشة الفوترة.
+  - تعديل [partner_billing_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) لاستلام حقول تفاصيل الشحن والتوصيل وإضافتها إلى حمولة البيانات المرسلة للسيرفر (`payload`) وبيانات الطباعة للمشترين.
+
+
+---
+
+## 37. إخفاء تفاصيل الزبون المؤقت للعملاء العاديين وتلقائية حفظ الاسم (يوليو 2026)
+
+تم تخصيص شاشة التوصيل لتعرض فقط خيارات الجدولة للعملاء المسجلين، مع تعيين اسم العميل الفعلي تلقائياً في قاعدة البيانات:
+* **تصفية بطاقة الزبون المؤقت برمجياً:**
+  - تعديل [temp_order_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) ليعرف ما إذا كان العميل نقدي عام (`نقدي عام` أو `سند مباشر` أو معرف الشريك فارغ).
+  - إذا كان العميل مسجلاً (وليس نقدي عام)، يتم إخفاء بطاقة *"معلومات الزبون المؤقت"* (التي تسأل عن الاسم والهاتف والعنوان) تلقائياً، والاحتفاظ ببطاقة *"موعد التسليم والملاحظات"* فقط لتحديد تاريخ ووقت الشحن.
+* **التعيين التلقائي للاسم الفعلي:**
+  - في حال كان العميل مسجلاً، تقوم دالة `_proceedToPOS` بتعيين اسم العميل، هاتفه، وعنوانه المسجلين تلقائياً وتمريرهم كمعاملات توصيل لشاشة البيع/عروض الشركاء.
+  - يضمن هذا التعديل حفظ وتخزين اسم العميل الفعلي في عمود `CustomerName` ضمن جدول `[Sales].[TempOrderInfo]` في قاعدة البيانات فور حفظ الفاتورة.
+
+
+---
+
+## 38. إضافة شاشة الطلبات اليومية وجدولة التوصيل في القائمة الجانبية والصلاحيات (يوليو 2026)
+
+تم إدخال واجهة مستخدم متكاملة على نظام سطح المكتب (WPF / VB.NET) لمتابعة وتسيير طلبات التوصيل اليومية وجدولة أوقات الشحن:
+* **واجهات وتصميم العرض (WPF Views):**
+  - إنشاء صفحة المستخدم [DailyOrdersPage](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DailyOrdersPage.xaml) لتنسيق وعرض الطلبات اليومية على شكل كروت (Cards) بطريقة الـ Expander القابل للطي والفرد مع أنميشن انسيابي سلس.
+  - **رأس الكارت (Header):** يعرض رقم الهاتف، ومبلغ الطلب الإجمالي، وميعاد التوصيل، وحالة الفاتورة (مسددة/آجلة) ملونة، وعنوان الشحن.
+  - **تفاصيل الكارت (Details):** تحتوي على قائمة الأصناف والكميات المطلوبة، واسم المستلم، والملاحظات، وزر لعرض تفاصيل الفاتورة.
+  - **تصنيف الأوقات الفائتة:** كروت الطلبات التي مضى وقت تسليمها عن التوقيت الحالي للنظام يتم تلوينها تلقائياً بلون مختلف مميز (رمادي داكن أو أحمر فاتح منبه) للدلالة على فوات وقت تسليمها.
+  - **صندوق إدخال التاريخ:** تطبيق صندوق نصوص TextBox منسق بستايل `ModernTextBoxStyle` المعتمد في بقية صفحات المشروع مع تلميح مائي "يوم/شهر/سنة" وربطه بالتحقق البرمجي التلقائي.
+* **التحكم والمنطق وقاموس الصلاحيات (Sidebar & Permissions):**
+  - تعديل [DashboardViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/DashboardViewModel.vb) لإضافة بند "الطلبات اليومية" برمز شاحنة التوصيل `🚚` في قائمة الـ Sidebar وتفعيل التوجيه لصفحة `DailyOrdersPage` عند التنقل.
+  - تعديل [UserManagementViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/UserManagementViewModel.vb) بإضافة الصلاحية `"DailyOrders"` باسم "الطلبات اليومية" ضمن القاموس البرمجي `AvailableForms` لتمكين إدارتها وتخصيصها لمختلف الأدوار والمسؤولين.
+
+* **تطوير الـ API ومسارات البيانات (FastAPI Backend):**
+  - إضافة الثابت `TEMPORDER_GETDAILYDELIVERIES` في [db_procedures.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures.py) لربط استدعاء الإجراء المخزن.
+  - إضافة دالة `get_daily_orders` في [invoice_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/invoice_service.py) لتعبئة رؤوس الطلبات والتفاصيل التفصيلية للأصناف المجدولة.
+  - إضافة مسار الـ API الموثق `GET /invoices/daily-orders` في [invoices.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/invoices.py).
+* **شاشة وتجهيزات تطبيق الموبايل (Flutter App):**
+  - إنشاء الشاشة الكاملة [daily_orders_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart) لعرض الطلبات اليومية في شكل كروت ExpansionTile مطوية، مع إبراز وتلوين المواعيد الفائتة باللون الأحمر/الوردي للتنبيه، وزر مدمج لإعادة طباعة الإيصال الحراري.
+  - تعديل [api_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart) لإضافة دالة جلب الطلبات اليومية.
+  - تعديل [settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) لإضافة خيار التخصيص وإظهار/إخفاء بطاقة الطلبات بالصفحة الرئيسية.
+  - تعديل [home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) لعرض الاختصار الجديد بالصفحة الرئيسية كبطاقة أرجوانية مميزة وأيقونة شاحنة التوصيل `Icons.local_shipping`.
+  - إضافة الترجمات ومفاتيح التعريب كاملة بملف التوطين [app_localizations.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart).
