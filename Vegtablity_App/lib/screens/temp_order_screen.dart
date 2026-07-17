@@ -210,10 +210,13 @@ class _TemporaryOrderScreenState extends State<TemporaryOrderScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -360,6 +363,8 @@ class _TemporaryOrderScreenState extends State<TemporaryOrderScreen> {
               ),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );

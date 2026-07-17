@@ -191,8 +191,11 @@ class _DailyOrdersScreenState extends State<DailyOrdersScreen> {
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: Column(
-          children: [
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              children: [
             // Date Filter Header
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -394,6 +397,8 @@ class _DailyOrdersScreenState extends State<DailyOrdersScreen> {
                             ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

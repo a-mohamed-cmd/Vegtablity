@@ -119,8 +119,11 @@ class _WastageScreenState extends State<WastageScreen> {
           )
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: SingleChildScrollView(
+            child: Column(
           children: [
             // Warehouse Selector Top Section
             Container(
@@ -457,6 +460,8 @@ class _WastageScreenState extends State<WastageScreen> {
               ),
             )
           ],
+        ),
+      ),
         ),
       ),
     );

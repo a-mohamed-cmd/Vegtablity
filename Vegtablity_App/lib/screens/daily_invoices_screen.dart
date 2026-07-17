@@ -208,12 +208,15 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.teal))
-          : _errorMessage.isNotEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 850),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator(color: Colors.teal))
+              : _errorMessage.isNotEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -461,6 +464,8 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                     _buildSummaryFooter(),
                   ],
                 ),
+          ),
+        ),
     );
   }
 

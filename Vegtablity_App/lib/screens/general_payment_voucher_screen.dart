@@ -253,12 +253,15 @@ class _GeneralPaymentVoucherScreenState
         backgroundColor: Colors.orange.shade700,
         foregroundColor: Colors.white,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-                child: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SingleChildScrollView(
+                    child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Target Account Selection
@@ -401,6 +404,8 @@ class _GeneralPaymentVoucherScreenState
                 ),
               ),
             ),
+          ),
+        ),
     );
   }
 }

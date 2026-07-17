@@ -149,9 +149,12 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
           ? const Center(child: CircularProgressIndicator(color: Colors.green))
           : Directionality(
               textDirection: TextDirection.rtl,
-              child: ListView(
-                padding: const EdgeInsets.all(20.0),
-                children: [
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 700),
+                  child: ListView(
+                    padding: const EdgeInsets.all(20.0),
+                    children: [
                   const Text(
                     'نظام التوصيل ومواعيد التسليم',
                     style: TextStyle(
@@ -298,6 +301,8 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                 ],
               ),
             ),
+          ),
+        ),
     );
   }
 }

@@ -1282,3 +1282,17 @@
   - تعديل [settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) لإضافة خيار التخصيص وإظهار/إخفاء بطاقة الطلبات بالصفحة الرئيسية.
   - تعديل [home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) لعرض الاختصار الجديد بالصفحة الرئيسية كبطاقة أرجوانية مميزة وأيقونة شاحنة التوصيل `Icons.local_shipping`.
   - إضافة الترجمات ومفاتيح التعريب كاملة بملف التوطين [app_localizations.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart).
+
+
+## 39. تحسين الواجهات المتجاوبة للتطبيق على شاشات التابلت والأجهزة اللوحية (يوليو 2026)
+
+تم إجراء مراجعة شاملة لجميع واجهات وشاشات تطبيق الموبايل (Flutter) لضمان تفاعليتها وتجاوبها التام (Adaptive / Responsive Design) مع مقاسات الشاشات اللوحية (Tablets & iPads) مقارنة بشاشات الهواتف الذكية الصغيرة، وتجنب التمدد المفرط للنصوص والحقول:
+
+* **إضافة حاويات الاحتواء والتموضع الموسط (Constrained Layouts):**
+  - **شاشة الطلبات اليومية للتوصيل ([daily_orders_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart)):** تغليف الواجهة بـ `ConstrainedBox` بحد أقصى للعرض `800` بكسل موسطاً في منتصف الشاشة.
+  - **شاشة الإعدادات العامة ([settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart)):** تقييد عرض قائمة الإعدادات بحد أقصى `700` بكسل موسطاً.
+  - **شاشات سندات الصرف والقبض للشركاء ([payment_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/payment_voucher_screen.dart)، [receipt_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/receipt_voucher_screen.dart)):** تغليف الجسم الرئيسي بـ `ConstrainedBox` بعرض أقصى `800` بكسل.
+  - **شاشات السندات العامة ([general_payment_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_payment_voucher_screen.dart)، [general_receipt_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_receipt_voucher_screen.dart)):** تغليف نموذج الإدخال بـ `ConstrainedBox` بحد أقصى للعرض `700` بكسل موسطاً.
+  - **شاشات تقرير الفواتير والسندات اليومية ([daily_invoices_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart)):** تقييد عرض التقارير والإجماليات بحد أقصى `850` بكسل موسطاً.
+  - **شاشات جرد المخازن وإهلاك البضاعة ([stocktake_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/stocktake_screen.dart)، [wastage_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/wastage_screen.dart)):** تغليف جداول وعمليات الجرد بـ `ConstrainedBox` بحد أقصى للعرض `800` بكسل.
+* **آلية التجاوب:** تتمدد الواجهات تلقائياً لتملأ الشاشة بالكامل (Edge-to-Edge) على شاشات الهواتف المحمولة وتتوسط بشكل عائم ومريح جداً للقراءة والضغط على الشاشات الكبيرة واللوحية.

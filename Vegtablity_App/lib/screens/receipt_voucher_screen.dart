@@ -361,12 +361,17 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                 )
               : null,
         ),
-        body: voucherProv.isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.greenAccent))
-            : _selectedPartner == null
-                ? _buildPartnerSelector()
-                : _buildInvoiceList(),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: voucherProv.isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.greenAccent))
+                : _selectedPartner == null
+                    ? _buildPartnerSelector()
+                    : _buildInvoiceList(),
+          ),
+        ),
         bottomNavigationBar: _selectedPartner != null &&
                 (_selectedAllocations.isNotEmpty ||
                     _freePaymentCtrl.text.isNotEmpty)
