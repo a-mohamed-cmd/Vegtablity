@@ -20,7 +20,7 @@ Public Class InvoicePrinterCustom
     Private _useDetailedDesign As Boolean = False
 
     ' ─── ثوابت التخطيط (سنتيمتر → مم بضربها × 10) ──
-    Private Const ITEM_START_CM As Single = 7.0F   ' بداية جدول الأصناف
+    Private Const ITEM_START_CM As Single = 7.25F   ' بداية جدول الأصناف
     Private Const ITEM_END_CM As Single = 20.0F    ' نهاية جدول الأصناف
     Private Const ROW_H_MM As Single = 5.0F        ' ارتفاع الصف
     Private Const PAGE_W_MM As Single = 210.0F     ' عرض الصفحة (21 سم)

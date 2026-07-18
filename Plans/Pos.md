@@ -1,4 +1,4 @@
-﻿# خطة تطوير نظام POS (Point of Sale) المتكامل
+# خطة تطوير نظام POS (Point of Sale) المتكامل
 ## التقنيات المستخدمة:
 *   **الواجهة الأمامية (Frontend):** Flutter (لضمان العمل على Android, iOS, Windows, and Web).
 *   **الواجهة الخلفية (Backend):** FastAPI (Python) لسرعة الأداء والتوافق مع الـ SQL Server.
@@ -18,7 +18,8 @@
 *   **شاشة الفوترة لعروض الشركاء (معدلة):** [PartnerBillingScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) - استقبال تفاصيل التوصيل وحفظها بقاعدة البيانات وطباعتها.
 *   **شاشة تقرير الفواتير اليومية (معدلة):** [DailyInvoicesScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart) - دعم إعادة طباعة تفاصيل ومواعيد التوصيل للعملاء.
 *   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة وتفعيل التصميم المخصص الجديد (UseCustomInvoiceDesign).
-*   **صفحة فاتورة المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - إضافة زر "تصدير PDF" في شريط الأدوات العلوي.
+*   **صفحة فاتورة المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - إضافة زر "تصدير PDF" في شريط الأدوات العلوي، وإضافة ميزة الفوكس التلقائي والانتقال لخانة الكمية عند تحديد الصنف.
+*   **صفحة فاتورة المبيعات (معدلة):** [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) - إضافة ميزة الفوكس التلقائي والانتقال لخانة الكمية عند تحديد الصنف.
 *   **شاشة الطلبات اليومية للتوصيل (جديدة):** [DailyOrdersPage](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DailyOrdersPage.xaml) - شاشة سطح المكتب لعرض طلبات التوصيل اليومية وجدولة أوقات الشحن على هيئة كروت مطوية.
 *   **شاشة الطلبات اليومية للتوصيل للهاتف (جديدة):** [DailyOrdersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart) - شاشة تطبيق الموبايل لمتابعة شحنات التوصيل اليومية وإعادة طباعتها حرارياً.
 
@@ -36,7 +37,8 @@
 *   **نموذج بيانات طباعة الفاتورة (معدل):** [InvoiceReportHeader](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/InvoiceReportData.vb) - إضافة حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
 *   **ملف الـ Trigger لقاعدة البيانات (معدل):** [14_Invoices_Post_Trigger.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/14_Invoices_Post_Trigger.sql) - ترحيل المخازن والحسابات بأمان مع معالجة السجلات المفقودة وإعادة احتساب متوسط التكلفة عند إلغاء ترحيل المشتريات.
 *   **سكربت تحديث الإجراء المخزن (جديد):** [29_sp_Report_InvoicePrint_Update.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/29_sp_Report_InvoicePrint_Update.sql) - جلب حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
-*   **ملف سكربت الـ SQL الرئيسي لقاعدة البيانات (معدل):** [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) - دمج جلب حقل المدفوع والمتبقي لتحديد نوع الفاتورة نقدي/آجل تلقائياً.
+*   **ملف سكربت الـ SQL الرئيسي لقاعدة البيانات (معدل):** [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) - دمج جلب حقل المدفوع والمتبقي لتحديد نوع الفاتورة نقدي/آجل تلقائياً، وتصحيح تنشيط حسابات المبيعات والإيرادات `411` و `412` و `1201`.
+*   **ملفي تشغيل خادم الـ API (معدلة):** [Run.bat / start_server.bat](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/Run.bat) - إزالة تعارض خيار `--workers 4` مع `--reload` لتفادي خطأ ويندوز `WinError 10022`.
 *   **متحكم شاشة الطلبات اليومية (جديد):** [DailyOrdersViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/DailyOrdersViewModel.vb) - إدارة عمليات التصفية بالتاريخ وعرض الفاتورة وجلب البيانات.
 *   **خدمة جلب وإدارة الطلبات (جديد):** [OrderService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/OrderService.vb) - استدعاء إجراءات التوصيل والطلبات اليومية من قاعدة البيانات.
 *   **نموذج بيانات الطلبات المجدولة (جديد):** [DailyOrder](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/DailyOrder.vb) - تمثيل بيانات الشحن والتسجيل والتوصيل للعملاء.
@@ -1296,3 +1298,35 @@
   - **شاشات تقرير الفواتير والسندات اليومية ([daily_invoices_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart)):** تقييد عرض التقارير والإجماليات بحد أقصى `850` بكسل موسطاً.
   - **شاشات جرد المخازن وإهلاك البضاعة ([stocktake_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/stocktake_screen.dart)، [wastage_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/wastage_screen.dart)):** تغليف جداول وعمليات الجرد بـ `ConstrainedBox` بحد أقصى للعرض `800` بكسل.
 * **آلية التجاوب:** تتمدد الواجهات تلقائياً لتملأ الشاشة بالكامل (Edge-to-Edge) على شاشات الهواتف المحمولة وتتوسط بشكل عائم ومريح جداً للقراءة والضغط على الشاشات الكبيرة واللوحية.
+
+---
+
+## 40. حل مشكلة ترحيل فواتير المبيعات بشجرة الحسابات وتصحيح تهيئة حسابات الإيرادات (يوليو 2026)
+
+تم حل مشكلة الفشل في ترحيل الفواتير (`IsPosted = 1`) نتيجة تعذر إدخال قيمة فارغة `NULL` في حقل `AccountID` بجدول قيود اليومية المحاسبية:
+*   **سبب المشكلة:** كان الـ Trigger المحاسبي يبحث عن حساب إيرادات المبيعات الافتراضي للفرع `41` بشرط أن يكون حساب حركة نشط (`IsTransactional = 1`). وبسبب خطأ في تهيئة قاعدة البيانات الجديدة، أُدخلت الحسابات الفرعية `411` (إيرادات المبيعات) و `412` (إيرادات أخرى) بقيمة `IsTransactional = 0` (حساب رئيسي غير نشط)، مما تسبب في إرجاع القيمة فارغة وفشل الترحيل بالكامل.
+*   **التعديل المنجز:**
+    *   تعديل السكربت الرئيسي لقاعدة البيانات [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) لتهيئة الحسابات `411` و `412` بقيمة `IsTransactional = 1` بشكل دائم.
+    *   تنفيذ جمل تحديث مباشرة على قاعدة البيانات النشطة `WashaDB` لتنشيط الحسابات `411` و `412` و `1201` وتصحيح شجرة الحسابات الحالية.
+
+---
+
+## 41. ميزة الفوكس والانتقال التلقائي لخانة الكمية عند اختيار الصنف بفاتورتي المبيعات والمشتريات (WPF) (يوليو 2026)
+
+تم تحسين سرعة وسلاسة إدخال البيانات بجدول الأصناف في شاشتي فواتير المبيعات والمشتريات عن طريق تفعيل انتقال تلقائي وتظليل فوري لخانة الكمية عند تحديد الصنف:
+*   **فاتورة المبيعات ([SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml)):**
+    *   ربط حدث `SelectionChanged` للـ ComboBox الخاص باختيار الصنف بـ `ProductComboBox_SelectionChanged`.
+    *   إنشاء معالج الحدث في كود الخلفية للتحقق من تفاعل المستخدم الفعلي ثم تفعيل التركيز التلقائي لعمود الكمية وتظليل القيمة بالكامل لتسهيل وتعديل الكمية مباشرة بدون استخدام الفأرة.
+    *   تبسيط معالج `DropDownClosed` وإلغاء تداخل التركيز التلقائي منه لمنع حدوث قفز مكرر للمؤشر.
+*   **فاتورة المشتريات ([PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml)):**
+    *   تطبيق نفس المنطق التفاعلي البرمجي تماماً لحدث `SelectionChanged` للـ ComboBox لنقل الفوكس وتظليل خانة الكمية في جدول المشتريات بالتزامن.
+
+---
+
+## 42. حل تعارض خيارات التشغيل وتصحيح خطأ 10022 لخادم الـ API على نظام Windows (يوليو 2026)
+
+تم تصحيح مشكلة فشل تشغيل خادم الـ API بظهور خطأ المقابس `WinError 10022` (Invalid argument) عند استدعاء uvicorn على نظام تشغيل ويندوز:
+*   **سبب المشكلة:** كان سكربت التشغيل يعتمد على تشغيل خادم uvicorn بتمرير معاملين متعارضين وهما `--reload` (المطورين) و `--workers 4` (الإنتاج). في بيئة ويندوز، تحاول بايثون مشاركة ونسخ نفس المقبس عبر العمليات المتعددة (Socket Duplication under spawn start method) وهو ما يرفضه نظام التشغيل ويؤدي لتعطل تشغيل السيرفر.
+*   **التعديل المنجز:**
+    *   تحديث ملفي التشغيل [Run.bat](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/Run.bat) و [start_server.bat](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/start_server.bat) بإزالة المعامل المتعارض والمسبب للخطأ `--workers 4` ليعمل الخادم بـ Worker افتراضي واحد مدعوم بالكامل على نظام ويندوز.
+
