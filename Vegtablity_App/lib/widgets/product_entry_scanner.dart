@@ -1,17 +1,29 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
+import '../providers/recipe_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:dio/dio.dart';
+
+enum CatalogSearchMode {
+  ingredients,    // مواد الوصفات (0, 1, 3) - sp_Product_GetForRecipeIngredients - "اختيار المواد من القائمة"
+  targetProducts, // أصناف هدف الوصفة (2, 3) - sp_Product_GetForRecipeTarget(includeAll: true) - "اختيار منتج من القائمة"
+  purchase,       // مشتريات (0, 1) - sp_Product_GetForPurchase - "كتالوج مواد المشتريات"
+  sales,          // مبيعات (2) - sp_Product_GetForSales - "كتالوج منتجات المبيعات"
+}
 
 class ProductEntryScanner extends StatefulWidget {
   final Function(String) onBarcodeSubmitted;
   final Function(Map<String, dynamic>) onProductSelected;
+  final CatalogSearchMode searchMode;
 
   const ProductEntryScanner({
     super.key,
     required this.onBarcodeSubmitted,
     required this.onProductSelected,
+    this.searchMode = CatalogSearchMode.ingredients,
   });
 
   @override
@@ -19,331 +31,377 @@ class ProductEntryScanner extends StatefulWidget {
 }
 
 class _ProductEntryScannerState extends State<ProductEntryScanner> {
-  final TextEditingController _inputController = TextEditingController();
+  late MobileScannerController _scannerController;
+  final Map<String, DateTime> _lastScanned = {};
+  String? _statusMessage;
+  Color _statusColor = Colors.teal;
+  final List<String> _sessionItems = [];
+  bool _isTorchOn = false;
+  bool _isDialogShowing = false;
 
-  void _openCameraScanner() {
-    final Map<String, DateTime> lastScanned = {};
-    String? statusMessage;
-    Color statusColor = Colors.teal;
-    List<String> sessionItems = [];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.black,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.8,
-              child: Column(
-                children: [
-                  AppBar(
-                    title: const Text('مسح متتابع للباركود بالكاميرا',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    backgroundColor: Colors.grey[900],
-                    elevation: 0,
-                    leading: IconButton(
-                      icon: const Icon(Icons.check, color: Colors.greenAccent),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    actions: [
-                      TextButton.icon(
-                        icon: const Icon(Icons.close, color: Colors.redAccent),
-                        label: const Text('إنهاء', style: TextStyle(color: Colors.white)),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                      )
-                    ],
-                  ),
-                  Expanded(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        MobileScanner(
-                          controller: MobileScannerController(
-                            detectionSpeed: DetectionSpeed.normal,
-                          ),
-                          onDetect: (BarcodeCapture capture) async {
-                            final List<Barcode> barcodes = capture.barcodes;
-                            for (final barcode in barcodes) {
-                              final String code = barcode.rawValue ?? '';
-                              final String trimmed = code.trim();
-                              if (trimmed.isEmpty) continue;
-
-                              // Debounce: prevent duplicate scan within 2 seconds
-                              final now = DateTime.now();
-                              if (lastScanned.containsKey(trimmed) &&
-                                  now.difference(lastScanned[trimmed]!).inSeconds < 2) {
-                                continue;
-                              }
-                              lastScanned[trimmed] = now;
-
-                              // Trigger feedback & visual status update
-                              setSheetState(() {
-                                statusMessage = 'جاري البحث عن الصنف...';
-                                statusColor = Colors.orange;
-                              });
-
-                              try {
-                                final apiService = Provider.of<ApiService>(context, listen: false);
-                                final response = await apiService.getProductByBarcode(trimmed);
-
-                                if (response.statusCode == 200 && response.data != null) {
-                                  final product = response.data;
-                                  final String prodName = product['ProductName'] ?? product['name'] ?? trimmed;
-                                  
-                                  SystemSound.play(SystemSoundType.click);
-                                  HapticFeedback.mediumImpact();
-
-                                  widget.onBarcodeSubmitted(trimmed);
-
-                                  setSheetState(() {
-                                    statusMessage = 'تمت إضافة: $prodName';
-                                    statusColor = Colors.green;
-                                    if (!sessionItems.contains(prodName)) {
-                                      sessionItems.insert(0, prodName);
-                                    }
-                                  });
-                                } else {
-                                  throw Exception();
-                                }
-                              } catch (_) {
-                                // Product not found / unrecognized
-                                SystemSound.play(SystemSoundType.click);
-                                HapticFeedback.heavyImpact();
-
-                                setSheetState(() {
-                                  statusMessage = 'صنف غير معرف! يرجى إدخال السعر';
-                                  statusColor = Colors.red;
-                                });
-
-                                if (mounted) {
-                                  final apiService = Provider.of<ApiService>(context, listen: false);
-                                  _showUnrecognizedPriceDialogForSheet(trimmed, apiService, () {
-                                    // Callback when saved
-                                    setSheetState(() {
-                                      final addedName = 'صنف عام - $trimmed';
-                                      statusMessage = 'تمت إضافة: $addedName';
-                                      statusColor = Colors.green;
-                                      if (!sessionItems.contains(addedName)) {
-                                        sessionItems.insert(0, addedName);
-                                      }
-                                    });
-                                    // Notify the parent component of barcode submission
-                                    widget.onBarcodeSubmitted(trimmed);
-                                  });
-                                }
-                              }
-
-                              // Auto clear status message after 1.5 seconds
-                              Future.delayed(const Duration(milliseconds: 1500), () {
-                                if (context.mounted) {
-                                  setSheetState(() {
-                                    if (statusMessage != 'جاري البحث عن الصنف...') {
-                                      statusMessage = null;
-                                    }
-                                  });
-                                }
-                              });
-                              break;
-                            }
-                          },
-                        ),
-                        // Scanner box
-                        Container(
-                          width: 250,
-                          height: 250,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: statusColor, width: 3),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        
-                        // Status Overlay Message (SnapMessage)
-                        if (statusMessage != null)
-                          Positioned(
-                            top: 20,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Text(
-                                statusMessage!,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-
-                        // Scan Instructions
-                        const Positioned(
-                          bottom: 140,
-                          child: Text('ضع الباركود في منتصف المربع للمسح التلقائي',
-                              style: TextStyle(color: Colors.white70, fontSize: 14)),
-                        ),
-
-                        // List of scanned items in this session
-                        if (sessionItems.isNotEmpty)
-                          Positioned(
-                            bottom: 10,
-                            left: 10,
-                            right: 10,
-                            height: 110,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'المنتجات المضافة في هذه الجلسة:',
-                                    style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Expanded(
-                                    child: ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: sessionItems.length,
-                                      itemBuilder: (ctx, index) {
-                                        return Container(
-                                          margin: const EdgeInsets.only(right: 6),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.teal[900]?.withOpacity(0.8),
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(color: Colors.teal, width: 0.5),
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            sessionItems[index],
-                                            style: const TextStyle(color: Colors.white, fontSize: 12),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+  @override
+  void initState() {
+    super.initState();
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+      torchEnabled: false,
     );
   }
 
-  void _showUnrecognizedPriceDialogForSheet(String barcode, ApiService apiService, VoidCallback onSuccess) {
-    final priceController = TextEditingController();
+  @override
+  void dispose() {
+    _scannerController.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) async {
+    if (_isDialogShowing) return;
+
+    final List<Barcode> barcodes = capture.barcodes;
+    for (final barcode in barcodes) {
+      final String code = barcode.rawValue ?? '';
+      final String trimmed = code.trim();
+      if (trimmed.isEmpty) continue;
+
+      // Debounce: prevent duplicate scan within 2 seconds
+      final now = DateTime.now();
+      if (_lastScanned.containsKey(trimmed) &&
+          now.difference(_lastScanned[trimmed]!).inSeconds < 2) {
+        continue;
+      }
+      _lastScanned[trimmed] = now;
+
+      setState(() {
+        _statusMessage = 'جاري البحث عن الصنف...';
+        _statusColor = Colors.orange;
+      });
+
+      try {
+        final apiService = Provider.of<ApiService>(context, listen: false);
+        final response = await apiService.getProductByBarcode(trimmed);
+
+        if (response.statusCode == 200 && response.data != null) {
+          final product = response.data;
+          final String prodName = product['ProductName'] ?? product['name'] ?? trimmed;
+
+          SystemSound.play(SystemSoundType.click);
+          HapticFeedback.mediumImpact();
+
+          widget.onBarcodeSubmitted(trimmed);
+
+          setState(() {
+            _statusMessage = 'تمت إضافة: $prodName';
+            _statusColor = Colors.green;
+            if (!_sessionItems.contains(prodName)) {
+              _sessionItems.insert(0, prodName);
+            }
+          });
+        } else {
+          throw Exception('Product not found');
+        }
+      } catch (_) {
+        SystemSound.play(SystemSoundType.click);
+        HapticFeedback.heavyImpact();
+
+        final apiService = Provider.of<ApiService>(context, listen: false);
+        final int defaultType = (widget.searchMode == CatalogSearchMode.ingredients || widget.searchMode == CatalogSearchMode.purchase)
+            ? 0
+            : 2;
+        _showQuickAddDialog(trimmed, apiService, defaultProductType: defaultType);
+      }
+
+      // Auto clear status message after 1.5 seconds
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          setState(() {
+            if (_statusMessage != 'جاري البحث عن الصنف...') {
+              _statusMessage = null;
+            }
+          });
+        }
+      });
+      break;
+    }
+  }
+
+  String _generateUniqueBarcode(List<dynamic> existingProducts) {
+    final Set<String> existingBarcodes = existingProducts
+        .map((p) => (p['Barcode'] ?? p['barcode'] ?? '').toString().trim())
+        .where((b) => b.isNotEmpty)
+        .toSet();
+
+    final random = Random();
+    String code;
+    do {
+      final numStr = (10000000 + random.nextInt(89999999)).toString();
+      code = '29$numStr';
+    } while (existingBarcodes.contains(code));
+
+    return code;
+  }
+
+  void _showQuickAddDialog(String scannedBarcode, ApiService apiService, {int defaultProductType = 0}) {
+    _isDialogShowing = true;
+    final bool isManualEntry = scannedBarcode.trim().isEmpty;
+
+    final recipeProvider = Provider.of<RecipeProvider>(context, listen: false);
+    final String initialBarcode = isManualEntry
+        ? _generateUniqueBarcode(recipeProvider.targetProducts)
+        : scannedBarcode.trim();
+
+    final barcodeController = TextEditingController(text: initialBarcode);
+    final nameController = TextEditingController(text: !isManualEntry ? 'صنف - $scannedBarcode' : '');
+    final purchasePriceController = TextEditingController(text: '0.00');
+    final salePriceController = TextEditingController(text: '0.00');
+    int selectedProductType = defaultProductType;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: const Text(
-            'صنف جديد غير معرف',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.right,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'رمز الباركود: $barcode',
-                style: const TextStyle(color: Colors.grey),
-                textAlign: TextAlign.right,
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: const [
+                  Icon(Icons.add_circle_outline, color: Colors.amberAccent),
+                  SizedBox(width: 8),
+                  Text(
+                    'إضافة صنف جديد (حفظ سريع)',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
               ),
-              const SizedBox(height: 15),
-              TextFormField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'سعر البيع',
-                  labelStyle: TextStyle(color: Colors.teal),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.teal),
-                  ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isManualEntry)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Text(
+                          'رمز الباركود الممسوح: $scannedBarcode',
+                          style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                      )
+                    else ...[
+                      TextFormField(
+                        controller: barcodeController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'رمز الباركود (يدوي / تلقائي فريد) *',
+                          labelStyle: const TextStyle(color: Colors.teal),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.autorenew, color: Colors.amberAccent),
+                            tooltip: 'توليد باركود فريد جديد',
+                            onPressed: () {
+                              barcodeController.text = _generateUniqueBarcode(recipeProvider.targetProducts);
+                            },
+                          ),
+                          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                          focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
+                    // Product Type Selector
+                    const Text('تصنيف المنتج:', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[800],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.teal),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: selectedProductType,
+                          dropdownColor: Colors.grey[850],
+                          isExpanded: true,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          items: () {
+                            if (widget.searchMode == CatalogSearchMode.purchase) {
+                              return const [
+                                DropdownMenuItem(value: 0, child: Text('🌾 مادة أولية (خام)')),
+                                DropdownMenuItem(value: 1, child: Text('📦 مادة عادية (صنف قياسي)')),
+                              ];
+                            } else if (widget.searchMode == CatalogSearchMode.sales) {
+                              return const [
+                                DropdownMenuItem(value: 1, child: Text('📦 مادة عادية (صنف قياسي)')),
+                                DropdownMenuItem(value: 2, child: Text('🏭 منتج مصنع (نهائي)')),
+                              ];
+                            } else if (widget.searchMode == CatalogSearchMode.ingredients) {
+                              return const [
+                                DropdownMenuItem(value: 0, child: Text('🌾 مادة أولية (خام)')),
+                                DropdownMenuItem(value: 1, child: Text('📦 مادة عادية (صنف قياسي)')),
+                                DropdownMenuItem(value: 3, child: Text('⚙️ مادة مؤقتة (وسيطة)')),
+                              ];
+                            } else {
+                              return const [
+                                DropdownMenuItem(value: 2, child: Text('🏭 منتج مصنع (نهائي)')),
+                                DropdownMenuItem(value: 3, child: Text('⚙️ منتج وسيط (نصف تصنيع)')),
+                              ];
+                            }
+                          }(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setDialogState(() {
+                                selectedProductType = val;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Name field
+                    TextFormField(
+                      controller: nameController,
+                      autofocus: true,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'اسم الصنف / المادة *',
+                        labelStyle: TextStyle(color: Colors.teal),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Purchase Cost field
+                    TextFormField(
+                      controller: purchasePriceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'سعر التكلفة (الشراء)',
+                        labelStyle: TextStyle(color: Colors.teal),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Sale Price field
+                    TextFormField(
+                      controller: salePriceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'سعر البيع (إن وجد)',
+                        labelStyle: TextStyle(color: Colors.teal),
+                        enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
-                onFieldSubmitted: (_) {
-                  _submitUnrecognizedProductForSheet(barcode, priceController.text, apiService, ctx, onSuccess);
-                },
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء', style: TextStyle(color: Colors.red)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-              onPressed: () => _submitUnrecognizedProductForSheet(barcode, priceController.text, apiService, ctx, onSuccess),
-              child: const Text('حفظ وإضافة', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _isDialogShowing = false;
+                  },
+                  child: const Text('إلغاء', style: TextStyle(color: Colors.redAccent)),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2ECC71)),
+                  icon: const Icon(Icons.bolt, color: Colors.white),
+                  label: const Text('حفظ سريـع ⚡', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  onPressed: () async {
+                    final String name = nameController.text.trim();
+                    final String targetBarcode = isManualEntry
+                        ? (barcodeController.text.trim().isNotEmpty
+                            ? barcodeController.text.trim()
+                            : _generateUniqueBarcode(recipeProvider.targetProducts))
+                        : scannedBarcode.trim();
+
+                    final double purchasePrice = double.tryParse(purchasePriceController.text.trim()) ?? 0.0;
+                    final double salePrice = double.tryParse(salePriceController.text.trim()) ?? 0.0;
+
+                    if (name.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('يرجى إدخال اسم الصنف'), backgroundColor: Colors.red),
+                      );
+                      return;
+                    }
+
+                    Navigator.pop(ctx);
+                    _isDialogShowing = false;
+
+                    try {
+                      final payload = {
+                        'Barcode': targetBarcode,
+                        'ProductName': name,
+                        'PurchasePrice': purchasePrice,
+                        'SalePrice': salePrice,
+                        'ProductType': selectedProductType,
+                      };
+
+                      final resp = await apiService.quickAddProduct(payload);
+                      if (resp.statusCode == 200 || resp.statusCode == 201) {
+                        final int newProdId = (resp.data != null && resp.data['ProductID'] != null)
+                            ? (resp.data['ProductID'] as num).toInt()
+                            : 0;
+
+                        try {
+                          await recipeProvider.loadRecipeIngredients();
+                          await recipeProvider.loadTargetProducts();
+                        } catch (_) {}
+
+                        if (widget.searchMode == CatalogSearchMode.targetProducts && newProdId > 0) {
+                          if (mounted) {
+                            Navigator.pop(context); // Close bottom sheet camera modal
+                          }
+                          widget.onProductSelected({
+                            'ProductID': newProdId,
+                            'ProductName': name,
+                            'Barcode': targetBarcode,
+                          });
+                          return;
+                        }
+
+                        if (targetBarcode.isNotEmpty) {
+                          widget.onBarcodeSubmitted(targetBarcode);
+                        }
+
+                        setState(() {
+                          _statusMessage = '✅ تم الحفظ السريع: $name';
+                          _statusColor = Colors.green;
+                          if (!_sessionItems.contains(name)) {
+                            _sessionItems.insert(0, name);
+                          }
+                        });
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('خطأ أثناء الحفظ السريع: $e'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
-    );
-  }
-
-  Future<void> _submitUnrecognizedProductForSheet(String barcode, String priceText, ApiService apiService, BuildContext dialogContext, VoidCallback onSuccess) async {
-    final double? price = double.tryParse(priceText);
-    if (price == null || price <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء إدخال سعر صحيح أكبر من الصفر', textAlign: TextAlign.right),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    Navigator.pop(dialogContext);
-    
-    try {
-      final payload = {
-        'Barcode': barcode,
-        'ProductName': 'صنف عام - $barcode',
-        'SalePrice': price,
-        'PurchasePrice': 0.0,
-      };
-      final response = await apiService.quickAddProduct(payload);
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        onSuccess();
-      } else {
-        throw Exception();
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('حدث خطأ أثناء تسجيل الصنف', textAlign: TextAlign.right),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
+    ).then((_) {
+      _isDialogShowing = false;
+    });
   }
 
   void _openCatalogBottomSheet() {
@@ -359,9 +417,16 @@ class _ProductEntryScannerState extends State<ProductEntryScanner> {
           heightFactor: 0.85,
           child: _CatalogSelector(
             apiService: apiService,
+            searchMode: widget.searchMode,
             onSelected: (product) {
               Navigator.pop(context);
               widget.onProductSelected(product);
+            },
+            onQuickAddRequested: (barcode) {
+              final int defaultType = (widget.searchMode == CatalogSearchMode.ingredients || widget.searchMode == CatalogSearchMode.purchase)
+                  ? 0
+                  : 2;
+              _showQuickAddDialog(barcode, apiService, defaultProductType: defaultType);
             },
           ),
         );
@@ -370,59 +435,142 @@ class _ProductEntryScannerState extends State<ProductEntryScanner> {
   }
 
   @override
-  void dispose() {
-    _inputController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final String appBarTitle = () {
+      switch (widget.searchMode) {
+        case CatalogSearchMode.ingredients:
+          return 'مسح باركود المواد الخام 📷';
+        case CatalogSearchMode.targetProducts:
+          return 'مسح باركود المنتجات 📷';
+        case CatalogSearchMode.purchase:
+          return 'مسح باركود المشتريات 📷';
+        case CatalogSearchMode.sales:
+          return 'مسح باركود المبيعات 📷';
+      }
+    }();
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: Row(
+      color: Colors.black,
+      child: Column(
         children: [
-          // Barcode Text Field
-          Expanded(
-            child: TextField(
-              controller: _inputController,
-              textAlign: TextAlign.right,
-              decoration: const InputDecoration(
-                hintText: 'أدخل الباركود يدوياً أو الصنف',
-                border: InputBorder.none,
-                hintStyle: TextStyle(color: Colors.grey),
-              ),
-              onSubmitted: (value) {
-                if (value.trim().isNotEmpty) {
-                  widget.onBarcodeSubmitted(value.trim());
-                  _inputController.clear();
-                }
+          // Header Bar
+          AppBar(
+            title: Text(appBarTitle,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+            backgroundColor: Colors.grey[900],
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(_isTorchOn ? Icons.flash_on : Icons.flash_off, color: Colors.amberAccent),
+              tooltip: 'الفلاش',
+              onPressed: () {
+                _scannerController.toggleTorch();
+                setState(() {
+                  _isTorchOn = !_isTorchOn;
+                });
               },
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.list_alt, color: Colors.greenAccent),
+                tooltip: 'قائمة الكتالوج',
+                onPressed: _openCatalogBottomSheet,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.redAccent),
+                tooltip: 'إغلاق',
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
           ),
-          
-          // Camera Scanner Button
-          IconButton(
-            icon: const Icon(Icons.camera_alt, color: Colors.green),
-            tooltip: 'مسح باركود',
-            onPressed: _openCameraScanner,
-          ),
-          
-          // Catalog Selection Button
-          IconButton(
-            icon: const Icon(Icons.list_alt, color: Colors.green),
-            tooltip: 'قائمة الأصناف',
-            onPressed: _openCatalogBottomSheet,
+
+          // Main Camera Scanner View
+          Expanded(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                MobileScanner(
+                  controller: _scannerController,
+                  onDetect: _onDetect,
+                ),
+
+                // Viewfinder Box Overlay
+                Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: _statusColor, width: 3),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+
+                // Status Message Overlay
+                if (_statusMessage != null)
+                  Positioned(
+                    top: 20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _statusColor.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Text(
+                        _statusMessage!,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+
+                // Scanned Session Items List
+                if (_sessionItems.isNotEmpty)
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
+                    child: Container(
+                      height: 65,
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.75),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.teal.withOpacity(0.5)),
+                      ),
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'المواد المضافة في الجلسة الحالية:',
+                            style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Expanded(
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _sessionItems.length,
+                              itemBuilder: (ctx, index) {
+                                return Container(
+                                  margin: const EdgeInsets.only(right: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal[900]?.withOpacity(0.9),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: Colors.teal, width: 0.5),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    _sessionItems[index],
+                                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
@@ -433,10 +581,14 @@ class _ProductEntryScannerState extends State<ProductEntryScanner> {
 class _CatalogSelector extends StatefulWidget {
   final ApiService apiService;
   final Function(Map<String, dynamic>) onSelected;
+  final Function(String)? onQuickAddRequested;
+  final CatalogSearchMode searchMode;
 
   const _CatalogSelector({
     required this.apiService,
     required this.onSelected,
+    this.onQuickAddRequested,
+    this.searchMode = CatalogSearchMode.ingredients,
   });
 
   @override
@@ -457,7 +609,22 @@ class _CatalogSelectorState extends State<_CatalogSelector> {
 
   Future<void> _fetchProducts() async {
     try {
-      final response = await widget.apiService.getProducts();
+      final Response response;
+      switch (widget.searchMode) {
+        case CatalogSearchMode.ingredients:
+          response = await widget.apiService.getProductsForRecipeIngredients();
+          break;
+        case CatalogSearchMode.targetProducts:
+          response = await widget.apiService.getProductsForRecipeTarget(includeAll: true);
+          break;
+        case CatalogSearchMode.purchase:
+          response = await widget.apiService.getProductsForPurchase();
+          break;
+        case CatalogSearchMode.sales:
+          response = await widget.apiService.getProductsForSales();
+          break;
+      }
+
       if (response.statusCode == 200) {
         setState(() {
           _allProducts = List<Map<String, dynamic>>.from(response.data);
@@ -478,8 +645,8 @@ class _CatalogSelectorState extends State<_CatalogSelector> {
         _filteredProducts = _allProducts;
       } else {
         _filteredProducts = _allProducts.where((p) {
-          final name = (p['ProductName'] ?? '').toString().toLowerCase();
-          final barcode = (p['Barcode'] ?? '').toString().toLowerCase();
+          final name = (p['ProductName'] ?? p['name'] ?? '').toString().toLowerCase();
+          final barcode = (p['Barcode'] ?? p['barcode'] ?? '').toString().toLowerCase();
           final searchLower = query.toLowerCase();
           return name.contains(searchLower) || barcode.contains(searchLower);
         }).toList();
@@ -495,23 +662,64 @@ class _CatalogSelectorState extends State<_CatalogSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final String listTitle = () {
+      switch (widget.searchMode) {
+        case CatalogSearchMode.ingredients:
+          return 'اختيار المواد من القائمة';
+        case CatalogSearchMode.targetProducts:
+          return 'اختيار منتج من القائمة';
+        case CatalogSearchMode.purchase:
+          return 'كتالوج مواد المشتريات (أولية وعادية)';
+        case CatalogSearchMode.sales:
+          return 'كتالوج منتجات المبيعات (منتجات مصنعة)';
+      }
+    }();
+
+    final String hintText = () {
+      switch (widget.searchMode) {
+        case CatalogSearchMode.ingredients:
+          return 'ابحث باسم المادة الخام أو الباركود...';
+        case CatalogSearchMode.targetProducts:
+          return 'ابحث باسم المنتج أو الباركود...';
+        case CatalogSearchMode.purchase:
+          return 'ابحث باسم المادة أو الباركود...';
+        case CatalogSearchMode.sales:
+          return 'ابحث باسم المنتج أو الباركود...';
+      }
+    }();
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Header
-          const Text(
-            'اختيار صنف من القائمة',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  listTitle,
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                ),
+              ),
+              IconButton.filled(
+                style: IconButton.styleFrom(backgroundColor: const Color(0xFF2ECC71)),
+                icon: const Icon(Icons.add, color: Colors.white),
+                tooltip: 'إضافة صنف جديد بالسريع ⚡',
+                onPressed: () {
+                  Navigator.pop(context);
+                  if (widget.onQuickAddRequested != null) {
+                    widget.onQuickAddRequested!('');
+                  }
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          
-          // Search Input
           TextField(
             controller: _searchController,
             textAlign: TextAlign.right,
             decoration: InputDecoration(
-              hintText: 'ابحث باسم الصنف أو الباركود...',
+              hintText: hintText,
               prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -521,23 +729,26 @@ class _CatalogSelectorState extends State<_CatalogSelector> {
             onChanged: _filterProducts,
           ),
           const SizedBox(height: 12),
-          
-          // Products list
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator(color: Colors.green))
                 : _filteredProducts.isEmpty
-                    ? const Center(child: Text('لا توجد أصناف تطابق البحث'))
+                    ? const Center(child: Text('لا توجد عناصر تطابق البحث'))
                     : ListView.builder(
                         itemCount: _filteredProducts.length,
                         itemBuilder: (context, index) {
                           final prod = _filteredProducts[index];
+                          final String name = prod['ProductName'] ?? prod['name'] ?? 'عنصر غير معروف';
+                          final String barcode = prod['Barcode'] ?? prod['barcode'] ?? 'لا يوجد';
+                          final double price = (prod['PurchasePrice'] as num?)?.toDouble() ?? (prod['SalePrice'] as num?)?.toDouble() ?? 0.0;
+
                           return Card(
                             margin: const EdgeInsets.symmetric(vertical: 4),
                             child: ListTile(
-                              title: Text(prod['ProductName'] ?? 'صنف غير معروف', textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              title: Text(name,
+                                  textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: Text(
-                                'الباركود: ${prod['Barcode'] ?? 'لا يوجد'} | السعر: ${prod['SalePrice'] ?? 0.0} KWD',
+                                'الباركود: $barcode | التكلفة/السعر: $price',
                                 textAlign: TextAlign.right,
                               ),
                               trailing: const Icon(Icons.add_shopping_cart, color: Colors.green),

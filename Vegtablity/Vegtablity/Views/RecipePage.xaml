@@ -1,0 +1,315 @@
+<UserControl x:Class="Views.RecipePage" x:Name="root"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:Vegtablity.Views"
+      xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+      xmlns:controls="clr-namespace:Vegtablity.Controls"
+      mc:Ignorable="d" 
+      d:DesignHeight="700" d:DesignWidth="1100"
+      FlowDirection="RightToLeft" Background="#F8FAFC"
+      FontFamily="Cairo">
+
+    <UserControl.DataContext>
+        <vm:RecipeViewModel/>
+    </UserControl.DataContext>
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Sidebar slide-in animation -->
+        <Storyboard x:Key="SidebarExpand">
+            <DoubleAnimation Storyboard.TargetName="SidebarBorder"
+                             Storyboard.TargetProperty="MaxWidth"
+                             To="340" Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+
+        <!-- Sidebar slide-out animation -->
+        <Storyboard x:Key="SidebarCollapse">
+            <DoubleAnimation Storyboard.TargetName="SidebarBorder"
+                             Storyboard.TargetProperty="MaxWidth"
+                             To="0" Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseIn"/></DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Bar -->
+        <Border Grid.Row="0" Background="White" CornerRadius="10" Padding="15" Margin="0,0,0,15">
+            <Border.Effect>
+                <DropShadowEffect Color="#E2E8F0" BlurRadius="12" ShadowDepth="2" Opacity="0.6"/>
+            </Border.Effect>
+                <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- ☰ Hamburger toggle -->
+                <Button x:Name="BtnToggleSidebar" Grid.Column="0"
+                        Content="☰" FontSize="20" Width="40" Height="40"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#334155" Cursor="Hand"
+                        VerticalAlignment="Center" Margin="0,0,10,0"
+                        ToolTip="إظهار / إخفاء قائمة الوصفات"
+                        Click="BtnToggleSidebar_Click"/>
+
+                <StackPanel Grid.Column="1" Orientation="Vertical">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="📜 " FontSize="22" VerticalAlignment="Center"/>
+                        <TextBlock Text="إدارة وصفات ومكونات المنتجات (Recipes)" FontSize="20" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="تحديد مكونات المنتجات المصنعة والوسيطة وحساب التكلفة الدقيقة تلقائياً للمخزون" Foreground="#64748B" FontSize="13" Margin="30,2,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="جديد ✨" Command="{Binding NewRecipeCommand}" Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Foreground="White" FontWeight="Bold" Padding="15,8" Margin="0,0,8,0" Cursor="Hand"/>
+                    <Button Content="تصدير PDF 📄" Click="BtnExportPdf_Click" Style="{StaticResource ModernButtonStyle}" Background="#DC2626" Foreground="White" FontWeight="Bold" Padding="15,8" Margin="0,0,8,0" Cursor="Hand" ToolTip="تصدير تفاصيل الوصفة إلى ملف PDF"/>
+                    <Button Content="تصدير Excel 📊" Click="BtnExportExcel_Click" Style="{StaticResource ModernButtonStyle}" Background="#16A34A" Foreground="White" FontWeight="Bold" Padding="15,8" Margin="0,0,8,0" Cursor="Hand" ToolTip="تصدير تفاصيل الوصفة إلى ملف Excel"/>
+                    <Button Content="حذف الوصفة 🗑️" Command="{Binding DeleteRecipeCommand}" Style="{StaticResource ModernButtonStyle}" Background="#EF4444" Foreground="White" FontWeight="Bold" Padding="15,8" Cursor="Hand"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content (2 Columns: Left = Recipe List, Right = Recipe Editor) -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidebarColumn" Width="Auto" MinWidth="0"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sidebar: Existing Recipes List -->
+            <Border x:Name="SidebarBorder" Grid.Column="0" Background="White" CornerRadius="10" Padding="12" Margin="0,0,15,0" ClipToBounds="True" MaxWidth="340" MinWidth="0">
+                <Border.Effect>
+                    <DropShadowEffect Color="#E2E8F0" BlurRadius="10" ShadowDepth="2" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="الوصفات المسجلة" FontSize="16" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10"/>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Recipes}" SelectedItem="{Binding SelectedRecipe}" BorderThickness="0" Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#F1F5F9" CornerRadius="8" Padding="10" Margin="0,3">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding ProductName}" FontWeight="Bold" FontSize="14" Foreground="#0F172A"/>
+                                            <TextBlock Text="{Binding IngredientsCount, StringFormat=عدد المكونات: {0}}" FontSize="12" Foreground="#64748B"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding TotalCost, StringFormat={}{0:N2}}" FontWeight="Bold" Foreground="#16A34A" FontSize="13"/>
+                                            <TextBlock Text="{Binding DataContext.CurrencySymbol, RelativeSource={RelativeSource AncestorType=UserControl}, StringFormat=' {0}'}" FontWeight="Bold" Foreground="#16A34A" FontSize="13"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <!-- Editor: Recipe Header & Ingredients DataGrid -->
+            <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="20">
+                <Border.Effect>
+                    <DropShadowEffect Color="#E2E8F0" BlurRadius="10" ShadowDepth="2" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Product Selection, Warehouse, Notes Header + Add Row Button -->
+                    <Grid Grid.Row="0" Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.2*"/>
+                            <ColumnDefinition Width="1.1*"/>
+                            <ColumnDefinition Width="1.5*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Col 0: Manufactured Product -->
+                        <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                            <TextBlock Text="المنتج المراد تحديد وصفته *" FontWeight="Bold" Foreground="#334155" Margin="0,0,0,5"/>
+                            <controls:SearchableDropdown
+                                x:Name="ProductTargetDropdown"
+                                ItemsSource="{Binding FilteredManufacturedProducts}"
+                                DisplayMemberPath="ProductName"
+                                Watermark="ابحث بالاسم أو الباركود..."
+                                Height="38"
+                                SearchChanged="ProductTargetDropdown_SearchChanged"
+                                ItemSelected="ProductTargetDropdown_ItemSelected"/>
+                        </StackPanel>
+
+                        <!-- Col 1: Warehouse -->
+                        <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                            <TextBlock Text="المستودع *" FontWeight="Bold" Foreground="#334155" Margin="0,0,0,5"/>
+                            <ComboBox ItemsSource="{Binding Warehouses}"
+                                      SelectedValuePath="WarehouseID"
+                                      DisplayMemberPath="WarehouseName"
+                                      SelectedValue="{Binding SelectedWarehouseID, UpdateSourceTrigger=PropertyChanged}"
+                                      Height="38" FontSize="14" VerticalContentAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Col 2: Notes -->
+                        <StackPanel Grid.Column="2" Margin="0,0,15,0">
+                            <TextBlock Text="ملاحظات التحضير والوصفة" FontWeight="Bold" Foreground="#334155" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" Height="38" FontSize="14" VerticalContentAlignment="Center" Padding="8,0"/>
+                        </StackPanel>
+
+                        <!-- Col 3: Add Row Button -->
+                        <Button Grid.Column="3" VerticalAlignment="Bottom"
+                                Content="➕ إضافة صف جديد"
+                                Command="{Binding AddIngredientCommand}"
+                                Style="{StaticResource ModernButtonStyle}"
+                                Background="#16A34A" Foreground="White" FontWeight="Bold"
+                                Height="38" Padding="16,0" Cursor="Hand"/>
+                    </Grid>
+
+                    <!-- Ingredients Grid -->
+                    <DataGrid x:Name="dgRecipeDetails" Grid.Row="1" ItemsSource="{Binding CurrentRecipeDetails}" AutoGenerateColumns="False" CanUserAddRows="False" Background="Transparent" BorderThickness="1" BorderBrush="#E2E8F0" RowHeight="38" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9">
+                        <DataGrid.Columns>
+
+                            <!-- Col 0: Barcode TextBox -->
+                            <DataGridTemplateColumn Header="باركود" Width="130">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding IngredientBarcode, UpdateSourceTrigger=PropertyChanged}"
+                                                 Padding="6,0" VerticalContentAlignment="Center" FlowDirection="LeftToRight"
+                                                 PreviewKeyDown="RecipeBarcode_PreviewKeyDown"
+                                                 GotFocus="TextBox_GotFocus"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Col 1: Product Name ComboBox (editable / searchable) -->
+                            <DataGridTemplateColumn Header="المادة الخام / المكون" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding DataContext.RawMaterialProducts, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  SelectedValuePath="ProductID"
+                                                  DisplayMemberPath="ProductName"
+                                                  SelectedValue="{Binding IngredientProductID, UpdateSourceTrigger=Explicit}"
+                                                  IsEditable="True" StaysOpenOnEdit="True"
+                                                  KeyUp="RecipeProductComboBox_KeyUp"
+                                                  PreviewKeyDown="RecipeProductComboBox_PreviewKeyDown"
+                                                  DropDownOpened="RecipeProductComboBox_DropDownOpened"
+                                                  DropDownClosed="RecipeProductComboBox_DropDownClosed"
+                                                  LostFocus="RecipeProductComboBox_LostFocus"
+                                                  SelectionChanged="RecipeProductComboBox_SelectionChanged"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Col 2: Unit -->
+                            <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName}" Width="80" IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- Col 3: Qty -->
+                            <DataGridTemplateColumn Header="الكمية" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Qty, UpdateSourceTrigger=PropertyChanged, StringFormat=N3}"
+                                                 Padding="6,0" VerticalContentAlignment="Center" TextAlignment="Center"
+                                                 PreviewKeyDown="RecipeQty_PreviewKeyDown"
+                                                 GotFocus="TextBox_GotFocus"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Col 4: Unit Cost (read-only) -->
+                            <DataGridTextColumn Header="سعر تكلفة الوحدة" Binding="{Binding UnitCost, StringFormat=N2}" Width="120" IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- Col 5: Line Cost (read-only) -->
+                            <DataGridTextColumn Header="إجمالي تكلفة المكون" Binding="{Binding LineCost, StringFormat=N2}" Width="130" IsReadOnly="True">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <!-- Col 6: Delete -->
+                            <DataGridTemplateColumn Header="إجراءات" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="❌" Command="{Binding DataContext.RemoveIngredientCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="حذف المكون"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Total & Save Footer -->
+                    <Grid Grid.Row="2" Margin="0,15,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="التكلفة الإجمالية للوصفة: " FontSize="16" FontWeight="Bold" Foreground="#1E293B"/>
+                            <TextBlock Text="{Binding TotalRecipeCost, StringFormat={}{0:N2}}" FontSize="18" FontWeight="Bold" Foreground="#16A34A"/>
+                            <TextBlock Text="{Binding CurrencySymbol, StringFormat=' {0}'}" FontSize="18" FontWeight="Bold" Foreground="#16A34A"/>
+                        </StackPanel>
+
+                        <Button Grid.Column="1" Content="حفظ الوصفة وتحديث المخزون 💾" Command="{Binding SaveRecipeCommand}" Style="{StaticResource ModernButtonStyle}" Background="#2563EB" Foreground="White" FontSize="15" FontWeight="Bold" Padding="25,10" Cursor="Hand"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Snackbar Notification -->
+        <Border x:Name="SnackbarBorder"
+                VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                Background="#1E293B" CornerRadius="12"
+                Padding="20,12" Margin="0,0,0,30"
+                Visibility="Collapsed" Panel.ZIndex="105"
+                MinWidth="250">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3" Color="#000000"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="✅" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock x:Name="SnackbarText"
+                           Text="تم حفظ الوصفة بنجاح"
+                           Foreground="White" FontSize="14" FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

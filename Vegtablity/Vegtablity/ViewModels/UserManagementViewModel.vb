@@ -43,7 +43,11 @@ Namespace ViewModels
         Private _availableForms As Dictionary(Of String, String)
 
         Public Sub New()
-            AvailableForms = New Dictionary(Of String, String) From {
+            Dim settingsService As New Services.SettingsService()
+            Dim compInfo = settingsService.GetCompanyInfo()
+            Dim isProductionMode As Boolean = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
+
+            Dim formsMap As New Dictionary(Of String, String) From {
                 {"Dashboard", "لوحة المعلومات الرئيسية"},
                 {"Sales", "فاتورة مبيعات"},
                 {"Purchases", "فاتورة مشتريات"},
@@ -72,6 +76,12 @@ Namespace ViewModels
                 {"StockTaking", "إدارة الجرد الآلي"},
                 {"DailyOrders", "الطلبات اليومية"}
             }
+
+            If isProductionMode Then
+                formsMap.Add("Recipes", "وصفات المنتجات")
+            End If
+
+            AvailableForms = formsMap
             LoadData()
         End Sub
 

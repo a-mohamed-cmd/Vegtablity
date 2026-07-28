@@ -125,84 +125,75 @@ class _WastageScreenState extends State<WastageScreen> {
           child: SingleChildScrollView(
             child: Column(
           children: [
-            // Warehouse Selector Top Section
+            // Warehouse Header (Automatically from SharedPreferences)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: Colors.grey[100],
+              color: Colors.teal.withOpacity(0.08),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    context.tr('wt_warehouse_label'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Icon(Icons.store, color: Colors.teal),
+                      const SizedBox(width: 8),
+                      Text(
+                        context.tr('wt_warehouse_label'),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                  DropdownButton<int>(
-                    value: provider.selectedWarehouseId,
-                    disabledHint: Text(provider.selectedWarehouseName,
-                        style: const TextStyle(color: Colors.black54)),
-                    onChanged: isLocked
-                        ? null
-                        : (id) {
-                            if (id != null) {
-                              final wh = provider.warehouses
-                                  .firstWhere((w) => w['WarehouseID'] == id);
-                              provider.selectWarehouse(
-                                  id, wh['WarehouseName'] ?? 'غير معروف');
-                            }
-                          },
-                    items: provider.warehouses.map<DropdownMenuItem<int>>((wh) {
-                      return DropdownMenuItem<int>(
-                        value: wh['WarehouseID'],
-                        child: Text(wh['WarehouseName'] ?? ''),
-                      );
-                    }).toList(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.teal,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      provider.selectedWarehouseName,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            if (isLocked)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  context.tr('wt_warehouse_locked_warn'),
-                  style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-
             // Unified Entry Component
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: ProductEntryScanner(
-                onBarcodeSubmitted: (barcode) =>
-                    provider.searchAndAddProductByBarcode(barcode),
-                onProductSelected: (prod) {
-                  // Find stock cost for this product in current warehouse
-                  double cost =
-                      (prod['PurchasePrice'] as num?)?.toDouble() ?? 0.0;
-                  provider.addProductDirectly(prod, cost);
-                  // Dynamically load average cost and stock level in background
-                  provider.apiService
-                      .getProductStockCost(prod['ProductID'] as int,
-                          provider.selectedWarehouseId)
-                      .then((res) {
-                    if (res.statusCode == 200) {
-                      final dynamic costVal = res.data['CostPrice'];
-                      final dynamic stockQty = res.data['StockQuantity'];
-                      if (costVal != null) {
-                        provider.updateCostPrice(prod['ProductID'] as int,
-                            (costVal as num).toDouble());
-                      }
-                      if (stockQty != null) {
-                        provider.updateStockBefore(prod['ProductID'] as int,
-                            (stockQty as num).toDouble());
-                      }
-                    }
-                  }).catchError((_) {});
-                },
+              child: SizedBox(
+                height: 380,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: ProductEntryScanner(
+                    searchMode: CatalogSearchMode.ingredients,
+                    onBarcodeSubmitted: (barcode) =>
+                        provider.searchAndAddProductByBarcode(barcode),
+                    onProductSelected: (prod) {
+                      // Find stock cost for this product in current warehouse
+                      double cost =
+                          (prod['PurchasePrice'] as num?)?.toDouble() ?? 0.0;
+                      provider.addProductDirectly(prod, cost);
+                      // Dynamically load average cost and stock level in background
+                      provider.apiService
+                          .getProductStockCost(prod['ProductID'] as int,
+                              provider.selectedWarehouseId)
+                          .then((res) {
+                        if (res.statusCode == 200) {
+                          final dynamic costVal = res.data['CostPrice'];
+                          final dynamic stockQty = res.data['StockQuantity'];
+                          if (costVal != null) {
+                            provider.updateCostPrice(prod['ProductID'] as int,
+                                (costVal as num).toDouble());
+                          }
+                          if (stockQty != null) {
+                            provider.updateStockBefore(prod['ProductID'] as int,
+                                (stockQty as num).toDouble());
+                          }
+                        }
+                      }).catchError((_) {});
+                    },
+                  ),
+                ),
               ),
             ),
 

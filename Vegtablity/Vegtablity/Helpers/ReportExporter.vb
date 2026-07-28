@@ -2532,6 +2532,157 @@ Namespace Helpers
         End Sub
 
         ' ===================================================
+        ' Export Single StockTake Voucher to PDF (طباعة سند الجرد)
+        ' ===================================================
+        Public Shared Sub ExportStockTakeVoucherToPdf(header As StockTakeHeader)
+            Try
+                If header Is Nothing Then Return
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "حفظ سند الجرد كـ PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                dlg.FileName = "جرد_" & header.StockTakeID & "_" & header.StockTakeDate.ToString("yyyyMMdd")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                doc.Info.Title = "سند جرد وتسوية مخزون رقم " & header.StockTakeID
+
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                page.Orientation = PdfSharp.PageOrientation.Portrait
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim margin = 35.0
+                Dim pageW = page.Width.Point - margin * 2
+                Dim currentY = margin
+
+                ' --- Company Header ---
+                DrawReportHeader(gfx, company, page, currentY, margin, pageW, 1)
+                Dim y = currentY
+
+                ' --- Document Title ---
+                y += 8
+                Dim titleTxt = ArabicTextHelper.Fix("سند جرد وتسوية مخزون")
+                gfx.DrawString(titleTxt, New XFont("Arial", 15, XFontStyle.Bold), XBrushes.DarkSlateGray,
+                               New XRect(margin, y, pageW, 25), XStringFormats.TopCenter)
+                y += 30
+
+                ' --- Status Stamp ---
+                Dim isApproved = (header.Status = "Approved")
+                Dim stampBrush = If(isApproved, New XSolidBrush(XColor.FromArgb(39, 174, 96)), New XSolidBrush(XColor.FromArgb(211, 84, 0)))
+                Dim stampTxt = If(isApproved, ArabicTextHelper.Fix("معتمد ✔"), ArabicTextHelper.Fix("مسودة"))
+                Dim stampRect As New XRect(margin + pageW - 100, y - 28, 95, 22)
+                gfx.DrawRectangle(stampBrush, stampRect)
+                gfx.DrawString(stampTxt, New XFont("Arial", 9, XFontStyle.Bold), XBrushes.White, stampRect, XStringFormats.Center)
+
+                ' --- Header Info Grid ---
+                Dim labelFont = New XFont("Arial", 9, XFontStyle.Bold)
+                Dim valueFont = New XFont("Arial", 9, XFontStyle.Regular)
+                Dim col1X = margin
+                Dim col2X = margin + pageW / 2
+
+                gfx.DrawString(ArabicTextHelper.Fix("رقم الجرد:"), labelFont, XBrushes.DarkGray, col1X, y)
+                gfx.DrawString(header.StockTakeID.ToString(), valueFont, XBrushes.Black, col1X + 80, y)
+                gfx.DrawString(ArabicTextHelper.Fix("التاريخ:"), labelFont, XBrushes.DarkGray, col2X, y)
+                gfx.DrawString(header.StockTakeDate.ToString("yyyy/MM/dd HH:mm"), valueFont, XBrushes.Black, col2X + 60, y)
+                y += 18
+
+                If Not String.IsNullOrEmpty(header.WarehouseName) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("المستودع:"), labelFont, XBrushes.DarkGray, col1X, y)
+                    gfx.DrawString(ArabicTextHelper.Fix(header.WarehouseName), valueFont, XBrushes.Black, col1X + 80, y)
+                End If
+                If Not String.IsNullOrEmpty(header.Notes) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("الملاحظات:"), labelFont, XBrushes.DarkGray, col2X, y)
+                    Dim notesText = If(header.Notes.Length > 40, header.Notes.Substring(0, 40) & "...", header.Notes)
+                    gfx.DrawString(ArabicTextHelper.Fix(notesText), valueFont, XBrushes.Black, col2X + 70, y)
+                End If
+                y += 22
+
+                gfx.DrawLine(XPens.DarkGray, margin, y, margin + pageW, y)
+                y += 8
+
+                ' --- Table Header ---
+                Dim colWidths() As Double = {pageW * 0.15, pageW * 0.35, pageW * 0.12, pageW * 0.12, pageW * 0.11, pageW * 0.15}
+                Dim colHeaders() As String = {"كود الصنف", "اسم المنتج", "الدفترية", "الفعلية", "الفرق", "قيمة الفروقات"}
+                Dim headerBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
+                Dim x = margin
+                gfx.DrawRectangle(headerBrush, margin, y, pageW, 20)
+                For i = 0 To colHeaders.Length - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(colHeaders(i)), New XFont("Arial", 8, XFontStyle.Bold), XBrushes.White,
+                                   New XRect(x + 2, y + 3, colWidths(i) - 4, 16), XStringFormats.Center)
+                    x += colWidths(i)
+                Next
+                y += 20
+
+                ' --- Table Rows ---
+                Dim totalDiffVal As Decimal = 0
+                Dim altBrush As New XSolidBrush(XColor.FromArgb(248, 249, 250))
+                Dim rowIdx = 0
+
+                If header.Details IsNot Nothing Then
+                    For Each d In header.Details
+                        If rowIdx Mod 2 = 0 Then gfx.DrawRectangle(altBrush, margin, y, pageW, 18)
+                        x = margin
+                        totalDiffVal += d.DifferenceValue
+                        Dim rowData() As String = {
+                            If(d.ProductCode, ""),
+                            If(d.ProductName, ""),
+                            d.SystemQuantity.ToString("N2"),
+                            d.ActualQuantity.ToString("N2"),
+                            d.DifferenceQuantity.ToString("N2"),
+                            d.DifferenceValue.ToString("N3")
+                        }
+                        For i = 0 To rowData.Length - 1
+                            Dim brush As XBrush = XBrushes.Black
+                            If i = 4 AndAlso d.DifferenceQuantity <> 0 Then
+                                brush = If(d.DifferenceQuantity < 0, New XSolidBrush(XColor.FromArgb(192, 57, 43)), New XSolidBrush(XColor.FromArgb(39, 174, 96)))
+                            ElseIf i = 5 AndAlso d.DifferenceValue <> 0 Then
+                                brush = If(d.DifferenceValue < 0, New XSolidBrush(XColor.FromArgb(192, 57, 43)), New XSolidBrush(XColor.FromArgb(39, 174, 96)))
+                            End If
+
+                            gfx.DrawString(ArabicTextHelper.Fix(rowData(i)), New XFont("Arial", 8, XFontStyle.Regular), brush,
+                                           New XRect(x + 3, y + 2, colWidths(i) - 6, 14),
+                                           If(i = 0 OrElse i >= 2, XStringFormats.Center, XStringFormats.TopLeft))
+                            x += colWidths(i)
+                        Next
+                        gfx.DrawRectangle(XPens.LightGray, margin, y, pageW, 18)
+                        y += 18
+                        rowIdx += 1
+
+                        If y > page.Height.Point - margin - 60 Then
+                            page = doc.AddPage()
+                            gfx = XGraphics.FromPdfPage(page)
+                            y = margin + 10
+                        End If
+                    Next
+                End If
+
+                ' --- Totals Row ---
+                y += 5
+                Dim totalBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
+                gfx.DrawRectangle(totalBrush, margin, y, pageW, 22)
+                gfx.DrawString(ArabicTextHelper.Fix("إجمالي الفروقات المالية:"), New XFont("Arial", 9, XFontStyle.Bold), XBrushes.White,
+                               New XRect(margin + 5, y + 4, pageW * 0.6, 16), XStringFormats.TopLeft)
+                gfx.DrawString(totalDiffVal.ToString("N3"), New XFont("Arial", 10, XFontStyle.Bold), XBrushes.Yellow,
+                               New XRect(margin + pageW - 120, y + 4, 115, 16), XStringFormats.TopRight)
+                y += 40
+
+                ' --- Signatures ---
+                gfx.DrawString(ArabicTextHelper.Fix("أعده:  ............................."), valueFont, XBrushes.Black, margin, y)
+                gfx.DrawString(ArabicTextHelper.Fix("اعتمده:  ............................."), valueFont, XBrushes.Black, margin + pageW - 180, y)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء طباعة سند الجرد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
         ' Export Wastage Report to PDF (تقرير الهالك)
         ' ===================================================
         Public Shared Sub ExportWastageReportToPdf(items As List(Of ReportWastageItem), title As String)
@@ -2701,6 +2852,201 @@ Namespace Helpers
                 End If
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء تصدير CSV: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Recipe (الوصفة ومكوناتها) to PDF
+        ' ===================================================
+        Public Shared Sub ExportRecipeToPdf(recipe As Recipe, Optional warehouseName As String = "")
+            Try
+                If recipe Is Nothing Then Return
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير الوصفة كـ PDF"
+                dlg.Filter = "PDF Files (*.pdf)|*.pdf"
+                Dim prodName = If(Not String.IsNullOrWhiteSpace(recipe.ProductName), recipe.ProductName, "الوصفة")
+                Dim safeName = prodName.Replace(" ", "_")
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = "وصفة_" & safeName & "_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                Dim settingsSvc As New SettingsService()
+                Dim company = settingsSvc.GetCompanyInfo()
+
+                doc.Info.Title = "وصفة صنف: " & prodName
+
+                Dim page = doc.AddPage()
+                page.Size = PdfSharp.PageSize.A4
+                page.Orientation = PdfSharp.PageOrientation.Portrait
+                Dim gfx = XGraphics.FromPdfPage(page)
+                Dim margin = 35.0
+                Dim pageW = page.Width.Point - margin * 2
+                Dim currentY = margin
+
+                ' --- Company Header ---
+                DrawReportHeader(gfx, company, page, currentY, margin, pageW, 1)
+                Dim y = currentY
+
+                ' --- Document Title ---
+                y += 8
+                Dim titleTxt = ArabicTextHelper.Fix("بطاقة وصفة ومكونات صنف مصنع")
+                gfx.DrawString(titleTxt, New XFont("Arial", 15, XFontStyle.Bold), XBrushes.DarkBlue,
+                               New XRect(margin, y, pageW, 25), XStringFormats.TopCenter)
+                y += 30
+
+                ' --- Header Info Grid ---
+                Dim labelFont = New XFont("Arial", 9, XFontStyle.Bold)
+                Dim valueFont = New XFont("Arial", 9, XFontStyle.Regular)
+                Dim col1X = margin
+                Dim col2X = margin + pageW / 2
+
+                gfx.DrawString(ArabicTextHelper.Fix("المنتج المصنع:"), labelFont, XBrushes.DarkGray, col1X, y)
+                gfx.DrawString(ArabicTextHelper.Fix(prodName), valueFont, XBrushes.Black, col1X + 85, y)
+
+                If Not String.IsNullOrEmpty(warehouseName) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("المستودع:"), labelFont, XBrushes.DarkGray, col2X, y)
+                    gfx.DrawString(ArabicTextHelper.Fix(warehouseName), valueFont, XBrushes.Black, col2X + 60, y)
+                End If
+                y += 18
+
+                If Not String.IsNullOrEmpty(recipe.Notes) Then
+                    gfx.DrawString(ArabicTextHelper.Fix("الملاحظات:"), labelFont, XBrushes.DarkGray, col1X, y)
+                    Dim notesText = If(recipe.Notes.Length > 50, recipe.Notes.Substring(0, 50) & "...", recipe.Notes)
+                    gfx.DrawString(ArabicTextHelper.Fix(notesText), valueFont, XBrushes.Black, col1X + 85, y)
+                End If
+                y += 22
+
+                gfx.DrawLine(XPens.DarkGray, margin, y, margin + pageW, y)
+                y += 10
+
+                ' --- Table Header ---
+                ' Columns: الباركود (18%), المادة الخام / المكون (35%), الوحدة (11%), الكمية (12%), تكلفة الوحدة (12%), الإجمالي (12%)
+                Dim colWidths() As Double = {pageW * 0.18, pageW * 0.35, pageW * 0.11, pageW * 0.12, pageW * 0.12, pageW * 0.12}
+                Dim colHeaders() As String = {"الباركود", "المادة الخام / المكون", "الوحدة", "الكمية", "تكلفة الوحدة", "الإجمالي"}
+                Dim headerBrush As New XSolidBrush(XColor.FromArgb(37, 99, 235))
+                Dim x = margin
+                gfx.DrawRectangle(headerBrush, margin, y, pageW, 20)
+                For i = 0 To colHeaders.Length - 1
+                    gfx.DrawString(ArabicTextHelper.Fix(colHeaders(i)), New XFont("Arial", 8, XFontStyle.Bold), XBrushes.White,
+                                   New XRect(x + 2, y + 3, colWidths(i) - 4, 16), XStringFormats.Center)
+                    x += colWidths(i)
+                Next
+                y += 20
+
+                ' --- Table Rows ---
+                Dim totalValue As Decimal = 0
+                Dim altBrush As New XSolidBrush(XColor.FromArgb(248, 249, 250))
+                Dim rowIdx = 0
+
+                If recipe.Details IsNot Nothing Then
+                    For Each d In recipe.Details
+                        If rowIdx Mod 2 = 0 Then gfx.DrawRectangle(altBrush, margin, y, pageW, 18)
+                        x = margin
+                        Dim lineTotal = If(d.LineCost > 0, d.LineCost, d.Qty * d.UnitCost)
+                        totalValue += lineTotal
+
+                        Dim barcodeTxt = If(Not String.IsNullOrWhiteSpace(d.IngredientBarcode), d.IngredientBarcode, "")
+                        Dim nameTxt = If(Not String.IsNullOrWhiteSpace(d.IngredientName), d.IngredientName, "")
+                        Dim unitTxt = If(Not String.IsNullOrWhiteSpace(d.UnitName), d.UnitName, "")
+
+                        Dim rowData() As String = {
+                            barcodeTxt,
+                            nameTxt,
+                            unitTxt,
+                            d.Qty.ToString("N3"),
+                            d.UnitCost.ToString("N2"),
+                            lineTotal.ToString("N2")
+                        }
+                        For i = 0 To rowData.Length - 1
+                            Dim brush = If(i = 5, New XSolidBrush(XColor.FromArgb(22, 163, 74)), XBrushes.Black)
+                            gfx.DrawString(ArabicTextHelper.Fix(rowData(i)), New XFont("Arial", 8, XFontStyle.Regular), brush,
+                                           New XRect(x + 3, y + 2, colWidths(i) - 6, 14),
+                                           If(i = 1, XStringFormats.TopLeft, XStringFormats.Center))
+                            x += colWidths(i)
+                        Next
+                        gfx.DrawRectangle(XPens.LightGray, margin, y, pageW, 18)
+                        y += 18
+                        rowIdx += 1
+
+                        If y > page.Height.Point - margin - 60 Then
+                            page = doc.AddPage()
+                            gfx = XGraphics.FromPdfPage(page)
+                            y = margin + 10
+                        End If
+                    Next
+                End If
+
+                ' --- Totals Row ---
+                y += 5
+                Dim totalBrush As New XSolidBrush(XColor.FromArgb(15, 23, 42))
+                gfx.DrawRectangle(totalBrush, margin, y, pageW, 22)
+                gfx.DrawString(ArabicTextHelper.Fix("التكلفة الإجمالية للوصفة:"), New XFont("Arial", 9, XFontStyle.Bold), XBrushes.White,
+                               New XRect(margin + 10, y + 4, pageW * 0.6, 16), XStringFormats.TopLeft)
+                
+                Dim finalTotal = If(recipe.TotalCost > 0, recipe.TotalCost, totalValue)
+                gfx.DrawString(finalTotal.ToString("N2"), New XFont("Arial", 10, XFontStyle.Bold), XBrushes.Yellow,
+                               New XRect(margin + pageW - 130, y + 4, 120, 16), XStringFormats.TopRight)
+                y += 40
+
+                ' --- Signatures ---
+                gfx.DrawString(ArabicTextHelper.Fix("مسؤول الإنتاج:  ............................."), valueFont, XBrushes.Black, margin, y)
+                gfx.DrawString(ArabicTextHelper.Fix("الاعتماد:  ............................."), valueFont, XBrushes.Black, margin + pageW - 180, y)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء طباعة الوصفة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Recipe (الوصفة ومكوناتها) to CSV / Excel
+        ' ===================================================
+        Public Shared Sub ExportRecipeToCsv(recipe As Recipe, Optional warehouseName As String = "")
+            Try
+                If recipe Is Nothing OrElse recipe.Details Is Nothing OrElse recipe.Details.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات ليتم تصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير الوصفة إلى Excel"
+                dlg.Filter = "ملفات Excel (*.csv)|*.csv"
+                Dim prodName = If(Not String.IsNullOrWhiteSpace(recipe.ProductName), recipe.ProductName, "الوصفة")
+                Dim safeName = prodName.Replace(" ", "_")
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = "وصفة_" & safeName & "_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() = True Then
+                    Using sw As New StreamWriter(dlg.FileName, False, Encoding.UTF8)
+                        sw.WriteLine("الباركود,المادة الخام / المكون,الوحدة,الكمية,تكلفة الوحدة,إجمالي التكلفة")
+
+                        For Each d In recipe.Details
+                            Dim lineTotal = If(d.LineCost > 0, d.LineCost, d.Qty * d.UnitCost)
+                            Dim barcodeTxt = """" & If(d.IngredientBarcode, "") & """"
+                            Dim nameTxt = """" & If(d.IngredientName, "") & """"
+                            Dim unitTxt = """" & If(d.UnitName, "") & """"
+
+                            sw.WriteLine($"{barcodeTxt},{nameTxt},{unitTxt},{d.Qty:F3},{d.UnitCost:F2},{lineTotal:F2}")
+                        Next
+
+                        sw.WriteLine($",,,,إجمالي التكلفة,{recipe.TotalCost:F2}")
+                    End Using
+
+                    If Global.System.IO.File.Exists(dlg.FileName) Then
+                        Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                    End If
+                End If
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء التصدير إلى Excel: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 

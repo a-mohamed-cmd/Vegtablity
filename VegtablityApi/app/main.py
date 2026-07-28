@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, invoices, partners, products, purchase_quotes, shifts, sales_quotes, security, settings, vouchers, accounts, inventory, license_control
+from app.routes import auth, invoices, partners, products, purchase_quotes, shifts, sales_quotes, security, settings, vouchers, accounts, inventory, license_control, recipes
 from app.routes.invoices import create_invoice
 
 app = FastAPI(title="Vegtablity POS API", version="1.0.0")
@@ -32,6 +32,7 @@ app.include_router(settings.router, prefix="/settings", tags=["Settings"])
 app.include_router(vouchers.router, prefix="/vouchers", tags=["Vouchers"])
 app.include_router(inventory.router, prefix="/inventory", tags=["Inventory"])
 app.include_router(license_control.router, prefix="/ctrl", tags=["License Control"])
+app.include_router(recipes.router, prefix="/recipes", tags=["Recipes"])
 
 
 # Alias / Compatibility router for Flutter Mobile POS client (/sales/invoice)

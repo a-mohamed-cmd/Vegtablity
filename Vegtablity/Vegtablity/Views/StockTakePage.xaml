@@ -409,6 +409,7 @@
 
                                     <!-- الأزرار — على اليسار (Column 1 في RTL) -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Content="طباعة" Command="{Binding PrintCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27ae60" Width="100" Margin="0,0,10,0"/>
                                         <Button Content="اعتماد تسوية الجرد النهائية" Command="{Binding ApproveCommand}" Width="220" Margin="0,0,10,0">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">

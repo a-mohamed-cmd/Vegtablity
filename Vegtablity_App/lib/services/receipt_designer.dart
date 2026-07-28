@@ -36,7 +36,7 @@ class ReceiptDesigner {
 
   static String _getCurrencySymbol(Map<String, dynamic>? companySettings) {
     final rawCurrency = companySettings?['CurrencySymbol']?.toString() ?? '';
-    if (rawCurrency.isEmpty) return '';
+    if (rawCurrency.isEmpty) return 'د.ك';
     if (rawCurrency.contains('/')) {
       return rawCurrency.split('/')[0].trim();
     }
@@ -438,5 +438,174 @@ class ReceiptDesigner {
     // Feed paper and cut
     await SunmiPrinter.lineWrap(4);
     await SunmiPrinter.cutPaper();
+  }
+
+  /// Prints thermal receipt for Recipe Card
+  static Future<void> printRecipeReceipt({
+    required Map<String, dynamic> recipe,
+    Map<String, dynamic>? companySettings,
+    int paperSize = 80,
+  }) async {
+    final sep = _getSeparator(paperSize);
+    final dSep = _getDashedSeparator(paperSize);
+
+    await SunmiPrinter.initPrinter();
+    await SunmiPrinter.startTransactionPrint(true);
+
+    // 1. Logo printing (Center aligned if available)
+    final String? logoBase64 = companySettings?['Logo'];
+    if (logoBase64 != null && logoBase64.isNotEmpty) {
+      try {
+        final Uint8List imageBytes = base64Decode(logoBase64);
+        await SunmiPrinter.printImage(imageBytes, align: SunmiPrintAlign.CENTER);
+        await SunmiPrinter.lineWrap(1);
+      } catch (_) {}
+    }
+
+    // 2. Company Information Header (Same as Invoice Receipt)
+    final String companyName = companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
+    final String address = companySettings?['Address'] ?? 'العارضيه';
+    final String phone = companySettings?['Phone'] ?? '55381505';
+
+    await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+    await SunmiPrinter.printText('العنوان: $address', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText('الهاتف: $phone', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+
+    // 3. Document Title
+    await SunmiPrinter.printText('بطاقة وصفة ومكونات صنف', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+    await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+
+    // 4. Product & Warehouse info
+    final String prodName = recipe['ProductName'] ?? recipe['product_name'] ?? 'وصفة صنف';
+    final String warehouseName = recipe['WarehouseName'] ?? recipe['warehouse_name'] ?? '';
+    final String notes = recipe['Notes'] ?? recipe['notes'] ?? '';
+
+    await SunmiPrinter.printText('المنتج المصنع: $prodName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+    if (warehouseName.isNotEmpty) {
+      await SunmiPrinter.printText('المستودع: $warehouseName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+    }
+    if (notes.isNotEmpty) {
+      await SunmiPrinter.printText('ملاحظات: $notes', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+    }
+    await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+
+    // 5. Details list
+    final details = recipe['Details'] as List<dynamic>? ?? [];
+    for (final item in details) {
+      final String barcode = item['IngredientBarcode'] ?? item['barcode'] ?? '';
+      final String name = item['IngredientName'] ?? item['name'] ?? 'مادة خام';
+      final String unit = item['UnitName'] ?? item['unit'] ?? '';
+      final double qty = (item['Qty'] as num?)?.toDouble() ?? 0.0;
+      final double unitCost = (item['UnitCost'] as num?)?.toDouble() ?? 0.0;
+      final double lineCost = (item['LineCost'] as num?)?.toDouble() ?? (qty * unitCost);
+
+      final String qtyFormatted = _formatQuantity(qty, unit);
+
+      await SunmiPrinter.printText('$name ${barcode.isNotEmpty ? "($barcode)" : ""}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+      await SunmiPrinter.printText('  $qtyFormatted x ${_formatCurrency(unitCost)} = ${_formatCurrency(lineCost)}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+    }
+
+    await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+
+    // 6. Total Recipe Cost
+    final double totalCost = (recipe['TotalCost'] as num?)?.toDouble() ?? 0.0;
+    final String cSymbol = _getCurrencySymbol(companySettings);
+
+    await SunmiPrinter.printText('التكلفة الكلية للوصفة: ${_formatCurrency(totalCost)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+    await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+
+    await SunmiPrinter.lineWrap(4);
+    await SunmiPrinter.cutPaper();
+  }
+
+  /// Builds ESC/POS bytes for Network recipe printing
+  static Future<List<int>> buildNetworkRecipeBytes({
+    required Map<String, dynamic> recipe,
+    required Map<String, dynamic>? companySettings,
+    required int paperSize,
+  }) async {
+    final List<int> bytes = [];
+
+    // Initialize printer: ESC @ (0x1B, 0x40)
+    bytes.addAll([0x1B, 0x40]);
+
+    // 1. Logo printing (Center aligned)
+    final String? logoBase64 = companySettings?['Logo'];
+    if (logoBase64 != null && logoBase64.isNotEmpty) {
+      final int targetWidth = paperSize == 80 ? 300 : 200;
+      final List<int> logoBytes = await convertImageToEscPos(logoBase64, targetWidth: targetWidth);
+      if (logoBytes.isNotEmpty) {
+        bytes.addAll([0x1B, 0x61, 0x01]);
+        bytes.addAll(logoBytes);
+        bytes.addAll('\n'.codeUnits);
+      }
+    }
+
+    // 2. Company Information Header (Center aligned)
+    bytes.addAll([0x1B, 0x61, 0x01]);
+    final String companyName = companySettings?['CompanyName'] ?? 'شركه الضحي للمنتجات الزراعيه';
+    final String address = companySettings?['Address'] ?? 'العارضيه';
+    final String phone = companySettings?['Phone'] ?? '55381505';
+
+    final String sep = _getSeparator(paperSize);
+    final String dSep = _getDashedSeparator(paperSize);
+
+    bytes.addAll('$sep\n'.codeUnits);
+    bytes.addAll('$companyName\n'.codeUnits);
+    bytes.addAll('العنوان: $address\n'.codeUnits);
+    bytes.addAll('الهاتف: $phone\n'.codeUnits);
+    bytes.addAll('$sep\n'.codeUnits);
+
+    // 3. Document Title
+    bytes.addAll('بطاقة وصفة ومكونات صنف\n'.codeUnits);
+    bytes.addAll('$dSep\n'.codeUnits);
+
+    // 4. Product & Warehouse info
+    bytes.addAll([0x1B, 0x61, 0x02]);
+    final String prodName = recipe['ProductName'] ?? recipe['product_name'] ?? 'وصفة صنف';
+    final String warehouseName = recipe['WarehouseName'] ?? recipe['warehouse_name'] ?? '';
+    final String notes = recipe['Notes'] ?? recipe['notes'] ?? '';
+
+    bytes.addAll('المنتج المصنع: $prodName\n'.codeUnits);
+    if (warehouseName.isNotEmpty) {
+      bytes.addAll('المستودع: $warehouseName\n'.codeUnits);
+    }
+    if (notes.isNotEmpty) {
+      bytes.addAll('ملاحظات: $notes\n'.codeUnits);
+    }
+    bytes.addAll('$dSep\n'.codeUnits);
+
+    // 5. Details list
+    final details = recipe['Details'] as List<dynamic>? ?? [];
+    for (final item in details) {
+      final String barcode = item['IngredientBarcode'] ?? item['barcode'] ?? '';
+      final String name = item['IngredientName'] ?? item['name'] ?? 'مادة خام';
+      final String unit = item['UnitName'] ?? item['unit'] ?? '';
+      final double qty = (item['Qty'] as num?)?.toDouble() ?? 0.0;
+      final double unitCost = (item['UnitCost'] as num?)?.toDouble() ?? 0.0;
+      final double lineCost = (item['LineCost'] as num?)?.toDouble() ?? (qty * unitCost);
+
+      final String qtyFormatted = _formatQuantity(qty, unit);
+
+      bytes.addAll('$name ${barcode.isNotEmpty ? "($barcode)" : ""}\n'.codeUnits);
+      bytes.addAll('  $qtyFormatted x ${_formatCurrency(unitCost)} = ${_formatCurrency(lineCost)}\n'.codeUnits);
+    }
+
+    bytes.addAll('$sep\n'.codeUnits);
+
+    // 6. Total Recipe Cost
+    final double totalCost = (recipe['TotalCost'] as num?)?.toDouble() ?? 0.0;
+    final String cSymbol = _getCurrencySymbol(companySettings);
+
+    bytes.addAll('التكلفة الكلية للوصفة: ${_formatCurrency(totalCost)} $cSymbol\n'.codeUnits);
+    bytes.addAll('$sep\n'.codeUnits);
+
+    // Feed paper and cut
+    bytes.addAll([0x1B, 0x64, 0x04]);
+    bytes.addAll([0x1D, 0x56, 0x42, 0x00]);
+
+    return bytes;
   }
 }

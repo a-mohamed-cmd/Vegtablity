@@ -342,8 +342,14 @@
     <Compile Include="Views\BalanceSheetPage.xaml.vb">
       <DependentUpon>BalanceSheetPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Models\Recipe.vb" />
+    <Compile Include="Services\RecipeService.vb" />
+    <Compile Include="ViewModels\RecipeViewModel.vb" />
     <Compile Include="Views\WastagePage.xaml.vb">
       <DependentUpon>WastagePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\RecipePage.xaml.vb">
+      <DependentUpon>RecipePage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\YearEndClosePage.xaml.vb">
       <DependentUpon>YearEndClosePage.xaml</DependentUpon>
@@ -468,6 +474,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\WastagePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\RecipePage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

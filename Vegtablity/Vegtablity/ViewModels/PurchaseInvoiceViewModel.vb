@@ -212,7 +212,7 @@ Namespace ViewModels
                 Warehouses.Add(w)
             Next
 
-            Dim productList = _productService.GetAllProducts()
+            Dim productList = _productService.GetProductsForPurchase()
             Products.Clear()
             For Each p In productList
                 Products.Add(p)
@@ -550,7 +550,7 @@ Namespace ViewModels
                 End If
 
                 ' جلب كل الأصناف مباشرة من قاعدة البيانات لضمان عدم التأثر بنظام الـ Pagination
-                Dim productList = _productService.GetAllProducts()
+                Dim productList = _productService.GetProductsForPurchase()
                 Dim unknownRows As New List(Of ImportedRow)()
                 Dim newDetails As New List(Of InvoiceDetail)()
 

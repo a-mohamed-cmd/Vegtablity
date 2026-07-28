@@ -73,5 +73,42 @@ Namespace Services
                 Return Nothing
             End Try
         End Function
+        Public Function GetProductsForPurchase() As List(Of Product)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of Product)(
+                    Helpers.StoredProcedures.SP_PRODUCT_GETFORPURCHASE,
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+
+        Public Function GetProductsForSales() As List(Of Product)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Return conn.Query(Of Product)(
+                    Helpers.StoredProcedures.SP_PRODUCT_GETFORSALES,
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+
+        Public Function GetProductsForRecipeIngredients(Optional warehouseID As Integer? = Nothing) As List(Of Product)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim p As New DynamicParameters()
+                p.Add("@WarehouseID", warehouseID)
+                Return conn.Query(Of Product)(
+                    Helpers.StoredProcedures.SP_PRODUCT_GETFORRECIPEINGREDIENTS,
+                    p,
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
+
+        Public Function GetProductsForRecipeTarget(Optional warehouseID As Integer? = Nothing) As List(Of Product)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim p As New DynamicParameters()
+                p.Add("@WarehouseID", warehouseID)
+                Return conn.Query(Of Product)(
+                    Helpers.StoredProcedures.SP_PRODUCT_GETFORRECIPETARGET,
+                    p,
+                    commandType:=CommandType.StoredProcedure).AsList()
+            End Using
+        End Function
     End Class
 End Namespace

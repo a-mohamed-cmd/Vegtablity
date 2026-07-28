@@ -11,6 +11,7 @@ import 'providers/license_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/wastage_provider.dart';
 import 'providers/stocktake_provider.dart';
+import 'providers/recipe_provider.dart';
 import 'screens/license_check_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/language_viewmodel.dart';
@@ -51,6 +52,9 @@ void main() {
         ),
         ChangeNotifierProvider<StockTakeProvider>(
           create: (context) => StockTakeProvider(apiService),
+        ),
+        ChangeNotifierProvider<RecipeProvider>(
+          create: (context) => RecipeProvider(apiService),
         ),
         ChangeNotifierProvider<LanguageViewModel>(
           create: (context) => LanguageViewModel(),

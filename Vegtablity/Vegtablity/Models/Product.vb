@@ -12,6 +12,24 @@ Namespace Models
         Public Property SalePrice As Decimal
         Public Property AlertQty As Decimal
         Public Property IsActive As Boolean
+        Public Property ProductType As Integer = 1
+
+        Public ReadOnly Property ProductTypeName As String
+            Get
+                Select Case ProductType
+                    Case 0
+                        Return "مادة خام"
+                    Case 1
+                        Return "صنف عادي"
+                    Case 2
+                        Return "منتج مصنع"
+                    Case 3
+                        Return "منتج وسيط"
+                    Case Else
+                        Return "صنف عادي"
+                End Select
+            End Get
+        End Property
 
         Public ReadOnly Property SearchText As String
             Get

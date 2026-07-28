@@ -2,8 +2,8 @@ import 'package:dio/dio.dart';
 
 class ApiService {
   final Dio _dio = Dio(BaseOptions(
-    //baseUrl: 'http://192.168.43.129:8000', // Update with actual API URL
-    baseUrl: 'http://185.216.203.50:8000', // Update with actual API URL
+    baseUrl: 'http://192.168.43.129:8000', // Update with actual API URL
+    // baseUrl: 'http://185.216.203.50:8000', // Update with actual API URL
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
   ));
@@ -55,6 +55,45 @@ class ApiService {
     } catch (e) {
       rethrow;
     }
+  }
+
+  Future<Response> getProductsForPurchase() async {
+    return await _dio.get('/products/for-purchase');
+  }
+
+  Future<Response> getProductsForSales() async {
+    return await _dio.get('/products/for-sales');
+  }
+
+  Future<Response> getProductsForRecipeIngredients({int? warehouseId}) async {
+    final queryParams = warehouseId != null ? {'warehouse_id': warehouseId} : null;
+    return await _dio.get('/products/for-recipe-ingredients', queryParameters: queryParams);
+  }
+
+  Future<Response> getProductsForRecipeTarget({int? warehouseId, bool includeAll = false}) async {
+    final queryParams = <String, dynamic>{};
+    if (warehouseId != null) queryParams['warehouse_id'] = warehouseId;
+    if (includeAll) queryParams['include_all'] = true;
+    return await _dio.get('/products/for-recipe-target', queryParameters: queryParams.isNotEmpty ? queryParams : null);
+  }
+
+  // ─── Recipes (الوصفات والتصنيع) ──────────────────────────────────────────
+
+  Future<Response> getAllRecipes() async {
+    return await _dio.get('/recipes/');
+  }
+
+  Future<Response> getRecipeByProduct(int productId, {int? warehouseId}) async {
+    final queryParams = warehouseId != null ? {'warehouse_id': warehouseId} : null;
+    return await _dio.get('/recipes/$productId', queryParameters: queryParams);
+  }
+
+  Future<Response> saveRecipe(Map<String, dynamic> data) async {
+    return await _dio.post('/recipes/', data: data);
+  }
+
+  Future<Response> deleteRecipe(int recipeId) async {
+    return await _dio.delete('/recipes/$recipeId');
   }
 
   // الحسابات

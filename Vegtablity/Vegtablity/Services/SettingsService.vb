@@ -29,7 +29,8 @@ Namespace Services
                         .CurrencySymbol = info.CurrencySymbol,
                         .UnifiedPartnerSearch = info.UnifiedPartnerSearch,
                         .UseDetailedInvoiceDesign = info.UseDetailedInvoiceDesign,
-                        .UseCustomInvoiceDesign = info.UseCustomInvoiceDesign
+                        .UseCustomInvoiceDesign = info.UseCustomInvoiceDesign,
+                        .ProductionMode = info.ProductionMode
                     },
                     commandType:=CommandType.StoredProcedure
                 )

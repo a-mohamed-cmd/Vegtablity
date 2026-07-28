@@ -266,7 +266,7 @@ Namespace ViewModels
                 FilteredPartners = New ObservableCollection(Of Partner)(results)
 
                 ' ✅ تحميل الأصناف مرة واحدة فقط — لا استدعاء DB عند التنقل بين الصفحات
-                Dim allProducts = _productService.GetAllProducts()
+                Dim allProducts = _productService.GetProductsForPurchase()
                 Products = New ObservableCollection(Of Product)(allProducts)
             Catch
             End Try

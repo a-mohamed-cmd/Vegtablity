@@ -50,7 +50,7 @@ Namespace Services
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Return conn.ExecuteScalar(Of Integer)(
                     Helpers.StoredProcedures.SP_PRODUCT_SAVE,
-                    New With {p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode, p.CategoryID, p.UnitID, p.PurchasePrice, p.SalePrice, p.AlertQty},
+                    New With {p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode, p.CategoryID, p.UnitID, p.PurchasePrice, p.SalePrice, p.AlertQty, p.ProductType},
                     commandType:=CommandType.StoredProcedure)
             End Using
         End Function

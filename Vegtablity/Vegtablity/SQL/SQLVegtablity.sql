@@ -2333,7 +2333,8 @@ BEGIN
         p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
         p.CategoryID, c.CatName,
         p.UnitID, u.UnitName,
-        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
     FROM [Inventory].[Products] p
     LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
     LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
@@ -2356,7 +2357,8 @@ BEGIN
         p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
         p.CategoryID, c.CatName,
         p.UnitID, u.UnitName,
-        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
     FROM [Inventory].[Products] p
     LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
     LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
@@ -2378,23 +2380,25 @@ CREATE PROCEDURE [Inventory].[sp_Product_Save]
     @UnitID INT = NULL,
     @PurchasePrice DECIMAL(18,3) = 0,
     @SalePrice DECIMAL(18,3) = 0,
-    @AlertQty DECIMAL(18,2) = 0
+    @AlertQty DECIMAL(18,2) = 0,
+    @ProductType INT = 1
 AS
 BEGIN
     SET NOCOUNT ON;
     IF @ProductID = 0
     BEGIN
         INSERT INTO [Inventory].[Products] 
-            (ProductName, ProductNameEn, Barcode, CategoryID, UnitID, PurchasePrice, SalePrice, AlertQty, IsActive)
+            (ProductName, ProductNameEn, Barcode, CategoryID, UnitID, PurchasePrice, SalePrice, AlertQty, IsActive, ProductType)
         VALUES 
-            (@ProductName, @ProductNameEn, @Barcode, @CategoryID, @UnitID, @PurchasePrice, @SalePrice, @AlertQty, 1);
+            (@ProductName, @ProductNameEn, @Barcode, @CategoryID, @UnitID, @PurchasePrice, @SalePrice, @AlertQty, 1, ISNULL(@ProductType, 1));
         SELECT SCOPE_IDENTITY() AS ProductID;
     END
     ELSE
     BEGIN
         UPDATE [Inventory].[Products] 
         SET ProductName = @ProductName, ProductNameEn = @ProductNameEn, Barcode = @Barcode, CategoryID = @CategoryID,
-            UnitID = @UnitID, PurchasePrice = @PurchasePrice, SalePrice = @SalePrice, AlertQty = @AlertQty
+            UnitID = @UnitID, PurchasePrice = @PurchasePrice, SalePrice = @SalePrice, AlertQty = @AlertQty,
+            ProductType = ISNULL(@ProductType, ProductType)
         WHERE ProductID = @ProductID;
         SELECT @ProductID AS ProductID;
     END
@@ -2429,7 +2433,8 @@ BEGIN
         p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
         p.CategoryID, c.CatName,
         p.UnitID, u.UnitName,
-        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
     FROM [Inventory].[Products] p
     LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
     LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
@@ -2451,7 +2456,8 @@ BEGIN
         p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
         p.CategoryID, c.CatName,
         p.UnitID, u.UnitName,
-        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
     FROM [Inventory].[Products] p
     LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
     LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
@@ -5170,7 +5176,8 @@ BEGIN
         p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
         p.CategoryID, c.CatName,
         p.UnitID, u.UnitName,
-        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
     FROM [Inventory].[Products] p
     LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
     LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
@@ -6133,7 +6140,8 @@ BEGIN
         p.Barcode
     FROM [Sales].[InvoiceDetails] d
     LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
-    WHERE d.InvID = @InvID;
+    WHERE d.InvID = @InvID
+    Order by d.DetID ;
 END
 GO
 
@@ -8673,7 +8681,7 @@ BEGIN
         -- 3. تسجيل القيود المحاسبية
         -- حساب التسويات/الهالك (64xx) وحساب المخزون (13xx)
         DECLARE @AdjExpenseAcc INT = ISNULL(
-            (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '64%' AND IsTransactional = 1 ORDER BY AccountCode),
+            (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '51%' AND IsTransactional = 1 ORDER BY AccountCode),
             (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '5%'  AND IsTransactional = 1 ORDER BY AccountCode DESC)
         );
         DECLARE @InventoryAcc INT = ISNULL(
@@ -9131,7 +9139,8 @@ CREATE PROCEDURE [Inventory].[sp_Product_QuickAdd]
     @Barcode      NVARCHAR(50),
     @ProductName  NVARCHAR(200),
     @PurchasePrice DECIMAL(18,3) = 0,
-    @SalePrice     DECIMAL(18,3) = 0
+    @SalePrice     DECIMAL(18,3) = 0,
+    @ProductType   INT = 1
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -9146,7 +9155,8 @@ BEGIN
         PurchasePrice,
         SalePrice,
         AlertQty,
-        IsActive
+        IsActive,
+        ProductType
     )
     VALUES (
         @ProductName,
@@ -9156,7 +9166,8 @@ BEGIN
         @PurchasePrice,
         @SalePrice,
         0,
-        1
+        1,
+        ISNULL(@ProductType, 1)
     );
 
     SET @NewID = SCOPE_IDENTITY();
@@ -9380,16 +9391,18 @@ BEGIN
         Logo, 
         UnifiedPartnerSearch, 
         CurrencySymbol,
-        UseDetailedInvoiceDesign
+        UseDetailedInvoiceDesign,
+        UseCustomInvoiceDesign,
+        ISNULL(ProductionMode, 0) AS ProductionMode
     FROM [Settings].[CompanySettings];
 END
 GO
 
- IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL
-    DROP procedure [Settings].[sp_CompanySettings_Save]
+-- 3. تحديث إجراء حفظ البيانات (Save SP)
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Save];
 GO
--- 3. تحديث إجراء حفظ البيانات (Save SP) ليشمل الحقل الجديد
-create PROCEDURE [Settings].[sp_CompanySettings_Save]
+
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
     @CompanyName NVARCHAR(200),
     @Address NVARCHAR(255) = NULL,
     @Phone NVARCHAR(50) = NULL,
@@ -9397,7 +9410,9 @@ create PROCEDURE [Settings].[sp_CompanySettings_Save]
     @Logo VARBINARY(MAX) = NULL,
     @UnifiedPartnerSearch BIT = 1,
     @CurrencySymbol NVARCHAR(100) = NULL,
-    @UseDetailedInvoiceDesign BIT = 0
+    @UseDetailedInvoiceDesign BIT = 0,
+    @UseCustomInvoiceDesign BIT = 0,
+    @ProductionMode BIT = 0
 AS
 BEGIN
     IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
@@ -9410,13 +9425,15 @@ BEGIN
             Logo = @Logo,
             UnifiedPartnerSearch = @UnifiedPartnerSearch,
             CurrencySymbol = @CurrencySymbol,
-            UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign
+            UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign,
+            UseCustomInvoiceDesign = @UseCustomInvoiceDesign,
+            ProductionMode = @ProductionMode
         WHERE SettingID = 1;
     END
     ELSE
     BEGIN
-        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign)
-        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign);
+        INSERT INTO [Settings].[CompanySettings] (CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode)
+        VALUES (@CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode);
     END
 END
 GO
@@ -9712,11 +9729,17 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'ProductionMode')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD ProductionMode BIT NOT NULL DEFAULT 0;
+END
+GO
+
 -- 2. تحديث إجراء جلب البيانات (Get SP)
 IF OBJECT_ID('[Settings].[sp_CompanySettings_Get]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Get];
 GO
 
-create PROCEDURE [Settings].[sp_CompanySettings_Get]
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Get]
 AS
 BEGIN
     SELECT TOP 1 
@@ -9726,10 +9749,11 @@ BEGIN
         Phone, 
         Email, 
         Logo, 
-        UnifiedPartnerSearch, 
+        ISNULL(UnifiedPartnerSearch, 1) AS UnifiedPartnerSearch, 
         CurrencySymbol,
-        UseDetailedInvoiceDesign,
-        UseCustomInvoiceDesign
+        ISNULL(UseDetailedInvoiceDesign, 0) AS UseDetailedInvoiceDesign,
+        ISNULL(UseCustomInvoiceDesign, 0) AS UseCustomInvoiceDesign,
+        ISNULL(ProductionMode, 0) AS ProductionMode
     FROM [Settings].[CompanySettings];
 END
 GO
@@ -9737,7 +9761,8 @@ GO
 -- 3. تحديث إجراء حفظ البيانات (Save SP)
 IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Save];
 GO
-create PROCEDURE [Settings].[sp_CompanySettings_Save]
+
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
     @CompanyName NVARCHAR(200),
     @Address NVARCHAR(255) = NULL,
     @Phone NVARCHAR(50) = NULL,
@@ -9746,7 +9771,8 @@ create PROCEDURE [Settings].[sp_CompanySettings_Save]
     @UnifiedPartnerSearch BIT = 1,
     @CurrencySymbol NVARCHAR(100) = NULL,
     @UseDetailedInvoiceDesign BIT = 0,
-    @UseCustomInvoiceDesign BIT = 0
+    @UseCustomInvoiceDesign BIT = 0,
+    @ProductionMode BIT = 0
 AS
 BEGIN
     IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
@@ -9760,13 +9786,14 @@ BEGIN
             UnifiedPartnerSearch = @UnifiedPartnerSearch,
             CurrencySymbol = @CurrencySymbol,
             UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign,
-            UseCustomInvoiceDesign = @UseCustomInvoiceDesign
+            UseCustomInvoiceDesign = @UseCustomInvoiceDesign,
+            ProductionMode = @ProductionMode
         WHERE SettingID = 1;
     END
     ELSE
     BEGIN
-        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign)
-        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign);
+        INSERT INTO [Settings].[CompanySettings] (CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode)
+        VALUES (@CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode);
     END
 END
 GO
@@ -10207,7 +10234,901 @@ BEGIN
     WHERE LicenseID = @LicenseID;
 END;
 GO
-
+--==================================================================
 EXEC [Security].[sp_Permission_AutoAssignAdmin] @UserID = 1;
+GO
+
+-- 1. إضافة عمود وضع التصنيع في جدول إعدادات الشركة الحالي
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'ProductionMode')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD ProductionMode BIT DEFAULT 0;
+END
+GO
+
+-- 2. إضافة نوع الصنف لجدول المنتجات (الافتراضي 1 للمنتجات القديمة)
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Inventory].[Products]') AND name = 'ProductType')
+BEGIN
+    ALTER TABLE [Inventory].[Products] ADD ProductType INT DEFAULT 1;
+END
+GO
+
+UPDATE [Inventory].[Products]
+SET ProductType = 1
+WHERE ProductType IS NULL;
+GO
+
+-- 3. جدول رأس الوصفة [Inventory].[Recipes]
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Recipes' AND schema_id = SCHEMA_ID('Inventory'))
+BEGIN
+    CREATE TABLE [Inventory].[Recipes] (
+        RecipeID INT PRIMARY KEY IDENTITY(1,1),
+        ProductID INT NOT NULL UNIQUE,                  -- المنتج المصنع أو المنتج الوسيط
+        TotalCost DECIMAL(18, 3) DEFAULT 0,            -- التكلفة الكلية المحسوبة للمكونات
+        Notes NVARCHAR(500),                           -- ملاحظات تحضير الوصفة
+        CreatedDate DATETIME DEFAULT GETDATE(),
+        FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID)
+    );
+END
+GO
+
+-- 4. جدول تفاصيل مكونات الوصفة [Inventory].[RecipeDetails]
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RecipeDetails' AND schema_id = SCHEMA_ID('Inventory'))
+BEGIN
+    CREATE TABLE [Inventory].[RecipeDetails] (
+        RecipeDetailID INT PRIMARY KEY IDENTITY(1,1),
+        RecipeID INT NOT NULL,
+        IngredientProductID INT NOT NULL,               -- الصنف الأولي (مادة خام أو منتج وسيط)
+        Qty DECIMAL(18, 4) NOT NULL,                    -- الكمية المطلوبة بدقة 4 خانات عشرية
+        Cost DECIMAL(18, 3) DEFAULT 0,                  -- تكلفة المكون وقت التعريف
+        FOREIGN KEY (RecipeID) REFERENCES [Inventory].[Recipes](RecipeID),
+        FOREIGN KEY (IngredientProductID) REFERENCES [Inventory].[Products](ProductID)
+    );
+END
+GO
+
+-- ==========================================================
+-- 5. الفهارس المخصصة لمنع القفول المتبادلة (Deadlock Prevention Indexes)
+-- ==========================================================
+
+-- أ. فهرس جدول رصيد المنتجات بالمخزن ProductStock
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_ProductStock_ProductID_WarehouseID')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_ProductStock_ProductID_WarehouseID
+    ON [Inventory].[ProductStock] (ProductID, WarehouseID)
+    INCLUDE (CurrentQty, AvgCostPrice);
+END
+GO
+
+-- ب. فهرس تفاصيل الوصفات RecipeDetails
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_RecipeDetails_RecipeID_Ingredient')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_RecipeDetails_RecipeID_Ingredient
+    ON [Inventory].[RecipeDetails] (RecipeID, IngredientProductID)
+    INCLUDE (Qty, Cost);
+END
+GO
+
+-- ج. فهرس رأس الوصفات Recipes
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Recipes_ProductID')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Recipes_ProductID
+    ON [Inventory].[Recipes] (ProductID)
+    INCLUDE (RecipeID, TotalCost);
+END
+GO
+
+-- د. فهرس تفاصيل الفواتير InvoiceDetails
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_InvoiceDetails_InvID_ProductID')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_InvoiceDetails_InvID_ProductID
+    ON [Sales].[InvoiceDetails] (InvID, ProductID)
+    INCLUDE (Quantity, UnitPrice, CostPrice);
+END
+GO
+
+IF OBJECT_ID('[Inventory].[sp_Update_Manufactured_Costs]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Update_Manufactured_Costs];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Update_Manufactured_Costs]
+    @WarehouseID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- التحديث المتسلسل من الأسفل للأعلى (Bottom-Up) لتحديث تكاليف المنتجات الوسيطة ثم المنتجات النهائية
+        DECLARE @Iteration INT = 1;
+        WHILE @Iteration <= 5
+        BEGIN
+            UPDATE PS_Manuf
+            SET PS_Manuf.AvgCostPrice = ISNULL((
+                SELECT SUM(RD.Qty * ISNULL(PS_Ing.AvgCostPrice, 0))
+                FROM [Inventory].[RecipeDetails] RD
+                INNER JOIN [Inventory].[Recipes] R ON R.RecipeID = RD.RecipeID
+                LEFT JOIN [Inventory].[ProductStock] PS_Ing 
+                       ON PS_Ing.ProductID = RD.IngredientProductID 
+                      AND PS_Ing.WarehouseID = PS_Manuf.WarehouseID
+                WHERE R.ProductID = PS_Manuf.ProductID
+            ), 0)
+            FROM [Inventory].[ProductStock] PS_Manuf
+            INNER JOIN [Inventory].[Recipes] R ON R.ProductID = PS_Manuf.ProductID
+            WHERE (@WarehouseID IS NULL OR PS_Manuf.WarehouseID = @WarehouseID);
+
+            SET @Iteration = @Iteration + 1;
+        END
+
+        -- إدراج أي سجلات مخزنية مفقودة للأصناف المصنعة
+        INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+        SELECT R.ProductID, W.WarehouseID, 0, ISNULL((
+            SELECT SUM(RD.Qty * ISNULL(PS_Ing.AvgCostPrice, 0))
+            FROM [Inventory].[RecipeDetails] RD
+            LEFT JOIN [Inventory].[ProductStock] PS_Ing ON PS_Ing.ProductID = RD.IngredientProductID AND PS_Ing.WarehouseID = W.WarehouseID
+            WHERE RD.RecipeID = R.RecipeID
+        ), 0)
+        FROM [Inventory].[Recipes] R
+        CROSS JOIN [Settings].[Warehouses] W
+        WHERE (@WarehouseID IS NULL OR W.WarehouseID = @WarehouseID)
+          AND NOT EXISTS (
+            SELECT 1 FROM [Inventory].[ProductStock] PS2 
+            WHERE PS2.ProductID = R.ProductID AND PS2.WarehouseID = W.WarehouseID
+        );
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+IF OBJECT_ID('[Sales].[trg_Invoice_Post]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_Invoice_Post];
+GO
+
+IF OBJECT_ID('[Sales].[trg_Invoice_Post]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_Invoice_Post];
+GO
+
+CREATE TRIGGER [Sales].[trg_Invoice_Post]
+ON [Sales].[InvoiceHeader]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- الفلترة الأساسية: العمل فقط عند تغير حالة IsPosted
+    IF NOT UPDATE(IsPosted) RETURN;
+
+    BEGIN TRY
+        -- جلب وضع التصنيع المسجل في إعدادات الشركة (الافتراضي 0 = غير مفعل)
+        DECLARE @ProductionMode BIT = ISNULL((SELECT TOP 1 ProductionMode FROM [Settings].[CompanySettings]), 0);
+
+        -- 1. متغيرات الحسابات الافتراضية
+        DECLARE @InventoryAcc INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '13%' AND IsTransactional = 1 ORDER BY AccountCode);
+        DECLARE @SalesAcc     INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '41%' AND IsTransactional = 1 ORDER BY AccountCode);
+        DECLARE @COGSAcc      INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '51%' AND IsTransactional = 1 ORDER BY AccountCode);
+        DECLARE @CustomerAcc  INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '12%' AND IsTransactional = 1 ORDER BY AccountCode);
+        DECLARE @VendorAcc    INT = (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '21%' AND IsTransactional = 1 ORDER BY AccountCode);
+
+        -- ==========================================================
+        -- أولاً: حالة الترحيل (POSTING: 0 -> 1)
+        -- ==========================================================
+        IF EXISTS (SELECT 1 FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 1 AND d.IsPosted = 0)
+        BEGIN
+            
+            -- أ. إدراج سجلات المنتجات المفقودة في جدول المخزون للمستودع المعين بقيم صفرية لمنع فشل التحديث
+            INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+            SELECT DISTINCT TargetProductID, WarehouseID, 0, 0
+            FROM (
+                SELECT D.ProductID AS TargetProductID, i.WarehouseID
+                FROM [Sales].[InvoiceDetails] D
+                JOIN inserted i ON D.InvID = i.InvID
+                JOIN deleted del ON i.InvID = del.InvID
+                WHERE i.IsPosted = 1 AND del.IsPosted = 0
+                UNION
+                SELECT RD.IngredientProductID AS TargetProductID, i.WarehouseID
+                FROM [Sales].[InvoiceDetails] D
+                JOIN inserted i ON D.InvID = i.InvID
+                JOIN deleted del ON i.InvID = del.InvID
+                JOIN [Inventory].[Recipes] R ON R.ProductID = D.ProductID
+                JOIN [Inventory].[RecipeDetails] RD ON RD.RecipeID = R.RecipeID
+                WHERE i.IsPosted = 1 AND del.IsPosted = 0 AND @ProductionMode = 1 AND i.InvType = 'Sales'
+            ) MissingStock
+            WHERE NOT EXISTS (
+                SELECT 1 FROM [Inventory].[ProductStock] S2 
+                WHERE S2.ProductID = MissingStock.TargetProductID AND S2.WarehouseID = MissingStock.WarehouseID
+            );
+
+            -- ب. تحديث متوسط التكلفة الأصلي (لالمشتريات فقط)
+            UPDATE S
+            SET S.AvgCostPrice = CASE 
+                WHEN (ISNULL(S.CurrentQty, 0) + T.TotalQty) > 0 
+                THEN (ISNULL(S.CurrentQty, 0) * ISNULL(S.AvgCostPrice, 0) + T.TotalSum) / (ISNULL(S.CurrentQty, 0) + T.TotalQty)
+                ELSE T.WeightedPrice END
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN (
+                SELECT D.ProductID, i.WarehouseID, SUM(D.Quantity) as TotalQty, SUM(D.Quantity * D.UnitPrice) as TotalSum,
+                       SUM(D.Quantity * D.UnitPrice) / NULLIF(SUM(D.Quantity), 0) as WeightedPrice
+                FROM [Sales].[InvoiceDetails] D
+                JOIN inserted i ON D.InvID = i.InvID
+                JOIN deleted d_old ON i.InvID = d_old.InvID
+                WHERE i.IsPosted = 1 AND d_old.IsPosted = 0 AND i.InvType = 'Purchase'
+                GROUP BY D.ProductID, i.WarehouseID
+            ) T ON S.ProductID = T.ProductID AND S.WarehouseID = T.WarehouseID;
+
+            -- ب.1. [استدعاء نظيف ومفصول للإجراء التكراري]: تحديث كافة المنتجات الوسيطة والنهائية عند ترحيل المشتريات
+            IF @ProductionMode = 1 AND EXISTS (SELECT 1 FROM inserted WHERE InvType = 'Purchase')
+            BEGIN
+                DECLARE @PurchasedW INT = (SELECT TOP 1 WarehouseID FROM inserted WHERE InvType = 'Purchase');
+                EXEC [Inventory].[sp_Update_Manufactured_Costs] @WarehouseID = @PurchasedW;
+            END
+
+            -- ج. تحديث الكميات باستخدام التفكيك التكراري (Recursive CTE) مع توحيد نوع البيانات CAST(..., DECIMAL(18,4))
+            ;WITH ExplodedPost AS (
+                SELECT 
+                    D.InvID,
+                    i.InvType,
+                    i.WarehouseID,
+                    D.ProductID AS TargetProductID,
+                    CAST(D.Quantity AS DECIMAL(18, 4)) AS TargetQty,
+                    0 AS RecLevel
+                FROM [Sales].[InvoiceDetails] D
+                JOIN inserted i ON D.InvID = i.InvID
+                JOIN deleted d_old ON i.InvID = d_old.InvID
+                WHERE i.IsPosted = 1 AND d_old.IsPosted = 0 
+                  AND (@ProductionMode = 0 OR i.InvType = 'Purchase' OR NOT EXISTS (SELECT 1 FROM [Inventory].[Recipes] WHERE ProductID = D.ProductID))
+
+                UNION ALL
+
+                SELECT 
+                    D.InvID,
+                    i.InvType,
+                    i.WarehouseID,
+                    RD.IngredientProductID AS TargetProductID,
+                    CAST((D.Quantity * RD.Qty) AS DECIMAL(18, 4)) AS TargetQty,
+                    1 AS RecLevel
+                FROM [Sales].[InvoiceDetails] D
+                JOIN inserted i ON D.InvID = i.InvID
+                JOIN deleted d_old ON i.InvID = d_old.InvID
+                JOIN [Inventory].[Recipes] R ON R.ProductID = D.ProductID
+                JOIN [Inventory].[RecipeDetails] RD ON RD.RecipeID = R.RecipeID
+                WHERE i.IsPosted = 1 AND d_old.IsPosted = 0 AND @ProductionMode = 1 AND i.InvType = 'Sales'
+
+                UNION ALL
+
+                SELECT 
+                    EP.InvID,
+                    EP.InvType,
+                    EP.WarehouseID,
+                    RD_Sub.IngredientProductID AS TargetProductID,
+                    CAST((EP.TargetQty * RD_Sub.Qty) AS DECIMAL(18, 4)) AS TargetQty,
+                    EP.RecLevel + 1
+                FROM ExplodedPost EP
+                JOIN [Inventory].[Recipes] R_Sub ON R_Sub.ProductID = EP.TargetProductID
+                JOIN [Inventory].[RecipeDetails] RD_Sub ON RD_Sub.RecipeID = R_Sub.RecipeID
+                WHERE EP.RecLevel > 0 
+                  AND NOT EXISTS (
+                      SELECT 1 FROM [Inventory].[ProductStock] PS 
+                      WHERE PS.ProductID = EP.TargetProductID AND PS.WarehouseID = EP.WarehouseID AND PS.CurrentQty > 0
+                  )
+            )
+            UPDATE S
+            SET S.CurrentQty = ISNULL(S.CurrentQty, 0) + (CASE WHEN T.InvType = 'Purchase' THEN T.Qty ELSE -T.Qty END)
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN (
+                SELECT TargetProductID, InvID, InvType, WarehouseID, SUM(TargetQty) as Qty 
+                FROM ExplodedPost 
+                GROUP BY TargetProductID, InvID, InvType, WarehouseID
+            ) T ON S.ProductID = T.TargetProductID AND S.WarehouseID = T.WarehouseID;
+
+            -- د. تسجيل التكلفة المباشرة السريعة (Fast Direct Lookup) من جدول ProductStock
+            UPDATE D
+            SET D.CostPrice = ISNULL(S.AvgCostPrice, 0)
+            FROM [Sales].[InvoiceDetails] D
+            JOIN inserted i ON D.InvID = i.InvID
+            JOIN [Inventory].[ProductStock] S ON D.ProductID = S.ProductID AND S.WarehouseID = i.WarehouseID
+            WHERE i.IsPosted = 1 AND i.InvType = 'Sales';
+
+            -- هـ. القيود المحاسبية (Journals - دون أي تعديل)
+            DECLARE @EntryMap TABLE (InvID INT, EntryNo INT);
+            INSERT INTO @EntryMap SELECT i.InvID, NEXT VALUE FOR [Accounting].[seq_EntryNo] 
+            FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 1 AND d.IsPosted = 0;
+
+            -- قيد الفاتورة (مشتريات/مبيعات)
+            INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(w.AccountID, @InventoryAcc), i.NetAmount, 0, N'مشتريات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID WHERE i.InvType = 'Purchase'
+            UNION ALL
+            SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(p.AccountID, @VendorAcc), 0, i.NetAmount, N'مشتريات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.InvType = 'Purchase'
+            UNION ALL
+            SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(p.AccountID, @CustomerAcc), i.NetAmount, 0, N'مبيعات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.InvType = 'Sales'
+            UNION ALL
+            SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, @SalesAcc, 0, i.NetAmount, N'مبيعات فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID WHERE i.InvType = 'Sales';
+
+            -- و. قيد تكلفة البضاعة المباعة (للمبيعات فقط - دون أي تعديل)
+            ;WITH InvoiceCOGS AS (
+                SELECT d.InvID, SUM(d.CostPrice * d.Quantity) AS TotalCost
+                FROM [Sales].[InvoiceDetails] d
+                INNER JOIN inserted i ON d.InvID = i.InvID
+                WHERE i.InvType = 'Sales'
+                GROUP BY d.InvID
+            )
+            INSERT INTO [Accounting].[JournalEntries] 
+                (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, @COGSAcc, cogs.TotalCost, 0, 
+                   N'تكلفة البضاعة المباعة فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i
+            JOIN @EntryMap m ON i.InvID = m.InvID
+            JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+            WHERE i.InvType = 'Sales' AND cogs.TotalCost > 0
+
+            UNION ALL
+
+            SELECT m.EntryNo, i.InvDate, 'Invoice', i.InvID, ISNULL(w.AccountID, @InventoryAcc), 0, cogs.TotalCost, 
+                   N'تكلفة البضاعة المباعة فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i
+            JOIN @EntryMap m ON i.InvID = m.InvID
+            JOIN InvoiceCOGS cogs ON i.InvID = cogs.InvID
+            LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
+            WHERE i.InvType = 'Sales' AND cogs.TotalCost > 0;
+
+            -- ز. قيود السداد (Payments - دون أي تعديل)
+            INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN ISNULL(p.AccountID, @VendorAcc) ELSE i.PaymentAccountID END, i.PaidAmount, 0, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+            UNION ALL
+            SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN i.PaymentAccountID ELSE ISNULL(p.AccountID, @CustomerAcc) END, 0, i.PaidAmount, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        END
+
+        -- ==========================================================
+        -- ثانياً: حالة إلغاء الترحيل (UNPOSTING: 1 -> 0)
+        -- ==========================================================
+        IF EXISTS (SELECT 1 FROM inserted i JOIN deleted d ON i.InvID = d.InvID WHERE i.IsPosted = 0 AND d.IsPosted = 1)
+        BEGIN
+            INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+            SELECT DISTINCT TargetProductID, WarehouseID, 0, 0
+            FROM (
+                SELECT D.ProductID AS TargetProductID, d_old.WarehouseID
+                FROM [Sales].[InvoiceDetails] D
+                JOIN deleted d_old ON D.InvID = d_old.InvID
+                JOIN inserted i ON d_old.InvID = i.InvID
+                WHERE i.IsPosted = 0 AND d_old.IsPosted = 1
+                UNION
+                SELECT RD.IngredientProductID AS TargetProductID, d_old.WarehouseID
+                FROM [Sales].[InvoiceDetails] D
+                JOIN deleted d_old ON D.InvID = d_old.InvID
+                JOIN inserted i ON d_old.InvID = i.InvID
+                JOIN [Inventory].[Recipes] R ON R.ProductID = D.ProductID
+                JOIN [Inventory].[RecipeDetails] RD ON RD.RecipeID = R.RecipeID
+                WHERE i.IsPosted = 0 AND d_old.IsPosted = 1 AND @ProductionMode = 1 AND d_old.InvType = 'Sales'
+            ) MissingStockUnpost
+            WHERE NOT EXISTS (
+                SELECT 1 FROM [Inventory].[ProductStock] S2 
+                WHERE S2.ProductID = MissingStockUnpost.TargetProductID AND S2.WarehouseID = MissingStockUnpost.WarehouseID
+            );
+
+            -- أ. إعادة حساب وتخفيض متوسط التكلفة (عند إلغاء ترحيل المشتريات فقط - دون أي تعديل)
+            UPDATE S
+            SET S.AvgCostPrice = CASE 
+                WHEN (ISNULL(S.CurrentQty, 0) - T.TotalQty) > 0 
+                THEN (CASE 
+                    WHEN (ISNULL(S.CurrentQty, 0) * ISNULL(S.AvgCostPrice, 0) - T.TotalSum) > 0 
+                    THEN (ISNULL(S.CurrentQty, 0) * ISNULL(S.AvgCostPrice, 0) - T.TotalSum) / (ISNULL(S.CurrentQty, 0) - T.TotalQty)
+                    ELSE 0 END)
+                ELSE 0 END
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN (
+                SELECT D.ProductID, d_old.WarehouseID, SUM(D.Quantity) as TotalQty, SUM(D.Quantity * D.UnitPrice) as TotalSum
+                FROM [Sales].[InvoiceDetails] D
+                JOIN deleted d_old ON D.InvID = d_old.InvID
+                JOIN inserted i ON d_old.InvID = i.InvID
+                WHERE i.IsPosted = 0 AND d_old.IsPosted = 1 AND d_old.InvType = 'Purchase'
+                GROUP BY D.ProductID, d_old.WarehouseID
+            ) T ON S.ProductID = T.ProductID AND S.WarehouseID = T.WarehouseID;
+
+            -- أ.1. [إعادة حساب التكاليف بعد إلغاء ترحيل الشراء]:
+            IF @ProductionMode = 1 AND EXISTS (SELECT 1 FROM deleted WHERE InvType = 'Purchase')
+            BEGIN
+                DECLARE @UnpostedW INT = (SELECT TOP 1 WarehouseID FROM deleted WHERE InvType = 'Purchase');
+                EXEC [Inventory].[sp_Update_Manufactured_Costs] @WarehouseID = @UnpostedW;
+            END
+
+            -- ب. عكس تأثير المخزن باستخدام التفكيك التكراري (Recursive CTE) مع توحيد نوع البيانات CAST(..., DECIMAL(18,4))
+            ;WITH ExplodedUnpost AS (
+                SELECT 
+                    D.InvID,
+                    d_old.InvType,
+                    d_old.WarehouseID,
+                    D.ProductID AS TargetProductID,
+                    CAST(D.Quantity AS DECIMAL(18, 4)) AS TargetQty,
+                    0 AS RecLevel
+                FROM [Sales].[InvoiceDetails] D
+                JOIN deleted d_old ON D.InvID = d_old.InvID
+                JOIN inserted i ON d_old.InvID = i.InvID
+                WHERE i.IsPosted = 0 AND d_old.IsPosted = 1
+                  AND (@ProductionMode = 0 OR d_old.InvType = 'Purchase' OR NOT EXISTS (SELECT 1 FROM [Inventory].[Recipes] WHERE ProductID = D.ProductID))
+
+                UNION ALL
+
+                SELECT 
+                    D.InvID,
+                    d_old.InvType,
+                    d_old.WarehouseID,
+                    RD.IngredientProductID AS TargetProductID,
+                    CAST((D.Quantity * RD.Qty) AS DECIMAL(18, 4)) AS TargetQty,
+                    1 AS RecLevel
+                FROM [Sales].[InvoiceDetails] D
+                JOIN deleted d_old ON D.InvID = d_old.InvID
+                JOIN inserted i ON d_old.InvID = i.InvID
+                JOIN [Inventory].[Recipes] R ON R.ProductID = D.ProductID
+                JOIN [Inventory].[RecipeDetails] RD ON RD.RecipeID = R.RecipeID
+                WHERE i.IsPosted = 0 AND d_old.IsPosted = 1 AND @ProductionMode = 1 AND d_old.InvType = 'Sales'
+
+                UNION ALL
+
+                SELECT 
+                    EU.InvID,
+                    EU.InvType,
+                    EU.WarehouseID,
+                    RD_Sub.IngredientProductID AS TargetProductID,
+                    CAST((EU.TargetQty * RD_Sub.Qty) AS DECIMAL(18, 4)) AS TargetQty,
+                    EU.RecLevel + 1
+                FROM ExplodedUnpost EU
+                JOIN [Inventory].[Recipes] R_Sub ON R_Sub.ProductID = EU.TargetProductID
+                JOIN [Inventory].[RecipeDetails] RD_Sub ON RD_Sub.RecipeID = R_Sub.RecipeID
+                WHERE EU.RecLevel > 0 
+                  AND NOT EXISTS (
+                      SELECT 1 FROM [Inventory].[ProductStock] PS 
+                      WHERE PS.ProductID = EU.TargetProductID AND PS.WarehouseID = EU.WarehouseID AND PS.CurrentQty > 0
+                  )
+            )
+            UPDATE S
+            SET S.CurrentQty = ISNULL(S.CurrentQty, 0) + (CASE WHEN T.InvType = 'Sales' THEN T.Qty ELSE -T.Qty END)
+            FROM [Inventory].[ProductStock] S
+            INNER JOIN (
+                SELECT TargetProductID, InvID, InvType, WarehouseID, SUM(TargetQty) as Qty 
+                FROM ExplodedUnpost 
+                GROUP BY TargetProductID, InvID, InvType, WarehouseID
+            ) T ON S.ProductID = T.TargetProductID AND S.WarehouseID = T.WarehouseID;
+
+            -- حذف القيود المحاسبية بالكامل (دون أي تعديل)
+            DELETE JE FROM [Accounting].[JournalEntries] JE
+            INNER JOIN deleted d_old ON JE.ReferenceID = d_old.InvID
+            WHERE JE.ReferenceType IN ('Invoice', 'Payment') AND d_old.IsPosted = 1;
+        END
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+-- 1. إجراء جلب جميع الوصفات
+IF OBJECT_ID('[Inventory].[sp_Recipe_GetAll]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Recipe_GetAll];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Recipe_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        R.RecipeID,
+        R.ProductID,
+        P.ProductName,
+        P.Barcode,
+        P.ProductType,
+        R.TotalCost,
+        R.Notes,
+        R.CreatedDate,
+        (SELECT COUNT(1) FROM [Inventory].[RecipeDetails] RD WHERE RD.RecipeID = R.RecipeID) AS IngredientsCount
+    FROM [Inventory].[Recipes] R
+    INNER JOIN [Inventory].[Products] P ON R.ProductID = P.ProductID
+    ORDER BY P.ProductName;
+END
+GO
+
+-- 2. إجراء جلب تفاصيل وصفة صنف معين
+IF OBJECT_ID('[Inventory].[sp_Recipe_GetByProduct]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Recipe_GetByProduct];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Recipe_GetByProduct]
+    @ProductID INT,
+    @WarehouseID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- الجدول 1: رأس الوصفة
+    SELECT 
+        R.RecipeID, 
+        R.ProductID, 
+        P.ProductName, 
+        ISNULL((
+            SELECT SUM(RD2.Qty * ISNULL(
+                CASE 
+                    WHEN @WarehouseID IS NOT NULL THEN PS2.AvgCostPrice
+                    ELSE MinStock.MinCost
+                END, 0))
+            FROM [Inventory].[RecipeDetails] RD2
+            LEFT JOIN [Inventory].[ProductStock] PS2 
+                   ON PS2.ProductID = RD2.IngredientProductID 
+                  AND PS2.WarehouseID = @WarehouseID
+            OUTER APPLY (
+                SELECT MIN(AvgCostPrice) AS MinCost
+                FROM [Inventory].[ProductStock]
+                WHERE ProductID = RD2.IngredientProductID AND AvgCostPrice > 0
+            ) MinStock
+            WHERE RD2.RecipeID = R.RecipeID
+        ), 0) AS TotalCost,
+        R.Notes
+    FROM [Inventory].[Recipes] R
+    INNER JOIN [Inventory].[Products] P ON R.ProductID = P.ProductID
+    WHERE R.ProductID = @ProductID;
+
+    -- الجدول 2: مكونات الوصفة مع تكلفة وحدة المادة الخام/المنتج الوسيط من ProductStock
+    SELECT 
+        RD.RecipeDetailID,
+        RD.RecipeID,
+        RD.IngredientProductID,
+        P.ProductName AS IngredientName,
+        P.Barcode AS IngredientBarcode,
+        P.ProductType AS IngredientType,
+        U.UnitName,
+        RD.Qty,
+        ISNULL(
+            CASE 
+                WHEN @WarehouseID IS NOT NULL THEN PS.AvgCostPrice
+                ELSE MinStock.MinCost
+            END, 0) AS UnitCost,
+        (RD.Qty * ISNULL(
+            CASE 
+                WHEN @WarehouseID IS NOT NULL THEN PS.AvgCostPrice
+                ELSE MinStock.MinCost
+            END, 0)) AS LineCost
+    FROM [Inventory].[RecipeDetails] RD
+    INNER JOIN [Inventory].[Recipes] R ON RD.RecipeID = R.RecipeID
+    INNER JOIN [Inventory].[Products] P ON RD.IngredientProductID = P.ProductID
+    LEFT JOIN [Settings].[Units] U ON P.UnitID = U.UnitID
+    LEFT JOIN [Inventory].[ProductStock] PS 
+           ON PS.ProductID = P.ProductID 
+          AND PS.WarehouseID = @WarehouseID
+    OUTER APPLY (
+        SELECT MIN(AvgCostPrice) AS MinCost
+        FROM [Inventory].[ProductStock]
+        WHERE ProductID = RD.IngredientProductID AND AvgCostPrice > 0
+    ) MinStock
+    WHERE R.ProductID = @ProductID;
+END
+GO
+
+-- 3. إجراء حفظ الوصفة وتفاصيلها بأسلوب XML (يستدعي sp_Update_Manufactured_Costs للتحديث المتسلسل)
+IF OBJECT_ID('[Inventory].[sp_Recipe_Save_XML]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Recipe_Save_XML];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Recipe_Save_XML]
+    @ProductID INT,
+    @Notes NVARCHAR(500),
+    @DetailsXML XML,
+    @WarehouseID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- فحص الحماية: منع إضافة الصنف كـ "مكون" لنفسه مباشرة
+        IF EXISTS (
+            SELECT 1 FROM @DetailsXML.nodes('/Details/Detail') AS T(c)
+            WHERE T.c.value('(IngredientProductID)[1]', 'INT') = @ProductID
+        )
+        BEGIN
+            RAISERROR(N'عذراً، لا يمكن إضافة المنتج كمكون لنفسه في الوصفة!', 16, 1);
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+
+        DECLARE @RecipeID INT;
+        SELECT @RecipeID = RecipeID FROM [Inventory].[Recipes] WHERE ProductID = @ProductID;
+
+        IF @RecipeID IS NULL
+        BEGIN
+            INSERT INTO [Inventory].[Recipes] (ProductID, Notes)
+            VALUES (@ProductID, @Notes);
+            SET @RecipeID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            UPDATE [Inventory].[Recipes] SET Notes = @Notes WHERE RecipeID = @RecipeID;
+        END
+
+        -- مسح المكونات القديمة وإعادة بناء المكونات
+        DELETE FROM [Inventory].[RecipeDetails] WHERE RecipeID = @RecipeID;
+
+        INSERT INTO [Inventory].[RecipeDetails] (RecipeID, IngredientProductID, Qty, Cost)
+        SELECT 
+            @RecipeID,
+            T.c.value('(IngredientProductID)[1]', 'INT'),
+            T.c.value('(Qty)[1]', 'DECIMAL(18, 4)'),
+            ISNULL(T.c.value('(Cost)[1]', 'DECIMAL(18, 3)'), 0)
+        FROM @DetailsXML.nodes('/Details/Detail') AS T(c);
+
+        -- 1. تحديث التكلفة الكلية للوصفة في جدول الجذور Recipes
+        DECLARE @RecipeTotalCost DECIMAL(18, 3) = 0;
+        SELECT @RecipeTotalCost = ISNULL(SUM(RD.Qty * RD.Cost), 0)
+        FROM [Inventory].[RecipeDetails] RD 
+        WHERE RD.RecipeID = @RecipeID;
+
+        UPDATE [Inventory].[Recipes]
+        SET TotalCost = @RecipeTotalCost
+        WHERE RecipeID = @RecipeID;
+
+        -- 2. إذا لم يُحدد مستودع، يتم استخدام المستودع الرئيسي الافتراضي
+        IF @WarehouseID IS NULL
+        BEGIN
+            SELECT TOP 1 @WarehouseID = WarehouseID FROM [Settings].[Warehouses] ORDER BY WarehouseID;
+        END
+
+        -- 3. إضافة/تحديث المنتج المصنع الجديد في ProductStock بالتكلفة المحسوبة ورصيد 0 إذا كان جديداً
+        IF @WarehouseID IS NOT NULL
+        BEGIN
+            IF EXISTS (SELECT 1 FROM [Inventory].[ProductStock] WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID)
+            BEGIN
+                UPDATE [Inventory].[ProductStock]
+                SET AvgCostPrice = @RecipeTotalCost
+                WHERE ProductID = @ProductID AND WarehouseID = @WarehouseID;
+            END
+            ELSE
+            BEGIN
+                INSERT INTO [Inventory].[ProductStock] (ProductID, WarehouseID, CurrentQty, AvgCostPrice)
+                VALUES (@ProductID, @WarehouseID, 0, @RecipeTotalCost);
+            END
+        END
+
+        -- 4. استدعاء الإجراء المتسلسل للتحديث الشامل لجميع المستويات في المخازن
+        EXEC [Inventory].[sp_Update_Manufactured_Costs] @WarehouseID = @WarehouseID;
+
+        COMMIT TRANSACTION;
+        SELECT @RecipeID AS RecipeID;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+-- 4. إجراء حذف وصفة
+IF OBJECT_ID('[Inventory].[sp_Recipe_Delete]', 'P') IS NOT NULL
+    DROP PROCEDURE [Inventory].[sp_Recipe_Delete];
+GO
+
+CREATE PROCEDURE [Inventory].[sp_Recipe_Delete]
+    @RecipeID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DELETE FROM [Inventory].[RecipeDetails] WHERE RecipeID = @RecipeID;
+        DELETE FROM [Inventory].[Recipes] WHERE RecipeID = @RecipeID;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END
+GO
+
+UPDATE [Inventory].[Products]
+SET ProductType = 1
+WHERE ProductType IS NULL;
+GO
+
+-- 5. إجراء فواتير المشتريات (جلب المواد الخام والأصناف العادية واستثناء الأصناف المصنعة)
+IF OBJECT_ID('[Inventory].[sp_Product_GetForPurchase]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetForPurchase];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetForPurchase]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @ProductionMode BIT = ISNULL((SELECT TOP 1 ProductionMode FROM [Settings].[CompanySettings]), 0);
+
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName, p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.IsActive = 1
+      AND (@ProductionMode = 0 OR ISNULL(p.ProductType, 1) IN (0, 1))
+    ORDER BY p.ProductName;
+END
+GO
+
+-- 6. إجراء فواتير المبيعات (جلب المنتجات المصنعة 2 والأصناف العادية 1)
+IF OBJECT_ID('[Inventory].[sp_Product_GetForSales]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetForSales];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetForSales]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @ProductionMode BIT = ISNULL((SELECT TOP 1 ProductionMode FROM [Settings].[CompanySettings]), 0);
+
+    SELECT 
+        p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+        p.CategoryID, c.CatName, p.UnitID, u.UnitName,
+        p.PurchasePrice, p.SalePrice, p.AlertQty, p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE p.IsActive = 1
+      AND (@ProductionMode = 0 OR ISNULL(p.ProductType, 1) IN (1, 2))
+    ORDER BY p.ProductName;
+END
+GO
+
+-- 7. إجراء تفاصيل الوصفات (جلب المواد الخام والمنتجات الوسيطة والأصناف العادية مع تكلفة ProductStock)
+IF OBJECT_ID('[Inventory].[sp_Product_GetForRecipeIngredients]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetForRecipeIngredients];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetForRecipeIngredients]
+    @WarehouseID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @ProductionMode BIT = ISNULL((SELECT TOP 1 ProductionMode FROM [Settings].[CompanySettings]), 0);
+
+    SELECT 
+        p.ProductID, 
+        p.ProductName, 
+        p.ProductNameEn, 
+        p.Barcode,
+        p.CategoryID, 
+        c.CatName, 
+        p.UnitID, 
+        u.UnitName,
+        ISNULL(
+            CASE 
+                WHEN @WarehouseID IS NOT NULL THEN PS.AvgCostPrice
+                ELSE MinStock.MinCost
+            END, 0) AS PurchasePrice,  -- التكلفة المرجحة حصراً من جدول ProductStock (حتى لو من مخزن آخر)
+        p.SalePrice, 
+        p.AlertQty, 
+        p.IsActive,
+        ISNULL(p.ProductType, 1) AS ProductType
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    LEFT JOIN [Inventory].[ProductStock] PS ON PS.ProductID = p.ProductID AND PS.WarehouseID = @WarehouseID
+    OUTER APPLY (
+        SELECT MIN(AvgCostPrice) AS MinCost
+        FROM [Inventory].[ProductStock]
+        WHERE ProductID = p.ProductID AND AvgCostPrice > 0
+    ) MinStock
+    WHERE p.IsActive = 1
+      AND (@ProductionMode = 0 OR ISNULL(p.ProductType, 1) IN (0, 1, 3))
+    ORDER BY p.ProductName;
+END
+GO
+
+-- 8. إجراء الأصناف المستهدفة للوصفات (جلب المنتجات المصنعة 2 والمنتجات الوسيطة 3 التي ليس لها وصفة مسجلة بعد)
+IF OBJECT_ID('[Inventory].[sp_Product_GetForRecipeTarget]', 'P') IS NOT NULL DROP PROCEDURE [Inventory].[sp_Product_GetForRecipeTarget];
+GO
+CREATE PROCEDURE [Inventory].[sp_Product_GetForRecipeTarget]
+    @WarehouseID INT = NULL,
+    @IncludeAll  BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @ProductionMode BIT = ISNULL((SELECT TOP 1 ProductionMode FROM [Settings].[CompanySettings]), 0);
+
+    IF @IncludeAll = 1
+    BEGIN
+        -- جلب جميع المنتجات المصنعة (2) والوسيطة (3) سواء لها وصفة مسجلة أو لا (لقائمة البحث الشاملة)
+        SELECT 
+            p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+            p.CategoryID, c.CatName, p.UnitID, u.UnitName,
+            ISNULL(
+                CASE 
+                    WHEN @WarehouseID IS NOT NULL THEN PS.AvgCostPrice
+                    ELSE MinStock.MinCost
+                END, 0) AS PurchasePrice,
+            p.SalePrice, p.AlertQty, p.IsActive,
+            ISNULL(p.ProductType, 1) AS ProductType,
+            CASE WHEN EXISTS (SELECT 1 FROM [Inventory].[Recipes] r WHERE r.ProductID = p.ProductID) THEN 1 ELSE 0 END AS HasRecipe
+        FROM [Inventory].[Products] p
+        LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+        LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+        LEFT JOIN [Inventory].[ProductStock] PS ON PS.ProductID = p.ProductID AND PS.WarehouseID = @WarehouseID
+        OUTER APPLY (
+            SELECT MIN(AvgCostPrice) AS MinCost
+            FROM [Inventory].[ProductStock]
+            WHERE ProductID = p.ProductID AND AvgCostPrice > 0
+        ) MinStock
+        WHERE p.IsActive = 1
+          AND ISNULL(p.ProductType, 1) IN (2, 3)
+        ORDER BY p.ProductName;
+    END
+    ELSE
+    BEGIN
+        -- الوضع الافتراضي: جلب المنتجات المصنعة (2) والوسيطة (3) التي ليس لها وصفة مسجلة بعد فقط
+        IF EXISTS (
+            SELECT 1 FROM [Inventory].[Products] p 
+            WHERE p.IsActive = 1 
+              AND ISNULL(p.ProductType, 1) IN (2, 3)
+              AND NOT EXISTS (SELECT 1 FROM [Inventory].[Recipes] r WHERE r.ProductID = p.ProductID)
+        )
+        BEGIN
+            SELECT 
+                p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+                p.CategoryID, c.CatName, p.UnitID, u.UnitName,
+                ISNULL(
+                    CASE 
+                        WHEN @WarehouseID IS NOT NULL THEN PS.AvgCostPrice
+                        ELSE MinStock.MinCost
+                    END, 0) AS PurchasePrice,
+                p.SalePrice, p.AlertQty, p.IsActive,
+                ISNULL(p.ProductType, 1) AS ProductType,
+                0 AS HasRecipe
+            FROM [Inventory].[Products] p
+            LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+            LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+            LEFT JOIN [Inventory].[ProductStock] PS ON PS.ProductID = p.ProductID AND PS.WarehouseID = @WarehouseID
+            OUTER APPLY (
+                SELECT MIN(AvgCostPrice) AS MinCost
+                FROM [Inventory].[ProductStock]
+                WHERE ProductID = p.ProductID AND AvgCostPrice > 0
+            ) MinStock
+            WHERE p.IsActive = 1
+              AND ISNULL(p.ProductType, 1) IN (2, 3)
+              AND NOT EXISTS (SELECT 1 FROM [Inventory].[Recipes] r WHERE r.ProductID = p.ProductID)
+            ORDER BY p.ProductName;
+        END
+        ELSE
+        BEGIN
+            -- التراجع لشمول المنتجات العادية والمصنعة والوسيطة التي ليس لها وصفة مسجلة بعد
+            SELECT 
+                p.ProductID, p.ProductName, p.ProductNameEn, p.Barcode,
+                p.CategoryID, c.CatName, p.UnitID, u.UnitName,
+                ISNULL(
+                    CASE 
+                        WHEN @WarehouseID IS NOT NULL THEN PS.AvgCostPrice
+                        ELSE MinStock.MinCost
+                    END, 0) AS PurchasePrice,
+                p.SalePrice, p.AlertQty, p.IsActive,
+                ISNULL(p.ProductType, 1) AS ProductType,
+                0 AS HasRecipe
+            FROM [Inventory].[Products] p
+            LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+            LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+            LEFT JOIN [Inventory].[ProductStock] PS ON PS.ProductID = p.ProductID AND PS.WarehouseID = @WarehouseID
+            OUTER APPLY (
+                SELECT MIN(AvgCostPrice) AS MinCost
+                FROM [Inventory].[ProductStock]
+                WHERE ProductID = p.ProductID AND AvgCostPrice > 0
+            ) MinStock
+            WHERE p.IsActive = 1
+              AND ISNULL(p.ProductType, 1) IN (1, 2, 3)
+              AND NOT EXISTS (SELECT 1 FROM [Inventory].[Recipes] r WHERE r.ProductID = p.ProductID)
+            ORDER BY p.ProductName;
+        END
+    END
+END
+GO
 
 

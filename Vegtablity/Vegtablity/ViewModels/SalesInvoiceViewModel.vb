@@ -237,7 +237,7 @@ Namespace ViewModels
                 CashAccounts = New ObservableCollection(Of Account)(cashList)
                 OnPropertyChanged(NameOf(CashAccounts))
 
-                Dim productList = _productService.GetAllProducts()
+                Dim productList = _productService.GetProductsForSales()
                 Products.Clear()
                 For Each p In productList
                     Products.Add(p)

@@ -116,6 +116,7 @@ Namespace ViewModels
         Public Property FetchSystemQuantityCommand As ICommand
         Public Property DownloadTemplateCommand As ICommand
         Public Property ImportExcelCommand As ICommand
+        Public Property PrintCommand As ICommand
 
         Public Sub New()
             AddNewCommand = New RelayCommand(AddressOf AddNew)
@@ -126,6 +127,7 @@ Namespace ViewModels
             FetchSystemQuantityCommand = New RelayCommand(AddressOf FetchSystemQuantity)
             DownloadTemplateCommand = New RelayCommand(AddressOf DownloadTemplate)
             ImportExcelCommand = New RelayCommand(AddressOf ImportFromExcel, AddressOf CanImport)
+            PrintCommand = New RelayCommand(AddressOf PrintStockTake, AddressOf CanPrintStockTake)
             
             LoadProducts()
             LoadWarehouses()
@@ -374,6 +376,38 @@ Namespace ViewModels
 
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء إنشاء القالب: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ─────────────────────────────────────────────
+        ' طباعة سند الجرد (PDF)
+        ' ─────────────────────────────────────────────
+        Private Function CanPrintStockTake() As Boolean
+            Return SelectedStockTake IsNot Nothing AndAlso SelectedStockTake.StockTakeID > 0
+        End Function
+
+        Private Sub PrintStockTake()
+            Try
+                If SelectedStockTake Is Nothing OrElse SelectedStockTake.StockTakeID = 0 Then
+                    RaiseEvent RequestSnackbar("⚠️ اختر مستند جرد محفوظ من القائمة أولاً")
+                    Return
+                End If
+
+                ' Ensure details are loaded for printing
+                If SelectedStockTake.Details Is Nothing OrElse SelectedStockTake.Details.Count = 0 Then
+                    Dim details = _stockTakeService.GetStockTakeDetails(SelectedStockTake.StockTakeID)
+                    SelectedStockTake.Details = New ObservableCollection(Of StockTakeDetails)(details)
+                End If
+
+                ' Attach warehouse name for print
+                If Warehouses IsNot Nothing Then
+                    Dim wh = Warehouses.FirstOrDefault(Function(w) w.WarehouseID = SelectedStockTake.WarehouseID)
+                    If wh IsNot Nothing Then SelectedStockTake.WarehouseName = wh.WarehouseName
+                End If
+
+                Helpers.ReportExporter.ExportStockTakeVoucherToPdf(SelectedStockTake)
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء طباعة سند الجرد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 

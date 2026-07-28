@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
+import '../widgets/product_entry_scanner.dart';
 import '../core/localization/app_localizations.dart';
 
 class PartnerBillingScreen extends StatefulWidget {
@@ -252,201 +253,38 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
   }
 
   void _openCameraScanner() {
-    final Map<String, DateTime> lastScanned = {};
-    String? statusMessage;
-    Color statusColor = Colors.teal;
-    List<String> sessionItems = [];
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.8,
-              child: Column(
-                children: [
-                  AppBar(
-                    title: Text(context.tr('pb_scan_camera_title'),
-                        style: const TextStyle(color: Colors.white)),
-                    backgroundColor: Colors.grey[900],
-                    elevation: 0,
-                    leading: IconButton(
-                      icon: const Icon(Icons.check, color: Colors.greenAccent),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    actions: [
-                      TextButton.icon(
-                        icon: const Icon(Icons.close, color: Colors.redAccent),
-                        label: const Text('إنهاء', style: TextStyle(color: Colors.white)),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                      )
-                    ],
-                  ),
-                  Expanded(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        MobileScanner(
-                          controller: MobileScannerController(
-                            detectionSpeed: DetectionSpeed.normal,
-                          ),
-                          onDetect: (BarcodeCapture capture) {
-                            final List<Barcode> barcodes = capture.barcodes;
-                            for (final barcode in barcodes) {
-                              final String code = barcode.rawValue ?? '';
-                              final String trimmed = code.trim();
-                              if (trimmed.isEmpty) continue;
-
-                              // Debounce: prevent duplicate scan within 2 seconds
-                              final now = DateTime.now();
-                              if (lastScanned.containsKey(trimmed) &&
-                                  now.difference(lastScanned[trimmed]!).inSeconds < 2) {
-                                continue;
-                              }
-                              lastScanned[trimmed] = now;
-
-                              // Process barcode locally
-                              final allowedItem = widget.allowedItems.firstWhere(
-                                (item) => (item['Barcode'] ?? '').toString().trim() == trimmed,
-                                orElse: () => {},
-                              );
-
-                              if (allowedItem.isNotEmpty) {
-                                _addOrIncrementProduct(allowedItem);
-                                final String prodName = allowedItem['ProductName'] ?? trimmed;
-                                
-                                SystemSound.play(SystemSoundType.click);
-                                HapticFeedback.mediumImpact();
-
-                                setSheetState(() {
-                                  statusMessage = 'تمت إضافة: $prodName';
-                                  statusColor = Colors.green;
-                                  if (!sessionItems.contains(prodName)) {
-                                    sessionItems.insert(0, prodName);
-                                  }
-                                });
-                              } else {
-                                SystemSound.play(SystemSoundType.click);
-                                HapticFeedback.heavyImpact();
-
-                                setSheetState(() {
-                                  statusMessage = 'صنف غير مدرج في العرض/الطلب!';
-                                  statusColor = Colors.red;
-                                });
-                              }
-
-                              // Auto clear status message after 1.5 seconds
-                              Future.delayed(const Duration(milliseconds: 1500), () {
-                                if (context.mounted) {
-                                  setSheetState(() {
-                                    statusMessage = null;
-                                  });
-                                }
-                              });
-                              break;
-                            }
-                          },
-                        ),
-                        // Scanner box
-                        Container(
-                          width: 250,
-                          height: 250,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: statusColor, width: 3),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        
-                        // Status Overlay Message (SnapMessage)
-                        if (statusMessage != null)
-                          Positioned(
-                            top: 20,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: statusColor.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Text(
-                                statusMessage!,
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-
-                        // Scan Instructions
-                        Positioned(
-                          bottom: 140,
-                          child: Text(context.tr('pb_scan_camera_hint'),
-                              style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                        ),
-
-                        // List of scanned items in this session
-                        if (sessionItems.isNotEmpty)
-                          Positioned(
-                            bottom: 10,
-                            left: 10,
-                            right: 10,
-                            height: 110,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'المنتجات المضافة في هذه الجلسة:',
-                                    style: TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Expanded(
-                                    child: ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: sessionItems.length,
-                                      itemBuilder: (ctx, index) {
-                                        return Container(
-                                          margin: const EdgeInsets.only(right: 6),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.teal[900]?.withOpacity(0.8),
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(color: Colors.teal, width: 0.5),
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: Text(
-                                            sessionItems[index],
-                                            style: const TextStyle(color: Colors.white, fontSize: 12),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.85,
+          child: ProductEntryScanner(
+            searchMode: widget.type.toLowerCase().contains('purchase')
+                ? CatalogSearchMode.purchase
+                : CatalogSearchMode.sales,
+            onBarcodeSubmitted: (barcode) {
+              _handleBarcodeScanned(barcode);
+            },
+            onProductSelected: (prod) {
+              _addOrIncrementProduct(prod);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('تمت إضافة: ${prod['ProductName'] ?? prod['name']}'),
+                  backgroundColor: Colors.teal,
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+          ),
         );
       },
     ).then((_) {
-      _focusNode.requestFocus();
+      if (mounted) {
+        _focusNode.requestFocus();
+        setState(() {});
+      }
     });
   }
 

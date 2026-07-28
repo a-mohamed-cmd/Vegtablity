@@ -344,7 +344,7 @@ Namespace ViewModels
 
             ' ✅ تحميل جميع الأصناف مرة واحدة في الذاكرة — بدون استدعاء DB عند كل تغيير
             Try
-                Dim allProducts = _productService.GetAllProducts()
+                Dim allProducts = _productService.GetProductsForSales()
                 Products = New ObservableCollection(Of Product)(allProducts)
                 OnPropertyChanged(NameOf(Products))
             Catch

@@ -45,13 +45,77 @@ class ProductService:
         finally:
             conn.close()
 
-    def quick_add_product(self, barcode: str, name: str, purchase_price: float, sale_price: float) -> int:
+    def get_products_for_purchase(self) -> List[Dict[str, Any]]:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.PRODUCT_GET_FOR_PURCHASE)
+            columns = [column[0] for column in cursor.description]
+            products = []
+            for row in cursor.fetchall():
+                p = dict(zip(columns, row))
+                p['PurchasePrice'] = float(p.get('PurchasePrice', 0.0))
+                p['SalePrice'] = float(p.get('SalePrice', 0.0))
+                products.append(p)
+            return products
+        finally:
+            conn.close()
+
+    def get_products_for_sales(self) -> List[Dict[str, Any]]:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.PRODUCT_GET_FOR_SALES)
+            columns = [column[0] for column in cursor.description]
+            products = []
+            for row in cursor.fetchall():
+                p = dict(zip(columns, row))
+                p['PurchasePrice'] = float(p.get('PurchasePrice', 0.0))
+                p['SalePrice'] = float(p.get('SalePrice', 0.0))
+                products.append(p)
+            return products
+        finally:
+            conn.close()
+
+    def get_products_for_recipe_ingredients(self, warehouse_id: Any = None) -> List[Dict[str, Any]]:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.PRODUCT_GET_FOR_RECIPE_INGREDIENTS, (warehouse_id,))
+            columns = [column[0] for column in cursor.description]
+            products = []
+            for row in cursor.fetchall():
+                p = dict(zip(columns, row))
+                p['PurchasePrice'] = float(p.get('PurchasePrice', 0.0))
+                p['SalePrice'] = float(p.get('SalePrice', 0.0))
+                products.append(p)
+            return products
+        finally:
+            conn.close()
+
+    def get_products_for_recipe_target(self, warehouse_id: Any = None, include_all: bool = False) -> List[Dict[str, Any]]:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.PRODUCT_GET_FOR_RECIPE_TARGET, (warehouse_id, 1 if include_all else 0))
+            columns = [column[0] for column in cursor.description]
+            products = []
+            for row in cursor.fetchall():
+                p = dict(zip(columns, row))
+                p['PurchasePrice'] = float(p.get('PurchasePrice', 0.0))
+                p['SalePrice'] = float(p.get('SalePrice', 0.0))
+                products.append(p)
+            return products
+        finally:
+            conn.close()
+
+    def quick_add_product(self, barcode: str, name: str, purchase_price: float, sale_price: float, product_type: int = 1) -> int:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "EXEC [Inventory].[sp_Product_QuickAdd] ?, ?, ?, ?",
-                (barcode, name, purchase_price, sale_price)
+                "EXEC [Inventory].[sp_Product_QuickAdd] ?, ?, ?, ?, ?",
+                (barcode, name, purchase_price, sale_price, product_type)
             )
             row = cursor.fetchone()
             if not row:

@@ -39,13 +39,22 @@ class WastageProvider extends ChangeNotifier {
 
   Future<void> loadWarehouses() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final int? cachedWhId = prefs.getInt('selected_warehouse_id');
+      final String? cachedWhName = prefs.getString('selected_warehouse_name');
+
       final response = await _apiService.getWarehouses();
       if (response.statusCode == 200) {
         _warehouses = List<Map<String, dynamic>>.from(response.data);
         if (_warehouses.isNotEmpty) {
-          final defaultWh = _warehouses.first;
-          _selectedWarehouseId = defaultWh['WarehouseID'] ?? 1;
-          _selectedWarehouseName = defaultWh['WarehouseName'] ?? 'المستودع الرئيسي';
+          if (cachedWhId != null && _warehouses.any((w) => w['WarehouseID'] == cachedWhId)) {
+            _selectedWarehouseId = cachedWhId;
+            _selectedWarehouseName = cachedWhName ?? 'المستودع الرئيسي';
+          } else {
+            final defaultWh = _warehouses.first;
+            _selectedWarehouseId = defaultWh['WarehouseID'] ?? 1;
+            _selectedWarehouseName = defaultWh['WarehouseName'] ?? 'المستودع الرئيسي';
+          }
         }
         notifyListeners();
       }

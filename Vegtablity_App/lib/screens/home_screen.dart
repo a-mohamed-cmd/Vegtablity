@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
 import '../providers/account_provider.dart';
+import '../providers/settings_provider.dart';
 import '../viewmodels/language_viewmodel.dart';
 import '../core/localization/app_localizations.dart';
 import '../models/language_model.dart';
@@ -23,6 +24,7 @@ import 'inventory/stocktake_screen.dart';
 import 'inventory/wastage_screen.dart';
 import 'supplier_selection_screen.dart';
 import 'daily_orders_screen.dart';
+import 'recipe_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showStockTake = true;
   bool _showWastage = true;
   bool _showDailyOrders = true;
+  bool _showRecipes = true;
 
   @override
   void initState() {
@@ -71,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _showStockTake = prefs.getBool('show_stocktake') ?? true;
         _showWastage = prefs.getBool('show_wastage') ?? true;
         _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
+        _showRecipes = prefs.getBool('show_recipes') ?? true;
         _isLoadingLayout = false;
       });
     } catch (e) {
@@ -243,6 +247,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const WastageScreen()));
               },
             ),
+            if (Provider.of<SettingsProvider>(context).isProductionMode)
+              ListTile(
+                leading: const Icon(Icons.restaurant_menu, color: Colors.teal),
+                title: const Text('وصفات المنتجات والتصنيع', style: TextStyle(fontWeight: FontWeight.bold)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const RecipeManagementScreen()));
+                },
+              ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.redAccent),
@@ -471,6 +484,17 @@ class _HomeScreenState extends State<HomeScreen> {
             context,
             MaterialPageRoute(
                 builder: (context) => const DailyOrdersScreen()));
+      }));
+    }
+    final isProductionMode = Provider.of<SettingsProvider>(context).isProductionMode;
+    if (_showRecipes && isProductionMode) {
+      cards.add(_buildActionCard(
+          context, 'وصفات المنتجات', Icons.restaurant_menu, Colors.green[700]!,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const RecipeManagementScreen()));
       }));
     }
 

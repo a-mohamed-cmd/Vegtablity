@@ -10,6 +10,7 @@ class CompanySettingsResponse(BaseModel):
     Logo: Optional[str] = None
     CurrencySymbol: Optional[str] = None
     IsActive: Optional[bool] = None
+    ProductionMode: Optional[bool] = None
 
     class Config:
         from_attributes = True

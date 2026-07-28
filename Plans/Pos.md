@@ -22,8 +22,17 @@
 *   **صفحة فاتورة المبيعات (معدلة):** [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) - إضافة ميزة الفوكس التلقائي والانتقال لخانة الكمية عند تحديد الصنف.
 *   **شاشة الطلبات اليومية للتوصيل (جديدة):** [DailyOrdersPage](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DailyOrdersPage.xaml) - شاشة سطح المكتب لعرض طلبات التوصيل اليومية وجدولة أوقات الشحن على هيئة كروت مطوية.
 *   **شاشة الطلبات اليومية للتوصيل للهاتف (جديدة):** [DailyOrdersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart) - شاشة تطبيق الموبايل لمتابعة شحنات التوصيل اليومية وإعادة طباعتها حرارياً.
+*   **شاشة إدارة وصفات ومكونات المنتجات لسطح المكتب (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) - إضافة قائمة اختيار المستودع، زري تصدير PDF و Excel، إشعار Snackbar منزلق، وتحسين التنقل بين الخلايا.
+*   **شاشة إدارة الوصفات للموبايل (جديدة):** [RecipeManagementScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) - شاشة تطبيق الهاتف لاستعراض الوصفات ومكوناتها.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **متحكم الوصفات (معدل):** [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - دعم الربط الدقيق للمستودع `SelectedWarehouseID` مع جلب أسعار التكلفة للمواد الخام وتنشيط إشعارات الـ Snackbar والتنظيف التلقائي للصفوف الفارغة قبل الحفظ.
+*   **خدمة الأصناف (معدلة):** [ProductService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ProductService.vb) - إضافة دالة `GetProductsForRecipeIngredients` لجلب المواد الخام والوسيطة بالتكلفة المرجحة من `ProductStock`.
+*   **خدمة الوصفات (معدلة):** [RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb) - تمرير `WarehouseID` لإجراء حفظ وتحديث الوصفات.
+*   **كلاس تصدير التقارير (معدل):** [ReportExporter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - إضافة الدالتين `ExportRecipeToPdf` و `ExportRecipeToCsv` لطباعة وتصدير الوصفات بهيكل تفصيلي كامل.
+*   **إجراء جلب المواد الخام للوصفة (جديد):** `[Inventory].[sp_Product_GetForRecipeIngredients]` - جلب المواد الخام والأصناف الوسيطة والعادية وحساب تكلفة `AvgCostPrice` من `ProductStock` حسْب المستودع المختار مع التراجع لـ 0.
+*   **إجراء حفظ الوصفة (معدل):** `[Inventory].[sp_Recipe_Save_XML]` - قبول `@WarehouseID` وإدراج/تحديث المنتج المصنع بـ `ProductStock` بالتكلفة الإجمالية وحجم رصيد 0.
+*   **إجراء جلب تفاصيل الوصفة (معدل):** `[Inventory].[sp_Recipe_GetByProduct]` - جلب تفاصيل المكونات والتكلفة بالربط المباشر مع `@WarehouseID` أو التراجع لأقل تكلفة.
 *   **كلاس تصميم الإيصالات وتنسيق الطباعة الحرارية (جديد):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - كلاس تنسيق رأس وتذييل وأصناف الإيصال وتعديل حجم الورق وطباعة الشعار.
 *   **كود التحكم بالطباعة المكتبي:** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة ونوع الفاتورة.
 *   **كلاس طابعة الفواتير المخصص الجديد (جديد):** [InvoicePrinterCustom](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinterCustom.vb) - كلاس طباعة مستقل مخصص لمحاكاة وتعديل مقاسات الفاتورة وتفقيطها وجدولها بمقدار 1 سم للأسفل للتصميم الرئيسي.
@@ -1329,4 +1338,177 @@
 *   **سبب المشكلة:** كان سكربت التشغيل يعتمد على تشغيل خادم uvicorn بتمرير معاملين متعارضين وهما `--reload` (المطورين) و `--workers 4` (الإنتاج). في بيئة ويندوز، تحاول بايثون مشاركة ونسخ نفس المقبس عبر العمليات المتعددة (Socket Duplication under spawn start method) وهو ما يرفضه نظام التشغيل ويؤدي لتعطل تشغيل السيرفر.
 *   **التعديل المنجز:**
     *   تحديث ملفي التشغيل [Run.bat](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/Run.bat) و [start_server.bat](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/start_server.bat) بإزالة المعامل المتعارض والمسبب للخطأ `--workers 4` ليعمل الخادم بـ Worker افتراضي واحد مدعوم بالكامل على نظام ويندوز.
+
+
+---
+
+## 43. نظام الوصفات والتصنيع الشامل ومتعدد المستويات (Multi-Level Recipe & Manufacturing System) (يوليو 2026)
+
+تم تصميم وتطوير نظام تصنيع ووصفات منتجات متعدد المستويات (Raw Materials -> Semi-Finished -> Finished Manufactured Products) لحساب تكلفة المخزون بدقة متناهية ودون إجهاد أداء كاشير الـ POS:
+
+### 🛠️ 1. مستوى قواعد البيانات (SQL Server - `SQLVegtablity.sql`):
+* **جداول الوصفات:**
+  - إنشاء جدول رأس الوصفة `[Inventory].[Recipes]` وجدول التفاصيل `[Inventory].[RecipeDetails]`.
+* **الأعمدة الجديدة والحماية:**
+  - إضافة عمود `ProductType INT DEFAULT 1` لجدول المنتجات `[Inventory].[Products]` لتحديد نوع المنتج (0: مادة خام، 1: صنف عادي، 2: منتج مصنع، 3: منتج وسيط).
+  - إضافة عمود `ProductionMode BIT DEFAULT 0` لجدول إعدادات الشركة `[Settings].[CompanySettings]`.
+* **التريجر الشامل `[Sales].[trg_Invoice_Post]`:**
+  - يدعم النمط القياسي `ProductionMode = 0` والنمط المصنع `ProductionMode = 1`.
+  - تحويل صريح للكميات `CAST(TargetQty AS DECIMAL(18, 4))` لتوحيد أنواع البيانات ومنع خطأ `Msg 240`.
+  - تفكيك وإعادة تجميع تكراري متناظر للترحيل وإلغاء الترحيل (Posting & Unposting Symmetry).
+* **إجراء التحديث المتسلسل للتكاليف `[Inventory].[sp_Update_Manufactured_Costs]`:**
+  - يعمل بتسلسل تصاعدي (Bottom-Up) حتى 5 مستويات تداخل لتحديث تكاليف المنتجات الوسيطة والمنتجات النهائية تلقائياً فور شراء مادة خام جديدة أو حفظ وصفة.
+* **فهارس منع القفول المتبادلة (Deadlock Prevention Indexes):**
+  - إنشاء فهارس `IX_ProductStock_ProductID_WarehouseID`, `IX_RecipeDetails_RecipeID_Ingredient`, `IX_Recipes_ProductID`, `IX_InvoiceDetails_InvID_ProductID`.
+* **إجراءات فلترة أصناف الفواتير (حسْب وضع التصنيع `ProductionMode`):**
+  - `[Inventory].[sp_Product_GetForPurchase]`: جلب المواد الخام والأصناف العادية واستثناء الأصناف المصنعة عند تفعيل `ProductionMode`.
+  - `[Inventory].[sp_Product_GetForSales]`: جلب الأصناف المباعة والمصنعة واستثناء المواد الخام عند تفعيل `ProductionMode`.
+* **إجراءات الوصفات المخزنة:**
+  - `sp_Recipe_GetAll`, `sp_Recipe_GetByProduct`, `sp_Recipe_Save_XML`, `sp_Recipe_Delete`.
+* **إجراءات إعدادات الشركة:**
+  - تحديث `sp_CompanySettings_Get` و `sp_CompanySettings_Save` بقيم افتراضية لجميع المعاملات الاختيارية لضمان سلامة الاستدعاءات القديمة 100%.
+
+---
+
+### 💻 2. تطبيق الـ Desktop (WPF VB.NET - `Vegtablity`):
+* **ثوابت الإجراءات المخزنة ([StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb)):**
+  - إضافة كافة ثوابت الوصفات والفلترة `SP_RECIPE_*` و `SP_PRODUCT_GETFOR*`.
+* **تحديث النماذج والخدمات:**
+  - تحديث [CompanyInfo.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) وتحديث [CompanySettingsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) و [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) لإضافة خيار زر التفعيل التفاعلي لـ `ProductionMode`.
+  - تحديث [Product.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/Product.vb) بإضافة `ProductType` و `ProductTypeName`.
+  - تحديث [ProductService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ProductService.vb) بإضافة `GetProductsForPurchase` و `GetProductsForSales`.
+  - تحديث [InventoryViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/InventoryViewModel.vb) و [InventoryPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/InventoryPage.xaml) لإضافة اختيار وعرض نوع المنتج شرطياً حسْب `ProductionMode`.
+  - إنشاء [Recipe.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/Recipe.vb) و [RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb) لإدارة بيانات الوصفات بالـ Dapper والـ XML.
+  - إنشاء واجهة [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml)، [RecipePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml.vb) و [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) مع حساب التكلفة الدقيقة حياً وتحديث المخزون.
+  - تحديث [UserManagementViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/UserManagementViewModel.vb) لإضافة صلاحية `"Recipes"` ("وصفات المنتجات") شرطياً بحسب `ProductionMode`.
+  - تحديث [DashboardViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/DashboardViewModel.vb) لإظهار بند **"وصفات المنتجات"** `📜` تحت قائمة **إدارة المخزون** بالشريط الجانبي شرطياً بحسب `ProductionMode`.
+  - تسجيل كافة الملفات بملف المشروع [Vegtablity.vbproj](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Vegtablity.vbproj).
+
+---
+
+### 🐍 3. خادم الـ API (FastAPI Backend - `VegtablityApi`):
+* **تعاريف الإجراءات ([db_procedures.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures.py)):** إضافة ثوابت إجراءات الوصفات والفلترة.
+* **الخدمات والراوتر:**
+  - إنشاء [recipe_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/recipe_service.py) لمعالجة الـ XML والاستدلالات.
+  - إنشاء [recipes.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/recipes.py) بجميع نقاط الـ API (`GET /recipes/`, `GET /recipes/{id}`, `POST /recipes/`, `DELETE /recipes/{id}`).
+  - تسجيل الـ Router في [main.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/main.py).
+
+---
+
+### 📱 4. تطبيق الموبايل (Flutter Client - `Vegtablity_App`):
+* **النموذج ومزود الحالة:**
+  - إنشاء [recipe_model.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/models/recipe_model.dart) لتمثيل `RecipeHeader` و `RecipeDetailItem`.
+  - إنشاء [recipe_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/recipe_provider.dart) لاستدعاء الـ API عبر Dio.
+  - تسجيل `RecipeProvider` في [main.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/main.dart).
+* **شاشة العرض:**
+  - إنشاء [recipe_management_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) لاستعراض الوصفات وعرض تفاصيل مكوناتها عبر نافذة Bottom Sheet تفاعلية.
+
+
+---
+
+## 44. التوثيق النهائي لتطوير وتحسينات شاشة الوصفات وتصنيع المخزون (Recipe & Manufacturing Enhancements) (يوليو 2026)
+
+تم إنجاز التوثيق الكامل والتحديثات الهيكلية لشاشة الوصفات والتصنيع متعدد المستويات لضمان دقة التكاليف وسلاسة تجربة المستخدم:
+
+### 🛠️ 1. مستوى قاعدة البيانات والإجراءات المخزنة (SQL Server - `SQLVegtablity.sql`):
+* **الإجراء المخزن الجديد `[Inventory].[sp_Product_GetForRecipeTarget]`:**
+  - يستقبل المعامل الاختياري `@WarehouseID INT = NULL`.
+  - يستجلب حصرياً المنتجات المصنعة (ProductType = 2) والمنتجات الوسيطة (ProductType = 3) التي ليس لها وصفة مسجلة سابقاً في جدول `[Inventory].[Recipes]` (`NOT EXISTS`) مع توليد التراجع لـ (1, 2, 3) غير المسجلة بالوصفات، لاستبعاد المنتجات ذات الوصفات المسجلة سابقاً والمواد الخام من قائمة اختيار إضافة وصفة جديدة.
+* **الإجراء المخزن الجديد `[Inventory].[sp_Product_GetForRecipeIngredients]`:**
+  - يستقبل المعامل الاختياري `@WarehouseID INT = NULL`.
+  - يجلب الأصناف ذات الأنواع (0: مادة خام، 1: قياسي، 3: شبه مصنع).
+  - يحسب تكلفة `PurchasePrice` المرجحة حصرياً من جدول `[Inventory].[ProductStock]` للمستودع المحدد (`PS.AvgCostPrice`)، وفي حال عدم تحديد مستودع يجلب أقل سعر تكلفة متاح بين المستودعات (`MIN(AvgCostPrice) WHERE AvgCostPrice > 0`) مع التراجع التلقائي لـ 0 عند انعدام التكلفة.
+* **تحديث الإجراء `[Inventory].[sp_Recipe_Save_XML]`:**
+  - استقبال البرامتر الاختياري `@WarehouseID INT = NULL`.
+  - بعد نجاح حفظ التفاصيل وحساب التكلفة الكلية للوصفة (`@RecipeTotalCost`)، يتم فحص وجود المنتج المصنع في جدول `ProductStock`:
+    - إن كان جديداً: يُدرج تلقائياً برصيد كمية صفر `CurrentQty = 0` وتكلفة `AvgCostPrice = @RecipeTotalCost`.
+    - إن كان موجوداً: تُحدث تكلفته المرجحة بـ `@RecipeTotalCost`.
+  - استدعاء التحديث المتسلسل `sp_Update_Manufactured_Costs` ممرراً `@WarehouseID`.
+* **تحديث الإجراء `[Inventory].[sp_Recipe_GetByProduct]`:**
+  - جلب بيانات رأس الوصفة ومكوناتها بالربط المباشر مع `@WarehouseID` لإرجاع التكلفة الدقيقة الخاصة بالمستودع المحدد بدلاً من إظهار أقل سعر تكلفة عبر المخازن بالخطأ في الـ UI.
+
+---
+
+### 💻 2. تطبيق الـ Desktop (WPF VB.NET - `Vegtablity`):
+* **فهرس الإجراءات والثوابت ([StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb)):**
+  - تسجيل الثابت `SP_PRODUCT_GETFORRECIPEINGREDIENTS`.
+* **خدمة الأصناف والوصفات ([ProductService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ProductService.vb) & [RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb)):**
+  - إضافة دالة `GetProductsForRecipeIngredients(Optional warehouseID As Integer? = Nothing)`.
+  - تحديث `SaveRecipe` و `GetRecipeByProduct` لتمرير البرامتر `@WarehouseID`.
+* **ربط المستودع برأس الوصفة ([RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) & [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb)):**
+  - إضافة قائمة اختيار المستودع `Warehouses` برأس الوصفة.
+  - عند اختيار أو تغيير المستودع `SelectedWarehouseID` يتم تلقائياً:
+    1. إعادة جلب أسعار تكلفة المواد الخام الخاصة بهذا المستودع عبر `GetProductsForRecipeIngredients`.
+    2. إعادة تحميل تفاصيل الوصفة المفتوحة وتحديث التكلفة المعروضة في الـ UI للتطابق 100% مع الـ PDF وقاعدة البيانات.
+* **التحكم بالتنقل بخلية الباركود ([RecipePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml.vb)):**
+  - عند الضغط على Enter في خلية الباركود: يتم الانتقال لخلية الكمية **فقط في حال مطابقة العثور على الصنف**، وإلا يظل التركيز في خلية الباركود ويُظلل النص لتسهيل تعديله.
+* **إشعار الحفظ المنزلق (Snackbar Notification):**
+  - إضافة عنصر `SnackbarBorder` بأسفل الصفحة برسم أنيق وربطه بحدث `RequestSnackbar` لعرض إشعار الحفظ نجاحاً لمدة 3 ثوانٍ واختفائه تلقائياً دون تعطيل شاشات النظام.
+* **التنظيف التلقائي قبل الحفظ:**
+  - تصفية وحذف الصفوف غير المكتملة تلقائياً قبل تنفيذ عملية الحفظ (الصفوف بدون صنف، أو بدون باركود/اسم، أو بكمية أقل من أو تساوي 0).
+* **تصدير التقارير ([ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb)):**
+  - إضافة دالتي `ExportRecipeToPdf` و `ExportRecipeToCsv` وتزويدهما بالبيانات الكاملة عبر `sp_Recipe_GetByProduct` لطباعة وتصدير جميع أعمدة الوصفة (الباركود، الاسم، الوحدة، الكمية، تكلفة الوحدة، التكلفة الإجمالية) بهيكل احترافي كلياً.
+
+---
+
+### 🐍 3. خادم الـ API (FastAPI Backend - `VegtablityApi`):
+* **فهرس الإجراءات ([db_procedures.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures.py)):**
+  - إضافة `PRODUCT_GET_FOR_RECIPE_INGREDIENTS = "EXEC [Inventory].[sp_Product_GetForRecipeIngredients] @WarehouseID=?"`.
+  - تحديث `RECIPE_SAVE_XML` لتمرير البرامتر `@WarehouseID`.
+* **مسارات المنتجات والفلترة ([product_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/product_service.py) & [products.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/products.py)):**
+  - إضافة مسارات الـ API: `GET /products/for-purchase` و `GET /products/for-sales` و `GET /products/for-recipe-ingredients`.
+* **خدمة الوصفات ([recipe_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/recipe_service.py) & [recipes.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/recipes.py)):**
+  - استقبال وتمرير `WarehouseID` في استدعاءات جلب وحفظ الوصفات لتشغيل التحديث المتسلسل للتكلفة بنجاح.
+
+---
+
+### 📱 4. تطبيق الموبايل (Flutter Client - `Vegtablity_App`):
+* **خدمة الـ API ([api_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart)):**
+  - إضافة استدعاءات `getProductsForPurchase`, `getProductsForSales`, `getProductsForRecipeIngredients`, `getAllRecipes`, `getRecipeByProduct`, `saveRecipe`, `deleteRecipe`.
+* **تصميم الإيصالات الحرارية ([receipt_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart)):**
+  - إضافة دالة `printRecipeReceipt` لطباعة بطاقات الوصفات حرارياً على طابعات Sunmi وطابعات ESC/POS.
+* **مزود حالة الوصفات ([recipe_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/recipe_provider.dart)):**
+  - دعم جلب وحفظ الوصفات ومكوناتها ممررة بـ `warehouseId` (المستودع المختار عند بداية الوردية) والتنظيف التلقائي للكونات الفارغة قبل التمرير.
+* **واجهة إدارة الوصفات ([recipe_management_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart)):**
+  - الاعتماد التلقائي على المستودع المحدد في بداية الوردية من الـ `SharedPreferences`.
+  - إلغاء زر إضافة + العلوي وإلغاء قلم التعديل من الكروت لتوفير المساحة، والاكتفاء بالضغط المباشر على الكارت أو الزر العائم (FAB).
+  - مسح باركود الكاميرا المتقدم لمنتجات التصنيع (2) والوسيطة (3):
+    1. منتج له وصفة مسجلة ⬅️ فتح التعديل مباشرة.
+    2. منتج موجود وليس له وصفة ⬅️ فتح شاشة الإدخال ممرراً المنتج مع تلميح (Snap Bar): *"هذا المنتج ليس له وصفة مسجلة بعد"*.
+    3. باركود غير موجود بالنظام ⬅️ فتح حوار الحفظ السريع المنبثق للحفظ التلقائي مقتصراً في خيار تصنيف المنتج حصرياً على نوعين: (**منتج مصنع نهائي 🏭** أو **منتج وسيط ⚙️**) واستدعاء الإجراء `sp_Product_QuickAdd`.
+* **واجهة إدخال وحفظ الوصفات الجديدة ([add_recipe_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/add_recipe_screen.dart)):**
+  - شاشة مخصصة لإدخال/تعديل الوصفات تتيح اختيار المنتج المصنع/الوسيط وإظهاره بوضوح في الـ ComboBox العلوي.
+  - إلغاء مربع البحث اليدوي للمواد الأولية والاكتفاء بزر وقائمة الباركود بالكاميرا الشاملة.
+  - تنسيق وإعادة ترتيب أدوات الصفحة واستغلال المساحة بجمالية عالية.
+  - **تعديل وتوحيد ترويسة إيصال الوصفة ودعم مقاسات الورق (58mm و 80mm) ([receipt_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) & [printer_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart)):** 
+    - تم مطابقة ترويسة بطاقة الوصفة مع الترويسة القياسية لفواتير النظام: (**شعار الشركة الديناميكي** ⬅️ **اسم الشركة** ⬅️ **العنوان** ⬅️ **رقم الهاتف**)، متبوعاً بالفاصل، ثم عنوان المستند (`بطاقة وصفة ومكونات صنف`)، وتفاصيل المنتج والمستودع والمكونات والتكلفة الكلية مع رمز العملة الديناميكية المعتمدة بالخادم (`_getCurrencySymbol`).
+    - دعم طباعة الوصفة عبر جميع أنواع الطابعات (Sunmi POS، Bluetooth، والطابعات الشبكية Network IP) بكافة مقاسات الورق (80mm و 58mm).
+    - إصلاح وتحديث زر الطباعة السريعة في كارت الوصفة بشاشة إدارة الوصفات ([recipe_management_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart)) ليمرر بيانات الشركة والشعار والعملة ديناميكياً فوراً ودون الحاجة للدخول للوصفة.
+* **ماسح الباركود وقائمة المنتجات والمواد ([product_entry_scanner.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/product_entry_scanner.dart)):**
+  - **الفصل الكلي والديناميكي بين قوائم البحث الكتالوجية (`CatalogSearchMode`):**
+    1. **نمط فواتير المشتريات (`CatalogSearchMode.purchase`):** يفرز عبر الإجراء المخزن المحدث `sp_Product_GetForPurchase` المواد الأولية (0) والمواد العادية (1) فقط دون عرض المصنعة (2) أو الوسيطة (3). وهو النمط المربوط حكراً وفورياً بكل من شاشة فواتير المشتريات الرئيسية ([pos_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) عند اختيار نوع `Purchase`) وشاشة فواتير الموردين ([partner_billing_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart))، حيث يستدعي الماسح والكتالوج الإجراء المخزن `sp_Product_GetForPurchase` مباشرة.
+    2. **نمط فواتير المبيعات (`CatalogSearchMode.sales`):** يفرز عبر الإجراء المخزن المحدث `sp_Product_GetForSales` المنتجات المصنعة النهائية (2) والأصناف العادية (1) لضمان دعم نظامي البيع المباشر والتصنيع معاً.
+    3. **نمط مكونات الوصفة (`CatalogSearchMode.ingredients`):** يفرز عبر `sp_Product_GetForRecipeIngredients` المواد الخام (0)، العادية (1)، والوسيطة (3).
+    4. **نمط هدف الوصفة (`CatalogSearchMode.targetProducts`):** يفرز عبر `sp_Product_GetForRecipeTarget` (مع `@IncludeAll = 1`) المنتجات المصنعة (2) والوسيطة (3).
+  - إضافة زر **`+`** علوي بجوار العنوان لفتح الحفظ السريع `sp_Product_QuickAdd` مباشرة، مع تخصيص الخيارات المتاحة لتصنيف المنتج في نافذة الحفظ السريع وفق النمط الفعال:
+    - **في نمط إضافة المواد/المكونات (`CatalogSearchMode.ingredients`):** يقتصر التصنيف حصرياً على 3 اختيارات: **مادة أولية (0)**، **مادة عادية (1)**، **مادة مؤقتة/وسيطة (3)**.
+    - **في نمط المنتجات المستهدفة (`CatalogSearchMode.targetProducts`):** يقتصر التصنيف حصرياً على اختيارين: **منتج مصنع نهائي (2)**، **منتج وسيط (3)**، وعند حفظ المنتج الجديد بالضغط على "حفظ وفتح الوصفة ⚡"، يتم إغلاق الحوار المنبثق وقائمة الكاميرا السفلية فوراً، والانتقال التلقائي لشاشة الوصفة ([AddRecipeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/add_recipe_screen.dart)) ممرراً المنتج الجديد بالـ ComboBox للبدء في إضافة المكونات مباشرة.
+  - **منطق الباركود التلقائي واليدوي:** يظهر مربع إدخال الباركود اليدوي حصرياً عند الإضافة اليدوية (بدون مسح بالكاميرا)، ويكون محقوناً تلقائياً بباركود فريد تم إنتاجه عشوائياً بدون تكرار مع المنتجات السابقة (`29XXXXXXXX`)، مع إمكانية تعديل الباركود يدوياً أو التوليد الجديد بضغطة زر.
+* **إصلاح وحل مشكلة الشاشة البيضاء في شاشتي الجرد والهلاك ([stocktake_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/stocktake_screen.dart) & [wastage_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/inventory/wastage_screen.dart)):**
+  - **سبب الشاشة البيضاء:** كان عنصر `ProductEntryScanner` المحتوي على كاميرا المسح والـ `Expanded` المباشر يُدرج داخل قائمة التمرير غير المحدودة الارتفاع `SingleChildScrollView` بدون تحديد ارتفاع ثابث، مما يسبب استثناء `RenderFlex / Unbounded Height Exception` وينتج عنه شاشة بيضاء.
+  - **الحل المطبق:**
+    1. تقييد ارتفاع مكون مسح وإدخال المنتجات بداخل `SizedBox` بارتفاع ثابت (380px) وحوايا دائرية أنيقة `ClipRRect(borderRadius: 12)` ليعمل الكاميرا والكتالوج بسلاسة بدون استثناءات layout.
+    2. إلغاء الـ `DropdownButton` اليدوي بالكامل واستبداله ببطاقة وشارة عرض تظهر اسم المستودع النشط المعتمد تلقائياً من ذاكرة الوردية `SharedPreferences` دون إتاحة التعديل اليدوي العشوائي لضمان سلامة قيد الجرد والإهلاك.
+* **ربط إظهار ووصفات المنتجات والتصنيع بقيمة `[ProductionMode]`:**
+  - تم ربط إظهار أيقونة وعنصر "وصفات المنتجات والتصنيع" في كل من **الشاشة الرئيسية (الشبكة الرئيسية)**، **القائمة الجانبية (Sidebar Drawer)**، و**شاشة الإعدادات العامة (General Settings)** بشرط تفعيل خيار `ProductionMode == 1` في إعدادات الشركة (`CompanySettings`).
+  - في حال تعطيل `ProductionMode` بالشركة، يتم إخفاء أزرار وقوائم الوصفات والتصنيع تلقائياً من التطبيق لتبسيط الواجهة وحظر الدخول غير المصرح به للنظام الإنتاجي.
+* **إضافة خيار وزر طباعة سند الجرد في تطبيق سطح المكتب WPF ([StockTakePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/StockTakePage.xaml)):**
+  - تخصيص وتثبيت زر **`طباعة`** بأسفل الصفحة بجانب زر اعتماد التقرير مباشرة مع حذف الزر العلوي لتبسيط الواجهة وتجنب التكرار.
+  - ربط الزر مع الأمر `PrintCommand` في [StockTakeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/StockTakeViewModel.vb).
+  - إضافة الدالة المخصصة `ExportStockTakeVoucherToPdf` بالملف [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) لطباعة وتصدير سند تسوية الجرد بصيغة PDF الرسمية موثقة بترويسة الشركة، حالة السند (معتمد / مسودة)، تفاصيل الأصناف والكميات الدفترية والفعلية ومبالغ الفروقات وإجمالي التسوية الختامي.
+
+
+
+
+
 

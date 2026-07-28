@@ -9,5 +9,6 @@ Namespace Models
         Public Property UnifiedPartnerSearch As Boolean = True
         Public Property UseDetailedInvoiceDesign As Boolean = False
         Public Property UseCustomInvoiceDesign As Boolean = False
+        Public Property ProductionMode As Boolean = False
     End Class
 End Namespace

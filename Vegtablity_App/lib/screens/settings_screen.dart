@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/language_viewmodel.dart';
+import '../providers/settings_provider.dart';
 import '../core/localization/app_localizations.dart';
 import '../models/language_model.dart';
 
@@ -25,6 +26,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   bool _showStockTake = true;
   bool _showWastage = true;
   bool _showDailyOrders = true;
+  bool _showRecipes = true;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
         _showStockTake = prefs.getBool('show_stocktake') ?? true;
         _showWastage = prefs.getBool('show_wastage') ?? true;
         _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
+        _showRecipes = prefs.getBool('show_recipes') ?? true;
         _isLoading = false;
       });
     } catch (e) {
@@ -121,6 +124,9 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
             break;
           case 'show_daily_orders':
             _showDailyOrders = value;
+            break;
+          case 'show_recipes':
+            _showRecipes = value;
             break;
         }
       });
@@ -298,6 +304,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     onChanged: (val) => _saveBoolSetting('show_daily_orders', val),
                     activeColor: Colors.teal,
                   ),
+                  if (Provider.of<SettingsProvider>(context).isProductionMode)
+                    SwitchListTile(
+                      title: const Text('وصفات المنتجات والتصنيع'),
+                      value: _showRecipes,
+                      onChanged: (val) => _saveBoolSetting('show_recipes', val),
+                      activeColor: Colors.teal,
+                    ),
                 ],
               ),
             ),

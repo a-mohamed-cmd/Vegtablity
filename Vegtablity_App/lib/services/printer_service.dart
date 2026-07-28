@@ -77,6 +77,8 @@ class PrinterService with ChangeNotifier {
     }
   }
 
+  Map<String, dynamic>? get companySettings => _companySettings;
+
   String get _currencySymbol {
     final rawCurrency = _companySettings?['CurrencySymbol']?.toString() ?? '';
     if (rawCurrency.isEmpty) return ''; // if empty, just hide it
@@ -533,6 +535,39 @@ class PrinterService with ChangeNotifier {
       return true;
     } catch (e) {
       print('خطأ في طباعة تقرير الوردية: $e');
+      return false;
+    }
+  }
+
+  Future<bool> printRecipe(Map<String, dynamic> recipe, {Map<String, dynamic>? companySettings}) async {
+    if (_companySettings == null) {
+      await _loadCompanySettings();
+    }
+    final settings = companySettings ?? _companySettings;
+
+    try {
+      if (_connectionType == 'Bluetooth' || _connectionType == 'None') {
+        await ReceiptDesigner.printRecipeReceipt(
+          recipe: recipe,
+          companySettings: settings,
+          paperSize: _paperSize,
+        );
+        return true;
+      } else if (_connectionType == 'Network') {
+        final Socket socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
+        final List<int> bytes = await ReceiptDesigner.buildNetworkRecipeBytes(
+          recipe: recipe,
+          companySettings: settings,
+          paperSize: _paperSize,
+        );
+        socket.add(bytes);
+        await socket.flush();
+        await socket.close();
+        return true;
+      }
+      return true;
+    } catch (e) {
+      print('خطأ في طباعة بطاقة الوصفة: $e');
       return false;
     }
   }

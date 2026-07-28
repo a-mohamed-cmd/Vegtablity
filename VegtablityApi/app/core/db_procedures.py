@@ -73,6 +73,18 @@ class StoredProcedures:
     # Retrieves average cost of a product for a specific warehouse
     PRODUCT_AVGCOST_GET = "EXEC [Inventory].[sp_Inventory_GetAvgCostByProduct] @ProductID=?, @WarehouseID=?"
 
+    # Product filtering procedures
+    PRODUCT_GET_FOR_PURCHASE = "EXEC [Inventory].[sp_Product_GetForPurchase]"
+    PRODUCT_GET_FOR_SALES = "EXEC [Inventory].[sp_Product_GetForSales]"
+    PRODUCT_GET_FOR_RECIPE_INGREDIENTS = "EXEC [Inventory].[sp_Product_GetForRecipeIngredients] @WarehouseID=?"
+    PRODUCT_GET_FOR_RECIPE_TARGET = "EXEC [Inventory].[sp_Product_GetForRecipeTarget] @WarehouseID=?, @IncludeAll=?"
+
+    # Recipe procedures
+    RECIPE_GET_ALL = "EXEC [Inventory].[sp_Recipe_GetAll]"
+    RECIPE_GET_BY_PRODUCT = "EXEC [Inventory].[sp_Recipe_GetByProduct] @ProductID=?, @WarehouseID=?"
+    RECIPE_SAVE_XML = "EXEC [Inventory].[sp_Recipe_Save_XML] @ProductID=?, @Notes=?, @DetailsXML=?, @WarehouseID=?"
+    RECIPE_DELETE = "EXEC [Inventory].[sp_Recipe_Delete] @RecipeID=?"
+
 
     # =========================================================================
     # Partners (Customers & Vendors)

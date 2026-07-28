@@ -127,89 +127,80 @@ class _StockTakeScreenState extends State<StockTakeScreen> {
           child: SingleChildScrollView(
             child: Column(
           children: [
-            // Warehouse Selector Top Section
+            // Warehouse Header (Automatically from SharedPreferences)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: Colors.grey[100],
+              color: Colors.teal.withOpacity(0.08),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    context.tr('st_warehouse_label'),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const Icon(Icons.store, color: Colors.teal),
+                      const SizedBox(width: 8),
+                      Text(
+                        context.tr('st_warehouse_label'),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                  DropdownButton<int>(
-                    value: provider.selectedWarehouseId,
-                    disabledHint: Text(provider.selectedWarehouseName,
-                        style: const TextStyle(color: Colors.black54)),
-                    onChanged: isLocked
-                        ? null
-                        : (id) {
-                            if (id != null) {
-                              final wh = provider.warehouses
-                                  .firstWhere((w) => w['WarehouseID'] == id);
-                              provider.selectWarehouse(
-                                  id, wh['WarehouseName'] ?? 'غير معروف');
-                            }
-                          },
-                    items: provider.warehouses.map<DropdownMenuItem<int>>((wh) {
-                      return DropdownMenuItem<int>(
-                        value: wh['WarehouseID'],
-                        child: Text(wh['WarehouseName'] ?? ''),
-                      );
-                    }).toList(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.teal,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      provider.selectedWarehouseName,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
                   ),
                 ],
               ),
             ),
 
-            if (isLocked)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  context.tr('st_warehouse_locked_warn'),
-                  style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-
             // Unified Entry Component
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: ProductEntryScanner(
-                onBarcodeSubmitted: (barcode) =>
-                    provider.searchAndAddProductByBarcode(barcode),
-                onProductSelected: (prod) {
-                  // Default product cost & quantity
-                  double cost =
-                      (prod['PurchasePrice'] as num?)?.toDouble() ?? 0.0;
-                  provider.addProductDirectly(prod, 0.0, cost);
-                  // Dynamically fetch actual system stock level & cost price for this warehouse in background
-                  provider.apiService
-                      .getProductStockCost(prod['ProductID'] as int,
-                          provider.selectedWarehouseId)
-                      .then((res) {
-                    if (res.statusCode == 200) {
-                      final double stockQty =
-                          (res.data['StockQuantity'] as num?)?.toDouble() ??
-                              0.0;
-                      final double costVal =
-                          (res.data['CostPrice'] as num?)?.toDouble() ?? cost;
+              child: SizedBox(
+                height: 380,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: ProductEntryScanner(
+                    searchMode: CatalogSearchMode.purchase,
+                    onBarcodeSubmitted: (barcode) =>
+                        provider.searchAndAddProductByBarcode(barcode),
+                    onProductSelected: (prod) {
+                      // Default product cost & quantity
+                      double cost =
+                          (prod['PurchasePrice'] as num?)?.toDouble() ?? 0.0;
+                      provider.addProductDirectly(prod, 0.0, cost);
+                      // Dynamically fetch actual system stock level & cost price for this warehouse in background
+                      provider.apiService
+                          .getProductStockCost(prod['ProductID'] as int,
+                              provider.selectedWarehouseId)
+                          .then((res) {
+                        if (res.statusCode == 200) {
+                          final double stockQty =
+                              (res.data['StockQuantity'] as num?)?.toDouble() ??
+                                  0.0;
+                          final double costVal =
+                              (res.data['CostPrice'] as num?)?.toDouble() ?? cost;
 
-                      // Update stock take item with real database values
-                      final index = provider.items.indexWhere(
-                          (item) => item.productID == prod['ProductID']);
-                      if (index != -1) {
-                        setState(() {
-                          provider.items[index].systemQty = stockQty;
-                          provider.items[index].costPrice = costVal;
-                        });
-                      }
-                    }
-                  }).catchError((_) {});
-                },
+                          // Update stock take item with real database values
+                          final index = provider.items.indexWhere(
+                              (item) => item.productID == prod['ProductID']);
+                          if (index != -1) {
+                            setState(() {
+                              provider.items[index].systemQty = stockQty;
+                              provider.items[index].costPrice = costVal;
+                            });
+                          }
+                        }
+                      }).catchError((_) {});
+                    },
+                  ),
+                ),
               ),
             ),
 

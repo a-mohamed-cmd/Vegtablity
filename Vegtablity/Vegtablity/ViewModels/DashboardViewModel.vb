@@ -348,8 +348,15 @@ Namespace ViewModels
                 .IsExpanded = False,
                 .Children = purchaseChildren
             })
+            Dim settingsService As New Services.SettingsService()
+            Dim compInfo = settingsService.GetCompanyInfo()
+            Dim isProductionMode As Boolean = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
+
             Dim inventoryChildren As New ObservableCollection(Of MenuItem)()
             inventoryChildren.Add(New MenuItem With {.Title = "المنتجات والمخزون", .Icon = "📦", .FormName = "Inventory", .IsVisible = True})
+            If isProductionMode Then
+                inventoryChildren.Add(New MenuItem With {.Title = "وصفات المنتجات", .Icon = "📜", .FormName = "Recipes", .IsVisible = True})
+            End If
             inventoryChildren.Add(New MenuItem With {.Title = "الهوالك والتوالف", .Icon = "🗑️", .FormName = "Wastage", .IsVisible = True})
             inventoryChildren.Add(New MenuItem With {.Title = "الجرد الآلي", .Icon = "📝", .FormName = "StockTaking", .IsVisible = True})
 
@@ -585,6 +592,10 @@ Namespace ViewModels
 
                     Case "StockTaking"
                         CurrentPage = New Views.StockTakePage()
+                        IsHomePage = False
+
+                    Case "Recipes"
+                        CurrentPage = New Views.RecipePage()
                         IsHomePage = False
                     Case "Partners"
                         CurrentPage = New Views.PartnersPage()

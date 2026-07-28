@@ -111,6 +111,17 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _productionMode As Boolean = False
+        Public Property ProductionMode As Boolean
+            Get
+                Return _productionMode
+            End Get
+            Set(value As Boolean)
+                _productionMode = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
         ' === Commands ===
         Public Property SaveCommand As RelayCommand
         Public Property SelectLogoCommand As RelayCommand
@@ -134,6 +145,7 @@ Namespace ViewModels
                     UnifiedPartnerSearch = info.UnifiedPartnerSearch
                     UseDetailedInvoiceDesign = info.UseDetailedInvoiceDesign
                     UseCustomInvoiceDesign = info.UseCustomInvoiceDesign
+                    ProductionMode = info.ProductionMode
                 End If
             Catch ex As Exception
                 ' Error handling
@@ -159,7 +171,8 @@ Namespace ViewModels
                     .CurrencySymbol = CurrencySymbol,
                     .UnifiedPartnerSearch = UnifiedPartnerSearch,
                     .UseDetailedInvoiceDesign = UseDetailedInvoiceDesign,
-                    .UseCustomInvoiceDesign = UseCustomInvoiceDesign
+                    .UseCustomInvoiceDesign = UseCustomInvoiceDesign,
+                    .ProductionMode = ProductionMode
                 }
                 _settingsService.SaveCompanyInfo(info)
                 MessageBox.Show("تم حفظ الإعدادات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)

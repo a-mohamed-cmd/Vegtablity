@@ -80,6 +80,15 @@ Namespace Helpers
         Public Const SP_PRODUCT_GETPAGED As String = "[Inventory].[sp_Product_GetPaged]"
         Public Const SP_PRODUCTCARD_UPDATEQUICKDETAILS As String = "[Inventory].[sp_ProductCard_UpdateQuickDetails]"
         Public Const SP_PRODUCT_QUICKADD As String = "[Inventory].[sp_Product_QuickAdd]"
+        Public Const SP_PRODUCT_GETFORPURCHASE As String = "[Inventory].[sp_Product_GetForPurchase]"
+        Public Const SP_PRODUCT_GETFORSALES As String = "[Inventory].[sp_Product_GetForSales]"
+        Public Const SP_PRODUCT_GETFORRECIPEINGREDIENTS As String = "[Inventory].[sp_Product_GetForRecipeIngredients]"
+        Public Const SP_PRODUCT_GETFORRECIPETARGET As String = "[Inventory].[sp_Product_GetForRecipeTarget]"
+        Public Const SP_RECIPE_GETALL As String = "[Inventory].[sp_Recipe_GetAll]"
+        Public Const SP_RECIPE_GETBYPRODUCT As String = "[Inventory].[sp_Recipe_GetByProduct]"
+        Public Const SP_RECIPE_SAVE_XML As String = "[Inventory].[sp_Recipe_Save_XML]"
+        Public Const SP_RECIPE_DELETE As String = "[Inventory].[sp_Recipe_Delete]"
+        Public Const SP_UPDATE_MANUFACTURED_COSTS As String = "[Inventory].[sp_Update_Manufactured_Costs]"
 
         ' =============================================
         ' Sales Schema - Partners

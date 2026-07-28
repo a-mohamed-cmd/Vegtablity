@@ -32,6 +32,9 @@ Namespace ViewModels
         Private _editPurchasePrice As Decimal
         Private _editSalePrice As Decimal
         Private _editAlertQty As Decimal
+        Private _editProductType As Integer = 1
+        Private _isProductionMode As Boolean = False
+        Private _productTypesList As List(Of KeyValuePair(Of Integer, String))
 
         ' ===== Lookups =====
         Private _categories As ObservableCollection(Of Category)
@@ -46,6 +49,16 @@ Namespace ViewModels
         Private _statusMessage As String
 
         Public Sub New()
+            Dim compInfo = _settingsService.GetCompanyInfo()
+            IsProductionMode = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
+            
+            ProductTypesList = New List(Of KeyValuePair(Of Integer, String)) From {
+                New KeyValuePair(Of Integer, String)(0, "مادة خام (مستلزمات تصنيع)"),
+                New KeyValuePair(Of Integer, String)(1, "صنف عادي (مستورد / جاهز للبيع)"),
+                New KeyValuePair(Of Integer, String)(2, "منتج مصنع (نهائي)"),
+                New KeyValuePair(Of Integer, String)(3, "منتج وسيط (تحضيري)")
+            }
+
             LoadLookups()
             LoadPermissions("Inventory")
             LoadProducts()
@@ -76,6 +89,7 @@ Namespace ViewModels
                     EditPurchasePrice = value.PurchasePrice
                     EditSalePrice = value.SalePrice
                     EditAlertQty = value.AlertQty
+                    EditProductType = If(value.ProductType = 0 AndAlso Not IsProductionMode, 1, value.ProductType)
                     IsEditingProduct = True
                     ClearErrors()
                 End If
@@ -228,6 +242,33 @@ Namespace ViewModels
             End Get
             Set(value As Decimal)
                 SetProperty(_editAlertQty, value)
+            End Set
+        End Property
+
+        Public Property EditProductType As Integer
+            Get
+                Return _editProductType
+            End Get
+            Set(value As Integer)
+                SetProperty(_editProductType, value)
+            End Set
+        End Property
+
+        Public Property IsProductionMode As Boolean
+            Get
+                Return _isProductionMode
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isProductionMode, value)
+            End Set
+        End Property
+
+        Public Property ProductTypesList As List(Of KeyValuePair(Of Integer, String))
+            Get
+                Return _productTypesList
+            End Get
+            Set(value As List(Of KeyValuePair(Of Integer, String)))
+                SetProperty(_productTypesList, value)
             End Set
         End Property
 #End Region
@@ -404,6 +445,7 @@ Namespace ViewModels
             EditPurchasePrice = 0
             EditSalePrice = 0
             EditAlertQty = 0
+            EditProductType = 1
             IsEditingProduct = False
             ClearErrors()
         End Sub
@@ -431,7 +473,8 @@ Namespace ViewModels
                     .UnitID = EditUnitID,
                     .PurchasePrice = EditPurchasePrice,
                     .SalePrice = EditSalePrice,
-                    .AlertQty = EditAlertQty
+                    .AlertQty = EditAlertQty,
+                    .ProductType = If(IsProductionMode, EditProductType, 1)
                 }
                 _inventoryService.SaveProduct(p)
                 StatusMessage = If(p.ProductID = 0, "تم إضافة الصنف بنجاح. ✅", "تم تحديث الصنف بنجاح. ✅")
