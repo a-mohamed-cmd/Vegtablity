@@ -303,80 +303,105 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
 
     return Directionality(
       textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xFF12121E),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1E1E2C),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Row(
-            children: [
-              const Icon(Icons.arrow_circle_down, color: Colors.greenAccent),
-              const SizedBox(width: 8),
-              Text(context.tr('rv_screen_title'),
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          bottom: _selectedPartner != null
-              ? PreferredSize(
-                  preferredSize: const Size.fromHeight(50),
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.greenAccent.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: Colors.greenAccent.withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.person,
-                              color: Colors.greenAccent, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                              '${context.tr('rv_customer_label')}${_selectedPartner!['PartnerName']}',
-                              style: const TextStyle(
-                                  color: Colors.greenAccent,
-                                  fontWeight: FontWeight.bold)),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: () => setState(() {
-                              _selectedPartner = null;
-                              _unpaidInvoices = [];
-                            }),
-                            child: const Icon(Icons.close,
-                                color: Colors.white54, size: 18),
-                          ),
-                        ],
+      child: PopScope(
+        canPop: _selectedPartner == null,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (_selectedPartner != null) {
+            setState(() {
+              _selectedPartner = null;
+              _unpaidInvoices = [];
+              _selectedMap.clear();
+              _payAmountMap.clear();
+            });
+          }
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF12121E),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF1E1E2C),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                if (_selectedPartner != null) {
+                  setState(() {
+                    _selectedPartner = null;
+                    _unpaidInvoices = [];
+                    _selectedMap.clear();
+                    _payAmountMap.clear();
+                  });
+                } else {
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            title: Row(
+              children: [
+                const Icon(Icons.arrow_circle_down, color: Colors.greenAccent),
+                const SizedBox(width: 8),
+                Text(context.tr('rv_screen_title'),
+                    style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            bottom: _selectedPartner != null
+                ? PreferredSize(
+                    preferredSize: const Size.fromHeight(50),
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: Colors.greenAccent.withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person,
+                                color: Colors.greenAccent, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                                '${context.tr('rv_customer_label')}${_selectedPartner!['PartnerName']}',
+                                style: const TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontWeight: FontWeight.bold)),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _selectedPartner = null;
+                                _unpaidInvoices = [];
+                              }),
+                              child: const Icon(Icons.close,
+                                  color: Colors.white54, size: 18),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                )
+                  )
+                : null,
+          ),
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: voucherProv.isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.greenAccent))
+                  : _selectedPartner == null
+                      ? _buildPartnerSelector()
+                      : _buildInvoiceList(),
+            ),
+          ),
+          bottomNavigationBar: _selectedPartner != null &&
+                  (_selectedAllocations.isNotEmpty ||
+                      _freePaymentCtrl.text.isNotEmpty)
+              ? _buildBottomBar()
               : null,
         ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: voucherProv.isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Colors.greenAccent))
-                : _selectedPartner == null
-                    ? _buildPartnerSelector()
-                    : _buildInvoiceList(),
-          ),
-        ),
-        bottomNavigationBar: _selectedPartner != null &&
-                (_selectedAllocations.isNotEmpty ||
-                    _freePaymentCtrl.text.isNotEmpty)
-            ? _buildBottomBar()
-            : null,
       ),
     );
   }

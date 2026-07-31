@@ -31,4 +31,16 @@ class LicenseApiService {
   Future<void> deleteLicense(String dbName, int licenseId) async {
     await ApiClient.dio.delete('licenses/$dbName/$licenseId');
   }
+
+  Future<Map<String, dynamic>> getCompanySettings(String dbName) async {
+    final response = await ApiClient.dio.get('company_settings/$dbName');
+    return Map<String, dynamic>.from(response.data);
+  }
+
+  Future<void> saveCompanySettings(String dbName, Map<String, dynamic> settings) async {
+    await ApiClient.dio.post(
+      'company_settings/$dbName',
+      data: settings,
+    );
+  }
 }

@@ -8,13 +8,17 @@ class LicenseProvider extends ChangeNotifier {
   List<String> _databases = [];
   String? _selectedDatabase;
   List<DeviceLicense> _licenses = [];
+  Map<String, dynamic>? _companySettings;
   bool _isLoading = false;
+  bool _isSettingsLoading = false;
   String? _errorMessage;
 
   List<String> get databases => _databases;
   String? get selectedDatabase => _selectedDatabase;
   List<DeviceLicense> get licenses => _licenses;
+  Map<String, dynamic>? get companySettings => _companySettings;
   bool get isLoading => _isLoading;
+  bool get isSettingsLoading => _isSettingsLoading;
   String? get errorMessage => _errorMessage;
 
   Future<void> fetchDatabases() async {
@@ -31,6 +35,7 @@ class LicenseProvider extends ChangeNotifier {
       notifyListeners();
       if (_selectedDatabase != null) {
         await fetchLicenses(_selectedDatabase!);
+        await fetchCompanySettings(_selectedDatabase!);
       }
     } catch (e) {
       _isLoading = false;
@@ -40,9 +45,52 @@ class LicenseProvider extends ChangeNotifier {
   }
 
   void selectDatabase(String dbName) {
+    if (_selectedDatabase == dbName && _companySettings != null) return;
     _selectedDatabase = dbName;
+    _companySettings = null;
+    _licenses = [];
+    _isSettingsLoading = true;
+    _isLoading = true;
     notifyListeners();
     fetchLicenses(dbName);
+    fetchCompanySettings(dbName);
+  }
+
+  Future<void> fetchCompanySettings(String dbName) async {
+    _isSettingsLoading = true;
+    _companySettings = null;
+    notifyListeners();
+    try {
+      final res = await _apiService.getCompanySettings(dbName);
+      if (_selectedDatabase == dbName) {
+        _companySettings = res;
+        _isSettingsLoading = false;
+        notifyListeners();
+      }
+    } catch (e) {
+      if (_selectedDatabase == dbName) {
+        _isSettingsLoading = false;
+        _companySettings = null;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<bool> saveCompanySettings(Map<String, dynamic> settings) async {
+    if (_selectedDatabase == null) return false;
+    _isSettingsLoading = true;
+    notifyListeners();
+    try {
+      await _apiService.saveCompanySettings(_selectedDatabase!, settings);
+      _companySettings = Map<String, dynamic>.from(settings);
+      _isSettingsLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _isSettingsLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> fetchLicenses(String dbName) async {
@@ -51,14 +99,19 @@ class LicenseProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _licenses = await _apiService.getLicenses(dbName);
-      _isLoading = false;
-      notifyListeners();
+      final res = await _apiService.getLicenses(dbName);
+      if (_selectedDatabase == dbName) {
+        _licenses = res;
+        _isLoading = false;
+        notifyListeners();
+      }
     } catch (e) {
-      _isLoading = false;
-      _errorMessage = "فشل في تحميل الأجهزة المسجلة لقاعدة البيانات $dbName";
-      _licenses = [];
-      notifyListeners();
+      if (_selectedDatabase == dbName) {
+        _isLoading = false;
+        _errorMessage = "فشل في تحميل الأجهزة المسجلة لقاعدة البيانات $dbName";
+        _licenses = [];
+        notifyListeners();
+      }
     }
   }
 

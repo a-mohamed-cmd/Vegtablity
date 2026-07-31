@@ -1,4 +1,4 @@
-﻿Imports System.Collections.ObjectModel
+Imports System.Collections.ObjectModel
 Imports System.ComponentModel
 Imports Vegtablity.Models
 Imports Vegtablity.Services
@@ -136,6 +136,7 @@ Namespace ViewModels
         Public Property NewCommand As RelayCommand
         Public Property SaveCommand As RelayCommand
         Public Property PostCommand As RelayCommand
+        Public Property UnpostCommand As RelayCommand
         Public Property AddLineCommand As RelayCommand
         Public Property DeleteLineCommand As RelayCommand
         Public Property PrintCommand As RelayCommand
@@ -149,6 +150,7 @@ Namespace ViewModels
             NewCommand = New RelayCommand(AddressOf NewJournal)
             SaveCommand = New RelayCommand(AddressOf ExecuteSave, AddressOf CanSave)
             PostCommand = New RelayCommand(AddressOf ExecutePost, AddressOf CanPost)
+            UnpostCommand = New RelayCommand(AddressOf ExecuteUnpost, AddressOf CanUnpost)
             AddLineCommand = New RelayCommand(AddressOf AddLine)
             DeleteLineCommand = New RelayCommand(AddressOf DeleteLine)
             PrintCommand = New RelayCommand(AddressOf ExecutePrint, AddressOf CanPrint)
@@ -303,6 +305,27 @@ Namespace ViewModels
                 End If
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Function CanUnpost(obj As Object) As Boolean
+            If CurrentPermissions Is Nothing OrElse Not CurrentPermissions.CanDelete Then Return False
+            
+            Return CurrentJournal IsNot Nothing AndAlso
+                   CurrentJournal.JID > 0 AndAlso
+                   CurrentJournal.IsPosted
+        End Function
+
+        Private Sub ExecuteUnpost(obj As Object)
+            Try
+                If MessageBox.Show("هل أنت متأكد من إلغاء ترحيل هذا القيد؟ سيتم حذف القيود المرتبطة من الدفتر العام وإرجاع القيد كغير مرحّل.", "تأكيد إلغاء الترحيل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.Yes Then
+                    _accountingService.UnpostJournalEntry(CurrentJournal.JID)
+                    LoadList()
+                    SelectedJournal = JournalList.FirstOrDefault(Function(j) j.JID = CurrentJournal.JID)
+                    MessageBox.Show("تم إلغاء ترحيل القيد وحذف مفرداته من الدفتر العام بنجاح", "إلغاء الترحيل", MessageBoxButton.OK, MessageBoxImage.Information)
+                End If
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء إلغاء الترحيل: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 

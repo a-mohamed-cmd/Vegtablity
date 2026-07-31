@@ -1502,10 +1502,27 @@
 * **ربط إظهار ووصفات المنتجات والتصنيع بقيمة `[ProductionMode]`:**
   - تم ربط إظهار أيقونة وعنصر "وصفات المنتجات والتصنيع" في كل من **الشاشة الرئيسية (الشبكة الرئيسية)**، **القائمة الجانبية (Sidebar Drawer)**، و**شاشة الإعدادات العامة (General Settings)** بشرط تفعيل خيار `ProductionMode == 1` في إعدادات الشركة (`CompanySettings`).
   - في حال تعطيل `ProductionMode` بالشركة، يتم إخفاء أزرار وقوائم الوصفات والتصنيع تلقائياً من التطبيق لتبسيط الواجهة وحظر الدخول غير المصرح به للنظام الإنتاجي.
+  - إزالة مربع الاختيار الخاص بوضع التصنيع (`ProductionMode CheckBox`) من شاشة إعدادات المؤسسة بالكمبيوتر ([CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml)) بناءً على الطلب، ليتم التحكم بالقيمة مباشرة من قواعد البيانات دون تدخل المستخدم.
 * **إضافة خيار وزر طباعة سند الجرد في تطبيق سطح المكتب WPF ([StockTakePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/StockTakePage.xaml)):**
   - تخصيص وتثبيت زر **`طباعة`** بأسفل الصفحة بجانب زر اعتماد التقرير مباشرة مع حذف الزر العلوي لتبسيط الواجهة وتجنب التكرار.
   - ربط الزر مع الأمر `PrintCommand` في [StockTakeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/StockTakeViewModel.vb).
   - إضافة الدالة المخصصة `ExportStockTakeVoucherToPdf` بالملف [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) لطباعة وتصدير سند تسوية الجرد بصيغة PDF الرسمية موثقة بترويسة الشركة، حالة السند (معتمد / مسودة)، تفاصيل الأصناف والكميات الدفترية والفعلية ومبالغ الفروقات وإجمالي التسوية الختامي.
+* **إضافة تبويب وإمكانية التحكم في جدول `CompanySettings` بتطبيق التراخيص ([LicenseManagerApp](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp)):**
+  - إضافة واجهة التحكم في إعدادات وتفضيلات النظام وتغيير قواعد البيانات ديناميكياً حسب اختيار الـ ComboBox.
+  - إضافة مفاتيح تفعيل/تعطيل (`SwitchListTile`) للتحكم في أعمدة `ProductionMode` و`UseCustomInvoiceDesign` و`UseDetailedInvoiceDesign` و`UnifiedPartnerSearch`.
+  - اعتماد خيار **زر الحفظ المباشر 💾 (Save Button)** لحفظ التغييرات بأمان بعد المعاينة والتأكد، وتجنب التعديلات العشوائية السريعة لقواعد بيانات الشركات والعملاء.
+* **تحديث واجهات وتنظيم تطبيق المشرف والتراخيص ([LicenseManagerApp](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp)):**
+  - **تخصيص الشاشة الرئيسية ([DashboardHomeScreen](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/dashboard_home_screen.dart)):** إزالة كروت المعاينة القديمة وحذف صفحة الميزات والتحديثات، والاعتماد على كارتين صغيرين مخصصين:
+    1. **كارت إدارة تراخيص الأجهزة 🔐:** يحمل شعار لوحة التحكم ويوجه لصفحة التراخيص دون المساس بها ([LicenseManagerScreen](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/license_manager_screen.dart)).
+    2. **كارت الخصائص وتفضيلات النظام 🔑:** يحمل رمز المفتاح ويوجه لصفحة التفضيلات وإعدادات قواعد البيانات المستقلة ([CompanySettingsScreen](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/company_settings_screen.dart)).
+  - **فصل صفحة الخصائص وتفضيلات النظام ([CompanySettingsScreen](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/company_settings_screen.dart)):** إنشاء شاشة مخصصة منفصلة كلياً للتحكم بقواعد البيانات وخيارات `ProductionMode` وتصاميم الفواتير والعملة دون الاعتماد على التبويبات المتداخلة.
+* **إصلاح زر وسلوك الرجوع بشاشات تحصيل العملاء وسداد الموردين ([ReceiptVoucherScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/receipt_voucher_screen.dart) & [PaymentVoucherScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/payment_voucher_screen.dart)):**
+  - إضافة `PopScope` وتطوير سهم الرجوع `leading: IconButton` في كلا الشاشتين.
+  - عند اختيار عميل أو مورد والدخول لقائمة الفواتير المستحقة، يتولى الضغط على زر الرجوع (أو زر الجهاز) تصفير العميل/المورد المحدد `_selectedPartner = null` للعودة لقائمة العملاء والموردين بدلاً من الخروج المفاجئ للشاشة الرئيسية.
+* **إضافة Stored Procedures للتحكم في إعدادات الشركة ([SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql)):**
+  - إضافة `[Settings].[sp_CompanySettings_Get_Ctrl]` لقراءة وتصدير إعدادات وتفضيلات النظام.
+  - إضافة `[Settings].[sp_CompanySettings_Save_Ctrl]` لتحديث وخزن خيارات `ProductionMode` والتصميم والبيانات العامة بأمان.
+  - ربط الإجراءات في [db_procedures_controls.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures_controls.py) واستدعائها من [license_control_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/license_control_service.py).
 
 
 

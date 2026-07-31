@@ -96,3 +96,26 @@ async def delete_license(db_name: str, license_id: int, current_user: str = Depe
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/company_settings/{db_name}")
+async def get_company_settings(db_name: str, current_user: str = Depends(get_current_ctrl_user)):
+    """
+    Retrieves company and system settings for the specified database.
+    """
+    service = LicenseControlService()
+    try:
+        return service.get_company_settings(db_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/company_settings/{db_name}")
+async def save_company_settings(db_name: str, payload: dict, current_user: str = Depends(get_current_ctrl_user)):
+    """
+    Updates company & system settings on the specified database.
+    """
+    service = LicenseControlService()
+    try:
+        service.save_company_settings(db_name, payload)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

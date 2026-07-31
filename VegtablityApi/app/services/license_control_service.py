@@ -123,3 +123,79 @@ class LicenseControlService:
         finally:
             cursor.close()
             conn.close()
+
+    def get_company_settings(self, db_name: str):
+        """
+        Retrieves company and system settings from [Settings].[CompanySettings] for a specific database.
+        """
+        connection_string = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={DB_SERVER};"
+            f"DATABASE={db_name};"
+            f"UID={DB_USER};"
+            f"PWD={DB_PASSWORD};"
+            "TrustServerCertificate=yes;"
+        )
+        conn = pyodbc.connect(connection_string)
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.CTRL_COMPANY_SETTINGS_GET)
+            columns = [col[0] for col in cursor.description]
+            row = cursor.fetchone()
+            if row:
+                res = dict(zip(columns, row))
+                for k, v in list(res.items()):
+                    if isinstance(v, (bytes, bytearray)):
+                        res[k] = None
+                    elif isinstance(v, (bool, int, float, str)) or v is None:
+                        pass
+                    else:
+                        res[k] = str(v)
+                return res
+            return {}
+        finally:
+            cursor.close()
+            conn.close()
+
+    def save_company_settings(self, db_name: str, payload: dict):
+        """
+        Updates company & system settings in [Settings].[CompanySettings] for a specific database.
+        """
+        connection_string = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER={DB_SERVER};"
+            f"DATABASE={db_name};"
+            f"UID={DB_USER};"
+            f"PWD={DB_PASSWORD};"
+            "TrustServerCertificate=yes;"
+        )
+        conn = pyodbc.connect(connection_string)
+        cursor = conn.cursor()
+        try:
+            def _parse_bool(val):
+                if val is None:
+                    return None
+                return 1 if (val is True or val == 1 or str(val).lower() in ("true", "1")) else 0
+
+            production_mode = _parse_bool(payload.get("ProductionMode"))
+            use_custom = _parse_bool(payload.get("UseCustomInvoiceDesign"))
+            use_detailed = _parse_bool(payload.get("UseDetailedInvoiceDesign"))
+            unified_search = _parse_bool(payload.get("UnifiedPartnerSearch"))
+            company_name = payload.get("CompanyName")
+            currency_symbol = payload.get("CurrencySymbol")
+            address = payload.get("Address")
+            phone = payload.get("Phone")
+            email = payload.get("Email")
+
+            cursor.execute(SP.CTRL_COMPANY_SETTINGS_SAVE, (
+                production_mode, use_custom, use_detailed, unified_search,
+                company_name, currency_symbol, address, phone, email
+            ))
+            conn.commit()
+            return True
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cursor.close()
+            conn.close()

@@ -53,6 +53,7 @@
                     <Button Content="🆕 قيد جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#3498db" Margin="5,0" IsEnabled="{Binding CurrentPermissions.CanAdd}"/>
                     <Button Content="💾 حفظ" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#27ae60" Margin="5,0"/>
                     <Button Content="📌 ترحيل" Command="{Binding PostCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#8e44ad" Margin="5,0"/>
+                    <Button Content="↩️ إلغاء الترحيل" Command="{Binding UnpostCommand}" Style="{StaticResource ModernButtonStyle}" Width="120" Height="32" Background="#e67e22" Margin="5,0" IsEnabled="{Binding CurrentPermissions.CanDelete}"/>
                     <Button Content="🖨️ طباعة" Command="{Binding PrintCommand}" Style="{StaticResource ModernButtonStyle}" Width="110" Height="32" Background="#7f8c8d" Margin="5,0"/>
                 </StackPanel>
             </Grid>

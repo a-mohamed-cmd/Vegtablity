@@ -112,7 +112,84 @@ BEGIN
 END
 GO
 
--- 4. إجراء ترحيل القيد اليدوي لجدول الحركات العام
+-- 4. Trigger: ترحيل وإلغاء ترحيل القيد اليدوي تلقائياً عند تغيير IsPosted
+IF OBJECT_ID('[Accounting].[trg_JournalHeader_Post]', 'TR') IS NOT NULL
+    DROP TRIGGER [Accounting].[trg_JournalHeader_Post];
+GO
+
+CREATE TRIGGER [Accounting].[trg_JournalHeader_Post]
+ON [Accounting].[JournalHeader]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. حالة إلغاء الترحيل (UNPOSTING: IsPosted 1 -> 0): حذف القيد من [Accounting].[JournalEntries]
+    DELETE JE
+    FROM [Accounting].[JournalEntries] JE
+    INNER JOIN deleted del ON JE.ReferenceID = del.JID AND JE.ReferenceType = 'Manual'
+    INNER JOIN inserted ins ON ins.JID = del.JID
+    WHERE del.IsPosted = 1 AND ins.IsPosted = 0;
+
+    -- 2. حالة التعديل على قيد مرحل (IsPosted 1 -> 1 مع التغيير): حذف القيود القديمة
+    DELETE JE
+    FROM [Accounting].[JournalEntries] JE
+    INNER JOIN deleted del ON JE.ReferenceID = del.JID AND JE.ReferenceType = 'Manual'
+    INNER JOIN inserted ins ON ins.JID = del.JID
+    WHERE del.IsPosted = 1 AND ins.IsPosted = 1
+      AND (del.JDate <> ins.JDate OR ISNULL(del.Description,'') <> ISNULL(ins.Description,'') OR del.TotalAmount <> ins.TotalAmount);
+
+    -- 3. حالة الترحيل (POSTING: 0 -> 1 أو Re-Post): إدخال القيود في [Accounting].[JournalEntries]
+    INSERT INTO [Accounting].[JournalEntries] (
+        EntryNo, 
+        EntryDate, 
+        ReferenceType, 
+        ReferenceID, 
+        AccountID, 
+        DebitAmount, 
+        CreditAmount, 
+        Description, 
+        UserID
+    )
+    SELECT 
+        ins.JournalNo,
+        ins.JDate,
+        'Manual',
+        ins.JID,
+        jd.AccountID,
+        jd.Debit,
+        jd.Credit,
+        ISNULL(jd.Notes, ins.Description),
+        ins.UserID
+    FROM inserted ins
+    JOIN [Accounting].[JournalDetails] jd ON ins.JID = jd.JID
+    LEFT JOIN deleted del ON del.JID = ins.JID
+    WHERE ins.IsPosted = 1
+      AND (
+          ISNULL(del.IsPosted, 0) = 0 -- الترحيل من جديد (0 -> 1)
+          OR (del.IsPosted = 1 AND (del.JDate <> ins.JDate OR ISNULL(del.Description,'') <> ISNULL(ins.Description,'') OR del.TotalAmount <> ins.TotalAmount)) -- إعادة الترحيل عند التعديل
+      );
+END
+GO
+
+-- 4.1 Trigger: حذف القيود من [Accounting].[JournalEntries] عند حذف رأس القيد اليدوي
+IF OBJECT_ID('[Accounting].[trg_JournalHeader_Delete]', 'TR') IS NOT NULL
+    DROP TRIGGER [Accounting].[trg_JournalHeader_Delete];
+GO
+
+CREATE TRIGGER [Accounting].[trg_JournalHeader_Delete]
+ON [Accounting].[JournalHeader]
+AFTER DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [Accounting].[JournalEntries]
+    WHERE ReferenceType = 'Manual' 
+      AND ReferenceID IN (SELECT JID FROM deleted);
+END
+GO
+
+-- 4.2 إجراء ترحيل القيد اليدوي لجدول الحركات العام
 IF OBJECT_ID('[Accounting].[sp_JournalEntry_Post]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_JournalEntry_Post];
 GO
 
@@ -121,40 +198,44 @@ CREATE PROCEDURE [Accounting].[sp_JournalEntry_Post]
 AS
 BEGIN
     SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[JournalHeader] WHERE JID = @JID)
+    BEGIN
+        RAISERROR(N'القيد غير موجود', 16, 1);
+        RETURN;
+    END
     IF EXISTS (SELECT 1 FROM [Accounting].[JournalHeader] WHERE JID = @JID AND IsPosted = 1)
     BEGIN
         RAISERROR(N'القيد مرحّل بالفعل', 16, 1);
         RETURN;
     END
 
-    BEGIN TRY
-        BEGIN TRANSACTION;
+    -- تحديث IsPosted يُفعّل الـ Trigger تلقائياً لإنشاء القيود
+    UPDATE [Accounting].[JournalHeader] SET IsPosted = 1 WHERE JID = @JID;
+END
+GO
 
-        -- نستخدم نفس رقم القيد الموجود في الرأس ليكون هو رقم الحركة في القيد العام
-        -- هذا يضمن الشفافية وتوحيد الترقيم
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
-        SELECT 
-            H.JournalNo,
-            H.JDate,
-            'Manual',
-            H.JID,
-            D.AccountID,
-            D.Debit,
-            D.Credit,
-            ISNULL(D.Notes, H.Description),
-            H.UserID
-        FROM [Accounting].[JournalHeader] H
-        JOIN [Accounting].[JournalDetails] D ON H.JID = D.JID
-        WHERE H.JID = @JID;
+-- 4.3 إجراء إلغاء ترحيل القيد اليدوي (حذف القيود من JournalEntries وإرجاع الحالة إلى غير مرحل)
+IF OBJECT_ID('[Accounting].[sp_JournalEntry_Unpost]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_JournalEntry_Unpost];
+GO
 
-        UPDATE [Accounting].[JournalHeader] SET IsPosted = 1 WHERE JID = @JID;
+CREATE PROCEDURE [Accounting].[sp_JournalEntry_Unpost]
+    @JID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[JournalHeader] WHERE JID = @JID)
+    BEGIN
+        RAISERROR(N'القيد غير موجود', 16, 1);
+        RETURN;
+    END
+    IF EXISTS (SELECT 1 FROM [Accounting].[JournalHeader] WHERE JID = @JID AND IsPosted = 0)
+    BEGIN
+        RAISERROR(N'القيد غير مرحّل بالأساس', 16, 1);
+        RETURN;
+    END
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH
+    -- تحديث IsPosted يُفعّل الـ Trigger تلقائياً لحذف القيد من JournalEntries
+    UPDATE [Accounting].[JournalHeader] SET IsPosted = 0 WHERE JID = @JID;
 END
 GO
 

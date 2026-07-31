@@ -128,6 +128,7 @@ Namespace Helpers
         Public Const SP_JOURNALENTRY_GETDETAILS As String = "[Accounting].[sp_JournalEntry_GetDetails]"
         Public Const SP_JOURNALENTRY_SAVE As String = "[Accounting].[sp_JournalEntry_Save]"
         Public Const SP_JOURNALENTRY_POST As String = "[Accounting].[sp_JournalEntry_Post]"
+        Public Const SP_JOURNALENTRY_UNPOST As String = "[Accounting].[sp_JournalEntry_Unpost]"
 
         ' =============================================
         ' Reports Schema

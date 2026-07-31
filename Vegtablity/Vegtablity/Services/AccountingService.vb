@@ -164,6 +164,15 @@ Namespace Services
             End Using
         End Sub
 
+        Public Sub UnpostJournalEntry(jid As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_JOURNALENTRY_UNPOST,
+                    New With {.JID = jid},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
+
         Public Function GetTrialBalance(startDate As Date, endDate As Date, Optional reportLevel As Integer = 0) As TrialBalanceReport
             Dim report As New TrialBalanceReport() With {.StartDate = startDate, .EndDate = endDate}
             Using conn As IDbConnection = _dbHelper.GetConnection()

@@ -255,7 +255,7 @@ class _LicenseManagerScreenState extends State<LicenseManagerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF1E1E2E),
       appBar: AppBar(
-        title: const Text("لوحة تحكم التراخيص والمشرفين"),
+        title: const Text("إدارة تراخيص الأجهزة"),
         backgroundColor: const Color(0xFF252538),
         elevation: 0,
         actions: [
@@ -316,8 +316,8 @@ class _LicenseManagerScreenState extends State<LicenseManagerScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
-                  // Header Row with Add Button (Adaptive Layout)
+
+                  // Header Row with Add Button
                   isSmallScreen
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -368,7 +368,6 @@ class _LicenseManagerScreenState extends State<LicenseManagerScreen> {
                                 itemBuilder: (context, index) {
                                   final item = licenseProvider.licenses[index];
                                   
-                                  // Adaptive Card Layout (Standard Row vs Mobile Card)
                                   if (isSmallScreen) {
                                     return Card(
                                       color: const Color(0xFF252538),
@@ -404,40 +403,36 @@ class _LicenseManagerScreenState extends State<LicenseManagerScreen> {
                                                     item.isActive ? "نشط" : "معطل",
                                                     style: TextStyle(
                                                       color: item.isActive ? Colors.green : Colors.red,
-                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 13,
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            const Divider(color: Color(0xFF1E1E2E), height: 20),
-                                            Text("HWID: ${item.machineHwid}", style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                                            const SizedBox(height: 4),
-                                            Text("مفتاح الترخيص: ${item.licenseKey}", style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                                            const SizedBox(height: 4),
+                                            const SizedBox(height: 8),
                                             Text(
-                                              "ينتهي في: ${item.expiryDate.length >= 10 ? item.expiryDate.substring(0, 10) : item.expiryDate}",
-                                              style: TextStyle(
-                                                color: DateTime.tryParse(item.expiryDate)?.isBefore(DateTime.now()) == true 
-                                                    ? Colors.redAccent 
-                                                    : Colors.amber,
-                                                fontSize: 13,
-                                              ),
+                                              "HWID: ${item.machineHwid}",
+                                              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              "انتهاء: ${item.expiryDate.length >= 10 ? item.expiryDate.substring(0, 10) : item.expiryDate}",
+                                              style: const TextStyle(color: Colors.grey, fontSize: 12),
                                             ),
                                             const SizedBox(height: 12),
                                             Row(
                                               mainAxisAlignment: MainAxisAlignment.end,
                                               children: [
-                                                TextButton.icon(
-                                                  icon: const Icon(Icons.edit, size: 16, color: Colors.blueAccent),
-                                                  label: const Text("تعديل", style: TextStyle(color: Colors.blueAccent)),
+                                                IconButton(
+                                                  icon: const Icon(Icons.edit, color: Colors.amber, size: 20),
                                                   onPressed: () => _showEditDialog(item),
+                                                  tooltip: "تعديل",
                                                 ),
-                                                const SizedBox(width: 12),
-                                                TextButton.icon(
-                                                  icon: const Icon(Icons.delete, size: 16, color: Colors.redAccent),
-                                                  label: const Text("حذف", style: TextStyle(color: Colors.redAccent)),
+                                                IconButton(
+                                                  icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
                                                   onPressed: () => _confirmDelete(item.licenseId),
+                                                  tooltip: "حذف",
                                                 ),
                                               ],
                                             ),
@@ -445,59 +440,71 @@ class _LicenseManagerScreenState extends State<LicenseManagerScreen> {
                                         ),
                                       ),
                                     );
-                                  }
-
-                                  // Desktop Layout (ListTile style)
-                                  return Card(
-                                    color: const Color(0xFF252538),
-                                    margin: const EdgeInsets.symmetric(vertical: 6.0),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    child: ListTile(
-                                      leading: CircleAvatar(
-                                        backgroundColor: item.isActive 
-                                            ? Colors.green.withValues(alpha: 0.2) 
-                                            : Colors.red.withValues(alpha: 0.2),
-                                        child: Icon(
-                                          item.isActive ? Icons.verified_user : Icons.gpp_bad,
-                                          color: item.isActive ? Colors.green : Colors.red,
+                                  } else {
+                                    // Large-screen row
+                                    return Card(
+                                      color: const Color(0xFF252538),
+                                      margin: const EdgeInsets.symmetric(vertical: 4.0),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                item.machineName,
+                                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                item.machineHwid,
+                                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Text(
+                                                item.expiryDate.length >= 10 ? item.expiryDate.substring(0, 10) : item.expiryDate,
+                                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: item.isActive
+                                                    ? Colors.green.withValues(alpha: 0.2)
+                                                    : Colors.red.withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                item.isActive ? "نشط" : "معطل",
+                                                style: TextStyle(
+                                                  color: item.isActive ? Colors.green : Colors.red,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            IconButton(
+                                              icon: const Icon(Icons.edit, color: Colors.amber, size: 20),
+                                              onPressed: () => _showEditDialog(item),
+                                              tooltip: "تعديل",
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                                              onPressed: () => _confirmDelete(item.licenseId),
+                                              tooltip: "حذف",
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      title: Text(
-                                        item.machineName,
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                                      ),
-                                      subtitle: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const SizedBox(height: 4),
-                                          Text("HWID: ${item.machineHwid}", style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                                          Text("مفتاح الترخيص: ${item.licenseKey}", style: const TextStyle(color: Colors.grey, fontSize: 13)),
-                                          Text(
-                                            "ينتهي في: ${item.expiryDate.length >= 10 ? item.expiryDate.substring(0, 10) : item.expiryDate}",
-                                            style: TextStyle(
-                                              color: DateTime.tryParse(item.expiryDate)?.isBefore(DateTime.now()) == true 
-                                                  ? Colors.redAccent 
-                                                  : Colors.amber,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.edit, color: Colors.blueAccent),
-                                            onPressed: () => _showEditDialog(item),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(Icons.delete, color: Colors.redAccent),
-                                            onPressed: () => _confirmDelete(item.licenseId),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
+                                    );
+                                  }
                                 },
                               ),
                   ),
