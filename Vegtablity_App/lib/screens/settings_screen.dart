@@ -32,6 +32,9 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SettingsProvider>(context, listen: false).fetchSettings();
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -161,41 +164,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(20.0),
                     children: [
-                  const Text(
-                    'نظام التوصيل ومواعيد التسليم',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'اختر ما إذا كنت ترغب بتطبيق نظام توصيل وتسجيل مواعيد شحن الطلبات للعملاء أو تفضل البيع المباشر الفوري.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: _selectedSalesMode,
-                    alignment: AlignmentDirectional.centerEnd,
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
-                    items: const [
-                      DropdownMenuItem(value: 'direct', child: Text('بيع مباشر بدون توصيل', textAlign: TextAlign.right)),
-                      DropdownMenuItem(value: 'temp_order', child: Text('تطبيق نظام التوصيل', textAlign: TextAlign.right)),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        _saveSalesMode(val);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 32),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  Text(
+                      Text(
                     context.tr('language'),
                     style: const TextStyle(
                       fontSize: 20,
@@ -298,12 +267,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     onChanged: (val) => _saveBoolSetting('show_wastage', val),
                     activeColor: Colors.teal,
                   ),
-                  SwitchListTile(
-                    title: Text(context.tr('home_daily_orders')),
-                    value: _showDailyOrders,
-                    onChanged: (val) => _saveBoolSetting('show_daily_orders', val),
-                    activeColor: Colors.teal,
-                  ),
+                  if (Provider.of<SettingsProvider>(context).enableDailyOrders)
+                    SwitchListTile(
+                      title: Text(context.tr('home_daily_orders')),
+                      value: _showDailyOrders,
+                      onChanged: (val) => _saveBoolSetting('show_daily_orders', val),
+                      activeColor: Colors.teal,
+                    ),
                   if (Provider.of<SettingsProvider>(context).isProductionMode)
                     SwitchListTile(
                       title: const Text('وصفات المنتجات والتصنيع'),

@@ -186,10 +186,13 @@ class LicenseControlService:
             address = payload.get("Address")
             phone = payload.get("Phone")
             email = payload.get("Email")
+            enable_daily_orders = _parse_bool(payload.get("EnableDailyOrders"))
+            delivery_system_mode = payload.get("DeliverySystemMode")
 
             cursor.execute(SP.CTRL_COMPANY_SETTINGS_SAVE, (
                 production_mode, use_custom, use_detailed, unified_search,
-                company_name, currency_symbol, address, phone, email
+                company_name, currency_symbol, address, phone, email,
+                enable_daily_orders, delivery_system_mode
             ))
             conn.commit()
             return True

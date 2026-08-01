@@ -46,6 +46,7 @@ Namespace ViewModels
             Dim settingsService As New Services.SettingsService()
             Dim compInfo = settingsService.GetCompanyInfo()
             Dim isProductionMode As Boolean = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
+            Dim enableDailyOrders As Boolean = (compInfo IsNot Nothing AndAlso compInfo.EnableDailyOrders)
 
             Dim formsMap As New Dictionary(Of String, String) From {
                 {"Dashboard", "لوحة المعلومات الرئيسية"},
@@ -73,9 +74,12 @@ Namespace ViewModels
                 {"CompanySettings", "بيانات الشركة"},
                 {"UserManagement", "إدارة المستخدمين"},
                 {"Wastage", "إدارة التوالف والهوالك"},
-                {"StockTaking", "إدارة الجرد الآلي"},
-                {"DailyOrders", "الطلبات اليومية"}
+                {"StockTaking", "إدارة الجرد الآلي"}
             }
+
+            If enableDailyOrders Then
+                formsMap.Add("DailyOrders", "الطلبات اليومية")
+            End If
 
             If isProductionMode Then
                 formsMap.Add("Recipes", "وصفات المنتجات")

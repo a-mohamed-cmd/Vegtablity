@@ -10,5 +10,7 @@ Namespace Models
         Public Property UseDetailedInvoiceDesign As Boolean = False
         Public Property UseCustomInvoiceDesign As Boolean = False
         Public Property ProductionMode As Boolean = False
+        Public Property EnableDailyOrders As Boolean = False
+        Public Property DeliverySystemMode As String = Nothing
     End Class
 End Namespace

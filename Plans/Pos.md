@@ -1544,3 +1544,37 @@
   - يتم عرض رسالة تحذيرية للمستخدم تتضمن القائمة الكاملة مع السؤال: *"هل تريد الاستمرار والحفظ على أي حال؟"*
   - عند اختيار **نعم**: تكتمل عملية الحفظ بأمان.
   - عند اختيار **لا**: تتوقف عملية الحفظ ويعود المستخدم إلى الجدول لتعديل أو تصحيح الكميات.
+
+
+* **ربط صلاحية شاشة الطلبات اليومية بإعداد تصميم الفواتير المخصص (UseCustomInvoiceDesign):**
+  - **تطبيق سطح المكتب (WPF):** في شاشة إدارة المستخدمين [UserManagementViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/UserManagementViewModel.vb)، أصبحت صلاحية `الطلبات اليومية (DailyOrders)` تظهر في قائمة الصلاحيات فقط عندما تكون قيمة `UseCustomInvoiceDesign` في جدول `CompanySettings` تساوي `True`. إذا كانت `False` تختفي الصلاحية تماماً من شاشة إدارة المستخدمين.
+  - **تطبيق الهاتف/المحمول (Flutter):**
+    1. تم إضافة الخاصية `useCustomInvoiceDesign` إلى [SettingsProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/settings_provider.dart).
+    2. في شاشة الإعدادات العامة [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart)، لا يظهر مفتاح تفعيل/إخفاء الطلبات اليومية إلا إذا كانت `UseCustomInvoiceDesign` تساوي `true`. إذا كانت `false` يختفي خيار التفعيل تماماً من الإعدادات.
+    3. في الشاشة الرئيسية [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)، يختفي زر/أيقونة الطلبات اليومية للمستخدم إذا كانت `UseCustomInvoiceDesign` تساوي `false` وتظهر فقط إذا كانت `true` مع تفعيل الخيار في الإعدادات.
+
+
+* **إحلال وتخصيص عمودين جديدين لخاصية الطلبات اليومية ونظام التوصيل (EnableDailyOrders & DeliverySystemMode):**
+  - **إلغاء الاعتماد على `UseCustomInvoiceDesign`:** تم تخصيص العمود المستقل `EnableDailyOrders` (نوع `BIT DEFAULT 0`) لتكون هي المسؤولة عن تفعيل خاصية الطلبات اليومية والتوصيل.
+  - **عمود نظام ومواعيد التوصيل (`DeliverySystemMode`):** تم إضافة عمود جديد بقيمة افتراضية `NULL` لربط نظام التوصيل ومواعيد التسليم مباشرةً من إعدادات الشركة بالسيرفر.
+  - **تحديث برنامج سطح المكتب (WPF):**
+    1. تحديث [CompanyInfo.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) و [SettingsService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/SettingsService.vb) لإدراج وتمرير `EnableDailyOrders` و `DeliverySystemMode`.
+    2. تحديث [UserManagementViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/UserManagementViewModel.vb) لربط إظهار صلاحية "الطلبات اليومية" بـ `EnableDailyOrders`.
+    3. تحديث [CompanySettingsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) و [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) لإتاحة التحكم بـ `EnableDailyOrders` و `DeliverySystemMode`.
+  - **تحديث خادم الـ API (VegtablityApi):**
+    1. ترقية النماذج في [settings.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/settings.py).
+    2. ترقية الاستدعاءات والإجراءات في [license_control_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/license_control_service.py) و [db_procedures_controls.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures_controls.py).
+  - **تحديث تطبيق الهاتف (Flutter App):**
+    1. تحديث [SettingsProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/settings_provider.dart) بالخاصيتين `enableDailyOrders` و `deliverySystemMode` مع التخزين المحلي والبحث المرن عن المفاتيح.
+    2. تحديث [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) لتعتمد على `enableDailyOrders`.
+    3. تحديث [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) لتعتمد على `enableDailyOrders` وتربط نظام التوصيل بـ `deliverySystemMode`.
+
+
+* **تحديث تطبيق لوحة تحكم التراخيص (LicenseManagerApp):**
+  - تم تحديث [company_settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/company_settings_screen.dart) ليشمل خيارات التحكم المباشرة بالعمودين الجديدين `EnableDailyOrders` و `DeliverySystemMode`.
+  - إضافة مفتاح التفعيل `SwitchListTile` لـ `EnableDailyOrders` وحقل النص `TextFormField` لـ `DeliverySystemMode` وإرسالهما ضمن الـ payload إلى الـ API عند الحفظ.
+
+
+* **إزالة خيار التحكم المحلي بنظام التوصيل ومواعيد التسليم من الإعدادات العامة بتطبيق الهاتف (`Vegtablity_App`):**
+  - تم حذف قسم القائمة المنسدلة للتحكم الفردي بنظام التوصيل من شاشة [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart).
+  - تم ربط الشاشات المختلفة مثل [supplier_selection_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/supplier_selection_screen.dart) و [partner_offers_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) مباشرةً بـ `SettingsProvider.deliverySystemMode` المسجل بالسيرفر والداتابيز (`DeliverySystemMode`).

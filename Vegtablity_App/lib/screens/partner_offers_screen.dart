@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../providers/settings_provider.dart';
 import '../core/localization/app_localizations.dart';
 import 'partner_billing_screen.dart';
 import 'temp_order_screen.dart';
@@ -178,8 +179,10 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
       // Navigate to Billing Screen or Temporary Order Screen with the quote details
       if (mounted) {
         if (widget.type == 'Sales') {
+          final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+          final dbMode = settingsProvider.deliverySystemMode;
           final prefs = await SharedPreferences.getInstance();
-          final mode = prefs.getString('cash_sale_mode') ?? 'direct';
+          final mode = (dbMode != null && dbMode.isNotEmpty) ? dbMode : (prefs.getString('cash_sale_mode') ?? 'direct');
           if (mode == 'temp_order') {
             Navigator.push(
               context,

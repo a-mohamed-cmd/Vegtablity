@@ -30,7 +30,9 @@ Namespace Services
                         .UnifiedPartnerSearch = info.UnifiedPartnerSearch,
                         .UseDetailedInvoiceDesign = info.UseDetailedInvoiceDesign,
                         .UseCustomInvoiceDesign = info.UseCustomInvoiceDesign,
-                        .ProductionMode = info.ProductionMode
+                        .ProductionMode = info.ProductionMode,
+                        .EnableDailyOrders = info.EnableDailyOrders,
+                        .DeliverySystemMode = info.DeliverySystemMode
                     },
                     commandType:=CommandType.StoredProcedure
                 )

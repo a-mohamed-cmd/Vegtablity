@@ -2,7 +2,7 @@ USE VegtablityDB;
 GO
 
 -- =============================================
--- 1. Create CompanySettings Table
+-- 1. Create CompanySettings Table & Alter Missing Columns
 -- =============================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CompanySettings' AND schema_id = SCHEMA_ID('Settings'))
 BEGIN
@@ -13,12 +13,32 @@ BEGIN
         Phone NVARCHAR(50),
         Email NVARCHAR(100),
         Logo VARBINARY(MAX),
+        UnifiedPartnerSearch BIT NOT NULL DEFAULT 1,
+        CurrencySymbol NVARCHAR(100) DEFAULT N'د.ك',
+        UseDetailedInvoiceDesign BIT NOT NULL DEFAULT 0,
+        UseCustomInvoiceDesign BIT NOT NULL DEFAULT 0,
+        ProductionMode BIT NOT NULL DEFAULT 0,
+        EnableDailyOrders BIT NOT NULL DEFAULT 0,
+        DeliverySystemMode NVARCHAR(50) NULL DEFAULT NULL,
         CONSTRAINT CK_OnlyOneRow CHECK (SettingID = 1)
     );
 
     -- Insert default record
     INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName)
     VALUES (1, N'شركة الخضروات');
+END
+GO
+
+-- Ensure new columns exist on existing databases
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableDailyOrders')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableDailyOrders BIT NOT NULL DEFAULT 0;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'DeliverySystemMode')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD DeliverySystemMode NVARCHAR(50) NULL DEFAULT NULL;
 END
 GO
 
@@ -32,7 +52,21 @@ GO
 CREATE PROCEDURE [Settings].[sp_CompanySettings_Get]
 AS
 BEGIN
-    SELECT TOP 1 * FROM [Settings].[CompanySettings];
+    SELECT TOP 1 
+        SettingID,
+        CompanyName,
+        Address,
+        Phone,
+        Email,
+        Logo,
+        ISNULL(UnifiedPartnerSearch, 1) AS UnifiedPartnerSearch,
+        ISNULL(CurrencySymbol, N'د.ك') AS CurrencySymbol,
+        ISNULL(UseDetailedInvoiceDesign, 0) AS UseDetailedInvoiceDesign,
+        ISNULL(UseCustomInvoiceDesign, 0) AS UseCustomInvoiceDesign,
+        ISNULL(ProductionMode, 0) AS ProductionMode,
+        ISNULL(EnableDailyOrders, 0) AS EnableDailyOrders,
+        DeliverySystemMode
+    FROM [Settings].[CompanySettings];
 END
 GO
 
@@ -44,7 +78,14 @@ CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
     @Address NVARCHAR(255) = NULL,
     @Phone NVARCHAR(50) = NULL,
     @Email NVARCHAR(100) = NULL,
-    @Logo VARBINARY(MAX) = NULL
+    @Logo VARBINARY(MAX) = NULL,
+    @UnifiedPartnerSearch BIT = 1,
+    @CurrencySymbol NVARCHAR(100) = NULL,
+    @UseDetailedInvoiceDesign BIT = 0,
+    @UseCustomInvoiceDesign BIT = 0,
+    @ProductionMode BIT = 0,
+    @EnableDailyOrders BIT = 0,
+    @DeliverySystemMode NVARCHAR(50) = NULL
 AS
 BEGIN
     IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
@@ -54,13 +95,20 @@ BEGIN
             Address = @Address,
             Phone = @Phone,
             Email = @Email,
-            Logo = @Logo
+            Logo = @Logo,
+            UnifiedPartnerSearch = @UnifiedPartnerSearch,
+            CurrencySymbol = @CurrencySymbol,
+            UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign,
+            UseCustomInvoiceDesign = @UseCustomInvoiceDesign,
+            ProductionMode = @ProductionMode,
+            EnableDailyOrders = @EnableDailyOrders,
+            DeliverySystemMode = @DeliverySystemMode
         WHERE SettingID = 1;
     END
     ELSE
     BEGIN
-        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo)
-        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo);
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders, DeliverySystemMode)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders, @DeliverySystemMode);
     END
 END
 GO

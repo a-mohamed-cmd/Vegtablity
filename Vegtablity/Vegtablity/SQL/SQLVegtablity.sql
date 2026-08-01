@@ -1119,6 +1119,13 @@ BEGIN
         Phone NVARCHAR(50),
         Email NVARCHAR(100),
         Logo VARBINARY(MAX),
+        UnifiedPartnerSearch BIT NOT NULL DEFAULT 1,
+        CurrencySymbol NVARCHAR(100) DEFAULT N'د.ك',
+        UseDetailedInvoiceDesign BIT NOT NULL DEFAULT 0,
+        UseCustomInvoiceDesign BIT NOT NULL DEFAULT 0,
+        ProductionMode BIT NOT NULL DEFAULT 0,
+        EnableDailyOrders BIT NOT NULL DEFAULT 0,
+        DeliverySystemMode NVARCHAR(50) NULL DEFAULT NULL,
         CONSTRAINT CK_OnlyOneRow CHECK (SettingID = 1)
     );
 
@@ -9819,22 +9826,23 @@ GO
 -- 2. تحديث إجراء جلب البيانات (Get SP)
 IF OBJECT_ID('[Settings].[sp_CompanySettings_Get]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Get];
 GO
-
 CREATE PROCEDURE [Settings].[sp_CompanySettings_Get]
 AS
 BEGIN
     SELECT TOP 1 
-        SettingID, 
-        CompanyName, 
-        Address, 
-        Phone, 
-        Email, 
-        Logo, 
-        ISNULL(UnifiedPartnerSearch, 1) AS UnifiedPartnerSearch, 
-        CurrencySymbol,
+        SettingID,
+        CompanyName,
+        Address,
+        Phone,
+        Email,
+        Logo,
+        ISNULL(UnifiedPartnerSearch, 1) AS UnifiedPartnerSearch,
+        ISNULL(CurrencySymbol, N'د.ك') AS CurrencySymbol,
         ISNULL(UseDetailedInvoiceDesign, 0) AS UseDetailedInvoiceDesign,
         ISNULL(UseCustomInvoiceDesign, 0) AS UseCustomInvoiceDesign,
-        ISNULL(ProductionMode, 0) AS ProductionMode
+        ISNULL(ProductionMode, 0) AS ProductionMode,
+        ISNULL(EnableDailyOrders, 0) AS EnableDailyOrders,
+        DeliverySystemMode
     FROM [Settings].[CompanySettings];
 END
 GO
@@ -9853,7 +9861,9 @@ CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
     @CurrencySymbol NVARCHAR(100) = NULL,
     @UseDetailedInvoiceDesign BIT = 0,
     @UseCustomInvoiceDesign BIT = 0,
-    @ProductionMode BIT = 0
+    @ProductionMode BIT = 0,
+    @EnableDailyOrders BIT = 0,
+    @DeliverySystemMode NVARCHAR(50) = NULL
 AS
 BEGIN
     IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
@@ -9868,13 +9878,15 @@ BEGIN
             CurrencySymbol = @CurrencySymbol,
             UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign,
             UseCustomInvoiceDesign = @UseCustomInvoiceDesign,
-            ProductionMode = @ProductionMode
+            ProductionMode = @ProductionMode,
+            EnableDailyOrders = @EnableDailyOrders,
+            DeliverySystemMode = @DeliverySystemMode
         WHERE SettingID = 1;
     END
     ELSE
     BEGIN
-        INSERT INTO [Settings].[CompanySettings] (CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode)
-        VALUES (@CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode);
+        INSERT INTO [Settings].[CompanySettings] (CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders, DeliverySystemMode)
+        VALUES (@CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders, @DeliverySystemMode);
     END
 END
 GO
@@ -11241,7 +11253,9 @@ CREATE PROCEDURE [Settings].[sp_CompanySettings_Save_Ctrl]
     @CurrencySymbol NVARCHAR(50) = NULL,
     @Address NVARCHAR(500) = NULL,
     @Phone NVARCHAR(50) = NULL,
-    @Email NVARCHAR(150) = NULL
+    @Email NVARCHAR(150) = NULL,
+    @EnableDailyOrders BIT = NULL,
+    @DeliverySystemMode NVARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -11254,9 +11268,24 @@ BEGIN
         CurrencySymbol = COALESCE(@CurrencySymbol, CurrencySymbol),
         Address = COALESCE(@Address, Address),
         Phone = COALESCE(@Phone, Phone),
-        Email = COALESCE(@Email, Email);
+        Email = COALESCE(@Email, Email),
+        EnableDailyOrders = ISNULL(@EnableDailyOrders, EnableDailyOrders),
+        DeliverySystemMode = COALESCE(@DeliverySystemMode, DeliverySystemMode);
 END
 GO
 
 
 
+
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableDailyOrders')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableDailyOrders BIT NOT NULL DEFAULT 0;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'DeliverySystemMode')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD DeliverySystemMode NVARCHAR(50) NULL DEFAULT NULL;
+END
+GO

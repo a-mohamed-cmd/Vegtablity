@@ -11,6 +11,8 @@ class CompanySettingsResponse(BaseModel):
     CurrencySymbol: Optional[str] = None
     IsActive: Optional[bool] = None
     ProductionMode: Optional[bool] = None
+    EnableDailyOrders: Optional[bool] = False
+    DeliverySystemMode: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -21,4 +23,3 @@ class PrinterSettingsSaveRequest(BaseModel):
     IPAddress: Optional[str] = None
     Port: Optional[int] = 9100
     BluetoothDevice: Optional[str] = None
-

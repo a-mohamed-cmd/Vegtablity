@@ -122,6 +122,28 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _enableDailyOrders As Boolean = False
+        Public Property EnableDailyOrders As Boolean
+            Get
+                Return _enableDailyOrders
+            End Get
+            Set(value As Boolean)
+                _enableDailyOrders = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
+        Private _deliverySystemMode As String = Nothing
+        Public Property DeliverySystemMode As String
+            Get
+                Return _deliverySystemMode
+            End Get
+            Set(value As String)
+                _deliverySystemMode = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
         ' === Commands ===
         Public Property SaveCommand As RelayCommand
         Public Property SelectLogoCommand As RelayCommand
@@ -146,6 +168,8 @@ Namespace ViewModels
                     UseDetailedInvoiceDesign = info.UseDetailedInvoiceDesign
                     UseCustomInvoiceDesign = info.UseCustomInvoiceDesign
                     ProductionMode = info.ProductionMode
+                    EnableDailyOrders = info.EnableDailyOrders
+                    DeliverySystemMode = info.DeliverySystemMode
                 End If
             Catch ex As Exception
                 ' Error handling
@@ -172,7 +196,9 @@ Namespace ViewModels
                     .UnifiedPartnerSearch = UnifiedPartnerSearch,
                     .UseDetailedInvoiceDesign = UseDetailedInvoiceDesign,
                     .UseCustomInvoiceDesign = UseCustomInvoiceDesign,
-                    .ProductionMode = ProductionMode
+                    .ProductionMode = ProductionMode,
+                    .EnableDailyOrders = EnableDailyOrders,
+                    .DeliverySystemMode = DeliverySystemMode
                 }
                 _settingsService.SaveCompanyInfo(info)
                 MessageBox.Show("تم حفظ الإعدادات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)

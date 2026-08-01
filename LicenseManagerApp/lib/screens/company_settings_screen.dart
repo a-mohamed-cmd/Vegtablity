@@ -15,11 +15,13 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
   late TextEditingController _currencyController;
   late TextEditingController _addressController;
   late TextEditingController _phoneController;
+  late TextEditingController _deliverySystemModeController;
 
   bool _productionMode = false;
   bool _useCustomInvoiceDesign = false;
   bool _useDetailedInvoiceDesign = false;
   bool _unifiedPartnerSearch = false;
+  bool _enableDailyOrders = false;
   String? _lastSyncedDb;
 
   @override
@@ -29,6 +31,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
     _currencyController = TextEditingController();
     _addressController = TextEditingController();
     _phoneController = TextEditingController();
+    _deliverySystemModeController = TextEditingController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<LicenseProvider>(context, listen: false);
@@ -46,6 +49,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
     _currencyController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
+    _deliverySystemModeController.dispose();
     super.dispose();
   }
 
@@ -60,6 +64,8 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       _useCustomInvoiceDesign = settings['UseCustomInvoiceDesign'] == true || settings['UseCustomInvoiceDesign'] == 1 || settings['UseCustomInvoiceDesign'] == '1';
       _useDetailedInvoiceDesign = settings['UseDetailedInvoiceDesign'] == true || settings['UseDetailedInvoiceDesign'] == 1 || settings['UseDetailedInvoiceDesign'] == '1';
       _unifiedPartnerSearch = settings['UnifiedPartnerSearch'] == true || settings['UnifiedPartnerSearch'] == 1 || settings['UnifiedPartnerSearch'] == '1';
+      _enableDailyOrders = settings['EnableDailyOrders'] == true || settings['EnableDailyOrders'] == 1 || settings['EnableDailyOrders'] == '1';
+      _deliverySystemModeController.text = settings['DeliverySystemMode']?.toString() ?? '';
       _lastSyncedDb = currentDb;
     }
   }
@@ -230,6 +236,52 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                                 value: _unifiedPartnerSearch,
                                 onChanged: (val) => setState(() => _unifiedPartnerSearch = val),
                               ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.lightGreenAccent,
+                                title: const Text(
+                                  "تفعيل ميزة الطلبات اليومية والتوصيل (EnableDailyOrders)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إظهار والتحكم بصلاحيات وشاشات الطلبات اليومية والتوصيل للعملاء",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableDailyOrders,
+                                onChanged: (val) => setState(() => _enableDailyOrders = val),
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<String>(
+                                value: ['direct', 'temp_order'].contains(_deliverySystemModeController.text.trim())
+                                    ? _deliverySystemModeController.text.trim()
+                                    : 'direct',
+                                dropdownColor: const Color(0xFF252538),
+                                style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15),
+                                decoration: const InputDecoration(
+                                  labelText: "نظام ومواعيد التوصيل (DeliverySystemMode)",
+                                  labelStyle: TextStyle(color: Colors.grey),
+                                  prefixIcon: Icon(Icons.local_shipping, color: Colors.amber),
+                                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.amber)),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'direct',
+                                    child: Text('direct', style: TextStyle(color: Colors.white)),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'temp_order',
+                                    child: Text('temp_order', style: TextStyle(color: Colors.white)),
+                                  ),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _deliverySystemModeController.text = val;
+                                    });
+                                  }
+                                },
+                              ),
                             ],
                           ),
                         ),
@@ -302,6 +354,8 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                             'CurrencySymbol': _currencyController.text.trim(),
                             'Address': _addressController.text.trim(),
                             'Phone': _phoneController.text.trim(),
+                            'EnableDailyOrders': _enableDailyOrders,
+                            'DeliverySystemMode': _deliverySystemModeController.text.trim(),
                           };
                           final res = await licenseProvider.saveCompanySettings(payload);
                           if (res && mounted) {

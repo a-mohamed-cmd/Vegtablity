@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../providers/settings_provider.dart';
 import '../core/localization/app_localizations.dart';
 import 'pos_screen.dart';
 import 'temp_order_screen.dart';
@@ -102,8 +103,10 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
     } else {
       // Check if temporary order mode is enabled for sales customers
       if (widget.type == 'Sales') {
+        final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+        final dbMode = settingsProvider.deliverySystemMode;
         final prefs = await SharedPreferences.getInstance();
-        final mode = prefs.getString('cash_sale_mode') ?? 'direct';
+        final mode = (dbMode != null && dbMode.isNotEmpty) ? dbMode : (prefs.getString('cash_sale_mode') ?? 'direct');
         if (mode == 'temp_order' && mounted) {
           Navigator.push(
             context,

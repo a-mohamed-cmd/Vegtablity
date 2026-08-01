@@ -57,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<VoucherProvider>(context, listen: false).refreshCache();
       Provider.of<AccountProvider>(context, listen: false).fetchGeneralPartnerId();
+      Provider.of<SettingsProvider>(context, listen: false).fetchSettings();
     });
   }
 
@@ -476,7 +477,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context) => const WastageScreen()));
       }));
     }
-    if (_showDailyOrders) {
+    final enableDailyOrders = Provider.of<SettingsProvider>(context).enableDailyOrders;
+    if (_showDailyOrders && enableDailyOrders) {
       cards.add(_buildActionCard(
           context, context.tr('home_daily_orders'), Icons.local_shipping, Colors.purple,
           () {
