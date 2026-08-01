@@ -9,6 +9,7 @@
 ## 📌 الفهرس العام للصفحات والملفات والكلاسات المضافة حديثاً (Index of Recent Additions)
 
 ### 1. الصفحات الجديدة والمعدلة (Added & Modified Pages / Screens):
+*   **شاشة إعدادات الطابعة الحرارية (معدلة):** [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - إضافة خيار تحديد نمط طباعة الشبكة (النص المباشر الافتراضي vs الطباعة الصورية عالية الدقة HD Raster Canvas) بشكل محلي مخصص لكل جهاز، وحفظه في SharedPreferences.
 *   **شاشة اختيار الشركاء والموردين (جديدة):** [PartnerSelectionScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart) - شاشة للبحث واختيار العملاء/الموردين عند بدء فاتورة جديدة أو التعديل من الـ POS.
 *   **شاشة إدخال تفاصيل ومواعيد شحن وتوصيل الطلبات للعملاء (جديدة):** [TemporaryOrderScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) - تحديد موعد التسليم والملاحظات للعملاء، وتخصيصها ديناميكياً لإخفاء بطاقة الزبون المؤقت للعملاء المسجلين.
 *   **شاشة نقطة البيع (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) - دمج خيار الدفع (نقدي/آجل) وتبديل الشريك ديناميكياً.
@@ -26,6 +27,10 @@
 *   **شاشة إدارة الوصفات للموبايل (جديدة):** [RecipeManagementScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) - شاشة تطبيق الهاتف لاستعراض الوصفات ومكوناتها.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - إضافة مراجعة التحقق من الكميات الصفرية (Zero Quantity Validation) قبل الحفظ وعرض قائمة تفصيلية بأرقام الصفوف وأسماء الأصناف مع رسالة تحذيرية وسؤال الاستمرار بالحفظ أم التراجع للتعديل.
+*   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة مراجعة الكميات الصفرية وعرض تحذير تفصيلي بالصفوف والأصناف مع تخيير المستخدم بين الحفظ أو التراجع.
+*   **خدمة الطابعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - تحميل وحفظ نمط طباعة الشبكة networkPrintMode والتنسيق المباشر والصوري محلياً، وتوجيه الطباعة بحسب لغة التطبيق الحالية (عربي / إنجليزي).
+*   **مصمم الفواتير الحرارية والـ Canvas (معدل):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - دعم الطباعة الديناميكية باللغة العربية والإنجليزية بحسب لغة التطبيق، وتحويل الفاتورة واللوجو والتقرير إلى صورة Canvas عالية الدقة لطابعات الشبكة POS 80.
 *   **متحكم الوصفات (معدل):** [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - دعم الربط الدقيق للمستودع `SelectedWarehouseID` مع جلب أسعار التكلفة للمواد الخام وتنشيط إشعارات الـ Snackbar والتنظيف التلقائي للصفوف الفارغة قبل الحفظ.
 *   **خدمة الأصناف (معدلة):** [ProductService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ProductService.vb) - إضافة دالة `GetProductsForRecipeIngredients` لجلب المواد الخام والوسيطة بالتكلفة المرجحة من `ProductStock`.
 *   **خدمة الوصفات (معدلة):** [RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb) - تمرير `WarehouseID` لإجراء حفظ وتحديث الوصفات.
@@ -1523,9 +1528,19 @@
   - إضافة `[Settings].[sp_CompanySettings_Get_Ctrl]` لقراءة وتصدير إعدادات وتفضيلات النظام.
   - إضافة `[Settings].[sp_CompanySettings_Save_Ctrl]` لتحديث وخزن خيارات `ProductionMode` والتصميم والبيانات العامة بأمان.
   - ربط الإجراءات في [db_procedures_controls.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures_controls.py) واستدعائها من [license_control_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/license_control_service.py).
+* **دعم الطباعة الديناميكية بحسب لغة التطبيق ونمط طباعة الشبكة المخصص للجهاز (Dynamic Print Language & Device-Specific Network Print Mode):**
+  - **الطباعة بحسب لغة التطبيق الحالية:** فحص لغة التطبيق المحددة (`ar` أو `en`) عند طباعة الفواتير والتقارير والسندات، وطباعة الترويسات والمسميات والإجماليات تلقائياً باللغة العربية عند اختيار اللغة العربية، أو باللغة الإنجليزية (`SALES INVOICE`, `GRAND TOTAL`, `Paid Amount`, `Balance Due`) عند اختيار اللغة الإنجليزية.
+  - **نمط طباعة الشبكة المخصص لكل جهاز (Network Engine Mode):** الإبقاء على النظام القديم المباشر (`direct`) كخيار افتراضي تلقائي لكافة الأجهزة، مع إضافة خيار مخصص في شاشة [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) لتمكين نمط الطباعة الصورية عالية الدقة (`raster` / Canvas Image) محلياً للجهاز المتصل بطابعة POS 80 عبر الشبكة لحل مشكلة الحروف العربية المتداخلة واللوجو على هذا الجهاز فقط دون التأثير على بقية أجهزة النظام.
 
 
 
 
 
 
+
+* **مراجعة وتدقيق الكميات الصفرية عند حفظ الفواتير (Zero Quantity Validation Before Save):**
+  - عند الضغط على زر الحفظ في شاشة المبيعات أو المشتريات، يتم فحص كامل الأصناف المضافة.
+  - في حال وجود صنف أو أكثر كميته تسادي صفر (0)، يتم تجميع قائمة تفصيلية تتضمن: رقم الصف داخل الجدول + اسم الصنف + قيمة الكمية (0).
+  - يتم عرض رسالة تحذيرية للمستخدم تتضمن القائمة الكاملة مع السؤال: *"هل تريد الاستمرار والحفظ على أي حال؟"*
+  - عند اختيار **نعم**: تكتمل عملية الحفظ بأمان.
+  - عند اختيار **لا**: تتوقف عملية الحفظ ويعود المستخدم إلى الجدول لتعديل أو تصحيح الكميات.

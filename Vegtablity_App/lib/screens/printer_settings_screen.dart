@@ -18,6 +18,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   final _portController = TextEditingController();
   final _bluetoothController = TextEditingController();
   int _selectedPaperSize = 80;
+  String _selectedNetworkPrintMode = 'direct';
   String _selectedSalesMode = 'direct';
   bool _isSaving = false;
   bool _isScanning = false;
@@ -61,6 +62,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
         _portController.text = _printerService.port.toString();
         _bluetoothController.text = _printerService.bluetoothDevice;
         _selectedPaperSize = _printerService.paperSize;
+        _selectedNetworkPrintMode = _printerService.networkPrintMode;
         _isLoading = false;
       });
     }
@@ -84,6 +86,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       port: port,
       bluetoothDevice: _bluetoothController.text.trim(),
       paperSize: _selectedPaperSize,
+      networkPrintMode: _selectedNetworkPrintMode,
     );
 
     if (mounted) {
@@ -257,6 +260,35 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.right,
                         decoration: const InputDecoration(border: OutlineInputBorder(), hintText: '9100'),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(context.tr('ps_network_mode_label'), textAlign: TextAlign.right, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _selectedNetworkPrintMode,
+                        alignment: AlignmentDirectional.centerEnd,
+                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                        items: [
+                          DropdownMenuItem(
+                            value: 'direct',
+                            child: Text(context.tr('ps_network_mode_direct'), textAlign: TextAlign.right),
+                          ),
+                          DropdownMenuItem(
+                            value: 'raster',
+                            child: Text(context.tr('ps_network_mode_raster'), textAlign: TextAlign.right),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedNetworkPrintMode = val);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        context.tr('ps_network_mode_desc'),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
                     if (_selectedConnectionType == 'Bluetooth') ...[

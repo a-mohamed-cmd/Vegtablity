@@ -366,7 +366,7 @@ Namespace ViewModels
 
         Private Sub ExecuteSave(parameter As Object)
             Try
-                Dim emptyRows = _allInvoiceDetails.Where(Function(d) d.ProductID = 0 OrElse d.Quantity = 0).ToList()
+                Dim emptyRows = _allInvoiceDetails.Where(Function(d) d.ProductID = 0).ToList()
                 For Each row In emptyRows
                     RemoveHandler row.PropertyChanged, AddressOf OnDetailPropertyChanged
                     _allInvoiceDetails.Remove(row)
@@ -375,6 +375,27 @@ Namespace ViewModels
                 If _allInvoiceDetails.Count = 0 Then
                     System.Windows.MessageBox.Show("يجب إضافة صنف واحد على الأقل لحفظ الفاتورة.", "تحذير", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
                     Return
+                End If
+
+                ' ── مراجعة الكميات الصفرية قبل الحفظ ──
+                Dim zeroQtyItems As New System.Collections.Generic.List(Of String)()
+                For i As Integer = 0 To _allInvoiceDetails.Count - 1
+                    Dim detailItem = _allInvoiceDetails(i)
+                    If detailItem.Quantity <= 0 Then
+                        Dim rowNum = i + 1
+                        Dim pName = If(Not String.IsNullOrWhiteSpace(detailItem.ProductName), detailItem.ProductName, "صنف بدون اسم")
+                        zeroQtyItems.Add($"  • الصف رقم [{rowNum}]: {pName} (الكمية = {detailItem.Quantity:0.##})")
+                    End If
+                Next
+
+                If zeroQtyItems.Count > 0 Then
+                    Dim zeroMsg As String = "تنبيه: توجد أصناف بدون كمية (الكمية = 0) في الفاتورة:" & vbCrLf & vbCrLf & _
+                                           String.Join(vbCrLf, zeroQtyItems) & vbCrLf & vbCrLf & _
+                                           "هل تريد الاستمرار والحفظ على أي حال؟"
+                    Dim zeroAnswer = System.Windows.MessageBox.Show(zeroMsg, "تحذير الكميات الصفرية", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+                    If zeroAnswer = System.Windows.MessageBoxResult.No Then
+                        Return
+                    End If
                 End If
 
                 CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(_allInvoiceDetails)

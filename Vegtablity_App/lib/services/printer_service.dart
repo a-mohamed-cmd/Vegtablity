@@ -36,6 +36,7 @@ class PrinterService with ChangeNotifier {
   int _port = 9100;
   String _bluetoothDevice = '';
   int _paperSize = 80; // 58 or 80
+  String _networkPrintMode = 'direct'; // 'direct', 'raster'
   bool _isSynced = false;
 
   String get connectionType => _connectionType;
@@ -43,6 +44,7 @@ class PrinterService with ChangeNotifier {
   int get port => _port;
   String get bluetoothDevice => _bluetoothDevice;
   int get paperSize => _paperSize;
+  String get networkPrintMode => _networkPrintMode;
   bool get isSynced => _isSynced;
 
   String get _separator {
@@ -105,6 +107,7 @@ class PrinterService with ChangeNotifier {
       _port = prefs.getInt('printer_port') ?? 9100;
       _bluetoothDevice = prefs.getString('printer_bluetooth') ?? '';
       _paperSize = prefs.getInt('printer_paper_size') ?? 80;
+      _networkPrintMode = prefs.getString('printer_network_mode') ?? 'direct';
       _isSynced = false;
       
       // 2. Fetch or generate MachineHWID
@@ -158,6 +161,7 @@ class PrinterService with ChangeNotifier {
     int port = 9100,
     required String bluetoothDevice,
     int paperSize = 80,
+    String networkPrintMode = 'direct',
   }) async {
     try {
       _connectionType = connectionType;
@@ -165,6 +169,7 @@ class PrinterService with ChangeNotifier {
       _port = port;
       _bluetoothDevice = bluetoothDevice;
       _paperSize = paperSize;
+      _networkPrintMode = networkPrintMode;
       _isSynced = false;
 
       final prefs = await SharedPreferences.getInstance();
@@ -173,6 +178,7 @@ class PrinterService with ChangeNotifier {
       await prefs.setInt('printer_port', port);
       await prefs.setString('printer_bluetooth', bluetoothDevice);
       await prefs.setInt('printer_paper_size', paperSize);
+      await prefs.setString('printer_network_mode', networkPrintMode);
       
       String? hwid = prefs.getString('machine_hwid');
       if (hwid == null) {
@@ -213,6 +219,8 @@ class PrinterService with ChangeNotifier {
   Future<bool> printReceipt(Map<String, dynamic> invoice) async {
     final prefs = await SharedPreferences.getInstance();
     final String? openWarehouseName = prefs.getString('selected_warehouse_name');
+    final String langCode = prefs.getString('app_language_code') ?? 'ar';
+    final bool isArabic = langCode == 'ar';
 
     try {
       // 1. Sunmi Internal Printer (Bluetooth or Simulator Fallback)
@@ -222,6 +230,7 @@ class PrinterService with ChangeNotifier {
           companySettings: _companySettings,
           paperSize: _paperSize,
           openWarehouseName: openWarehouseName,
+          isArabic: isArabic,
         );
       }
 
@@ -234,6 +243,8 @@ class PrinterService with ChangeNotifier {
             companySettings: _companySettings,
             paperSize: _paperSize,
             openWarehouseName: openWarehouseName,
+            isArabic: isArabic,
+            networkPrintMode: _networkPrintMode,
           );
           socket.add(printBytes);
           await socket.flush();

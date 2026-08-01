@@ -467,6 +467,10 @@ class AppLocalizations {
       'ps_bt_scan_button': 'البحث عن الطابعات المتوفرة (Scan)',
       'ps_bt_scan_desc': 'جاري فحص النطاق والبحث عن أجهزة بلوتوث نشطة...',
       'ps_bt_found': 'الطابعات التي تم العثور عليها:',
+      'ps_network_mode_label': 'نمط طباعة الشبكة (Network Engine)',
+      'ps_network_mode_direct': 'النص المباشر (تلقائي - النظام القديم)',
+      'ps_network_mode_raster': 'طباعة صورية عالية الدقة (صورة Canvas - للغة العربية والشعار)',
+      'ps_network_mode_desc': 'اختر الطباعة الصورية عند توصيل طابعة شبكة POS 80 لحل مشاكل الحروف العربية والشعار على هذا الجهاز فقط.',
       'ps_test_print_btn': 'طباعة تجريبية',
       'ps_save_btn': 'حفظ الإعدادات',
 
@@ -985,7 +989,11 @@ class AppLocalizations {
       'ps_bt_scan_searching': 'Searching for devices...',
       'ps_bt_scan_button': 'Search for available printers (Scan)',
       'ps_bt_scan_desc': 'Scanning range for active bluetooth devices...',
-      'ps_bt_found': 'Printers found:',
+      'ps_bt_found': 'Found printers:',
+      'ps_network_mode_label': 'Network Printing Engine',
+      'ps_network_mode_direct': 'Direct Text (Default - Legacy Mode)',
+      'ps_network_mode_raster': 'HD Raster Image Canvas (For Arabic & Logo)',
+      'ps_network_mode_desc': 'Select HD Raster Image mode when connected to a POS 80 Network printer to fix Arabic text & logo corruption on this device only.',
       'ps_test_print_btn': 'Test Print',
       'ps_save_btn': 'Save Settings',
 

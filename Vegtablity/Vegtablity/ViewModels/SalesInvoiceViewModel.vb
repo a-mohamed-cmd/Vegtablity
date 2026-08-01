@@ -461,6 +461,27 @@ Namespace ViewModels
                     Return
                 End If
 
+                ' ── مراجعة الكميات الصفرية قبل الحفظ ──
+                Dim zeroQtyItems As New System.Collections.Generic.List(Of String)()
+                For i As Integer = 0 To validDetails.Count - 1
+                    Dim detailItem = validDetails(i)
+                    If detailItem.Quantity <= 0 Then
+                        Dim rowNum = i + 1
+                        Dim pName = If(Not String.IsNullOrWhiteSpace(detailItem.ProductName), detailItem.ProductName, "صنف بدون اسم")
+                        zeroQtyItems.Add($"  • الصف رقم [{rowNum}]: {pName} (الكمية = {detailItem.Quantity:0.##})")
+                    End If
+                Next
+
+                If zeroQtyItems.Count > 0 Then
+                    Dim zeroMsg As String = "تنبيه: توجد أصناف بدون كمية (الكمية = 0) في الفاتورة:" & vbCrLf & vbCrLf & _
+                                           String.Join(vbCrLf, zeroQtyItems) & vbCrLf & vbCrLf & _
+                                           "هل تريد الاستمرار والحفظ على أي حال؟"
+                    Dim zeroAnswer = System.Windows.MessageBox.Show(zeroMsg, "تحذير الكميات الصفرية", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+                    If zeroAnswer = System.Windows.MessageBoxResult.No Then
+                        Return
+                    End If
+                End If
+
                 ' Build the details collection for the service with CURRENTLY VALID items only
                 CurrentInvoice.Details = New ObservableCollection(Of InvoiceDetail)(validDetails)
                 RecalculateTotals()
