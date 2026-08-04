@@ -160,9 +160,11 @@ BEGIN
     SELECT 
         d.*,
         p.ProductName,
+        COALESCE(u.UnitName, N'') AS UnitName,
         p.Barcode
     FROM [Sales].[InvoiceDetails] d
     LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
     WHERE d.InvID = @InvID;
 END
 GO

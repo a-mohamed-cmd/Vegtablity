@@ -140,7 +140,7 @@ class _DailyOrdersScreenState extends State<DailyOrdersScreen> {
                 'price': _parseDouble(item['UnitPrice']),
                 'quantity': _parseDouble(item['Quantity']),
                 'total': _parseDouble(item['TotalPrice']),
-                'UnitName': item['UnitName'] ?? '',
+                'UnitName': item['UnitName'] ?? item['unitName'] ?? item['unit_name'] ?? item['unit'] ?? item['Unit'] ?? '',
               })
           .toList(),
     };

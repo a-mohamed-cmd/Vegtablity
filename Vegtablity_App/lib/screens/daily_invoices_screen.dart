@@ -138,6 +138,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
           paymentSum += _parseDouble(v['Amount']);
         }
 
+        if (!mounted) return;
         setState(() {
           _salesInvoices = todaySales;
           _purchaseInvoices = todayPurchases;
@@ -151,12 +152,14 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
           _isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           _errorMessage = context.tr('di_fetch_error');
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage =
             context.tr('di_error_loading').replaceAll('{error}', e.toString());
@@ -1234,7 +1237,7 @@ class _InvoiceDetailsBottomSheetState
                 'price': _parseDouble(item['UnitPrice']),
                 'quantity': _parseDouble(item['Quantity']),
                 'total': _parseDouble(item['TotalPrice']),
-                'UnitName': item['UnitName'] ?? '',
+                'UnitName': item['UnitName'] ?? item['unitName'] ?? item['unit_name'] ?? item['unit'] ?? item['Unit'] ?? '',
               })
           .toList(),
     };

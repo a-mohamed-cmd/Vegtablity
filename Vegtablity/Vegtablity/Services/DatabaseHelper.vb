@@ -18,7 +18,7 @@ Namespace Services
             ' Old Local Connection String (192.168.43.129\SQLEXPRESS):
             Dim encodedConn As String = "RGF0YSBTb3VyY2U9MTkyLjE2OC40My4xMjlcU1FMRVhQUkVTUztJbml0aWFsIENhdGFsb2c9VmVndGFibGl0eURCO1VzZXIgSUQ9TW9oYW1lZDtQYXNzd29yZD0xMjU2MzA7VHJ1c3RTZXJ2ZXJDZXJ0aWZpY2F0ZT1UcnVlOw=="
             'washaDB
-            'Dim encodedConn As String = "RGF0YSBTb3VyY2U9MTg1LjIxNi4yMDMuNTAsMTQyMjtJbml0aWFsIENhdGFsb2c9V2FzaGFEQjtVc2VyIElEPU1vaGFtZWQ7UGFzc3dvcmQ9MTI1NjMwO1RydXN0U2VydmVyQ2VydGlmaWNhdGU9VHJ1ZTs="
+            ' Dim encodedConn As String = "RGF0YSBTb3VyY2U9MTg1LjIxNi4yMDMuNTAsMTQyMjtJbml0aWFsIENhdGFsb2c9V2FzaGFEQjtVc2VyIElEPU1vaGFtZWQ7UGFzc3dvcmQ9MTI1NjMwO1RydXN0U2VydmVyQ2VydGlmaWNhdGU9VHJ1ZTs="
             _connectionString = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encodedConn))
 
 

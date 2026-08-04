@@ -188,9 +188,9 @@ class _PosScreenState extends State<PosScreen> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: Colors.grey[900],
-          title: const Text(
-            'صنف جديد غير معرف',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          title: Text(
+            context.tr('pos_unrecognized_title'),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           content: Column(
@@ -198,7 +198,7 @@ class _PosScreenState extends State<PosScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'رمز الباركود: $barcode',
+                context.tr('pos_barcode_label').replaceAll('{barcode}', barcode),
                 style: const TextStyle(color: Colors.grey),
                 textAlign: TextAlign.right,
               ),
@@ -208,13 +208,13 @@ class _PosScreenState extends State<PosScreen> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'سعر البيع',
-                  labelStyle: TextStyle(color: Colors.teal),
-                  enabledBorder: OutlineInputBorder(
+                decoration: InputDecoration(
+                  labelText: context.tr('pos_sale_price'),
+                  labelStyle: const TextStyle(color: Colors.teal),
+                  enabledBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
-                  focusedBorder: OutlineInputBorder(
+                  focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.teal),
                   ),
                 ),
@@ -228,12 +228,12 @@ class _PosScreenState extends State<PosScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء', style: TextStyle(color: Colors.red)),
+              child: Text(context.tr('pos_cancel'), style: const TextStyle(color: Colors.red)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
               onPressed: () => _submitUnrecognizedProductForSheet(barcode, priceController.text, posProvider, ctx, onSuccess),
-              child: const Text('حفظ وإضافة', style: TextStyle(color: Colors.white)),
+              child: Text(context.tr('pos_save_and_add'), style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -245,8 +245,8 @@ class _PosScreenState extends State<PosScreen> {
     final double? price = double.tryParse(priceText);
     if (price == null || price <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الرجاء إدخال سعر صحيح أكبر من الصفر', textAlign: TextAlign.right),
+        SnackBar(
+          content: Text(context.tr('pos_invalid_price_error'), textAlign: TextAlign.right),
           backgroundColor: Colors.red,
         ),
       );
@@ -261,7 +261,7 @@ class _PosScreenState extends State<PosScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(posProvider.errorMessage ?? 'حدث خطأ في التسجيل', textAlign: TextAlign.right),
+            content: Text(posProvider.errorMessage ?? context.tr('pos_quick_add_error'), textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
         );
@@ -293,15 +293,15 @@ class _PosScreenState extends State<PosScreen> {
                 ),
               );
             } else if (_allProducts.isEmpty) {
-              content = const Center(
+              content = Center(
                 child: Text(
-                  'لا توجد منتجات نشطة حالياً',
-                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                  context.tr('pos_catalog_no_products'),
+                  style: const TextStyle(color: Colors.grey, fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
               );
             } else {
-              const String allLabel = 'الكل';
+              final String allLabel = context.tr('pos_catalog_all');
               final List<String> tabList = [allLabel, ..._categories];
 
               _selectedCat ??= allLabel;
@@ -378,7 +378,7 @@ class _PosScreenState extends State<PosScreen> {
                               posProvider.addProductToCart(prod);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('تمت إضافة $name لسلة المشتريات', textAlign: TextAlign.right),
+                                  content: Text(context.tr('pos_added_to_cart').replaceAll('{name}', name), textAlign: TextAlign.right),
                                   duration: const Duration(milliseconds: 700),
                                   backgroundColor: Colors.teal[800],
                                 ),
@@ -412,7 +412,7 @@ class _PosScreenState extends State<PosScreen> {
                                     ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${price.toStringAsFixed(2)} د.ك',
+                                    '${price.toStringAsFixed(2)} KWD',
                                     style: const TextStyle(
                                         color: Colors.tealAccent,
                                         fontSize: 12,
@@ -439,9 +439,9 @@ class _PosScreenState extends State<PosScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'كتالوج المنتجات',
-                        style: TextStyle(
+                      Text(
+                        context.tr('pos_catalog_title'),
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold),
@@ -450,7 +450,7 @@ class _PosScreenState extends State<PosScreen> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.refresh, color: Colors.tealAccent),
-                            tooltip: 'تحديث المنتجات',
+                            tooltip: context.tr('pos_catalog_refresh'),
                             onPressed: () async {
                               setModalState(() {
                                 _isLoadingProducts = true;
@@ -618,11 +618,11 @@ class _PosScreenState extends State<PosScreen> {
         appBar: AppBar(
           title: Text(widget.type == 'Sales'
               ? (_selectedPartner != null
-                  ? 'فاتورة مبيعات - ${_selectedPartner!['PartnerName']}'
+                  ? context.tr('pos_sales_title_with_partner').replaceAll('{name}', _selectedPartner!['PartnerName']?.toString() ?? '')
                   : context.tr('pos_sales_title'))
               : (_selectedPartner != null
-                  ? 'فاتورة مشتريات - ${_selectedPartner!['PartnerName']}'
-                  : 'فاتورة مشتريات جديدة')),
+                  ? context.tr('pos_purchase_title_with_partner').replaceAll('{name}', _selectedPartner!['PartnerName']?.toString() ?? '')
+                  : context.tr('pos_purchase_title'))),
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -654,7 +654,7 @@ class _PosScreenState extends State<PosScreen> {
                       children: [
                         IconButton(
                           icon: Icon(Icons.grid_view, color: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange, size: 30),
-                          tooltip: 'عرض كتالوج المنتجات',
+                          tooltip: context.tr('pos_catalog_tooltip'),
                           onPressed: () => _openProductCatalog(posProvider),
                         ),
                         const SizedBox(width: 8),
@@ -680,14 +680,14 @@ class _PosScreenState extends State<PosScreen> {
                       children: [
                         Text(
                           _selectedPartner != null
-                              ? '${widget.type == 'Sales' ? 'العميل' : 'المورد'}: ${_selectedPartner!['PartnerName']}'
-                              : '${widget.type == 'Sales' ? 'العميل' : 'المورد'}: نقدي (عام)',
+                              ? '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${_selectedPartner!['PartnerName']}'
+                              : '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${context.tr('pos_cash_general')}',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
                           icon: Icon(Icons.person_search, color: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange),
-                          tooltip: widget.type == 'Sales' ? 'تغيير العميل' : 'تغيير المورد',
+                          tooltip: widget.type == 'Sales' ? context.tr('pos_change_customer') : context.tr('pos_change_supplier'),
                           onPressed: () async {
                             final selected = await Navigator.push<Map<String, dynamic>>(
                               context,
@@ -885,9 +885,9 @@ class _PosScreenState extends State<PosScreen> {
                   color: Colors.green),
               textAlign: TextAlign.right),
           const SizedBox(height: 16),
-          const Text(
-            'نوع المعاملة',
-            style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+          Text(
+            context.tr('pos_trans_type'),
+            style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           const SizedBox(height: 8),
@@ -895,7 +895,7 @@ class _PosScreenState extends State<PosScreen> {
             children: [
               Expanded(
                 child: ChoiceChip(
-                  label: const Text('آجل / ذمم', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(context.tr('pos_credit_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
                   selected: !_isCash,
                   selectedColor: Colors.orange[200],
                   onSelected: (val) {
@@ -908,7 +908,7 @@ class _PosScreenState extends State<PosScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: ChoiceChip(
-                  label: const Text('نقدي / كاش', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(context.tr('pos_cash_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
                   selected: _isCash,
                   selectedColor: Colors.green[200],
                   onSelected: (val) {
@@ -922,9 +922,9 @@ class _PosScreenState extends State<PosScreen> {
           ),
           const SizedBox(height: 16),
           if (_isCash && _accounts.isNotEmpty) ...[
-            const Text(
-              'طريقة الدفع / الحساب',
-              style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+            Text(
+              context.tr('pos_payment_account'),
+              style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
               textAlign: TextAlign.right,
             ),
             const SizedBox(height: 8),
@@ -968,7 +968,7 @@ class _PosScreenState extends State<PosScreen> {
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2),
                     )
-                  : Text(widget.type == 'Sales' ? context.tr('pos_pay_print') : 'حفظ الفاتورة والطباعة',
+                  : Text(widget.type == 'Sales' ? context.tr('pos_pay_print') : context.tr('pos_save_and_print'),
                       style: const TextStyle(fontSize: 18)),
             ),
             style: ElevatedButton.styleFrom(
@@ -990,8 +990,8 @@ class _PosScreenState extends State<PosScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.grey[900],
-        boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: const Offset(0, -2)),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, -2)),
         ],
       ),
       child: SafeArea(
@@ -1003,7 +1003,7 @@ class _PosScreenState extends State<PosScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'الإجمالي المستحق',
+                    context.tr('pos_total_due'),
                     style: TextStyle(color: Colors.grey[400], fontSize: 12),
                   ),
                   Text(
@@ -1024,9 +1024,9 @@ class _PosScreenState extends State<PosScreen> {
                       _showCheckoutBottomSheet(posProvider);
                     },
               icon: const Icon(Icons.check_circle_outline, color: Colors.white),
-              label: const Text(
-                'إنهاء الطلب',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              label: Text(
+                context.tr('pos_finish_order'),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange,
@@ -1107,9 +1107,9 @@ class _PosScreenState extends State<PosScreen> {
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 8),
-          const Text(
-            'نوع المعاملة',
-            style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+          Text(
+            context.tr('pos_trans_type'),
+            style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           const SizedBox(height: 8),
@@ -1117,8 +1117,8 @@ class _PosScreenState extends State<PosScreen> {
             children: [
               Expanded(
                 child: ChoiceChip(
-                  label: const Center(
-                    child: Text('آجل / ذمم', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Center(
+                    child: Text(context.tr('pos_credit_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   selected: !_isCash,
                   selectedColor: Colors.orange[200],
@@ -1133,8 +1133,8 @@ class _PosScreenState extends State<PosScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: ChoiceChip(
-                  label: const Center(
-                    child: Text('نقدي / كاش', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Center(
+                    child: Text(context.tr('pos_cash_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   selected: _isCash,
                   selectedColor: Colors.green[200],
@@ -1150,9 +1150,9 @@ class _PosScreenState extends State<PosScreen> {
           ),
           const SizedBox(height: 20),
           if (_isCash && _accounts.isNotEmpty) ...[
-            const Text(
-              'طريقة الدفع / الحساب',
-              style: TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+            Text(
+              context.tr('pos_payment_account'),
+              style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
               textAlign: TextAlign.right,
             ),
             const SizedBox(height: 8),
@@ -1201,7 +1201,7 @@ class _PosScreenState extends State<PosScreen> {
                           color: Colors.white, strokeWidth: 2),
                     )
                   : Text(
-                      widget.type == 'Sales' ? context.tr('pos_pay_print') : 'حفظ الفاتورة والطباعة',
+                      widget.type == 'Sales' ? context.tr('pos_pay_print') : context.tr('pos_save_and_print'),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
             ),

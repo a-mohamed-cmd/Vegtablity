@@ -6697,50 +6697,61 @@ BEGIN
             -- جلب حساب الصندوق
             SELECT TOP 1 @CashboxID = AccountID
             FROM [Accounting].[ChartOfAccounts]
-            WHERE AccountName LIKE N'%صندوق%'
+            WHERE (AccountName LIKE N'%صندوق%' OR AccountName LIKE N'%cash%' OR AccountCode LIKE '11%')
               AND IsTransactional = 1;
 
             -- جلب حساب الإيرادات الأخرى (412)
-            SELECT @RevenueIDchild = AccountID
+            SELECT TOP 1 @RevenueIDchild = AccountID
             FROM [Accounting].[ChartOfAccounts]
             WHERE AccountCode = '412';
 
-            IF @CashboxID IS NULL OR @RevenueIDchild IS NULL
-                THROW 50002, 'تعذر إيجاد حسابات الصندوق أو الإيرادات الأخرى في دليل الحسابات', 1;
-
-            IF @Difference > 0
+            IF @RevenueIDchild IS NULL
             BEGIN
-                -- *** فائض: مدين الصندوق / دائن إيرادات أخرى (412) ***
-                SET @JournalDesc = N'فائض كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
-                SET @DebitAccID  = @CashboxID;
-                SET @CreditAccID = @RevenueIDchild;
-            END
-            ELSE
-            BEGIN
-                -- *** عجز: مدين إيرادات أخرى (412) / دائن الصندوق ***
-                SET @JournalDesc = N'عجز كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
-                SET @DebitAccID  = @RevenueIDchild;
-                SET @CreditAccID = @CashboxID;
+                SELECT TOP 1 @RevenueIDchild = AccountID
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE (AccountName LIKE N'%إيراد%' OR AccountName LIKE N'%أرباح%' OR AccountCode LIKE '4%')
+                  AND IsTransactional = 1;
             END
 
-            -- جلب رقم القيد التالي من الـ Sequence (مشترك بين السطرين)
-            SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+            IF @CashboxID IS NOT NULL AND @RevenueIDchild IS NOT NULL
+            BEGIN
+                IF @Difference > 0
+                BEGIN
+                    -- *** فائض: مدين الصندوق / دائن إيرادات أخرى (412) ***
+                    SET @JournalDesc = N'فائض كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                    SET @DebitAccID  = @CashboxID;
+                    SET @CreditAccID = @RevenueIDchild;
+                END
+                ELSE
+                BEGIN
+                    -- *** عجز: مدين إيرادات أخرى (412) / دائن الصندوق ***
+                    SET @JournalDesc = N'عجز كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                    SET @DebitAccID  = @RevenueIDchild;
+                    SET @CreditAccID = @CashboxID;
+                END
 
-            -- السطر 1: المدين
-            INSERT INTO [Accounting].[JournalEntries]
-                (EntryNo, EntryDate, ReferenceType, ReferenceID,
-                 AccountID, DebitAmount, CreditAmount, Description, UserID)
-            VALUES
-                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
-                 @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID);
+                IF OBJECT_ID('[Accounting].[seq_EntryNo]', 'SO') IS NOT NULL
+                BEGIN
+                    -- جلب رقم القيد التالي من الـ Sequence (مشترك بين السطرين)
+                    SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
 
-            -- السطر 2: الدائن
-            INSERT INTO [Accounting].[JournalEntries]
-                (EntryNo, EntryDate, ReferenceType, ReferenceID,
-                 AccountID, DebitAmount, CreditAmount, Description, UserID)
-            VALUES
-                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
-                 @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
+                    -- السطر 1: المدين
+                    INSERT INTO [Accounting].[JournalEntries]
+                        (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                         AccountID, DebitAmount, CreditAmount, Description, UserID)
+                    VALUES
+                        (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                         @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID);
+
+                    -- السطر 2: الدائن
+                    INSERT INTO [Accounting].[JournalEntries]
+                        (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                         AccountID, DebitAmount, CreditAmount, Description, UserID)
+                    VALUES
+                        (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                         @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
+                END
+            END
         END
 
         -- =====================================================
@@ -7440,33 +7451,49 @@ BEGIN
             DECLARE @CreditAccID    INT;
             SELECT TOP 1 @CashboxID = AccountID
             FROM [Accounting].[ChartOfAccounts]
-            WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1;
-            SELECT @RevenueIDchild = AccountID
+            WHERE (AccountName LIKE N'%صندوق%' OR AccountName LIKE N'%كاش%' OR AccountCode LIKE '11%')
+              AND IsTransactional = 1;
+
+            SELECT TOP 1 @RevenueIDchild = AccountID
             FROM [Accounting].[ChartOfAccounts]
             WHERE AccountCode = '412';
-            IF @CashboxID IS NULL OR @RevenueIDchild IS NULL
-                THROW 50002, 'تعذر إيجاد حسابات الصندوق أو الإيرادات الأخرى', 1;
-            IF @Difference > 0
+
+            IF @RevenueIDchild IS NULL
             BEGIN
-                SET @JournalDesc = N'فائض كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
-                SET @DebitAccID  = @CashboxID;
-                SET @CreditAccID = @RevenueIDchild;
+                SELECT TOP 1 @RevenueIDchild = AccountID
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE (AccountName LIKE N'%إيراد%' OR AccountName LIKE N'%أرباح%' OR AccountCode LIKE '4%')
+                  AND IsTransactional = 1;
             END
-            ELSE
+
+            IF @CashboxID IS NOT NULL AND @RevenueIDchild IS NOT NULL
             BEGIN
-                SET @JournalDesc = N'عجز كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
-                SET @DebitAccID  = @RevenueIDchild;
-                SET @CreditAccID = @CashboxID;
+                IF @Difference > 0
+                BEGIN
+                    SET @JournalDesc = N'فائض كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                    SET @DebitAccID  = @CashboxID;
+                    SET @CreditAccID = @RevenueIDchild;
+                END
+                ELSE
+                BEGIN
+                    SET @JournalDesc = N'عجز كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                    SET @DebitAccID  = @RevenueIDchild;
+                    SET @CreditAccID = @CashboxID;
+                END
+
+                IF OBJECT_ID('[Accounting].[seq_EntryNo]', 'SO') IS NOT NULL
+                BEGIN
+                    SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+                    INSERT INTO [Accounting].[JournalEntries]
+                        (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                         AccountID, DebitAmount, CreditAmount, Description, UserID)
+                    VALUES
+                        (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                         @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID),
+                        (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                         @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
+                END
             END
-            SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
-            INSERT INTO [Accounting].[JournalEntries]
-                (EntryNo, EntryDate, ReferenceType, ReferenceID,
-                 AccountID, DebitAmount, CreditAmount, Description, UserID)
-            VALUES
-                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
-                 @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID),
-                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
-                 @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
         END
         -- ④ ترحيل الفواتير المرتبطة بهذه الوردية
         UPDATE [Sales].[InvoiceHeader]
@@ -11287,5 +11314,25 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'DeliverySystemMode')
 BEGIN
     ALTER TABLE [Settings].[CompanySettings] ADD DeliverySystemMode NVARCHAR(50) NULL DEFAULT NULL;
+END
+GO
+IF OBJECT_ID('[Sales].[sp_InvoiceDetails_GetByInvID]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID];
+GO
+create PROCEDURE [Sales].[sp_InvoiceDetails_GetByInvID]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        d.*,
+        p.ProductName,
+        p.ProductNameEn,
+        u.UnitName,
+        p.Barcode
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE d.InvID = @InvID
+	order by [DetID];
 END
 GO

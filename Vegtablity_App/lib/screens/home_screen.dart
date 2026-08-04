@@ -1,3 +1,4 @@
+import '../services/printer_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -182,6 +183,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                       builder: (context) => const PrinterSettingsScreen()),
                 );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.point_of_sale, color: Colors.green),
+              title: Text(context.tr('home_open_cash_drawer')),
+              onTap: () async {
+                Navigator.pop(context); // Close drawer
+                final printerService = Provider.of<PrinterService>(context, listen: false);
+                final success = await printerService.openCashDrawer();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        success ? context.tr('cd_open_success') : context.tr('cd_open_failed'),
+                      ),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
               },
             ),
             ListTile(

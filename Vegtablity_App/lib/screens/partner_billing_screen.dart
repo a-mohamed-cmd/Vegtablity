@@ -458,7 +458,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                     'price': c['price'],
                     'quantity': (c['quantity'] as num).toDouble(),
                     'total': c['total'],
-                    'UnitName': c['unitName'] ?? '',
+                    'UnitName': c['UnitName'] ?? c['unitName'] ?? c['unit_name'] ?? c['unit'] ?? '',
                   })
               .toList(),
         };

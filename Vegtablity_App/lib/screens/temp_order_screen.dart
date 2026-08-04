@@ -126,8 +126,8 @@ class _TemporaryOrderScreenState extends State<TemporaryOrderScreen> {
 
         if (name.isEmpty && phone.isEmpty && address.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('الرجاء إدخال بعض البيانات أو اختيار تخطي للمتابعة بنقدي عام مباشر', textAlign: TextAlign.right),
+            SnackBar(
+              content: Text(context.tr('temp_order_validation_error'), textAlign: TextAlign.right),
               backgroundColor: Colors.orange,
             ),
           );
@@ -193,8 +193,12 @@ class _TemporaryOrderScreenState extends State<TemporaryOrderScreen> {
     final bool isGeneralCash = widget.partner['PartnerID'] == null ||
         widget.partner['PartnerName'] == 'نقدي عام' ||
         widget.partner['PartnerName'] == 'سند مباشر';
-    final skipText = isGeneralCash ? 'تخطي والمتابعة كنقدي عام مباشر' : 'تخطي والمتابعة بدون بيانات توصيل';
-    final titleText = isGeneralCash ? 'بيانات التوصيل والطلب المؤقت' : 'تحديد موعد التوصيل للعميل';
+    final skipText = isGeneralCash
+        ? context.tr('temp_order_skip_general')
+        : context.tr('temp_order_skip_customer');
+    final titleText = isGeneralCash
+        ? context.tr('temp_order_title_general')
+        : context.tr('temp_order_title_customer');
 
     return Scaffold(
       appBar: AppBar(
@@ -217,154 +221,154 @@ class _TemporaryOrderScreenState extends State<TemporaryOrderScreen> {
             padding: const EdgeInsets.all(16.0),
             child: Form(
               key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (isGeneralCash)
-                Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const Text(
-                          'معلومات الزبون المؤقت',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _nameController,
-                          textAlign: TextAlign.right,
-                          decoration: const InputDecoration(
-                            labelText: 'اسم الزبون / العميل',
-                            prefixIcon: Icon(Icons.person, color: Colors.teal),
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _phoneController,
-                          textAlign: TextAlign.right,
-                          keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(
-                            labelText: 'رقم الهاتف',
-                            prefixIcon: Icon(Icons.phone, color: Colors.teal),
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _addressController,
-                          textAlign: TextAlign.right,
-                          maxLines: 2,
-                          decoration: const InputDecoration(
-                            labelText: 'عنوان التوصيل بالتفصيل',
-                            prefixIcon: Icon(Icons.location_on, color: Colors.teal),
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              if (isGeneralCash) const SizedBox(height: 16),
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'موعد التسليم والملاحظات',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _selectTime(context),
-                              icon: const Icon(Icons.access_time, color: Colors.teal),
-                              label: Text(
-                                _selectedTime == null
-                                    ? 'تحديد الوقت'
-                                    : _selectedTime!.format(context),
-                                style: const TextStyle(color: Colors.teal),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Colors.teal),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isGeneralCash)
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              context.tr('temp_order_cust_info_title'),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _nameController,
+                              textAlign: TextAlign.right,
+                              decoration: InputDecoration(
+                                labelText: context.tr('temp_order_cust_name_label'),
+                                prefixIcon: const Icon(Icons.person, color: Colors.teal),
+                                border: const OutlineInputBorder(),
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _phoneController,
+                              textAlign: TextAlign.right,
+                              keyboardType: TextInputType.phone,
+                              decoration: InputDecoration(
+                                labelText: context.tr('temp_order_phone_label'),
+                                prefixIcon: const Icon(Icons.phone, color: Colors.teal),
+                                border: const OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _addressController,
+                              textAlign: TextAlign.right,
+                              maxLines: 2,
+                              decoration: InputDecoration(
+                                labelText: context.tr('temp_order_address_label'),
+                                prefixIcon: const Icon(Icons.location_on, color: Colors.teal),
+                                border: const OutlineInputBorder(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (isGeneralCash) const SizedBox(height: 16),
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            context.tr('temp_order_delivery_schedule_title'),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.teal),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () => _selectDate(context),
-                              icon: const Icon(Icons.calendar_today, color: Colors.teal),
-                              label: Text(
-                                _selectedDate == null
-                                    ? 'تحديد التاريخ'
-                                    : "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}",
-                                style: const TextStyle(color: Colors.teal),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _selectTime(context),
+                                  icon: const Icon(Icons.access_time, color: Colors.teal),
+                                  label: Text(
+                                    _selectedTime == null
+                                        ? context.tr('temp_order_select_time')
+                                        : _selectedTime!.format(context),
+                                    style: const TextStyle(color: Colors.teal),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.teal),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
                               ),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Colors.teal),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _selectDate(context),
+                                  icon: const Icon(Icons.calendar_today, color: Colors.teal),
+                                  label: Text(
+                                    _selectedDate == null
+                                        ? context.tr('temp_order_select_date')
+                                        : "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}",
+                                    style: const TextStyle(color: Colors.teal),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.teal),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _notesController,
+                            textAlign: TextAlign.right,
+                            maxLines: 2,
+                            decoration: InputDecoration(
+                              labelText: context.tr('temp_order_notes_label'),
+                              prefixIcon: const Icon(Icons.note_alt, color: Colors.teal),
+                              border: const OutlineInputBorder(),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _notesController,
-                        textAlign: TextAlign.right,
-                        maxLines: 2,
-                        decoration: const InputDecoration(
-                          labelText: 'ملاحظات إضافية حول الطلب والتوصيل',
-                          prefixIcon: Icon(Icons.note_alt, color: Colors.teal),
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => _proceedToPOS(isSkipped: false),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(
+                      context.tr('temp_order_proceed_btn'),
+                      style: const TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => _proceedToPOS(isSkipped: true),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.grey),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(
+                      skipText,
+                      style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => _proceedToPOS(isSkipped: false),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.teal,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text(
-                  'متابعة إلى سلة المنتجات ⬅',
-                  style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () => _proceedToPOS(isSkipped: true),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.grey),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: Text(
-                  skipText,
-                  style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
         ),
       ),
     );
