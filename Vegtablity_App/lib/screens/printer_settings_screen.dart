@@ -19,7 +19,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
   final _bluetoothController = TextEditingController();
   int _selectedPaperSize = 80;
   String _selectedNetworkPrintMode = 'direct';
-  String _selectedSalesMode = 'direct';
+  int _selectedPrintCopies = 1;
   bool _isSaving = false;
   bool _isScanning = false;
   bool _isLoading = false;
@@ -63,6 +63,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
         _bluetoothController.text = _printerService.bluetoothDevice;
         _selectedPaperSize = _printerService.paperSize;
         _selectedNetworkPrintMode = _printerService.networkPrintMode;
+        _selectedPrintCopies = _printerService.printCopies;
         _isLoading = false;
       });
     }
@@ -87,6 +88,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       bluetoothDevice: _bluetoothController.text.trim(),
       paperSize: _selectedPaperSize,
       networkPrintMode: _selectedNetworkPrintMode,
+      printCopies: _selectedPrintCopies,
     );
 
     if (mounted) {
@@ -212,6 +214,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                     Text(context.tr('ps_conn_type'), textAlign: TextAlign.right, style: const TextStyle(fontSize: 16, color: Colors.grey)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       value: _selectedConnectionType,
                       alignment: AlignmentDirectional.centerEnd,
                       decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -230,6 +233,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                     const Text('حجم ورق الطباعة الحراري', textAlign: TextAlign.right, style: TextStyle(fontSize: 16, color: Colors.grey)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<int>(
+                      isExpanded: true,
                       value: _selectedPaperSize,
                       alignment: AlignmentDirectional.centerEnd,
                       decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -265,6 +269,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       Text(context.tr('ps_network_mode_label'), textAlign: TextAlign.right, style: const TextStyle(fontSize: 16, color: Colors.grey)),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: _selectedNetworkPrintMode,
                         alignment: AlignmentDirectional.centerEnd,
                         decoration: const InputDecoration(border: OutlineInputBorder()),
@@ -289,6 +294,27 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                         context.tr('ps_network_mode_desc'),
                         textAlign: TextAlign.right,
                         style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('عدد نسخ الطباعة (Print Copies)', textAlign: TextAlign.right, style: TextStyle(fontSize: 16, color: Colors.grey)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        value: _selectedPrintCopies,
+                        alignment: AlignmentDirectional.centerEnd,
+                        decoration: const InputDecoration(border: OutlineInputBorder()),
+                        items: const [
+                          DropdownMenuItem(value: 1, child: Text('1 نسخة', textAlign: TextAlign.right)),
+                          DropdownMenuItem(value: 2, child: Text('2 نسختان (مزدوج)', textAlign: TextAlign.right)),
+                          DropdownMenuItem(value: 3, child: Text('3 ثلاث نسخ', textAlign: TextAlign.right)),
+                          DropdownMenuItem(value: 4, child: Text('4 أربع نسخ', textAlign: TextAlign.right)),
+                          DropdownMenuItem(value: 5, child: Text('5 خمس نسخ', textAlign: TextAlign.right)),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedPrintCopies = val);
+                          }
+                        },
                       ),
                     ],
                     if (_selectedConnectionType == 'Bluetooth') ...[

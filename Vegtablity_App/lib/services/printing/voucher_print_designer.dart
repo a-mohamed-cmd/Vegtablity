@@ -6,6 +6,10 @@ import 'printer_base.dart';
 
 /// Unified Print Designer for Receipt Vouchers, Payment Vouchers, and General Vouchers (سندات القبض والصرف والسندات العامة)
 class VoucherPrintDesigner {
+  static String _formatPaymentAccountName(dynamic rawName, bool isArabic) {
+    if (rawName == null) return '';
+    return rawName.toString().trim();
+  }
   // =========================================================================
   // SECTION 1: DEFAULT & BLUETOOTH MODE (النص المباشر والبلوتوث - الوضع التلقائي)
   // =========================================================================
@@ -48,7 +52,8 @@ class VoucherPrintDesigner {
       final double amount = double.tryParse(voucher['Amount']?.toString() ?? voucher['amount']?.toString() ?? '0') ?? 0.0;
       await SunmiPrinter.printText(isArabic ? 'المبلغ المستلم: ${PrinterBase.formatCurrency(amount)} $cSymbol' : 'Amount: ${PrinterBase.formatCurrency(amount)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
 
-      final String method = voucher['payment_method'] ?? voucher['PaymentMethod'] ?? (isArabic ? 'نقداً' : 'Cash');
+      final String rawMethod = (voucher['payment_method'] ?? voucher['PaymentMethod'] ?? voucher['account_name'] ?? voucher['AccountName'] ?? '').toString();
+      final String method = rawMethod.isNotEmpty ? _formatPaymentAccountName(rawMethod, isArabic) : (isArabic ? 'نقداً' : 'Cash');
       await SunmiPrinter.printText(isArabic ? 'طريقة الدفع: $method' : 'Payment Method: $method', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
 
       final String notes = voucher['Notes'] ?? voucher['notes'] ?? voucher['description'] ?? '';
@@ -297,7 +302,8 @@ class VoucherPrintDesigner {
     final String cSymbol = PrinterBase.getCurrencySymbol(companySettings, isArabic: isArabic);
 
     addText(isArabic ? 'المبلغ المستلم: ${PrinterBase.formatCurrency(amount)} $cSymbol' : 'Amount: ${PrinterBase.formatCurrency(amount)} $cSymbol', bold: true, fontSize: headerSize);
-    final String method = voucher['payment_method'] ?? voucher['PaymentMethod'] ?? (isArabic ? 'نقداً' : 'Cash');
+    final String rawMethod = (voucher['payment_method'] ?? voucher['PaymentMethod'] ?? voucher['account_name'] ?? voucher['AccountName'] ?? '').toString();
+    final String method = rawMethod.isNotEmpty ? _formatPaymentAccountName(rawMethod, isArabic) : (isArabic ? 'نقداً' : 'Cash');
     addText(isArabic ? 'طريقة الدفع: $method' : 'Payment Method: $method', fontSize: bodySize);
 
     final String notes = voucher['Notes'] ?? voucher['notes'] ?? voucher['description'] ?? '';

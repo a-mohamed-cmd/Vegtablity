@@ -128,6 +128,11 @@ class StoredProcedures:
     # Adds a payment allocation to a specific invoice
     INVOICE_ADD_PAYMENT = "EXEC [Sales].[sp_Invoice_AddPayment_pos] @InvID=?, @PaymentAmount=?, @PaymentAccountID=?, @UserID=?"
     
+    # Payment Splits
+    INVOICE_SPLITS_SAVE = "EXEC [Sales].[sp_InvoicePaymentSplits_Save] @InvID=?, @PaymentAccountID=?, @Amount=?"
+    INVOICE_SPLITS_GET = "EXEC [Sales].[sp_InvoicePaymentSplits_GetByInvID] @InvID=?"
+    SHIFT_GET_PAYMENT_TOTALS = "EXEC [Sales].[sp_Shift_GetPaymentMethodTotals] @ShiftID=?"
+    
     # Retrieves the header details of a specific invoice
     INVOICE_GET_BY_ID = "{CALL [Sales].[sp_Invoice_GetByID] (?)}"
     
@@ -249,4 +254,26 @@ class StoredProcedures:
             @DetailsXml = ?;
         SELECT @StockTakeID as StockTakeID;
     """
+
+    # =========================================================================
+    # Sales Discounts & Product Bundles
+    # =========================================================================
+    PRODUCT_DISCOUNTS_GET_ALL = "EXEC [Sales].[sp_ProductDiscounts_GetAll]"
+    PRODUCT_DISCOUNTS_GET_ACTIVE_FOR_POS = "EXEC [Sales].[sp_ProductDiscounts_GetActiveForPos]"
+    PRODUCT_DISCOUNTS_GET_PRODUCT_IDS = "EXEC [Sales].[sp_ProductDiscounts_GetProductIDs] @DiscountID=?"
+    PRODUCTS_GET_FOR_DISCOUNTS = "EXEC [Sales].[sp_Products_GetForDiscounts]"
+    PRODUCT_DISCOUNTS_SAVE_XML = """
+        DECLARE @OutID INT = ?;
+        EXEC [Sales].[sp_ProductDiscounts_Save_XML]
+            @DiscountID = @OutID OUTPUT,
+            @DiscountName = ?,
+            @DiscountType = ?,
+            @DiscountValue = ?,
+            @MinQuantity = ?,
+            @IsActive = ?,
+            @ProductIDsXml = ?;
+        SELECT @OutID AS SavedID;
+    """
+    PRODUCT_DISCOUNTS_DELETE = "EXEC [Sales].[sp_ProductDiscounts_Delete] @DiscountID=?"
+
 

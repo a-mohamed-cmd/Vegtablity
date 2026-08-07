@@ -6,6 +6,14 @@ import 'printer_base.dart';
 
 /// Dedicated Print Designer for Daily Shift Closing Reports (تقرير إغلاق الوردية)
 class ShiftReportPrintDesigner {
+  static String _formatPaymentAccountName(dynamic rawName, bool isArabic) {
+    if (rawName == null) return '';
+    final String str = rawName.toString().trim();
+    if (str.toLowerCase() == 'cash') {
+      return isArabic ? 'نقداً' : 'Cash';
+    }
+    return str;
+  }
   // =========================================================================
   // SECTION 1: DEFAULT & BLUETOOTH MODE (النص المباشر والبلوتوث - الوضع التلقائي)
   // =========================================================================
@@ -107,6 +115,17 @@ class ShiftReportPrintDesigner {
         await SunmiPrinter.printText(isArabic ? 'الفارق (عجز/زيادة): $diffStr $cSymbol' : 'Variance: $diffStr $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
       }
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+
+      final List paymentTotals = summary['PaymentTotals'] ?? [];
+      if (paymentTotals.isNotEmpty) {
+        await SunmiPrinter.printText(isArabic ? 'تفاصيل وسائل الدفع:' : 'Payment Methods Breakdown:', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        for (var pt in paymentTotals) {
+          final String pName = pt['PaymentMethodName'] ?? 'طريقة دفع';
+          final double pAmount = double.tryParse(pt['TotalAmount']?.toString() ?? '0') ?? 0.0;
+          await SunmiPrinter.printText('• $pName: ${PrinterBase.formatCurrency(pAmount)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        }
+        await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
 
       final List categories = summary['CategoryBreakdown'] ?? summary['categories'] ?? [];
       if (categories.isNotEmpty) {

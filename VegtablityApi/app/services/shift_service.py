@@ -102,9 +102,32 @@ class ShiftService:
                     "TotalPurchasesRemainder": float(row.TotalPurchasesRemainder),
                     "TotalReceiptVouchers": float(row.TotalReceiptVouchers) if hasattr(row, 'TotalReceiptVouchers') and row.TotalReceiptVouchers is not None else 0.0,
                     "TotalPaymentVouchers": float(row.TotalPaymentVouchers) if hasattr(row, 'TotalPaymentVouchers') and row.TotalPaymentVouchers is not None else 0.0,
-                    "Vouchers": self.get_shift_vouchers(shift_id)
+                    "Vouchers": self.get_shift_vouchers(shift_id),
+                    "PaymentTotals": self.get_shift_payment_totals(shift_id)
                 }
             return None
+        finally:
+            conn.close()
+
+    def get_shift_payment_totals(self, shift_id: int) -> list:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.SHIFT_GET_PAYMENT_TOTALS, (shift_id,))
+            rows = cursor.fetchall()
+            totals = []
+            for row in rows:
+                totals.append({
+                    "AccountID": row.AccountID,
+                    "AccountCode": row.AccountCode,
+                    "PaymentMethodName": row.PaymentMethodName,
+                    "InvType": row.InvType,
+                    "TotalAmount": float(row.TotalAmount),
+                    "SourceType": row.SourceType
+                })
+            return totals
+        except Exception:
+            return []
         finally:
             conn.close()
 
@@ -131,3 +154,4 @@ class ShiftService:
             return []
         finally:
             conn.close()
+

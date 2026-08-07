@@ -362,6 +362,7 @@ class _GeneralReceiptVoucherScreenState
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<int>(
+                              isExpanded: true,
                               value: _selectedCashAccountId,
                               decoration: InputDecoration(
                                 labelText: context.tr('grv_receive_to_account'),

@@ -78,71 +78,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        Private _unifiedPartnerSearch As Boolean = True
-        Public Property UnifiedPartnerSearch As Boolean
-            Get
-                Return _unifiedPartnerSearch
-            End Get
-            Set(value As Boolean)
-                _unifiedPartnerSearch = value
-                OnPropertyChanged()
-            End Set
-        End Property
-
-        Private _useDetailedInvoiceDesign As Boolean = False
-        Public Property UseDetailedInvoiceDesign As Boolean
-            Get
-                Return _useDetailedInvoiceDesign
-            End Get
-            Set(value As Boolean)
-                _useDetailedInvoiceDesign = value
-                OnPropertyChanged()
-            End Set
-        End Property
-
-        Private _useCustomInvoiceDesign As Boolean = False
-        Public Property UseCustomInvoiceDesign As Boolean
-            Get
-                Return _useCustomInvoiceDesign
-            End Get
-            Set(value As Boolean)
-                _useCustomInvoiceDesign = value
-                OnPropertyChanged()
-            End Set
-        End Property
-
-        Private _productionMode As Boolean = False
-        Public Property ProductionMode As Boolean
-            Get
-                Return _productionMode
-            End Get
-            Set(value As Boolean)
-                _productionMode = value
-                OnPropertyChanged()
-            End Set
-        End Property
-
-        Private _enableDailyOrders As Boolean = False
-        Public Property EnableDailyOrders As Boolean
-            Get
-                Return _enableDailyOrders
-            End Get
-            Set(value As Boolean)
-                _enableDailyOrders = value
-                OnPropertyChanged()
-            End Set
-        End Property
-
-        Private _deliverySystemMode As String = Nothing
-        Public Property DeliverySystemMode As String
-            Get
-                Return _deliverySystemMode
-            End Get
-            Set(value As String)
-                _deliverySystemMode = value
-                OnPropertyChanged()
-            End Set
-        End Property
+        Private _currentCompanyInfo As CompanyInfo
 
         ' === Commands ===
         Public Property SaveCommand As RelayCommand
@@ -156,20 +92,14 @@ Namespace ViewModels
 
         Private Sub LoadSettings()
             Try
-                Dim info = _settingsService.GetCompanyInfo()
-                If info IsNot Nothing Then
-                    CompanyName = info.CompanyName
-                    Address = info.Address
-                    Phone = info.Phone
-                    Email = info.Email
-                    Logo = info.Logo
-                    CurrencySymbol = info.CurrencySymbol
-                    UnifiedPartnerSearch = info.UnifiedPartnerSearch
-                    UseDetailedInvoiceDesign = info.UseDetailedInvoiceDesign
-                    UseCustomInvoiceDesign = info.UseCustomInvoiceDesign
-                    ProductionMode = info.ProductionMode
-                    EnableDailyOrders = info.EnableDailyOrders
-                    DeliverySystemMode = info.DeliverySystemMode
+                _currentCompanyInfo = _settingsService.GetCompanyInfo()
+                If _currentCompanyInfo IsNot Nothing Then
+                    CompanyName = _currentCompanyInfo.CompanyName
+                    Address = _currentCompanyInfo.Address
+                    Phone = _currentCompanyInfo.Phone
+                    Email = _currentCompanyInfo.Email
+                    Logo = _currentCompanyInfo.Logo
+                    CurrencySymbol = _currentCompanyInfo.CurrencySymbol
                 End If
             Catch ex As Exception
                 ' Error handling
@@ -193,12 +123,12 @@ Namespace ViewModels
                     .Email = Email,
                     .Logo = Logo,
                     .CurrencySymbol = CurrencySymbol,
-                    .UnifiedPartnerSearch = UnifiedPartnerSearch,
-                    .UseDetailedInvoiceDesign = UseDetailedInvoiceDesign,
-                    .UseCustomInvoiceDesign = UseCustomInvoiceDesign,
-                    .ProductionMode = ProductionMode,
-                    .EnableDailyOrders = EnableDailyOrders,
-                    .DeliverySystemMode = DeliverySystemMode
+                    .UnifiedPartnerSearch = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.UnifiedPartnerSearch, True),
+                    .UseDetailedInvoiceDesign = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.UseDetailedInvoiceDesign, False),
+                    .UseCustomInvoiceDesign = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.UseCustomInvoiceDesign, False),
+                    .ProductionMode = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.ProductionMode, False),
+                    .EnableDailyOrders = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableDailyOrders, False),
+                    .DeliverySystemMode = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.DeliverySystemMode, Nothing)
                 }
                 _settingsService.SaveCompanyInfo(info)
                 MessageBox.Show("تم حفظ الإعدادات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)

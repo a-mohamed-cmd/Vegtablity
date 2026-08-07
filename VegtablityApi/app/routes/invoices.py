@@ -65,6 +65,17 @@ async def get_invoice(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/{inv_id}/payment-splits", response_model=List[dict])
+async def get_invoice_payment_splits(
+    inv_id: int,
+    user_id: int = Depends(get_current_user_id)
+):
+    service = InvoiceService()
+    try:
+        return service.get_payment_splits(inv_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/", response_model=InvoiceResponse)
 async def create_invoice(
     invoice: InvoiceCreate,
@@ -76,3 +87,4 @@ async def create_invoice(
         return {"InvID": inv_id, "message": "Invoice saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+

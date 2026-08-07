@@ -87,8 +87,31 @@ class InvoiceService:
             for d_row in cursor.fetchall():
                 details.append(dict(zip(detail_columns, d_row)))
             
+            # جلب تفاصيل تقسيم الدفع
+            try:
+                cursor.execute(SP.INVOICE_SPLITS_GET, (inv_id,))
+                split_columns = [column[0] for column in cursor.description]
+                splits = []
+                for s_row in cursor.fetchall():
+                    splits.append(dict(zip(split_columns, s_row)))
+                header['PaymentSplits'] = splits
+            except Exception:
+                header['PaymentSplits'] = []
+            
             header['Details'] = details
             return header
+        finally:
+            conn.close()
+
+    def get_payment_splits(self, inv_id: int) -> list:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.INVOICE_SPLITS_GET, (inv_id,))
+            columns = [column[0] for column in cursor.description]
+            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        except Exception:
+            return []
         finally:
             conn.close()
 
@@ -131,6 +154,9 @@ class InvoiceService:
 
         # Resolve fallback PaymentAccountID if PaidAmount > 0 and PaymentAccountID is None
         resolved_payment_account_id = invoice.PaymentAccountID
+        if invoice.PaymentSplits and len(invoice.PaymentSplits) > 0 and resolved_payment_account_id is None:
+            resolved_payment_account_id = invoice.PaymentSplits[0].PaymentAccountID
+
         if invoice.PaidAmount > 0 and resolved_payment_account_id is None:
             cursor.execute("SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = 30 AND IsTransactional = 1")
             fallback_row = cursor.fetchone()
@@ -182,6 +208,12 @@ class InvoiceService:
                 raise Exception("Failed to save invoice")
             
             inv_id = row[0]
+
+            # ✅ حفظ تقسيم طرق الدفع (PaymentSplits) إذا وُجدت
+            if invoice.PaymentSplits and len(invoice.PaymentSplits) > 0:
+                for split in invoice.PaymentSplits:
+                    cursor.execute(SP.INVOICE_SPLITS_SAVE, (inv_id, split.PaymentAccountID, split.Amount))
+
             conn.commit()
             return inv_id
         except Exception as e:
@@ -189,3 +221,4 @@ class InvoiceService:
             raise e
         finally:
             conn.close()
+

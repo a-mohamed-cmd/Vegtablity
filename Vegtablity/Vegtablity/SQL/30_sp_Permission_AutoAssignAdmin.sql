@@ -50,7 +50,8 @@ BEGIN
     (N'UserManagement'),
     (N'Wastage'),
     (N'StockTaking'),
-    (N'DailyOrders');
+    (N'DailyOrders'),
+    (N'SalesDiscounts');
 
     -- 3. دمج وإدخال الصلاحيات غير الموجودة، وتحديث الحالية لمنح الصلاحيات الكاملة (العرض، الإضافة، التعديل، الحذف، والطباعة)
     MERGE [Security].[RolePermissions] AS target

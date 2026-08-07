@@ -361,6 +361,7 @@ class _GeneralPaymentVoucherScreenState
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<int>(
+                              isExpanded: true,
                               value: _selectedCashAccountId,
                               decoration: InputDecoration(
                                 labelText: context.tr('gpv_pay_from_account'),

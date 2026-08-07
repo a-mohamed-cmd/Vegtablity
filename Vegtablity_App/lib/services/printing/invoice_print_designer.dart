@@ -6,6 +6,21 @@ import 'printer_base.dart';
 
 /// Unified Print Designer for Sales and Purchase Invoices (فواتير المبيعات والمشتريات)
 class InvoicePrintDesigner {
+  static String _formatPaymentAccountName(dynamic rawName, double paidAmount, bool isArabic) {
+    final name = rawName?.toString().trim() ?? '';
+    if (name.isNotEmpty) {
+      final lower = name.toLowerCase();
+      if (lower == 'cash' || lower == 'csh') {
+        return isArabic ? 'نقداً' : 'Cash';
+      }
+      return name;
+    }
+    if (paidAmount > 0) {
+      return isArabic ? 'نقداً' : 'Cash';
+    }
+    return isArabic ? 'آجل' : 'Credit';
+  }
+
   // =========================================================================
   // SECTION 1: DEFAULT & BLUETOOTH MODE (النص المباشر والبلوتوث - الوضع التلقائي)
   // =========================================================================
@@ -114,24 +129,53 @@ class InvoicePrintDesigner {
         final double qty = double.tryParse(item['Quantity']?.toString() ?? item['quantity']?.toString() ?? '0') ?? 0.0;
         final double price = double.tryParse(item['Price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
         final double total = double.tryParse(item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
+        final double itemDiscount = double.tryParse(item['discountAmount']?.toString() ?? item['DiscountAmount']?.toString() ?? '0') ?? 0.0;
         final String unitName = item['UnitName'] ?? item['unit_name'] ?? item['unit'] ?? item['Unit'] ?? item['unit_symbol'] ?? item['UnitSymbol'] ?? '';
         calculatedTotal += total;
 
         await SunmiPrinter.printText(name, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
         await SunmiPrinter.printText('  ${PrinterBase.formatQuantity(qty, unitName)} x ${PrinterBase.formatCurrency(price)} = ${PrinterBase.formatCurrency(total)}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        if (itemDiscount > 0) {
+          final String discLabel = isArabic ? 'خصم الصنف' : 'Item Discount';
+          await SunmiPrinter.printText('  ($discLabel: -${PrinterBase.formatCurrency(itemDiscount)})', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        }
       }
 
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
-      final double totalAmount       = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? calculatedTotal;
+      final double netAmount          = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['NetAmount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? calculatedTotal;
+      final double totalDiscount     = (invoice['total_discount'] as num?)?.toDouble() ?? (invoice['TotalDiscount'] as num?)?.toDouble() ?? (invoice['discount_amount'] as num?)?.toDouble() ?? (invoice['Discount'] as num?)?.toDouble() ?? 0.0;
+      final double originalTotal     = (invoice['original_total'] as num?)?.toDouble() ?? (invoice['OriginalTotal'] as num?)?.toDouble() ?? (netAmount + totalDiscount);
       final double paidAtCreate       = (invoice['paid_amount'] as num?)?.toDouble() ?? (invoice['PaidAmount'] as num?)?.toDouble() ?? 0.0;
       final double voucherPaidAmount  = (invoice['voucher_paid_amount'] as num?)?.toDouble() ?? 0.0;
       final double remainder          = (invoice['remainder'] as num?)?.toDouble() ?? (invoice['Remainder'] as num?)?.toDouble() ?? 0.0;
       final double totalPaid = paidAtCreate + voucherPaidAmount;
 
-      await SunmiPrinter.printText(isArabic ? 'الإجمالي الكلي: ${PrinterBase.formatCurrency(totalAmount)} $cSymbol' : 'Grand Total: ${PrinterBase.formatCurrency(totalAmount)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
-      if (remainder > 0.001 || totalPaid < totalAmount - 0.001) {
-        await SunmiPrinter.printText(isArabic ? 'المدفوع: ${PrinterBase.formatCurrency(totalPaid)} $cSymbol' : 'Paid Amount: ${PrinterBase.formatCurrency(totalPaid)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+      if (totalDiscount > 0) {
+        await SunmiPrinter.printText(isArabic ? 'الإجمالي: ${PrinterBase.formatCurrency(originalTotal)} $cSymbol' : 'Gross Total: ${PrinterBase.formatCurrency(originalTotal)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        await SunmiPrinter.printText(isArabic ? 'الخصم: -${PrinterBase.formatCurrency(totalDiscount)}' : 'Discount: -${PrinterBase.formatCurrency(totalDiscount)}', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+      }
+      await SunmiPrinter.printText(isArabic ? 'الصافي (Net Total): ${PrinterBase.formatCurrency(netAmount)} $cSymbol' : 'Net Total: ${PrinterBase.formatCurrency(netAmount)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+      await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+
+      final List splits = (invoice['PaymentSplits'] ?? invoice['payment_splits'] ?? []) as List;
+      final String rawAccName = (invoice['PaymentAccountName'] ?? invoice['AccountName'] ?? invoice['payment_account_name'] ?? invoice['PaymentMethodName'] ?? '').toString().trim();
+
+      if (splits.isNotEmpty) {
+        await SunmiPrinter.printText(isArabic ? '--- وسائل الدفع ---' : '--- Payment Methods ---', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+        for (var s in splits) {
+          final String rawSName = (s['PaymentMethodName'] ?? s['AccountName'] ?? s['PaymentAccountName'] ?? '').toString().trim();
+          final double sAmt = double.tryParse(s['Amount']?.toString() ?? '0') ?? 0.0;
+          final String sName = _formatPaymentAccountName(rawSName, sAmt, isArabic);
+          await SunmiPrinter.printText('• $sName: ${PrinterBase.formatCurrency(sAmt)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+        }
+      } else {
+        final String displayMethod = _formatPaymentAccountName(rawAccName, totalPaid, isArabic);
+        await SunmiPrinter.printText(isArabic ? 'طريقة الدفع: $displayMethod' : 'Payment Method: $displayMethod', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+      }
+
+      await SunmiPrinter.printText(isArabic ? 'إجمالي المدفوع: ${PrinterBase.formatCurrency(totalPaid)} $cSymbol' : 'Total Paid: ${PrinterBase.formatCurrency(totalPaid)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+      if (remainder > 0.001) {
         await SunmiPrinter.printText(isArabic ? 'المتبقي آجل: ${PrinterBase.formatCurrency(remainder)} $cSymbol' : 'Balance Due: ${PrinterBase.formatCurrency(remainder)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
       }
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
@@ -181,12 +225,28 @@ class InvoicePrintDesigner {
     final String invIdStr = invId != null && invId != 0 ? '#$invId' : (isArabic ? 'جديدة' : 'New');
     final String partnerName = invoice['PartnerName'] ?? invoice['partner_name'] ?? (isArabic ? 'عميل نقدي' : 'Cash Customer');
 
+    DateTime printDateTime;
+    try {
+      if (invoice['created_at'] != null) {
+        printDateTime = DateTime.parse(invoice['created_at'].toString());
+      } else if (invoice['InvDate'] != null) {
+        printDateTime = DateTime.parse(invoice['InvDate'].toString());
+      } else {
+        printDateTime = DateTime.now();
+      }
+    } catch (_) {
+      printDateTime = DateTime.now();
+    }
+    final String shortDate = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
+    final String timeStr = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}:${printDateTime.second.toString().padLeft(2, '0')}';
+
     bytes.addAll(isArabic ? '  فاتورة $typeName جديدة\n'.codeUnits : '  New $typeName Invoice\n'.codeUnits);
     if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
       bytes.addAll(isArabic ? 'المستودع: $openWarehouseName\n'.codeUnits : 'Warehouse: $openWarehouseName\n'.codeUnits);
     }
     bytes.addAll(isArabic ? 'رقم الفاتورة: $invIdStr\n'.codeUnits : 'Invoice No: $invIdStr\n'.codeUnits);
     bytes.addAll(isArabic ? 'العميل/المورد: $partnerName\n'.codeUnits : 'Partner: $partnerName\n'.codeUnits);
+    bytes.addAll(isArabic ? 'التاريخ والوقت: $shortDate $timeStr\n'.codeUnits : 'Date & Time: $shortDate $timeStr\n'.codeUnits);
 
     // Shipping & Delivery Details
     final String? tempCustomerName = invoice['temp_customer_name'] ?? invoice['TempCustomerName'] ?? invoice['tempCustomerName'];
@@ -234,13 +294,50 @@ class InvoicePrintDesigner {
       final double total = double.tryParse(item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
       final String unitName = item['UnitName'] ?? item['unit_name'] ?? item['unit'] ?? item['Unit'] ?? item['unit_symbol'] ?? item['UnitSymbol'] ?? '';
 
+      final double itemDiscount = double.tryParse(item['discountAmount']?.toString() ?? item['DiscountAmount']?.toString() ?? '0') ?? 0.0;
+
       bytes.addAll('$name\n'.codeUnits);
       bytes.addAll('  ${PrinterBase.formatQuantity(qty, unitName)} x ${PrinterBase.formatCurrency(price)} = ${PrinterBase.formatCurrency(total)}\n'.codeUnits);
+      if (itemDiscount > 0) {
+        final String discLabel = isArabic ? 'خصم الصنف' : 'Item Discount';
+        bytes.addAll('  ($discLabel: -${PrinterBase.formatCurrency(itemDiscount)})\n'.codeUnits);
+      }
     }
     bytes.addAll('$dSep\n'.codeUnits);
 
-    final double totalAmount = (invoice['total_amount'] as num?)?.toDouble() ?? 0.0;
-    bytes.addAll(isArabic ? 'الإجمالي الكلي: ${PrinterBase.formatCurrency(totalAmount)} $cSymbol\n'.codeUnits : 'Grand Total: ${PrinterBase.formatCurrency(totalAmount)} $cSymbol\n'.codeUnits);
+    final double netAmount      = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['NetAmount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? 0.0;
+    final double totalDiscount = (invoice['total_discount'] as num?)?.toDouble() ?? (invoice['TotalDiscount'] as num?)?.toDouble() ?? (invoice['discount_amount'] as num?)?.toDouble() ?? (invoice['Discount'] as num?)?.toDouble() ?? 0.0;
+    final double originalTotal = (invoice['original_total'] as num?)?.toDouble() ?? (invoice['OriginalTotal'] as num?)?.toDouble() ?? (netAmount + totalDiscount);
+    final double paidAmount    = (invoice['paid_amount'] as num?)?.toDouble() ?? (invoice['PaidAmount'] as num?)?.toDouble() ?? 0.0;
+    final double remainder     = (invoice['remainder'] as num?)?.toDouble() ?? (invoice['Remainder'] as num?)?.toDouble() ?? 0.0;
+    final List splits = (invoice['PaymentSplits'] ?? invoice['payment_splits'] ?? []) as List;
+    final String rawAccName = (invoice['PaymentAccountName'] ?? invoice['AccountName'] ?? invoice['payment_account_name'] ?? invoice['PaymentMethodName'] ?? '').toString().trim();
+
+    if (totalDiscount > 0) {
+      bytes.addAll(isArabic ? 'الإجمالي: ${PrinterBase.formatCurrency(originalTotal)} $cSymbol\n'.codeUnits : 'Gross Total: ${PrinterBase.formatCurrency(originalTotal)} $cSymbol\n'.codeUnits);
+      bytes.addAll(isArabic ? 'الخصم: -${PrinterBase.formatCurrency(totalDiscount)}\n'.codeUnits : 'Discount: -${PrinterBase.formatCurrency(totalDiscount)}\n'.codeUnits);
+    }
+    bytes.addAll(isArabic ? 'الصافي (Net Total): ${PrinterBase.formatCurrency(netAmount)} $cSymbol\n'.codeUnits : 'Net Total: ${PrinterBase.formatCurrency(netAmount)} $cSymbol\n'.codeUnits);
+    bytes.addAll('$dSep\n'.codeUnits);
+
+    if (splits.isNotEmpty) {
+      bytes.addAll(isArabic ? '--- وسائل الدفع ---\n'.codeUnits : '--- Payment Methods ---\n'.codeUnits);
+      for (var s in splits) {
+        final String rawSName = (s['PaymentMethodName'] ?? s['AccountName'] ?? s['PaymentAccountName'] ?? '').toString().trim();
+        final double sAmt = double.tryParse(s['Amount']?.toString() ?? '0') ?? 0.0;
+        final String sName = _formatPaymentAccountName(rawSName, sAmt, isArabic);
+        bytes.addAll('• $sName: ${PrinterBase.formatCurrency(sAmt)} $cSymbol\n'.codeUnits);
+      }
+    } else {
+      final String displayMethod = _formatPaymentAccountName(rawAccName, paidAmount, isArabic);
+      bytes.addAll(isArabic ? 'طريقة الدفع: $displayMethod\n'.codeUnits : 'Payment Method: $displayMethod\n'.codeUnits);
+    }
+
+    bytes.addAll(isArabic ? 'إجمالي المدفوع: ${PrinterBase.formatCurrency(paidAmount)} $cSymbol\n'.codeUnits : 'Total Paid: ${PrinterBase.formatCurrency(paidAmount)} $cSymbol\n'.codeUnits);
+    if (remainder > 0.001) {
+      bytes.addAll(isArabic ? 'المتبقي آجل: ${PrinterBase.formatCurrency(remainder)} $cSymbol\n'.codeUnits : 'Balance Due: ${PrinterBase.formatCurrency(remainder)} $cSymbol\n'.codeUnits);
+    }
+
     bytes.addAll('$sep\n'.codeUnits);
     bytes.addAll([0x1B, 0x61, 0x01]);
     bytes.addAll(isArabic ? 'شكراً لزيارتكم! طُبعت عبر نظام POS\n'.codeUnits : 'Thank you for your visit! Printed via POS System\n'.codeUnits);
@@ -439,33 +536,52 @@ class InvoicePrintDesigner {
       final String qtyFormatted = PrinterBase.formatQuantity(qty, unitName);
       calculatedTotal += total;
 
+      final double itemDiscount = double.tryParse(item['discountAmount']?.toString() ?? item['DiscountAmount']?.toString() ?? '0') ?? 0.0;
+
       addText(name, bold: true, fontSize: headerSize);
       addText('  $qtyFormatted x ${PrinterBase.formatCurrency(price)} = ${PrinterBase.formatCurrency(total)}', fontSize: bodySize);
+      if (itemDiscount > 0) {
+        final String discLabel = isArabic ? 'خصم الصنف' : 'Item Discount';
+        addText('  ($discLabel: -${PrinterBase.formatCurrency(itemDiscount)})', fontSize: smallSize);
+      }
     }
     addDivider(dashed: true);
 
-    // Totals Section
-    final double totalAmount       = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? calculatedTotal;
-    final double paidAtCreate       = (invoice['paid_amount'] as num?)?.toDouble() ?? (invoice['PaidAmount'] as num?)?.toDouble() ?? 0.0;
-    final double voucherPaidAmount  = (invoice['voucher_paid_amount'] as num?)?.toDouble() ?? 0.0;
+    // Totals & Payment Section
+    final double netAmount          = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['NetAmount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? calculatedTotal;
+    final double totalDiscount     = (invoice['total_discount'] as num?)?.toDouble() ?? (invoice['TotalDiscount'] as num?)?.toDouble() ?? (invoice['discount_amount'] as num?)?.toDouble() ?? (invoice['Discount'] as num?)?.toDouble() ?? 0.0;
+    final double originalTotal     = (invoice['original_total'] as num?)?.toDouble() ?? (invoice['OriginalTotal'] as num?)?.toDouble() ?? (netAmount + totalDiscount);
+    final double totalPaid          = (invoice['paid_amount'] as num?)?.toDouble() ?? (invoice['PaidAmount'] as num?)?.toDouble() ?? 0.0;
     final double remainder          = (invoice['remainder'] as num?)?.toDouble() ?? (invoice['Remainder'] as num?)?.toDouble() ?? 0.0;
-    final double totalPaid = paidAtCreate + voucherPaidAmount;
 
-    final String formattedTotal     = PrinterBase.formatCurrency(totalAmount);
     final String formattedPaid      = PrinterBase.formatCurrency(totalPaid);
     final String formattedRemainder = PrinterBase.formatCurrency(remainder);
 
-    final bool hasSplitPayment = remainder > 0.001 || totalPaid < totalAmount - 0.001;
+    final List splits = (invoice['PaymentSplits'] ?? invoice['payment_splits'] ?? []) as List;
+    final String rawAccName = (invoice['PaymentAccountName'] ?? invoice['AccountName'] ?? invoice['payment_account_name'] ?? invoice['PaymentMethodName'] ?? '').toString().trim();
 
-    addText(isArabic ? 'الإجمالي الكلي: $formattedTotal $cSymbol' : 'Grand Total: $formattedTotal $cSymbol', bold: true, fontSize: headerSize);
-    if (hasSplitPayment) {
-      if (voucherPaidAmount > 0.001) {
-        addText(isArabic ? 'نقداً عند الإنشاء: ${PrinterBase.formatCurrency(paidAtCreate)} $cSymbol' : 'Paid at creation: ${PrinterBase.formatCurrency(paidAtCreate)} $cSymbol', fontSize: bodySize);
-        addText(isArabic ? 'عبر سند: ${PrinterBase.formatCurrency(voucherPaidAmount)} $cSymbol' : 'Voucher Paid: ${PrinterBase.formatCurrency(voucherPaidAmount)} $cSymbol', fontSize: bodySize);
-        addText(isArabic ? 'إجمالي المدفوع: $formattedPaid $cSymbol' : 'Total Paid: $formattedPaid $cSymbol', fontSize: bodySize);
-      } else {
-        addText(isArabic ? 'المدفوع: $formattedPaid $cSymbol' : 'Paid Amount: $formattedPaid $cSymbol', fontSize: bodySize);
+    if (totalDiscount > 0) {
+      addText(isArabic ? 'الإجمالي: ${PrinterBase.formatCurrency(originalTotal)} $cSymbol' : 'Gross Total: ${PrinterBase.formatCurrency(originalTotal)} $cSymbol', fontSize: bodySize);
+      addText(isArabic ? 'الخصم: -${PrinterBase.formatCurrency(totalDiscount)}' : 'Discount: -${PrinterBase.formatCurrency(totalDiscount)}', bold: true, fontSize: bodySize);
+    }
+    addText(isArabic ? 'الصافي (Net Total): ${PrinterBase.formatCurrency(netAmount)} $cSymbol' : 'Net Total: ${PrinterBase.formatCurrency(netAmount)} $cSymbol', bold: true, fontSize: headerSize);
+    addDivider(dashed: true);
+
+    if (splits.isNotEmpty) {
+      addText(isArabic ? '--- وسائل الدفع ---' : '--- Payment Methods ---', bold: true, fontSize: bodySize);
+      for (var s in splits) {
+        final String rawSName = (s['PaymentMethodName'] ?? s['AccountName'] ?? s['PaymentAccountName'] ?? '').toString().trim();
+        final double sAmt = double.tryParse(s['Amount']?.toString() ?? '0') ?? 0.0;
+        final String sName = _formatPaymentAccountName(rawSName, sAmt, isArabic);
+        addText('• $sName: ${PrinterBase.formatCurrency(sAmt)} $cSymbol', fontSize: bodySize);
       }
+    } else {
+      final String displayMethod = _formatPaymentAccountName(rawAccName, totalPaid, isArabic);
+      addText(isArabic ? 'طريقة الدفع: $displayMethod' : 'Payment Method: $displayMethod', bold: true, fontSize: bodySize);
+    }
+
+    addText(isArabic ? 'إجمالي المدفوع: $formattedPaid $cSymbol' : 'Total Paid: $formattedPaid $cSymbol', fontSize: bodySize);
+    if (remainder > 0.001) {
       addText(isArabic ? 'المتبقي آجل: $formattedRemainder $cSymbol' : 'Balance Due: $formattedRemainder $cSymbol', bold: true, fontSize: headerSize, color: const ui.Color(0xFF8B0000));
     }
     addDivider();

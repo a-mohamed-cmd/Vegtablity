@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:dio/dio.dart';
 import '../providers/pos_provider.dart';
 import '../providers/shift_provider.dart';
+import '../models/product_discount.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
 import '../core/localization/app_localizations.dart';
@@ -15,7 +16,8 @@ import 'supplier_selection_screen.dart';
 
 class PosScreen extends StatefulWidget {
   final String type; // 'Sales' or 'Purchase'
-  final Map<String, dynamic>? partner; // Optional selected partner (for purchases)
+  final Map<String, dynamic>?
+      partner; // Optional selected partner (for purchases)
   final String? tempCustomerName;
   final String? tempPhone;
   final String? tempAddress;
@@ -82,10 +84,11 @@ class _PosScreenState extends State<PosScreen> {
           : await apiService.getProductsForSales();
       if (response.statusCode == 200) {
         final List<dynamic> rawList = response.data ?? [];
-        
+
         // Map and group items once
-        final List<Map<String, dynamic>> mappedList = rawList.map((e) => Map<String, dynamic>.from(e)).toList();
-        
+        final List<Map<String, dynamic>> mappedList =
+            rawList.map((e) => Map<String, dynamic>.from(e)).toList();
+
         final Map<String, List<Map<String, dynamic>>> grouped = {};
         for (var prod in mappedList) {
           final String cat = prod['CatName']?.toString() ?? 'أخرى';
@@ -121,20 +124,47 @@ class _PosScreenState extends State<PosScreen> {
       final String? cachedAccJson = prefs.getString('cached_accounts');
       if (cachedAccJson != null) {
         final List<dynamic> decoded = json.decode(cachedAccJson);
-        setState(() {
-          _accounts = List<Map<String, dynamic>>.from(decoded);
-          final cashAcc = _accounts.firstWhere(
-            (acc) => (acc['AccountName']?.toString() ?? '').contains('صندوق') || (acc['AccountName']?.toString() ?? '').contains('كاش'),
-            orElse: () => <String, dynamic>{},
-          );
-          if (cashAcc.isNotEmpty) {
-            _selectedAccountId = cashAcc['AccountID'];
-          } else if (_accounts.isNotEmpty) {
-            _selectedAccountId = _accounts.first['AccountID'];
-          }
-        });
+        if (mounted) {
+          setState(() {
+            _accounts = List<Map<String, dynamic>>.from(decoded);
+            _updateSelectedAccountId();
+          });
+        }
+      }
+
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      final res = await apiService.getPaymentAccounts();
+      if (res.statusCode == 200 && res.data is List) {
+        final List<Map<String, dynamic>> fetched =
+            List<Map<String, dynamic>>.from(res.data);
+        if (fetched.isNotEmpty && mounted) {
+          setState(() {
+            _accounts = fetched;
+            _updateSelectedAccountId();
+          });
+          prefs.setString('cached_accounts', json.encode(fetched));
+        }
       }
     } catch (_) {}
+  }
+
+  void _updateSelectedAccountId() {
+    if (_accounts.isNotEmpty) {
+      if (_selectedAccountId == null) {
+        final cashAcc = _accounts.firstWhere((acc) {
+          final name = (acc['AccountName']?.toString() ?? '').toLowerCase();
+          final code = (acc['AccountCode']?.toString() ?? '');
+          return name.contains('صندوق') ||
+              name.contains('كاش') ||
+              name.contains('cash') ||
+              name.contains('نقدا') ||
+              name.contains('نقداً') ||
+              code == '110101' ||
+              code.startsWith('1101');
+        }, orElse: () => _accounts.first);
+        _selectedAccountId = cashAcc['AccountID'];
+      }
+    }
   }
 
   @override
@@ -158,13 +188,15 @@ class _PosScreenState extends State<PosScreen> {
                 ? CatalogSearchMode.purchase
                 : CatalogSearchMode.sales,
             onBarcodeSubmitted: (barcode) async {
-              await posProvider.searchAndAddProductByBarcode(barcode);
+              await posProvider.searchAndAddProductByBarcode(barcode,
+                  invoiceType: widget.type);
             },
             onProductSelected: (prod) {
-              posProvider.addProductToCart(prod);
+              posProvider.addProductToCart(prod, invoiceType: widget.type);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('تمت إضافة: ${prod['ProductName'] ?? prod['name']}'),
+                  content:
+                      Text('تمت إضافة: ${prod['ProductName'] ?? prod['name']}'),
                   backgroundColor: Colors.teal,
                   duration: const Duration(seconds: 1),
                 ),
@@ -180,8 +212,10 @@ class _PosScreenState extends State<PosScreen> {
     });
   }
 
-  void _showUnrecognizedPriceDialogForSheet(String barcode, PosProvider posProvider, VoidCallback onSuccess) {
+  void _showUnrecognizedPriceDialogForSheet(
+      String barcode, PosProvider posProvider, VoidCallback onSuccess) {
     final priceController = TextEditingController();
+    final bool isPurchase = (widget.type == 'Purchase');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -190,7 +224,8 @@ class _PosScreenState extends State<PosScreen> {
           backgroundColor: Colors.grey[900],
           title: Text(
             context.tr('pos_unrecognized_title'),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           content: Column(
@@ -198,18 +233,21 @@ class _PosScreenState extends State<PosScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                context.tr('pos_barcode_label').replaceAll('{barcode}', barcode),
+                context
+                    .tr('pos_barcode_label')
+                    .replaceAll('{barcode}', barcode),
                 style: const TextStyle(color: Colors.grey),
                 textAlign: TextAlign.right,
               ),
               const SizedBox(height: 15),
               TextFormField(
                 controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: context.tr('pos_sale_price'),
+                  labelText: isPurchase ? 'سعر الشراء الافتراضي' : context.tr('pos_sale_price'),
                   labelStyle: const TextStyle(color: Colors.teal),
                   enabledBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
@@ -220,7 +258,8 @@ class _PosScreenState extends State<PosScreen> {
                 ),
                 textAlign: TextAlign.center,
                 onFieldSubmitted: (_) {
-                  _submitUnrecognizedProductForSheet(barcode, priceController.text, posProvider, ctx, onSuccess);
+                  _submitUnrecognizedProductForSheet(barcode,
+                      priceController.text, posProvider, ctx, onSuccess);
                 },
               ),
             ],
@@ -228,12 +267,15 @@ class _PosScreenState extends State<PosScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(context.tr('pos_cancel'), style: const TextStyle(color: Colors.red)),
+              child: Text(context.tr('pos_cancel'),
+                  style: const TextStyle(color: Colors.red)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-              onPressed: () => _submitUnrecognizedProductForSheet(barcode, priceController.text, posProvider, ctx, onSuccess),
-              child: Text(context.tr('pos_save_and_add'), style: const TextStyle(color: Colors.white)),
+              onPressed: () => _submitUnrecognizedProductForSheet(
+                  barcode, priceController.text, posProvider, ctx, onSuccess),
+              child: Text(context.tr('pos_save_and_add'),
+                  style: const TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -241,27 +283,37 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  Future<void> _submitUnrecognizedProductForSheet(String barcode, String priceText, PosProvider posProvider, BuildContext dialogContext, VoidCallback onSuccess) async {
+  Future<void> _submitUnrecognizedProductForSheet(
+      String barcode,
+      String priceText,
+      PosProvider posProvider,
+      BuildContext dialogContext,
+      VoidCallback onSuccess) async {
     final double? price = double.tryParse(priceText);
     if (price == null || price <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.tr('pos_invalid_price_error'), textAlign: TextAlign.right),
+          content: Text(context.tr('pos_invalid_price_error'),
+              textAlign: TextAlign.right),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
     Navigator.pop(dialogContext);
-    
-    final product = await posProvider.quickAddUnrecognizedProduct(barcode, price);
+
+    final bool isPurchase = (widget.type == 'Purchase');
+    final product =
+        await posProvider.quickAddUnrecognizedProduct(barcode, price, isPurchase: isPurchase);
     if (product != null) {
       onSuccess();
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(posProvider.errorMessage ?? context.tr('pos_quick_add_error'), textAlign: TextAlign.right),
+            content: Text(
+                posProvider.errorMessage ?? context.tr('pos_quick_add_error'),
+                textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
         );
@@ -333,8 +385,11 @@ class _PosScreenState extends State<PosScreen> {
                             label: Text(
                               catName,
                               style: TextStyle(
-                                color: isSelected ? Colors.white : Colors.white70,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color:
+                                    isSelected ? Colors.white : Colors.white70,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                             selected: isSelected,
@@ -355,7 +410,8 @@ class _PosScreenState extends State<PosScreen> {
                   const SizedBox(height: 12),
                   Expanded(
                     child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
@@ -366,7 +422,8 @@ class _PosScreenState extends State<PosScreen> {
                         final prod = displayedProducts[index];
                         final String name = prod['ProductName'] ?? '';
                         final String unit = prod['UnitName'] ?? '';
-                        final double price = (prod['SalePrice'] as num?)?.toDouble() ?? 0.0;
+                        final double price =
+                            (prod['SalePrice'] as num?)?.toDouble() ?? 0.0;
 
                         return Card(
                           color: Colors.grey[850],
@@ -378,7 +435,11 @@ class _PosScreenState extends State<PosScreen> {
                               posProvider.addProductToCart(prod);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(context.tr('pos_added_to_cart').replaceAll('{name}', name), textAlign: TextAlign.right),
+                                  content: Text(
+                                      context
+                                          .tr('pos_added_to_cart')
+                                          .replaceAll('{name}', name),
+                                      textAlign: TextAlign.right),
                                   duration: const Duration(milliseconds: 700),
                                   backgroundColor: Colors.teal[800],
                                 ),
@@ -408,7 +469,8 @@ class _PosScreenState extends State<PosScreen> {
                                   if (unit.isNotEmpty)
                                     Text(
                                       unit,
-                                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                      style: const TextStyle(
+                                          color: Colors.white54, fontSize: 11),
                                     ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -449,7 +511,8 @@ class _PosScreenState extends State<PosScreen> {
                       Row(
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.refresh, color: Colors.tealAccent),
+                            icon: const Icon(Icons.refresh,
+                                color: Colors.tealAccent),
                             tooltip: context.tr('pos_catalog_refresh'),
                             onPressed: () async {
                               setModalState(() {
@@ -460,7 +523,8 @@ class _PosScreenState extends State<PosScreen> {
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white70),
+                            icon:
+                                const Icon(Icons.close, color: Colors.white70),
                             onPressed: () => Navigator.pop(context),
                           ),
                         ],
@@ -483,7 +547,8 @@ class _PosScreenState extends State<PosScreen> {
     if (trimmedBarcode.isEmpty) return;
 
     final posProvider = Provider.of<PosProvider>(context, listen: false);
-    final bool success = await posProvider.searchAndAddProductByBarcode(trimmedBarcode);
+    final bool success =
+        await posProvider.searchAndAddProductByBarcode(trimmedBarcode, invoiceType: widget.type);
 
     if (!success) {
       _barcodeController.clear();
@@ -497,6 +562,7 @@ class _PosScreenState extends State<PosScreen> {
 
   void _showUnrecognizedPriceDialog(String barcode, PosProvider posProvider) {
     final priceController = TextEditingController();
+    final bool isPurchase = (widget.type == 'Purchase');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -520,23 +586,25 @@ class _PosScreenState extends State<PosScreen> {
               const SizedBox(height: 15),
               TextFormField(
                 controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 autofocus: true,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'سعر البيع',
-                  labelStyle: TextStyle(color: Colors.teal),
-                  enabledBorder: OutlineInputBorder(
+                decoration: InputDecoration(
+                  labelText: isPurchase ? 'سعر الشراء الافتراضي' : 'سعر البيع',
+                  labelStyle: const TextStyle(color: Colors.teal),
+                  enabledBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
-                  focusedBorder: OutlineInputBorder(
+                  focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(color: Colors.teal),
                   ),
                 ),
                 textAlign: TextAlign.center,
                 onFieldSubmitted: (_) {
                   // Submit on Enter key press
-                  _submitUnrecognizedProduct(barcode, priceController.text, posProvider, ctx);
+                  _submitUnrecognizedProduct(
+                      barcode, priceController.text, posProvider, ctx);
                 },
               ),
             ],
@@ -548,8 +616,10 @@ class _PosScreenState extends State<PosScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-              onPressed: () => _submitUnrecognizedProduct(barcode, priceController.text, posProvider, ctx),
-              child: const Text('حفظ وإضافة', style: TextStyle(color: Colors.white)),
+              onPressed: () => _submitUnrecognizedProduct(
+                  barcode, priceController.text, posProvider, ctx),
+              child: const Text('حفظ وإضافة',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -557,25 +627,30 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  Future<void> _submitUnrecognizedProduct(String barcode, String priceText, PosProvider posProvider, BuildContext dialogContext) async {
+  Future<void> _submitUnrecognizedProduct(String barcode, String priceText,
+      PosProvider posProvider, BuildContext dialogContext) async {
     final double? price = double.tryParse(priceText);
     if (price == null || price <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('الرجاء إدخال سعر صحيح أكبر من الصفر', textAlign: TextAlign.right),
+          content: Text('الرجاء إدخال سعر صحيح أكبر من الصفر',
+              textAlign: TextAlign.right),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
     Navigator.pop(dialogContext);
-    
-    final product = await posProvider.quickAddUnrecognizedProduct(barcode, price);
+
+    final bool isPurchase = (widget.type == 'Purchase');
+    final product =
+        await posProvider.quickAddUnrecognizedProduct(barcode, price, isPurchase: isPurchase);
     if (product != null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم تسجيل الصنف وإضافته بنجاح', textAlign: TextAlign.right),
+            content: Text('تم تسجيل الصنف وإضافته بنجاح',
+                textAlign: TextAlign.right),
             backgroundColor: Colors.green,
             duration: Duration(milliseconds: 1500),
           ),
@@ -586,7 +661,8 @@ class _PosScreenState extends State<PosScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(posProvider.errorMessage ?? 'حدث خطأ في التسجيل', textAlign: TextAlign.right),
+            content: Text(posProvider.errorMessage ?? 'حدث خطأ في التسجيل',
+                textAlign: TextAlign.right),
             backgroundColor: Colors.red,
           ),
         );
@@ -618,10 +694,14 @@ class _PosScreenState extends State<PosScreen> {
         appBar: AppBar(
           title: Text(widget.type == 'Sales'
               ? (_selectedPartner != null
-                  ? context.tr('pos_sales_title_with_partner').replaceAll('{name}', _selectedPartner!['PartnerName']?.toString() ?? '')
+                  ? context.tr('pos_sales_title_with_partner').replaceAll(
+                      '{name}',
+                      _selectedPartner!['PartnerName']?.toString() ?? '')
                   : context.tr('pos_sales_title'))
               : (_selectedPartner != null
-                  ? context.tr('pos_purchase_title_with_partner').replaceAll('{name}', _selectedPartner!['PartnerName']?.toString() ?? '')
+                  ? context.tr('pos_purchase_title_with_partner').replaceAll(
+                      '{name}',
+                      _selectedPartner!['PartnerName']?.toString() ?? '')
                   : context.tr('pos_purchase_title'))),
           flexibleSpace: Container(
             decoration: BoxDecoration(
@@ -635,6 +715,42 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ),
           actions: [
+            Consumer<PrinterService>(
+              builder: (context, printerService, child) {
+                return IconButton(
+                  icon: const Icon(Icons.print),
+                  tooltip: 'طباعة أحدث إضافة بالنظام',
+                  onPressed: () async {
+                    if (printerService.lastAddedDocument == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'لا يوجد مستند سابق مضاف حالياً لطباعته',
+                              textAlign: TextAlign.right),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+                    final success =
+                        await printerService.printLastAddedDocument();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            success
+                                ? 'تمت طباعة أحدث إضافة بنجاح'
+                                : 'فشلت عملية طباعة أحدث إضافة',
+                            textAlign: TextAlign.right,
+                          ),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.qr_code_scanner),
               onPressed: _scanBarcode,
@@ -653,7 +769,11 @@ class _PosScreenState extends State<PosScreen> {
                     child: Row(
                       children: [
                         IconButton(
-                          icon: Icon(Icons.grid_view, color: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange, size: 30),
+                          icon: Icon(Icons.grid_view,
+                              color: widget.type == 'Sales'
+                                  ? Colors.teal
+                                  : Colors.deepOrange,
+                              size: 30),
                           tooltip: context.tr('pos_catalog_tooltip'),
                           onPressed: () => _openProductCatalog(posProvider),
                         ),
@@ -674,7 +794,8 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0, vertical: 4.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -682,17 +803,25 @@ class _PosScreenState extends State<PosScreen> {
                           _selectedPartner != null
                               ? '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${_selectedPartner!['PartnerName']}'
                               : '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${context.tr('pos_cash_general')}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: Icon(Icons.person_search, color: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange),
-                          tooltip: widget.type == 'Sales' ? context.tr('pos_change_customer') : context.tr('pos_change_supplier'),
+                          icon: Icon(Icons.person_search,
+                              color: widget.type == 'Sales'
+                                  ? Colors.teal
+                                  : Colors.deepOrange),
+                          tooltip: widget.type == 'Sales'
+                              ? context.tr('pos_change_customer')
+                              : context.tr('pos_change_supplier'),
                           onPressed: () async {
-                            final selected = await Navigator.push<Map<String, dynamic>>(
+                            final selected =
+                                await Navigator.push<Map<String, dynamic>>(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PartnerSelectionScreen(type: widget.type, isSelectionOnly: true),
+                                builder: (context) => PartnerSelectionScreen(
+                                    type: widget.type, isSelectionOnly: true),
                               ),
                             );
                             if (selected != null) {
@@ -718,44 +847,154 @@ class _PosScreenState extends State<PosScreen> {
                             itemCount: invoiceItems.length,
                             itemBuilder: (context, index) {
                               final item = invoiceItems[index];
+                              final int productId = item['ProductID'] ?? 0;
+                              final availableDiscounts = widget.type == 'Sales'
+                                  ? (posProvider.activeDiscountsByProduct[productId] ?? [])
+                                  : <ProductDiscount>[];
+                              final ProductDiscount? activeDiscount = item['appliedDiscount'] as ProductDiscount?;
+
                               return Card(
                                 margin: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
-                                child: ListTile(
-                                  title: Text(item['name'],
-                                      textAlign: TextAlign.right,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  subtitle: Wrap(
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                          '${context.tr('pos_item_price')}${item['price']} KWD${context.tr('pos_item_quantity')}',
-                                          textAlign: TextAlign.right),
-                                      _QuantityEditor(
-                                        initialQuantity: item['quantity'],
-                                        onChanged: (newQty) {
-                                          posProvider.updateQuantity(
-                                              index, newQty);
-                                        },
+                                      ListTile(
+                                        title: Row(
+                                          children: [
+                                            if (activeDiscount != null)
+                                              Flexible(
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  alignment: Alignment.centerRight,
+                                                  child: Container(
+                                                    margin: const EdgeInsets.only(left: 6),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.amber.shade100,
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(color: Colors.amber.shade700),
+                                                    ),
+                                                    child: Text(
+                                                      '${context.tr('pos_item_discount')}: ${activeDiscount.formattedLabel}',
+                                                      style: TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: Colors.amber.shade900),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            Expanded(
+                                              child: Text(
+                                                item['name'],
+                                                textAlign: TextAlign.right,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                    fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        subtitle: Padding(
+                                          padding: const EdgeInsets.only(top: 4.0),
+                                          child: Wrap(
+                                            crossAxisAlignment: WrapCrossAlignment.center,
+                                            spacing: 8,
+                                            runSpacing: 4,
+                                            children: [
+                                              if (widget.type == 'Purchase')
+                                                _PriceEditor(
+                                                  initialPrice: (item['price'] as num).toDouble(),
+                                                  isPurchase: true,
+                                                  onChanged: (newPrice) {
+                                                    posProvider.updatePrice(index, newPrice);
+                                                  },
+                                                )
+                                              else
+                                                Text(
+                                                  '${context.tr('pos_item_price')}${(item['price'] as num).toStringAsFixed(3)}',
+                                                  style: const TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 13,
+                                                      color: Colors.tealAccent),
+                                                ),
+                                              Text('${context.tr('pos_item_quantity')}',
+                                                  textAlign: TextAlign.right),
+                                              _QuantityEditor(
+                                                initialQuantity: item['quantity'],
+                                                onChanged: (newQty) {
+                                                  posProvider.updateQuantity(
+                                                      index, newQty);
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                if (activeDiscount != null && item['originalPrice'] != null)
+                                                  Text(
+                                                    '${((item['originalPrice'] as num) * (item['quantity'] as num)).toStringAsFixed(3)}',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey,
+                                                      decoration: TextDecoration.lineThrough,
+                                                    ),
+                                                  ),
+                                                Text(
+                                                  '${(item['total'] as num).toStringAsFixed(3)} KWD',
+                                                  style: const TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 15,
+                                                      color: Colors.green),
+                                                ),
+                                              ],
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete,
+                                                  color: Colors.red, size: 20),
+                                              onPressed: () =>
+                                                  posProvider.removeItem(index),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text('${item['total']} KWD',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: Colors.green)),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete,
-                                            color: Colors.red, size: 20),
-                                        onPressed: () =>
-                                            posProvider.removeItem(index),
-                                      ),
+                                      if (availableDiscounts.isNotEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 16.0, left: 16.0, bottom: 8.0),
+                                          child: Wrap(
+                                            spacing: 6,
+                                            runSpacing: 4,
+                                            children: availableDiscounts.map((disc) {
+                                              final bool isSelected = activeDiscount?.discountId == disc.discountId;
+                                              return ChoiceChip(
+                                                label: Text(
+                                                  disc.formattedLabel,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                                    color: isSelected ? Colors.white : Colors.indigo.shade900,
+                                                  ),
+                                                ),
+                                                selected: isSelected,
+                                                selectedColor: Colors.indigo,
+                                                backgroundColor: Colors.indigo.shade50,
+                                                onSelected: (_) {
+                                                  posProvider.toggleDiscountForItem(index, disc);
+                                                },
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -778,16 +1017,56 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  Future<void> _handlePaymentAndPrint(
-      PosProvider posProvider, double total) async {
+  Future<void> _handlePaymentAndPrint(PosProvider posProvider, double total,
+      {List<Map<String, dynamic>>? paymentSplits}) async {
+    // Capture ALL UI context objects and translation strings BEFORE any async gaps
+    final messenger = ScaffoldMessenger.of(context);
+    final printerService = Provider.of<PrinterService>(context, listen: false);
+    final warnMsgTpl = context.tr('pos_save_success_warn');
+    final okMsgTpl = context.tr('pos_save_success_ok');
+    final printedLabel = context.tr('pos_print_status_printed');
+    final errorLabel = context.tr('pos_print_status_failed');
+    final virtualLabel = context.tr('pos_print_status_virtual');
+    final failedMsg = posProvider.errorMessage ?? context.tr('pos_save_failed');
+
+    double paid = _isCash ? total : 0.0;
+    double remainder = _isCash ? 0.0 : total;
+
+    if (paymentSplits != null && paymentSplits.isNotEmpty) {
+      paid = paymentSplits.fold<double>(
+          0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+      remainder = total > paid ? total - paid : 0.0;
+    }
+
+    String? paymentAccountName;
+    if (_isCash) {
+      _updateSelectedAccountId();
+      if (_accounts.isNotEmpty) {
+        final selected = _accounts.firstWhere(
+          (a) => a['AccountID'] == _selectedAccountId,
+          orElse: () => _accounts.first,
+        );
+        paymentAccountName = selected['AccountName']?.toString();
+      }
+      if (paymentAccountName == null || paymentAccountName.trim().isEmpty) {
+        paymentAccountName = 'Cash';
+      }
+    }
+
     // 1. Capture invoice elements BEFORE clearing provider state upon save
     final invoiceToPrint = {
       'type': widget.type,
       'created_at': DateTime.now().toIso8601String(),
       'total_amount': total,
-      'paid_amount':  _isCash ? total : 0.0,
-      'remainder':    _isCash ? 0.0 : total,
+      'original_total': posProvider.totalOriginalAmount,
+      'discount_amount': posProvider.totalDiscountAmount,
+      'paid_amount': paid,
+      'remainder': remainder,
       'items': List<Map<String, dynamic>>.from(posProvider.invoiceItems),
+      if (paymentSplits != null && paymentSplits.isNotEmpty)
+        'PaymentSplits': paymentSplits,
+      if (paymentAccountName != null && paymentAccountName.isNotEmpty)
+        'PaymentAccountName': paymentAccountName,
       'temp_customer_name': widget.tempCustomerName,
       'temp_phone': widget.tempPhone,
       'temp_address': widget.tempAddress,
@@ -798,10 +1077,11 @@ class _PosScreenState extends State<PosScreen> {
 
     // 2. Perform save (either online or offline local persistence fallback)
     final newInvId = await posProvider.saveInvoice(
-      widget.type, 
-      paymentAccountId: _isCash ? _selectedAccountId : null, 
+      widget.type,
+      paymentAccountId: _isCash ? _selectedAccountId : null,
       partnerId: _selectedPartner?['PartnerID'],
       isCash: _isCash,
+      paymentSplits: paymentSplits,
       tempCustomerName: widget.tempCustomerName,
       tempPhone: widget.tempPhone,
       tempAddress: widget.tempAddress,
@@ -810,61 +1090,51 @@ class _PosScreenState extends State<PosScreen> {
       tempNotes: widget.tempNotes,
     );
 
-    if (mounted) {
-      if (newInvId != null) {
-        // Add database-generated or local InvID to print invoice
-        invoiceToPrint['InvID'] = newInvId;
+    if (newInvId != null) {
+      // Add database-generated or local InvID to print invoice
+      invoiceToPrint['InvID'] = newInvId;
 
-        // 3. Trigger automatic receipt printing on thermal printer service
-        final printerService =
-            Provider.of<PrinterService>(context, listen: false);
-        final printSuccess = await printerService.printReceipt(invoiceToPrint);
+      final warnMsg = warnMsgTpl.replaceAll('{id}', newInvId.toString());
+      final okMsg = okMsgTpl.replaceAll('{id}', newInvId.toString());
 
-        if (mounted) {
-          final isVirtual = printerService.connectionType == 'None';
-          final showWarning = !printSuccess && !isVirtual;
+      final printSuccess = await printerService.printReceipt(invoiceToPrint);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                showWarning
-                    ? context
-                        .tr('pos_save_success_warn')
-                        .replaceAll('{id}', newInvId.toString())
-                    : context
-                        .tr('pos_save_success_ok')
-                        .replaceAll('{id}', newInvId.toString()),
-                textAlign: TextAlign.right,
-              ),
-              backgroundColor: showWarning ? Colors.orange : Colors.green,
-              action: SnackBarAction(
-                label: printSuccess
-                    ? context.tr('pos_print_status_printed')
-                    : (isVirtual
-                        ? context.tr('pos_print_status_virtual')
-                        : context.tr('pos_print_status_failed')),
-                textColor: Colors.white,
-                onPressed: () {},
-              ),
-            ),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              posProvider.errorMessage ?? context.tr('pos_save_failed'),
-              textAlign: TextAlign.right,
-            ),
-            backgroundColor: Colors.red,
+      final isVirtual = printerService.connectionType == 'None';
+      final showWarning = !printSuccess && !isVirtual;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            showWarning ? warnMsg : okMsg,
+            textAlign: TextAlign.right,
           ),
-        );
-      }
+          backgroundColor: showWarning ? Colors.orange : Colors.green,
+          action: SnackBarAction(
+            label: printSuccess
+                ? printedLabel
+                : (isVirtual ? virtualLabel : errorLabel),
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            failedMsg,
+            textAlign: TextAlign.right,
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   Widget _buildCheckoutPanel(PosProvider posProvider, {bool isMobile = false}) {
     final double total = posProvider.totalAmount;
+    final double originalTotal = posProvider.totalOriginalAmount;
+    final double totalDiscount = posProvider.totalDiscountAmount;
     final bool canPay = posProvider.invoiceItems.isNotEmpty;
 
     return Container(
@@ -875,19 +1145,54 @@ class _PosScreenState extends State<PosScreen> {
         mainAxisSize: isMobile ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(context.tr('pos_total'),
-              style: const TextStyle(fontSize: 20, color: Colors.grey),
-              textAlign: TextAlign.right),
-          Text('$total KWD',
-              style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green),
-              textAlign: TextAlign.right),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${originalTotal.toStringAsFixed(3)} KWD',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    Text('${context.tr('pos_gross_total')}:', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('- ${totalDiscount.toStringAsFixed(3)}',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: totalDiscount > 0 ? Colors.redAccent : Colors.black54)),
+                    Text('${context.tr('pos_total_discount')}:', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  ],
+                ),
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${total.toStringAsFixed(3)} KWD',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green)),
+                    Text('${context.tr('pos_net_total')}:', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  ],
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           Text(
             context.tr('pos_trans_type'),
-            style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           const SizedBox(height: 8),
@@ -895,7 +1200,8 @@ class _PosScreenState extends State<PosScreen> {
             children: [
               Expanded(
                 child: ChoiceChip(
-                  label: Text(context.tr('pos_credit_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(context.tr('pos_credit_mode'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   selected: !_isCash,
                   selectedColor: Colors.orange[200],
                   onSelected: (val) {
@@ -908,7 +1214,8 @@ class _PosScreenState extends State<PosScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: ChoiceChip(
-                  label: Text(context.tr('pos_cash_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(context.tr('pos_cash_mode'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   selected: _isCash,
                   selectedColor: Colors.green[200],
                   onSelected: (val) {
@@ -924,15 +1231,20 @@ class _PosScreenState extends State<PosScreen> {
           if (_isCash && _accounts.isNotEmpty) ...[
             Text(
               context.tr('pos_payment_account'),
-              style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold),
               textAlign: TextAlign.right,
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
+              isExpanded: true,
               dropdownColor: Colors.white,
               value: _selectedAccountId,
               decoration: const InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(),
                 fillColor: Colors.white,
                 filled: true,
@@ -954,6 +1266,29 @@ class _PosScreenState extends State<PosScreen> {
             ),
             const SizedBox(height: 16),
           ],
+          if (_isCash) ...[
+            OutlinedButton.icon(
+              onPressed: (!canPay || posProvider.isLoading)
+                  ? null
+                  : () async {
+                      if (_accounts.isEmpty) {
+                        await _loadPaymentAccounts();
+                      }
+                      if (mounted) {
+                        _showSplitPaymentDialog(posProvider, total);
+                      }
+                    },
+              icon: const Icon(Icons.call_split, color: Colors.teal),
+              label: Text(context.tr('pos_split_payment'),
+                  style: const TextStyle(
+                      color: Colors.teal, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.teal, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           ElevatedButton.icon(
             onPressed: (!canPay || posProvider.isLoading)
                 ? null
@@ -968,11 +1303,15 @@ class _PosScreenState extends State<PosScreen> {
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2),
                     )
-                  : Text(widget.type == 'Sales' ? context.tr('pos_pay_print') : context.tr('pos_save_and_print'),
+                  : Text(
+                      widget.type == 'Sales'
+                          ? context.tr('pos_pay_print')
+                          : context.tr('pos_save_and_print'),
                       style: const TextStyle(fontSize: 18)),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: widget.type == 'Sales' ? Colors.green : Colors.deepOrange,
+              backgroundColor:
+                  widget.type == 'Sales' ? Colors.green : Colors.deepOrange,
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey,
             ),
@@ -982,16 +1321,346 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
+  void _showSplitPaymentDialog(
+      PosProvider posProvider, double totalAmount) async {
+    if (_accounts.isEmpty) {
+      await _loadPaymentAccounts();
+      if (_accounts.isEmpty) {
+        _accounts = [
+          {'AccountID': 0, 'AccountName': 'نقداً'}
+        ];
+      }
+    }
+
+    List<Map<String, dynamic>> splits = [
+      {'PaymentAccountID': _accounts.first['AccountID'], 'Amount': totalAmount}
+    ];
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            double totalPaid = splits.fold(0.0,
+                (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+            double remainder =
+                totalAmount > totalPaid ? totalAmount - totalPaid : 0.0;
+
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                context.tr('pos_split_payment'),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.right,
+              ),
+              content: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: Colors.teal.withValues(alpha: 0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${totalAmount.toStringAsFixed(2)} د.ك',
+                                    style: const TextStyle(
+                                        color: Colors.tealAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16)),
+                                const Text('إجمالي الفاتورة:',
+                                    style: TextStyle(color: Colors.white70)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${totalPaid.toStringAsFixed(2)} د.ك',
+                                    style: const TextStyle(
+                                        color: Colors.greenAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14)),
+                                Text(context.tr('split_paid_now'),
+                                    style:
+                                        const TextStyle(color: Colors.white70)),
+                              ],
+                            ),
+                            if (remainder > 0) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('${remainder.toStringAsFixed(2)} د.ك',
+                                      style: const TextStyle(
+                                          color: Colors.orangeAccent,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14)),
+                                  Text(context.tr('split_remainder_credit'),
+                                      style: const TextStyle(
+                                          color: Colors.white70)),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...splits.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final split = entry.value;
+                        if (split['controller'] == null) {
+                          final initialAmt =
+                              (split['Amount'] as num?)?.toDouble() ?? 0.0;
+                          split['controller'] = TextEditingController(
+                              text: initialAmt > 0
+                                  ? initialAmt.toStringAsFixed(2)
+                                  : '');
+                        }
+                        final controller =
+                            split['controller'] as TextEditingController;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[850],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  if (splits.length > 1)
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_circle,
+                                          color: Colors.redAccent),
+                                      onPressed: () {
+                                        setDialogState(() {
+                                          final removed =
+                                              splits.removeAt(index);
+                                          (removed['controller']
+                                                  as TextEditingController?)
+                                              ?.dispose();
+                                        });
+                                      },
+                                    ),
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      isExpanded: true,
+                                      value: split['PaymentAccountID'],
+                                      dropdownColor: Colors.grey[800],
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
+                                      decoration: InputDecoration(
+                                        labelText:
+                                            context.tr('split_payment_account'),
+                                        labelStyle: const TextStyle(
+                                            color: Colors.white54),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 4),
+                                        enabledBorder: const OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                                color: Colors.white24)),
+                                        focusedBorder: const OutlineInputBorder(
+                                            borderSide:
+                                                BorderSide(color: Colors.teal)),
+                                      ),
+                                      items: _accounts.map((acc) {
+                                        return DropdownMenuItem<int>(
+                                          value: acc['AccountID'],
+                                          child: Text(acc['AccountName'] ?? '',
+                                              textDirection: TextDirection.rtl),
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setDialogState(() {
+                                            split['PaymentAccountID'] = val;
+                                            final matchedAcc =
+                                                _accounts.firstWhere(
+                                                    (a) =>
+                                                        a['AccountID'] == val,
+                                                    orElse: () => {});
+                                            split['PaymentMethodName'] =
+                                                matchedAcc['AccountName'] ?? '';
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: controller,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                style: const TextStyle(
+                                    color: Colors.tealAccent,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16),
+                                decoration: InputDecoration(
+                                  labelText: context.tr('split_amount_paid'),
+                                  labelStyle:
+                                      const TextStyle(color: Colors.white54),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  enabledBorder: const OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.white24)),
+                                  focusedBorder: const OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.teal)),
+                                ),
+                                onChanged: (val) {
+                                  final double parsed =
+                                      double.tryParse(val) ?? 0.0;
+                                  split['Amount'] = parsed;
+                                  setDialogState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setDialogState(() {
+                            final nextAcc = _accounts.length > splits.length
+                                ? _accounts[splits.length]['AccountID']
+                                : _accounts.first['AccountID'];
+                            final nextName = _accounts.length > splits.length
+                                ? _accounts[splits.length]['AccountName']
+                                : _accounts.first['AccountName'];
+                            splits.add({
+                              'PaymentAccountID': nextAcc,
+                              'PaymentMethodName': nextName,
+                              'Amount': remainder > 0 ? remainder : 0.0
+                            });
+                          });
+                        },
+                        icon: const Icon(Icons.add_circle, size: 18),
+                        label: Text(context.tr('split_add_another_method')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal[800],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    final controllers = splits
+                        .map((s) => s['controller'] as TextEditingController?)
+                        .whereType<TextEditingController>()
+                        .toList();
+                    Navigator.pop(ctx);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      for (var c in controllers) {
+                        try {
+                          c.dispose();
+                        } catch (_) {}
+                      }
+                    });
+                  },
+                  child: Text(context.tr('split_cancel'),
+                      style: const TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final validSplits = splits
+                        .where((s) =>
+                            ((s['Amount'] as num?)?.toDouble() ?? 0.0) > 0)
+                        .map((s) => {
+                              'PaymentAccountID': s['PaymentAccountID'],
+                              'PaymentMethodName': s['PaymentMethodName'],
+                              'Amount': (s['Amount'] as num).toDouble(),
+                            })
+                        .toList();
+
+                    if (validSplits.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                context.tr('split_valid_amounts_warn'),
+                                textAlign: TextAlign.right),
+                            backgroundColor: Colors.orange),
+                      );
+                      return;
+                    }
+
+                    final controllers = splits
+                        .map((s) => s['controller'] as TextEditingController?)
+                        .whereType<TextEditingController>()
+                        .toList();
+
+                    Navigator.pop(ctx);
+
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      for (var c in controllers) {
+                        try {
+                          c.dispose();
+                        } catch (_) {}
+                      }
+                    });
+
+                    _handlePaymentAndPrint(posProvider, totalAmount,
+                        paymentSplits: validSplits);
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white),
+                  child: Text(context.tr('split_confirm_and_save'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildCompactBottomBar(PosProvider posProvider) {
     final double total = posProvider.totalAmount;
+    final double originalTotal = posProvider.totalOriginalAmount;
+    final double totalDiscount = posProvider.totalDiscountAmount;
     final bool hasItems = posProvider.invoiceItems.isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.grey[900],
         boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, -2)),
+          BoxShadow(
+              color: Colors.black26, blurRadius: 4, offset: Offset(0, -2)),
         ],
       ),
       child: SafeArea(
@@ -1002,16 +1671,44 @@ class _PosScreenState extends State<PosScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    context.tr('pos_total_due'),
-                    style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      children: [
+                        Text(
+                          'الإجمالي: ${originalTotal.toStringAsFixed(3)}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                        ),
+                        if (totalDiscount > 0) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            'الخصم: -${totalDiscount.toStringAsFixed(3)}',
+                            style: const TextStyle(color: Colors.amberAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                  Text(
-                    '${total.toStringAsFixed(3)} KWD',
-                    style: const TextStyle(
-                      color: Colors.greenAccent,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      children: [
+                        const Text(
+                          'الصافي: ',
+                          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          '${total.toStringAsFixed(3)} KWD',
+                          style: const TextStyle(
+                            color: Colors.greenAccent,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -1026,12 +1723,15 @@ class _PosScreenState extends State<PosScreen> {
               icon: const Icon(Icons.check_circle_outline, color: Colors.white),
               label: Text(
                 context.tr('pos_finish_order'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange,
+                backgroundColor:
+                    widget.type == 'Sales' ? Colors.teal : Colors.deepOrange,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1069,8 +1769,11 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  Widget _buildCheckoutSheetContent(PosProvider posProvider, StateSetter setSheetState) {
+  Widget _buildCheckoutSheetContent(
+      PosProvider posProvider, StateSetter setSheetState) {
     final double total = posProvider.totalAmount;
+    final double originalTotal = posProvider.totalOriginalAmount;
+    final double totalDiscount = posProvider.totalDiscountAmount;
     final bool canPay = posProvider.invoiceItems.isNotEmpty;
 
     return Container(
@@ -1090,26 +1793,56 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            context.tr('pos_total'),
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-            textAlign: TextAlign.right,
-          ),
-          Text(
-            '${total.toStringAsFixed(3)} KWD',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: widget.type == 'Sales' ? Colors.teal : Colors.deepOrange,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
             ),
-            textAlign: TextAlign.right,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${originalTotal.toStringAsFixed(3)} KWD',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+                    const Text('الإجمالي:', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('- ${totalDiscount.toStringAsFixed(3)}',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: totalDiscount > 0 ? Colors.redAccent : Colors.black54)),
+                    Text('${context.tr('pos_total_discount')}:', style: const TextStyle(fontSize: 14, color: Colors.black54)),
+                  ],
+                ),
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${total.toStringAsFixed(3)} KWD',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal)),
+                    const Text('الصافي:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           const Divider(),
           const SizedBox(height: 8),
           Text(
             context.tr('pos_trans_type'),
-            style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+                fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           const SizedBox(height: 8),
@@ -1118,7 +1851,8 @@ class _PosScreenState extends State<PosScreen> {
               Expanded(
                 child: ChoiceChip(
                   label: Center(
-                    child: Text(context.tr('pos_credit_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(context.tr('pos_credit_mode'),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   selected: !_isCash,
                   selectedColor: Colors.orange[200],
@@ -1134,7 +1868,8 @@ class _PosScreenState extends State<PosScreen> {
               Expanded(
                 child: ChoiceChip(
                   label: Center(
-                    child: Text(context.tr('pos_cash_mode'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(context.tr('pos_cash_mode'),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   selected: _isCash,
                   selectedColor: Colors.green[200],
@@ -1152,15 +1887,20 @@ class _PosScreenState extends State<PosScreen> {
           if (_isCash && _accounts.isNotEmpty) ...[
             Text(
               context.tr('pos_payment_account'),
-              style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold),
               textAlign: TextAlign.right,
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
+              isExpanded: true,
               dropdownColor: Colors.white,
               value: _selectedAccountId,
               decoration: const InputDecoration(
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(),
                 fillColor: Colors.white,
                 filled: true,
@@ -1183,6 +1923,34 @@ class _PosScreenState extends State<PosScreen> {
             ),
             const SizedBox(height: 20),
           ],
+          if (_isCash) ...[
+            OutlinedButton.icon(
+              onPressed: (!canPay || posProvider.isLoading)
+                  ? null
+                  : () async {
+                      Navigator.pop(context); // Close bottom sheet
+                      if (_accounts.isEmpty) {
+                        await _loadPaymentAccounts();
+                      }
+                      if (mounted) {
+                        _showSplitPaymentDialog(posProvider, total);
+                      }
+                    },
+              icon: const Icon(Icons.call_split, color: Colors.teal),
+              label: Text(context.tr('pos_split_payment'),
+                  style: const TextStyle(
+                      color: Colors.teal, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.teal, width: 1.5),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          const SizedBox(height: 12),
           ElevatedButton.icon(
             onPressed: (!canPay || posProvider.isLoading)
                 ? null
@@ -1201,12 +1969,16 @@ class _PosScreenState extends State<PosScreen> {
                           color: Colors.white, strokeWidth: 2),
                     )
                   : Text(
-                      widget.type == 'Sales' ? context.tr('pos_pay_print') : context.tr('pos_save_and_print'),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      widget.type == 'Sales'
+                          ? context.tr('pos_pay_print')
+                          : context.tr('pos_save_and_print'),
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold),
                     ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: widget.type == 'Sales' ? Colors.green : Colors.deepOrange,
+              backgroundColor:
+                  widget.type == 'Sales' ? Colors.green : Colors.deepOrange,
               foregroundColor: Colors.white,
               disabledBackgroundColor: Colors.grey,
               shape: RoundedRectangleBorder(
@@ -1279,6 +2051,157 @@ class _QuantityEditorState extends State<_QuantityEditor> {
             _controller.text = widget.initialQuantity.toString();
           }
         },
+      ),
+    );
+  }
+}
+
+class _PriceEditor extends StatefulWidget {
+  final double initialPrice;
+  final bool isPurchase;
+  final Function(double) onChanged;
+
+  const _PriceEditor({
+    required this.initialPrice,
+    this.isPurchase = false,
+    required this.onChanged,
+  });
+
+  @override
+  State<_PriceEditor> createState() => _PriceEditorState();
+}
+
+class _PriceEditorState extends State<_PriceEditor> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        TextEditingController(text: widget.initialPrice.toStringAsFixed(3));
+  }
+
+  @override
+  void didUpdateWidget(covariant _PriceEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialPrice != widget.initialPrice) {
+      final double? currentVal = double.tryParse(_controller.text);
+      if (currentVal != widget.initialPrice) {
+        _controller.text = widget.initialPrice.toStringAsFixed(3);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _showEditDialog() {
+    final dialogController =
+        TextEditingController(text: widget.initialPrice.toString());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          widget.isPurchase
+              ? 'تعديل سعر الشراء للوحدة'
+              : 'تعديل سعر البيع للوحدة',
+          textAlign: TextAlign.right,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: dialogController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: widget.isPurchase
+                    ? 'سعر الشراء الجديد'
+                    : 'سعر البيع الجديد',
+                labelStyle: const TextStyle(color: Colors.teal),
+                enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.teal)),
+              ),
+              textAlign: TextAlign.center,
+              onFieldSubmitted: (val) {
+                final double? p = double.tryParse(val);
+                if (p != null && p >= 0) {
+                  widget.onChanged(p);
+                  Navigator.pop(ctx);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child:
+                const Text('إلغاء', style: TextStyle(color: Colors.redAccent)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+            onPressed: () {
+              final double? p = double.tryParse(dialogController.text);
+              if (p != null && p >= 0) {
+                widget.onChanged(p);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('تحديث', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _showEditDialog,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: widget.isPurchase
+              ? Colors.orange.withOpacity(0.15)
+              : Colors.teal.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+              color: widget.isPurchase
+                  ? Colors.orange.withOpacity(0.4)
+                  : Colors.teal.withOpacity(0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${widget.isPurchase ? "الشراء: " : "السعر: "}${widget.initialPrice.toStringAsFixed(3)}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color:
+                    widget.isPurchase ? Colors.orange[300] : Colors.teal[300],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.edit,
+              size: 14,
+              color: widget.isPurchase ? Colors.orange[300] : Colors.teal[300],
+            ),
+          ],
+        ),
       ),
     );
   }

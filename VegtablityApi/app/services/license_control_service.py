@@ -188,11 +188,12 @@ class LicenseControlService:
             email = payload.get("Email")
             enable_daily_orders = _parse_bool(payload.get("EnableDailyOrders"))
             delivery_system_mode = payload.get("DeliverySystemMode")
+            enable_sales_discounts = _parse_bool(payload.get("EnableSalesDiscounts"))
 
             cursor.execute(SP.CTRL_COMPANY_SETTINGS_SAVE, (
                 production_mode, use_custom, use_detailed, unified_search,
                 company_name, currency_symbol, address, phone, email,
-                enable_daily_orders, delivery_system_mode
+                enable_daily_orders, delivery_system_mode, enable_sales_discounts
             ))
             conn.commit()
             return True

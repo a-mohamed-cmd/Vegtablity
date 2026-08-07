@@ -65,7 +65,8 @@ BEGIN
         ISNULL(UseCustomInvoiceDesign, 0) AS UseCustomInvoiceDesign,
         ISNULL(ProductionMode, 0) AS ProductionMode,
         ISNULL(EnableDailyOrders, 0) AS EnableDailyOrders,
-        DeliverySystemMode
+        DeliverySystemMode,
+        ISNULL(EnableSalesDiscounts, 0) AS EnableSalesDiscounts
     FROM [Settings].[CompanySettings];
 END
 GO
@@ -85,7 +86,8 @@ CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
     @UseCustomInvoiceDesign BIT = 0,
     @ProductionMode BIT = 0,
     @EnableDailyOrders BIT = 0,
-    @DeliverySystemMode NVARCHAR(50) = NULL
+    @DeliverySystemMode NVARCHAR(50) = NULL,
+    @EnableSalesDiscounts BIT = 0
 AS
 BEGIN
     IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
@@ -102,13 +104,14 @@ BEGIN
             UseCustomInvoiceDesign = @UseCustomInvoiceDesign,
             ProductionMode = @ProductionMode,
             EnableDailyOrders = @EnableDailyOrders,
-            DeliverySystemMode = @DeliverySystemMode
+            DeliverySystemMode = @DeliverySystemMode,
+            EnableSalesDiscounts = @EnableSalesDiscounts
         WHERE SettingID = 1;
     END
     ELSE
     BEGIN
-        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders, DeliverySystemMode)
-        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders, @DeliverySystemMode);
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders, DeliverySystemMode, EnableSalesDiscounts)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders, @DeliverySystemMode, @EnableSalesDiscounts);
     END
 END
 GO

@@ -9,6 +9,10 @@ class InvoiceDetail(BaseModel):
     TotalPrice: float
     CostPrice: float
 
+class PaymentSplitItem(BaseModel):
+    PaymentAccountID: int
+    Amount: float
+
 class InvoiceCreate(BaseModel):
     InvType: str # Sales or Purchase
     InvDate: datetime
@@ -29,6 +33,8 @@ class InvoiceCreate(BaseModel):
     TempDeliveryDate: Optional[str] = None
     TempDeliveryTime: Optional[str] = None
     Details: List[InvoiceDetail]
+    PaymentSplits: Optional[List[PaymentSplitItem]] = None
+
 
 class InvoiceResponse(BaseModel):
     InvID: int

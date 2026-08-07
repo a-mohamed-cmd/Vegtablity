@@ -64,27 +64,6 @@
                                                FontSize="11" Foreground="#95a5a6" Margin="10,0,0,0" LineHeight="18"/>
                                 </StackPanel>
                                 <TextBox Text="{Binding CurrencySymbol, UpdateSourceTrigger=PropertyChanged}" Height="45" Padding="12,10" FontSize="16" Margin="0,0,0,25" VerticalContentAlignment="Center" MaxLength="30"/>
-
-                                <!-- System Preferences: Partner Mode -->
-                                <TextBlock Text="تفضيلات النظام" FontSize="16" FontWeight="SemiBold" Foreground="#34495e" Margin="0,15,0,10"/>
-                                <StackPanel>
-                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
-                                        <CheckBox IsChecked="{Binding UnifiedPartnerSearch}" Content="تفعيل البحث الموحد (دمج العملاء والموردين معاً في شاشات الفواتير)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
-                                    </Border>
-                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
-                                        <CheckBox IsChecked="{Binding UseDetailedInvoiceDesign}" Content="تفعيل طباعة الفواتير بالتصميم التفصيلي (الجدول ورأس الفاتورة الموحد)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
-                                    </Border>
-                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
-                                        <CheckBox IsChecked="{Binding UseCustomInvoiceDesign}" Content="تفعيل طباعة الفواتير بالتصميم المخصص (الجديد)" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
-                                    </Border>
-                                    <Border Background="#fdfdfd" BorderBrush="#bdc3c7" BorderThickness="1" CornerRadius="8" Padding="15" Margin="0,0,0,15">
-                                        <CheckBox IsChecked="{Binding EnableDailyOrders}" Content="تفعيل شخاصية وميزة الطلبات اليومية والتوصيل" FontSize="15" FontWeight="SemiBold" Foreground="#2c3e50" VerticalContentAlignment="Center"/>
-                                    </Border>
-                                     <StackPanel Margin="0,5,0,0">
-                                         <TextBlock Text="نظام ومواعيد التوصيل (Delivery System Mode)" FontSize="14" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,5"/>
-                                        <TextBox Text="{Binding DeliverySystemMode, UpdateSourceTrigger=PropertyChanged}" Height="40" Padding="10,8" FontSize="14" VerticalContentAlignment="Center"/>
-                                     </StackPanel>
-                                </StackPanel>
                             </StackPanel>
 
                             <!-- Logo Section -->

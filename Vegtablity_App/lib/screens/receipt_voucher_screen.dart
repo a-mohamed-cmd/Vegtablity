@@ -484,6 +484,7 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<int>(
+                  isExpanded: true,
                   value: _selectedAccountId,
                   dropdownColor: const Color(0xFF1E1E2C),
                   decoration: InputDecoration(

@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../models/product_discount.dart';
 
 class PosProvider extends ChangeNotifier {
   final ApiService _apiService;
   final List<Map<String, dynamic>> _invoiceItems = [];
+  Map<int, List<ProductDiscount>> _activeDiscountsByProduct = {};
   List<Map<String, dynamic>> _offlineInvoices = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -13,9 +15,11 @@ class PosProvider extends ChangeNotifier {
 
   PosProvider(this._apiService) {
     _loadOfflineInvoices();
+    fetchActiveDiscounts();
   }
 
   List<Map<String, dynamic>> get invoiceItems => _invoiceItems;
+  Map<int, List<ProductDiscount>> get activeDiscountsByProduct => _activeDiscountsByProduct;
   List<Map<String, dynamic>> get offlineInvoices => _offlineInvoices;
   int get offlineInvoicesCount => _offlineInvoices.length;
   bool get isLoading => _isLoading;
@@ -24,6 +28,38 @@ class PosProvider extends ChangeNotifier {
 
   double get totalAmount {
     return _invoiceItems.fold(0.0, (sum, item) => sum + (item['total'] ?? 0.0));
+  }
+
+  double get totalOriginalAmount {
+    return _invoiceItems.fold(0.0, (sum, item) {
+      final origP = (item['originalPrice'] ?? item['price'] ?? 0.0) as double;
+      final qty = (item['quantity'] ?? 1.0) as double;
+      return sum + (origP * qty);
+    });
+  }
+
+  double get totalDiscountAmount {
+    return _invoiceItems.fold(0.0, (sum, item) {
+      return sum + ((item['discountAmount'] ?? 0.0) as double);
+    });
+  }
+
+  Future<void> fetchActiveDiscounts() async {
+    try {
+      final res = await _apiService.getActiveDiscountsForPos();
+      if (res.statusCode == 200 && res.data is List) {
+        final List<dynamic> list = res.data;
+        final Map<int, List<ProductDiscount>> grouped = {};
+        for (var item in list) {
+          final disc = ProductDiscount.fromJson(item);
+          grouped.putIfAbsent(disc.productId, () => []).add(disc);
+        }
+        _activeDiscountsByProduct = grouped;
+        notifyListeners();
+      }
+    } catch (e) {
+      // Quietly ignore network failures for discounts sync
+    }
   }
 
   void clearInvoice() {
@@ -57,7 +93,7 @@ class PosProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> searchAndAddProductByBarcode(String barcode) async {
+  Future<bool> searchAndAddProductByBarcode(String barcode, {String invoiceType = 'Sales'}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -67,7 +103,10 @@ class PosProvider extends ChangeNotifier {
       if (response.statusCode == 200) {
         final product = response.data;
         
-        final rawPrice = product['SalePrice'] ?? product['price'];
+        final bool isPurchase = (invoiceType == 'Purchase');
+        final rawPrice = isPurchase
+            ? (product['PurchasePrice'] ?? product['purchase_price'] ?? product['CostPrice'] ?? product['price'] ?? product['SalePrice'])
+            : (product['SalePrice'] ?? product['price']);
         double priceValue = 0.0;
         if (rawPrice is num) {
           priceValue = rawPrice.toDouble();
@@ -77,18 +116,23 @@ class PosProvider extends ChangeNotifier {
 
         final existingIndex = _invoiceItems.indexWhere((item) => item['barcode'] == barcode);
         if (existingIndex != -1) {
-          _invoiceItems[existingIndex]['quantity'] += 1;
-          _invoiceItems[existingIndex]['total'] = _invoiceItems[existingIndex]['price'] * _invoiceItems[existingIndex]['quantity'];
+          _invoiceItems[existingIndex]['quantity'] += 1.0;
+          _recalculateItemDiscount(_invoiceItems[existingIndex]);
         } else {
-          _invoiceItems.add({
+          final item = {
             'ProductID': product['ProductID'] ?? product['product_id'] ?? 1,
             'barcode': product['Barcode'] ?? product['barcode'] ?? barcode,
             'name': product['ProductName'] ?? product['name'] ?? 'منتج غير معروف',
+            'originalPrice': priceValue,
             'price': priceValue,
-            'quantity': 1,
+            'quantity': 1.0,
             'total': priceValue,
+            'discountAmount': 0.0,
+            'appliedDiscount': null,
             'UnitName': product['UnitName'] ?? product['unit_name'] ?? product['unit'] ?? '',
-          });
+          };
+          _recalculateItemDiscount(item);
+          _invoiceItems.add(item);
         }
         
         _isLoading = false;
@@ -106,12 +150,46 @@ class PosProvider extends ChangeNotifier {
     return false;
   }
 
-  void addProductToCart(Map<String, dynamic> product) {
+  void _recalculateItemDiscount(Map<String, dynamic> item) {
+    final double origP = ((item['originalPrice'] ?? item['price']) as num).toDouble();
+    final double qty = ((item['quantity'] ?? 1.0) as num).toDouble();
+    final ProductDiscount? disc = item['appliedDiscount'] as ProductDiscount?;
+
+    if (disc != null) {
+      if (qty >= disc.minQuantity) {
+        final double discAmt = disc.calculateDiscountAmount(origP, qty);
+        item['discountAmount'] = discAmt;
+        if (disc.discountType == 1) {
+          // Percentage %
+          item['price'] = origP * (1.0 - (disc.discountValue / 100.0));
+        } else if (disc.discountType == 2) {
+          // Fixed Amount per unit
+          item['price'] = (origP - disc.discountValue).clamp(0.0, double.infinity);
+        } else if (disc.discountType == 3) {
+          // Bundle Total Discount
+          item['price'] = (origP - (disc.discountValue / qty)).clamp(0.0, double.infinity);
+        }
+      } else {
+        // Threshold not met yet
+        item['price'] = origP;
+        item['discountAmount'] = 0.0;
+      }
+    } else {
+      item['price'] = origP;
+      item['discountAmount'] = 0.0;
+    }
+    item['total'] = (item['price'] as double) * qty;
+  }
+
+  void addProductToCart(Map<String, dynamic> product, {String invoiceType = 'Sales'}) {
     final int productId = product['ProductID'] ?? product['product_id'] ?? 1;
     final String barcode = product['Barcode'] ?? product['barcode'] ?? '';
     final String name = product['ProductName'] ?? product['name'] ?? 'منتج غير معروف';
     
-    final rawPrice = product['SalePrice'] ?? product['price'] ?? 0.0;
+    final bool isPurchase = (invoiceType == 'Purchase');
+    final rawPrice = isPurchase
+        ? (product['PurchasePrice'] ?? product['purchase_price'] ?? product['CostPrice'] ?? product['price'] ?? product['SalePrice'] ?? 0.0)
+        : (product['SalePrice'] ?? product['price'] ?? 0.0);
     double priceValue = 0.0;
     if (rawPrice is num) {
       priceValue = rawPrice.toDouble();
@@ -124,28 +202,61 @@ class PosProvider extends ChangeNotifier {
     final existingIndex = _invoiceItems.indexWhere((item) => item['ProductID'] == productId);
     if (existingIndex != -1) {
       _invoiceItems[existingIndex]['quantity'] += 1.0;
-      _invoiceItems[existingIndex]['total'] = _invoiceItems[existingIndex]['price'] * _invoiceItems[existingIndex]['quantity'];
+      _recalculateItemDiscount(_invoiceItems[existingIndex]);
     } else {
-      _invoiceItems.add({
+      final item = {
         'ProductID': productId,
         'barcode': barcode,
         'name': name,
+        'originalPrice': priceValue,
         'price': priceValue,
         'quantity': 1.0,
         'total': priceValue,
+        'discountAmount': 0.0,
+        'appliedDiscount': null,
         'UnitName': unitName,
-      });
+      };
+      _recalculateItemDiscount(item);
+      _invoiceItems.add(item);
     }
+    notifyListeners();
+  }
+
+  /// Toggles a single discount on a cart item (Exclusive Toggle)
+  void toggleDiscountForItem(int index, ProductDiscount discount) {
+    if (index < 0 || index >= _invoiceItems.length) return;
+
+    final item = _invoiceItems[index];
+    final ProductDiscount? currentDiscount = item['appliedDiscount'] as ProductDiscount?;
+
+    if (currentDiscount != null && currentDiscount.discountId == discount.discountId) {
+      // De-select active discount
+      item['appliedDiscount'] = null;
+    } else {
+      // Apply new discount exclusively (overrides any existing discount!)
+      item['appliedDiscount'] = discount;
+    }
+
+    _recalculateItemDiscount(item);
     notifyListeners();
   }
 
   void updateQuantity(int index, num newQuantity) {
     if (index >= 0 && index < _invoiceItems.length && newQuantity > 0) {
-      _invoiceItems[index]['quantity'] = newQuantity;
-      _invoiceItems[index]['total'] = _invoiceItems[index]['price'] * newQuantity;
+      _invoiceItems[index]['quantity'] = newQuantity.toDouble();
+      _recalculateItemDiscount(_invoiceItems[index]);
       notifyListeners();
     } else if (newQuantity <= 0) {
       removeItem(index);
+    }
+  }
+
+  void updatePrice(int index, double newPrice) {
+    if (index >= 0 && index < _invoiceItems.length && newPrice >= 0) {
+      _invoiceItems[index]['price'] = newPrice;
+      _invoiceItems[index]['originalPrice'] = newPrice;
+      _recalculateItemDiscount(_invoiceItems[index]);
+      notifyListeners();
     }
   }
 
@@ -162,6 +273,7 @@ class PosProvider extends ChangeNotifier {
     int? paymentAccountId,
     int? partnerId,
     bool isCash = true,
+    List<Map<String, dynamic>>? paymentSplits,
     String? tempCustomerName,
     String? tempPhone,
     String? tempAddress,
@@ -190,12 +302,24 @@ class PosProvider extends ChangeNotifier {
         final String? cachedAccJson = prefs.getString('cached_accounts');
         if (cachedAccJson != null) {
           final List<dynamic> decoded = json.decode(cachedAccJson);
-          final cashAcc = decoded.firstWhere(
-            (acc) => (acc['AccountName']?.toString() ?? '').contains('صندوق') || (acc['AccountName']?.toString() ?? '').contains('كاش'),
-            orElse: () => null,
-          );
-          if (cashAcc != null) {
-            resolvedPaymentAccountId = cashAcc['AccountID'];
+          if (decoded.isNotEmpty) {
+            final cashAcc = decoded.firstWhere(
+              (acc) {
+                final name = (acc['AccountName']?.toString() ?? '').toLowerCase();
+                final code = (acc['AccountCode']?.toString() ?? '');
+                return name.contains('صندوق') ||
+                    name.contains('كاش') ||
+                    name.contains('cash') ||
+                    name.contains('نقدا') ||
+                    name.contains('نقداً') ||
+                    code == '110101' ||
+                    code.startsWith('1101');
+              },
+              orElse: () => decoded.first,
+            );
+            if (cashAcc != null) {
+              resolvedPaymentAccountId = cashAcc['AccountID'];
+            }
           }
         }
       } catch (_) {}
@@ -213,17 +337,26 @@ class PosProvider extends ChangeNotifier {
       };
     }).toList();
 
-    final double paid = isCash ? totalAmount : 0.0;
-    final double remainder = isCash ? 0.0 : totalAmount;
+    double paid = isCash ? totalAmount : 0.0;
+    double remainder = isCash ? 0.0 : totalAmount;
+
+    if (paymentSplits != null && paymentSplits.isNotEmpty) {
+      paid = paymentSplits.fold<double>(0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+      remainder = totalAmount > paid ? (totalAmount - paid) : 0.0;
+    }
+
+    final double grossTotal = totalOriginalAmount;
+    final double discountVal = totalDiscountAmount;
+    final double netTotal = totalAmount;
 
     final invoiceData = {
       'InvType': invoiceType == 'Sales' ? 'Sales' : 'Purchase',
       'InvDate': DateTime.now().toIso8601String(),
       'PartnerID': finalPartnerId,
       'WarehouseID': warehouseId,
-      'TotalAmount': totalAmount,
-      'Discount': 0.0,
-      'NetAmount': totalAmount,
+      'TotalAmount': grossTotal,
+      'Discount': discountVal,
+      'NetAmount': netTotal,
       'PaidAmount': paid,
       'Remainder': remainder,
       'Notes': tempNotes ?? (invoiceType == 'Sales' ? 'مبيعات نقطة البيع المحمولة' : 'مشتريات نقطة البيع المحمولة'),
@@ -235,6 +368,7 @@ class PosProvider extends ChangeNotifier {
       'TempDeliveryTime': tempDeliveryTime,
       'Details': details,
       if (isCash && resolvedPaymentAccountId != null) 'PaymentAccountID': resolvedPaymentAccountId,
+      if (paymentSplits != null && paymentSplits.isNotEmpty) 'PaymentSplits': paymentSplits,
     };
 
     try {
@@ -266,7 +400,7 @@ class PosProvider extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> quickAddUnrecognizedProduct(String barcode, double salePrice) async {
+  Future<Map<String, dynamic>?> quickAddUnrecognizedProduct(String barcode, double price, {bool isPurchase = false}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -275,8 +409,8 @@ class PosProvider extends ChangeNotifier {
       final payload = {
         'Barcode': barcode,
         'ProductName': 'صنف عام - $barcode',
-        'SalePrice': salePrice,
-        'PurchasePrice': 0.0,
+        'SalePrice': price,
+        'PurchasePrice': isPurchase ? price : 0.0,
       };
       
       final response = await _apiService.quickAddProduct(payload);
@@ -286,10 +420,12 @@ class PosProvider extends ChangeNotifier {
           'ProductID': newProductId,
           'ProductName': 'صنف عام - $barcode',
           'Barcode': barcode,
-          'SalePrice': salePrice,
+          'SalePrice': price,
+          'PurchasePrice': price,
+          'price': price,
           'UnitName': 'حبه',
         };
-        addProductToCart(productMap);
+        addProductToCart(productMap, invoiceType: isPurchase ? 'Purchase' : 'Sales');
         _isLoading = false;
         notifyListeners();
         return productMap;

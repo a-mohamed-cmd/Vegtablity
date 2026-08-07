@@ -461,25 +461,9 @@ Namespace ViewModels
                     Return
                 End If
 
-                ' ── مراجعة الكميات الصفرية قبل الحفظ ──
-                Dim zeroQtyItems As New System.Collections.Generic.List(Of String)()
-                For i As Integer = 0 To validDetails.Count - 1
-                    Dim detailItem = validDetails(i)
-                    If detailItem.Quantity <= 0 Then
-                        Dim rowNum = i + 1
-                        Dim pName = If(Not String.IsNullOrWhiteSpace(detailItem.ProductName), detailItem.ProductName, "صنف بدون اسم")
-                        zeroQtyItems.Add($"  • الصف رقم [{rowNum}]: {pName} (الكمية = {detailItem.Quantity:0.##})")
-                    End If
-                Next
-
-                If zeroQtyItems.Count > 0 Then
-                    Dim zeroMsg As String = "تنبيه: توجد أصناف بدون كمية (الكمية = 0) في الفاتورة:" & vbCrLf & vbCrLf & _
-                                           String.Join(vbCrLf, zeroQtyItems) & vbCrLf & vbCrLf & _
-                                           "هل تريد الاستمرار والحفظ على أي حال؟"
-                    Dim zeroAnswer = System.Windows.MessageBox.Show(zeroMsg, "تحذير الكميات الصفرية", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
-                    If zeroAnswer = System.Windows.MessageBoxResult.No Then
-                        Return
-                    End If
+                ' ── مراجعة الكميات والأسعار الصفرية قبل الحفظ ──
+                If Not ValidateInvoiceItemsBeforeSave(validDetails, isSalesInvoice:=True) Then
+                    Return
                 End If
 
                 ' Build the details collection for the service with CURRENTLY VALID items only
@@ -722,6 +706,52 @@ Namespace ViewModels
                 End If
             Next
             Return isAllValid
+        End Function
+
+        ''' <summary>
+        ''' فحص مراجعة الأصناف قبل الحفظ (الكميات الصفرية والأسعار الصفرية)
+        ''' </summary>
+        Private Function ValidateInvoiceItemsBeforeSave(validDetails As List(Of InvoiceDetail), isSalesInvoice As Boolean) As Boolean
+            Dim zeroQtyItems As New System.Collections.Generic.List(Of String)()
+            Dim zeroPriceItems As New System.Collections.Generic.List(Of String)()
+
+            For i As Integer = 0 To validDetails.Count - 1
+                Dim detailItem = validDetails(i)
+                Dim rowNum = i + 1
+                Dim pName = If(Not String.IsNullOrWhiteSpace(detailItem.ProductName), detailItem.ProductName, "صنف بدون اسم")
+
+                If detailItem.Quantity <= 0 Then
+                    zeroQtyItems.Add($"  • الصف رقم [{rowNum}]: {pName} (الكمية = {detailItem.Quantity:0.##})")
+                End If
+
+                If detailItem.UnitPrice <= 0 Then
+                    Dim priceLabel As String = If(isSalesInvoice, "سعر البيع", "سعر الشراء")
+                    zeroPriceItems.Add($"  • الصف رقم [{rowNum}]: {pName} ({priceLabel} = {detailItem.UnitPrice:0.###})")
+                End If
+            Next
+
+            If zeroQtyItems.Count > 0 OrElse zeroPriceItems.Count > 0 Then
+                Dim msgParts As New System.Collections.Generic.List(Of String)()
+
+                If zeroQtyItems.Count > 0 Then
+                    msgParts.Add("⚠️ توجد أصناف بدون كمية (الكمية = 0) في الفاتورة:" & vbCrLf & String.Join(vbCrLf, zeroQtyItems))
+                End If
+
+                If zeroPriceItems.Count > 0 Then
+                    Dim priceSectionTitle As String = If(isSalesInvoice, "⚠️ توجد أصناف بدون سعر (سعر البيع = 0) في الفاتورة:", "⚠️ توجد أصناف بدون سعر (سعر الشراء = 0) في الفاتورة:")
+                    msgParts.Add(priceSectionTitle & vbCrLf & String.Join(vbCrLf, zeroPriceItems))
+                End If
+
+                Dim warningMsg As String = String.Join(vbCrLf & vbCrLf & "──────────────────────────────────" & vbCrLf & vbCrLf, msgParts) & _
+                                           vbCrLf & vbCrLf & "هل تريد الاستمرار والحفظ على أي حال؟"
+
+                Dim answer = System.Windows.MessageBox.Show(warningMsg, "تنبيه قبل حفظ الفاتورة", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning)
+                If answer = System.Windows.MessageBoxResult.No Then
+                    Return False
+                End If
+            End If
+
+            Return True
         End Function
 
         Private Function CanExecuteAddItem(parameter As Object) As Boolean

@@ -361,15 +361,16 @@ Public Class InvoicePrinter
         Dim rectCust As New RectangleF(gl(2.0F), gt(3.0F), 80.0F, 8.0F)
         g.DrawString(If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fRight)
 
-        ' نوع الفاتورة / Payment Type (تحت اسم العميل مباشرة)
+        ' نوع الفاتورة / Payment Type (في منتصف الصفحة وعلى نفس سطر Invoice No)
         Dim isCash As Boolean = (_reportData.Header.Remainder <= 0)
         Dim paymentTypeText As String = If(isCash, "cash", "credit")
-        Dim rectPaymentType As New RectangleF(gl(2.0F), gt(4.0F), 80.0F, 8.0F)
-        g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType, fRight)
+        Dim fCenter As New StringFormat() With {.Alignment = StringAlignment.Center}
+        Dim rectPaymentType As New RectangleF(gl(7.0F), gt(5.0F), 70.0F, 8.0F)
+        g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType, fCenter)
 
-        ' الملاحظات (عربي - RTL) (نزلت سطر لتحت)
+        ' الملاحظات (عربي - RTL) (تحت اسم العميل مباشرة)
         If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
-            Dim rectNotes As New RectangleF(gl(2.0F), gt(5.0F), 100.0F, 8.0F)
+            Dim rectNotes As New RectangleF(gl(2.0F), gt(4.0F), 100.0F, 8.0F)
             g.DrawString("ملاحظات: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes, fRight)
         End If
 

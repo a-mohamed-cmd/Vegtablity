@@ -260,5 +260,15 @@ Namespace Helpers
         Public Const SP_STOCKTAKE_GETDETAILS As String = "[Inventory].[sp_StockTake_GetDetails]"
         Public Const SP_STOCKTAKE_SAVE_XML As String = "[Inventory].[sp_StockTake_Save_XML]"
         Public Const SP_STOCKTAKE_APPROVE As String = "[Inventory].[sp_StockTake_Approve]"
+
+        ' =============================================
+        ' Sales Schema - Sales Discounts & Product Bundles
+        ' =============================================
+        Public Const SP_PRODUCTS_GETFORDISCOUNTS As String = "[Sales].[sp_Products_GetForDiscounts]"
+        Public Const SP_PRODUCTDISCOUNTS_GETALL As String = "[Sales].[sp_ProductDiscounts_GetAll]"
+        Public Const SP_PRODUCTDISCOUNTS_GETACTIVEFORPOS As String = "[Sales].[sp_ProductDiscounts_GetActiveForPos]"
+        Public Const SP_PRODUCTDISCOUNTS_GETPRODUCTIDS As String = "[Sales].[sp_ProductDiscounts_GetProductIDs]"
+        Public Const SP_PRODUCTDISCOUNTS_SAVE_XML As String = "[Sales].[sp_ProductDiscounts_Save_XML]"
+        Public Const SP_PRODUCTDISCOUNTS_DELETE As String = "[Sales].[sp_ProductDiscounts_Delete]"
     End Class
 End Namespace

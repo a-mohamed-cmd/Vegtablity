@@ -469,6 +469,7 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: DropdownButtonFormField<int>(
+            isExpanded: true,
             value: _selectedAccountId,
             dropdownColor: const Color(0xFF1E1E2C),
             decoration: InputDecoration(

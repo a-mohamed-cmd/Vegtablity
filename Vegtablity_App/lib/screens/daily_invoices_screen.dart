@@ -1224,6 +1224,10 @@ class _InvoiceDetailsBottomSheetState
       'voucher_paid_amount': _parseDouble(data['VoucherPaidAmount']),
       'remainder':           _parseDouble(data['Remainder']),
       
+      // Payment Splits & Account Name
+      'PaymentSplits': data['PaymentSplits'] ?? data['payment_splits'] ?? [],
+      'PaymentAccountName': data['PaymentAccountName'] ?? data['payment_account_name'] ?? data['AccountName'],
+
       // Temporary Customer / Delivery details
       'temp_customer_name': data['TempCustomerName'] ?? data['temp_customer_name'],
       'temp_phone':        data['TempPhone'] ?? data['temp_phone'],
@@ -1242,22 +1246,28 @@ class _InvoiceDetailsBottomSheetState
           .toList(),
     };
 
+    final messenger = ScaffoldMessenger.of(context);
+    final printSuccessText = context.tr('di_print_success');
+    final printErrorText = context.tr('di_print_error');
     final printerService = Provider.of<PrinterService>(context, listen: false);
+
     try {
       final success = await printerService.printReceipt(printData);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-              content: Text(context.tr('di_print_success')),
-              backgroundColor: success ? Colors.green : Colors.red),
+            content: Text(printSuccessText),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-              content: Text(context.tr('di_print_error')),
-              backgroundColor: Colors.red),
+            content: Text(printErrorText),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -1266,136 +1276,377 @@ class _InvoiceDetailsBottomSheetState
   void _showPaymentDialog(Map<String, dynamic> invoiceData) {
     final double remainder = _parseDouble(invoiceData['Remainder']);
     final int invId = invoiceData['InvID'] ?? 0;
+    final controller = TextEditingController(text: remainder.toStringAsFixed(2));
 
-    final controller =
-        TextEditingController(text: remainder.toStringAsFixed(2));
+    List<Map<String, dynamic>> paymentAccounts = [];
+    int? selectedAccountId;
+    bool isLoadingAccounts = true;
+
+    bool isSplitMode = false;
+    List<Map<String, dynamic>> splits = [];
 
     showDialog(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[850],
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            context.tr('di_payment_dialog_title'),
-            textAlign: TextAlign.right,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                context.tr('di_payment_remaining').replaceAll('{amount}', remainder.toStringAsFixed(2)),
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
-                textAlign: TextAlign.right,
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            if (isLoadingAccounts && paymentAccounts.isEmpty) {
+              final apiService = Provider.of<ApiService>(context, listen: false);
+              apiService.getPaymentAccounts().then((res) {
+                if (res.statusCode == 200 && res.data is List) {
+                  final list = List<Map<String, dynamic>>.from(res.data);
+                  setDialogState(() {
+                    paymentAccounts = list;
+                    isLoadingAccounts = false;
+                    if (paymentAccounts.isNotEmpty) {
+                      selectedAccountId = paymentAccounts.first['AccountID'];
+                      splits = [
+                        {'PaymentAccountID': paymentAccounts.first['AccountID'], 'Amount': remainder}
+                      ];
+                    }
+                  });
+                } else {
+                  setDialogState(() => isLoadingAccounts = false);
+                }
+              }).catchError((_) {
+                setDialogState(() => isLoadingAccounts = false);
+              });
+            }
+
+            final double totalSplitPaid = splits.fold(0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+
+            return AlertDialog(
+              backgroundColor: Colors.grey[850],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.tr('di_payment_dialog_title'),
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setDialogState(() {
+                          isSplitMode = !isSplitMode;
+                          if (isSplitMode && splits.isEmpty && paymentAccounts.isNotEmpty) {
+                            splits = [
+                              {'PaymentAccountID': paymentAccounts.first['AccountID'], 'Amount': remainder}
+                            ];
+                          }
+                        });
+                      },
+                      icon: Icon(isSplitMode ? Icons.payment : Icons.call_split, color: Colors.tealAccent, size: 18),
+                      label: Text(
+                        isSplitMode ? context.tr('di_single_payment_mode') : context.tr('pos_split_payment'),
+                        style: const TextStyle(color: Colors.tealAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: Colors.tealAccent,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  labelText: context.tr('di_payment_amount_label'),
-                  labelStyle: const TextStyle(color: Colors.white54),
-                  enabledBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.white30),
-                      borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                      borderSide: const BorderSide(color: Colors.teal),
-                      borderRadius: BorderRadius.circular(12)),
+              content: SizedBox(
+                width: isSplitMode ? 400 : null,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        context.tr('di_payment_remaining').replaceAll('{amount}', remainder.toStringAsFixed(2)),
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        textAlign: TextAlign.right,
+                      ),
+                      const SizedBox(height: 16),
+                      if (isLoadingAccounts)
+                        const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()))
+                      else if (!isSplitMode) ...[
+                        if (paymentAccounts.isNotEmpty) ...[
+                          DropdownButtonFormField<int>(
+                            isExpanded: true,
+                            value: selectedAccountId,
+                            dropdownColor: Colors.grey[800],
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            decoration: InputDecoration(
+                              labelText: context.tr('di_payment_account_label'),
+                              labelStyle: const TextStyle(color: Colors.white54),
+                              enabledBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(color: Colors.white30),
+                                  borderRadius: BorderRadius.circular(12)),
+                              focusedBorder: OutlineInputBorder(
+                                  borderSide: const BorderSide(color: Colors.teal),
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            items: paymentAccounts.map((acc) {
+                              return DropdownMenuItem<int>(
+                                value: acc['AccountID'],
+                                child: Text(acc['AccountName'] ?? '', textDirection: TextDirection.rtl),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setDialogState(() => selectedAccountId = val);
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        TextField(
+                          controller: controller,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: Colors.tealAccent,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold),
+                          decoration: InputDecoration(
+                            labelText: context.tr('di_payment_amount_label'),
+                            labelStyle: const TextStyle(color: Colors.white54),
+                            enabledBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(color: Colors.white30),
+                                borderRadius: BorderRadius.circular(12)),
+                            focusedBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(color: Colors.teal),
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ] else ...[
+                        // SPLIT MODE UI
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('${totalSplitPaid.toStringAsFixed(2)} / ${remainder.toStringAsFixed(2)} KWD',
+                                  style: TextStyle(
+                                      color: (totalSplitPaid > remainder) ? Colors.orangeAccent : Colors.tealAccent,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
+                              Text(context.tr('di_split_total_paid'), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...splits.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final s = entry.value;
+                          if (s['controller'] == null) {
+                            final initialAmt = (s['Amount'] as num?)?.toDouble() ?? 0.0;
+                            s['controller'] = TextEditingController(text: initialAmt > 0 ? initialAmt.toStringAsFixed(2) : '');
+                          }
+                          final sController = s['controller'] as TextEditingController;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[800],
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    if (splits.length > 1)
+                                      IconButton(
+                                        icon: const Icon(Icons.remove_circle, color: Colors.redAccent, size: 20),
+                                        onPressed: () {
+                                          setDialogState(() {
+                                            final removed = splits.removeAt(idx);
+                                            (removed['controller'] as TextEditingController?)?.dispose();
+                                          });
+                                        },
+                                      ),
+                                    Expanded(
+                                      child: DropdownButtonFormField<int>(
+                                        isExpanded: true,
+                                        value: s['PaymentAccountID'],
+                                        dropdownColor: Colors.grey[850],
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                        decoration: InputDecoration(
+                                          labelText: context.tr('di_payment_method_label'),
+                                          labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        ),
+                                        items: paymentAccounts.map((acc) {
+                                          return DropdownMenuItem<int>(
+                                            value: acc['AccountID'],
+                                            child: Text(acc['AccountName'] ?? '', textDirection: TextDirection.rtl),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            setDialogState(() => s['PaymentAccountID'] = val);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: sController,
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold),
+                                  decoration: InputDecoration(
+                                    labelText: context.tr('di_payment_amount_single'),
+                                    labelStyle: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  ),
+                                  onChanged: (val) {
+                                    final double parsed = double.tryParse(val) ?? 0.0;
+                                    s['Amount'] = parsed;
+                                    setDialogState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setDialogState(() {
+                              final double currentPaid = splits.fold(0.0, (sum, item) => sum + ((item['Amount'] as num?)?.toDouble() ?? 0.0));
+                              final double left = remainder > currentPaid ? remainder - currentPaid : 0.0;
+                              final nextAcc = paymentAccounts.length > splits.length ? paymentAccounts[splits.length]['AccountID'] : paymentAccounts.first['AccountID'];
+                              splits.add({'PaymentAccountID': nextAcc, 'Amount': left});
+                            });
+                          },
+                          icon: const Icon(Icons.add, size: 18),
+                          label: Text(context.tr('di_add_payment_method_btn'), style: const TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal[800],
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(context.tr('di_cancel'),
-                  style: const TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final double? payAmount = double.tryParse(controller.text);
-                if (payAmount == null ||
-                    payAmount <= 0 ||
-                    payAmount > remainder) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(context.tr('di_invalid_payment'),
-                          textAlign: TextAlign.right),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                  return;
-                }
-
-                Navigator.pop(ctx);
-
-                setState(() {
-                  _isLoading = true;
-                });
-
-                try {
-                  final apiService =
-                      Provider.of<ApiService>(context, listen: false);
-                  final response =
-                      await apiService.payInvoice(invId, payAmount);
-
-                  if (response.statusCode == 200) {
-                    await _fetchDetails();
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(context.tr('di_payment_success'),
-                              textAlign: TextAlign.right),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    for (var s in splits) {
+                      (s['controller'] as TextEditingController?)?.dispose();
                     }
-                  } else {
-                    setState(() => _isLoading = false);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              context.tr('di_payment_fail').replaceAll('{error}', response.data.toString()),
-                              textAlign: TextAlign.right),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
+                    Navigator.pop(ctx);
+                  },
+                  child: Text(context.tr('di_cancel'), style: const TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final apiService = Provider.of<ApiService>(context, listen: false);
+
+                    if (!isSplitMode) {
+                      final double? payAmount = double.tryParse(controller.text);
+                      if (payAmount == null || payAmount <= 0 || payAmount > remainder) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(context.tr('di_invalid_payment'), textAlign: TextAlign.right),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                        return;
+                      }
+
+                      for (var s in splits) {
+                        (s['controller'] as TextEditingController?)?.dispose();
+                      }
+                      Navigator.pop(ctx);
+                      setState(() => _isLoading = true);
+
+                      try {
+                        final response = await apiService.payInvoice(invId, payAmount, accountId: selectedAccountId);
+                        if (response.statusCode == 200) {
+                          await _fetchDetails();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(context.tr('di_payment_success'), textAlign: TextAlign.right),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } else {
+                          setState(() => _isLoading = false);
+                        }
+                      } catch (e) {
+                        setState(() => _isLoading = false);
+                      }
+                    } else {
+                      // SPLIT MODE SUBMISSION
+                      final validSplits = splits.where((s) => ((s['Amount'] as num?)?.toDouble() ?? 0.0) > 0).toList();
+                      if (validSplits.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(context.tr('di_invalid_split_amounts'), textAlign: TextAlign.right), backgroundColor: Colors.orange),
+                        );
+                        return;
+                      }
+                      for (var s in splits) {
+                        (s['controller'] as TextEditingController?)?.dispose();
+                      }
+
+                      Navigator.pop(ctx);
+                      setState(() => _isLoading = true);
+
+                      try {
+                        bool allSuccess = true;
+                        for (var sp in validSplits) {
+                          final amt = (sp['Amount'] as num).toDouble();
+                          final accId = sp['PaymentAccountID'] as int;
+                          final resp = await apiService.payInvoice(invId, amt, accountId: accId);
+                          if (resp.statusCode != 200) {
+                            allSuccess = false;
+                          }
+                        }
+
+                        await _fetchDetails();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(allSuccess ? context.tr('di_payment_success') : 'تم تسجيل الدفعات الجزئية', textAlign: TextAlign.right),
+                              backgroundColor: allSuccess ? Colors.green : Colors.orange,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setState(() => _isLoading = false);
+                      }
                     }
-                  }
-                } catch (e) {
-                  setState(() => _isLoading = false);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            context.tr('di_payment_error').replaceAll('{error}', e.toString()),
-                            textAlign: TextAlign.right),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[700],
-                  foregroundColor: Colors.white),
-              child: Text(context.tr('di_confirm_payment')),
-            ),
-          ],
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                  child: Text(context.tr('di_confirm'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
+
 
 
   @override
@@ -1757,6 +2008,34 @@ class _InvoiceDetailsBottomSheetState
             ),
           ],
         ),
+        if (invoiceData['PaymentSplits'] != null &&
+            (invoiceData['PaymentSplits'] as List).isNotEmpty) ...[
+          const SizedBox(height: 10),
+          const Text('تفاصيل طرق الدفع:',
+              style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: (invoiceData['PaymentSplits'] as List).map<Widget>((s) {
+              final name = s['PaymentMethodName'] ?? 'طريقة دفع';
+              final amt = _parseDouble(s['Amount']);
+              final symbol = Provider.of<SettingsProvider>(context, listen: false).currencySymbol;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.teal.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.teal.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  '$name: ${amt.toStringAsFixed(2)} $symbol',
+                  style: const TextStyle(color: Colors.tealAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ],
     );
   }

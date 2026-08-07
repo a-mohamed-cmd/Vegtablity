@@ -66,20 +66,37 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       final String? cachedAccJson = prefs.getString('cached_accounts');
       if (cachedAccJson != null) {
         final List<dynamic> decoded = json.decode(cachedAccJson);
-        setState(() {
-          _accounts = List<Map<String, dynamic>>.from(decoded);
-          final cashAcc = _accounts.firstWhere(
-            (acc) => (acc['AccountName']?.toString() ?? '').contains('صندوق') || (acc['AccountName']?.toString() ?? '').contains('كاش'),
-            orElse: () => <String, dynamic>{},
-          );
-          if (cashAcc.isNotEmpty) {
-            _selectedAccountId = cashAcc['AccountID'];
-          } else if (_accounts.isNotEmpty) {
-            _selectedAccountId = _accounts.first['AccountID'];
-          }
-        });
+        if (mounted) {
+          setState(() {
+            _accounts = List<Map<String, dynamic>>.from(decoded);
+            _updateSelectedAccountId();
+          });
+        }
+      }
+
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      final res = await apiService.getPaymentAccounts();
+      if (res.statusCode == 200 && res.data is List) {
+        final List<Map<String, dynamic>> fetched = List<Map<String, dynamic>>.from(res.data);
+        if (fetched.isNotEmpty && mounted) {
+          setState(() {
+            _accounts = fetched;
+            _updateSelectedAccountId();
+          });
+          prefs.setString('cached_accounts', json.encode(fetched));
+        }
       }
     } catch (_) {}
+  }
+
+  void _updateSelectedAccountId() {
+    if (_accounts.isNotEmpty && _selectedAccountId == null) {
+      final cashAcc = _accounts.firstWhere(
+        (acc) => (acc['AccountName']?.toString() ?? '').contains('صندوق') || (acc['AccountName']?.toString() ?? '').contains('كاش'),
+        orElse: () => _accounts.first,
+      );
+      _selectedAccountId = cashAcc['AccountID'];
+    }
   }
 
   @override
@@ -321,6 +338,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<int>(
+                      isExpanded: true,
                       dropdownColor: Colors.grey[850],
                       value: dialogSelectedAccountId,
                       decoration: const InputDecoration(
@@ -368,7 +386,255 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     );
   }
 
-  Future<void> _submitInvoice(bool isCash, {int? paymentAccountId}) async {
+  void _showSplitPaymentDialog() {
+    if (_accounts.isEmpty) return;
+
+    List<Map<String, dynamic>> splits = [
+      {'PaymentAccountID': _accounts.first['AccountID'], 'Amount': _netAmount}
+    ];
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final double totalAmount = _netAmount;
+            final double totalPaid = splits.fold(0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+            final double remainder = totalAmount > totalPaid ? totalAmount - totalPaid : 0.0;
+
+            return AlertDialog(
+              backgroundColor: Colors.grey[900],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text(
+                'تقسيم وسائل الدفع (Split Payment)',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.right,
+              ),
+              content: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.teal.withValues(alpha: 0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${totalAmount.toStringAsFixed(2)} د.ك',
+                                    style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+                                const Text('إجمالي الصافي:', style: TextStyle(color: Colors.white70)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${totalPaid.toStringAsFixed(2)} د.ك',
+                                    style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 14)),
+                                Text(context.tr('split_paid_now'), style: const TextStyle(color: Colors.white70)),
+                              ],
+                            ),
+                            if (remainder > 0) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('${remainder.toStringAsFixed(2)} د.ك',
+                                      style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 14)),
+                                  Text(context.tr('split_remainder_credit'), style: const TextStyle(color: Colors.white70)),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...splits.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final split = entry.value;
+                        if (split['controller'] == null) {
+                          final initialAmt = (split['Amount'] as num?)?.toDouble() ?? 0.0;
+                          split['controller'] = TextEditingController(text: initialAmt > 0 ? initialAmt.toStringAsFixed(2) : '');
+                        }
+                        final controller = split['controller'] as TextEditingController;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[850],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white24),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  if (splits.length > 1)
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
+                                      onPressed: () {
+                                        setDialogState(() {
+                                          final removed = splits.removeAt(index);
+                                          (removed['controller'] as TextEditingController?)?.dispose();
+                                        });
+                                      },
+                                    ),
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      isExpanded: true,
+                                      value: split['PaymentAccountID'],
+                                      dropdownColor: Colors.grey[800],
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      decoration: InputDecoration(
+                                        labelText: context.tr('split_payment_account'),
+                                        labelStyle: const TextStyle(color: Colors.white54),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                                        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                                      ),
+                                      items: _accounts.map((acc) {
+                                        return DropdownMenuItem<int>(
+                                          value: acc['AccountID'],
+                                          child: Text(acc['AccountName'] ?? '', textDirection: TextDirection.rtl),
+                                        );
+                                      }).toList(),
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setDialogState(() {
+                                            split['PaymentAccountID'] = val;
+                                            final matchedAcc = _accounts.firstWhere((a) => a['AccountID'] == val, orElse: () => {});
+                                            split['PaymentMethodName'] = matchedAcc['AccountName'] ?? '';
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: controller,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 16),
+                                decoration: InputDecoration(
+                                  labelText: context.tr('split_amount_paid'),
+                                  labelStyle: const TextStyle(color: Colors.white54),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+                                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                                ),
+                                onChanged: (val) {
+                                  final double parsed = double.tryParse(val) ?? 0.0;
+                                  split['Amount'] = parsed;
+                                  setDialogState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setDialogState(() {
+                            final nextAcc = _accounts.length > splits.length ? _accounts[splits.length]['AccountID'] : _accounts.first['AccountID'];
+                            final nextName = _accounts.length > splits.length ? _accounts[splits.length]['AccountName'] : _accounts.first['AccountName'];
+                            splits.add({
+                              'PaymentAccountID': nextAcc,
+                              'PaymentMethodName': nextName,
+                              'Amount': remainder > 0 ? remainder : 0.0
+                            });
+                          });
+                        },
+                        icon: const Icon(Icons.add_circle, size: 18),
+                        label: Text(context.tr('split_add_another_method')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal[800],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    final controllers = splits
+                        .map((s) => s['controller'] as TextEditingController?)
+                        .whereType<TextEditingController>()
+                        .toList();
+                    Navigator.pop(ctx);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      for (var c in controllers) {
+                        try {
+                          c.dispose();
+                        } catch (_) {}
+                      }
+                    });
+                  },
+                  child: Text(context.tr('split_cancel'), style: const TextStyle(color: Colors.white54)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final validSplits = splits
+                        .where((s) => ((s['Amount'] as num?)?.toDouble() ?? 0.0) > 0)
+                        .map((s) => {
+                              'PaymentAccountID': s['PaymentAccountID'],
+                              'PaymentMethodName': s['PaymentMethodName'],
+                              'Amount': (s['Amount'] as num).toDouble(),
+                            })
+                        .toList();
+
+                    if (validSplits.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(context.tr('split_valid_amounts_warn'), textAlign: TextAlign.right), backgroundColor: Colors.orange),
+                      );
+                      return;
+                    }
+
+                    final controllers = splits
+                        .map((s) => s['controller'] as TextEditingController?)
+                        .whereType<TextEditingController>()
+                        .toList();
+
+                    Navigator.pop(ctx);
+
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      for (var c in controllers) {
+                        try {
+                          c.dispose();
+                        } catch (_) {}
+                      }
+                    });
+
+                    _submitInvoice(true, paymentSplits: validSplits);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700], foregroundColor: Colors.white),
+                  child: Text(context.tr('split_confirm_and_save'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitInvoice(bool isCash, {int? paymentAccountId, List<Map<String, dynamic>>? paymentSplits}) async {
     if (_cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -390,8 +656,13 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     final double total = _subtotal;
     final double discount = _discount;
     final double net = _netAmount;
-    final double paid = isCash ? net : 0.0;
-    final double remainder = isCash ? 0.0 : net;
+    double paid = isCash ? net : 0.0;
+    double remainder = isCash ? 0.0 : net;
+
+    if (paymentSplits != null && paymentSplits.isNotEmpty) {
+      paid = paymentSplits.fold<double>(0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+      remainder = net > paid ? net - paid : 0.0;
+    }
 
     // Build details list matching InvoiceDetail schema
     final details = _cartItems.map((item) {
@@ -421,6 +692,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'Details': details,
       if (isCash && (paymentAccountId ?? _selectedAccountId) != null)
         'PaymentAccountID': paymentAccountId ?? _selectedAccountId,
+      if (paymentSplits != null && paymentSplits.isNotEmpty)
+        'PaymentSplits': paymentSplits,
       'TempCustomerName': widget.tempCustomerName,
       'TempPhone': widget.tempPhone,
       'TempAddress': widget.tempAddress,
@@ -428,16 +701,33 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'TempDeliveryTime': widget.tempDeliveryTime,
     };
 
+    final messenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+    final pbSaveSuccessTpl = context.tr('pb_save_success');
+    final pbSaveErrorTpl = context.tr('pb_save_error');
+
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
+      final printerService = Provider.of<PrinterService>(context, listen: false);
       final response = await apiService.savePartnerInvoice(payload);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final int newInvId = response.data['InvID'] ?? 0;
 
-        // Auto print receipt using PrinterService
-        final printerService =
-            Provider.of<PrinterService>(context, listen: false);
+        String? paymentAccountName;
+        if (isCash) {
+          if (_accounts.isNotEmpty) {
+            final selectedId = paymentAccountId ?? _selectedAccountId;
+            final selected = _accounts.firstWhere(
+              (a) => a['AccountID'] == selectedId,
+              orElse: () => _accounts.first,
+            );
+            paymentAccountName = selected['AccountName']?.toString();
+          }
+          if (paymentAccountName == null || paymentAccountName.trim().isEmpty) {
+            paymentAccountName = 'نقداً';
+          }
+        }
 
         final printInvoiceData = {
           'InvID': newInvId,
@@ -447,6 +737,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           'total_amount': net,
           'paid_amount':  paid,
           'remainder':    remainder,
+          if (paymentSplits != null && paymentSplits.isNotEmpty) 'PaymentSplits': paymentSplits,
+          if (paymentAccountName != null && paymentAccountName.isNotEmpty) 'PaymentAccountName': paymentAccountName,
           'temp_customer_name': widget.tempCustomerName,
           'temp_phone':        widget.tempPhone,
           'temp_address':      widget.tempAddress,
@@ -463,29 +755,30 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               .toList(),
         };
 
+        final successMsg = pbSaveSuccessTpl.replaceAll('{id}', newInvId.toString());
+
         await printerService.printReceipt(printInvoiceData);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text(
-                context
-                    .tr('pb_save_success')
-                    .replaceAll('{id}', newInvId.toString()),
+                successMsg,
                 textAlign: TextAlign.right,
               ),
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pop(context); // Return to offers screen
+          nav.pop(); // Return to offers screen
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text(
-                  '${context.tr('pb_save_server_fail')}${response.data}',
-                  textAlign: TextAlign.right),
+                pbSaveErrorTpl,
+                textAlign: TextAlign.right,
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -493,10 +786,12 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('${context.tr('pb_network_error')}$e',
-                textAlign: TextAlign.right),
+            content: Text(
+              '${pbSaveErrorTpl}: $e',
+              textAlign: TextAlign.right,
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -556,6 +851,37 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             ),
           ),
           actions: [
+            Consumer<PrinterService>(
+              builder: (context, printerService, child) {
+                return IconButton(
+                  icon: const Icon(Icons.print),
+                  tooltip: 'طباعة أحدث إضافة بالنظام',
+                  onPressed: () async {
+                    if (printerService.lastAddedDocument == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('لا يوجد مستند سابق مضاف حالياً لطباعته', textAlign: TextAlign.right),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+                    final success = await printerService.printLastAddedDocument();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            success ? 'تمت طباعة أحدث إضافة بنجاح' : 'فشلت عملية طباعة أحدث إضافة',
+                            textAlign: TextAlign.right,
+                          ),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.qr_code_scanner, size: 28),
               tooltip: context.tr('pb_scan_tooltip'),
@@ -906,6 +1232,31 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               ),
               const SizedBox(width: 8),
               Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _cartItems.isEmpty
+                      ? null
+                      : () async {
+                          if (_accounts.isEmpty) {
+                            await _loadPaymentAccounts();
+                          }
+                          if (mounted) {
+                            _showSplitPaymentDialog();
+                          }
+                        },
+                  icon: const Icon(Icons.call_split, color: Colors.teal),
+                  label: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Text(context.tr('pos_split_payment'),
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.bold, color: Colors.teal)),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.teal, width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
                 child: ElevatedButton.icon(
                   onPressed:
                       _cartItems.isEmpty ? null : () => _submitInvoice(false),
@@ -1027,26 +1378,51 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Row(
             children: [
               Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _cartItems.isEmpty
+                      ? null
+                      : () async {
+                          if (_accounts.isEmpty) {
+                            await _loadPaymentAccounts();
+                          }
+                          if (mounted) {
+                            _showSplitPaymentDialog();
+                          }
+                        },
+                  icon: const Icon(Icons.call_split, color: Colors.teal, size: 16),
+                  label: Text(context.tr('pos_split_payment'),
+                      style: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.teal, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
                 child: ElevatedButton(
                   onPressed:
                       _cartItems.isEmpty ? null : () => _showCashPaymentDialog(),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      foregroundColor: Colors.white),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8)),
                   child: Text(context.tr('pb_pay_cash'),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: ElevatedButton(
                   onPressed:
                       _cartItems.isEmpty ? null : () => _submitInvoice(false),
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange[800],
-                      foregroundColor: Colors.white),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8)),
                   child: Text(context.tr('pb_pay_credit'),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ),
             ],

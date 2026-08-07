@@ -22,6 +22,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
   bool _useDetailedInvoiceDesign = false;
   bool _unifiedPartnerSearch = false;
   bool _enableDailyOrders = false;
+  bool _enableSalesDiscounts = false;
   String? _lastSyncedDb;
 
   @override
@@ -65,6 +66,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       _useDetailedInvoiceDesign = settings['UseDetailedInvoiceDesign'] == true || settings['UseDetailedInvoiceDesign'] == 1 || settings['UseDetailedInvoiceDesign'] == '1';
       _unifiedPartnerSearch = settings['UnifiedPartnerSearch'] == true || settings['UnifiedPartnerSearch'] == 1 || settings['UnifiedPartnerSearch'] == '1';
       _enableDailyOrders = settings['EnableDailyOrders'] == true || settings['EnableDailyOrders'] == 1 || settings['EnableDailyOrders'] == '1';
+      _enableSalesDiscounts = settings['EnableSalesDiscounts'] == true || settings['EnableSalesDiscounts'] == 1 || settings['EnableSalesDiscounts'] == '1';
       _deliverySystemModeController.text = settings['DeliverySystemMode']?.toString() ?? '';
       _lastSyncedDb = currentDb;
     }
@@ -250,6 +252,20 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                                 value: _enableDailyOrders,
                                 onChanged: (val) => setState(() => _enableDailyOrders = val),
                               ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.orangeAccent,
+                                title: const Text(
+                                  "تفعيل ميزة خصومات وباقات المبيعات (EnableSalesDiscounts)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إظهار والتحكم بصلاحيات وشاشات وباقات خصومات المنتجات بالفواتير وتطبيق POS",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableSalesDiscounts,
+                                onChanged: (val) => setState(() => _enableSalesDiscounts = val),
+                              ),
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
                                 value: ['direct', 'temp_order'].contains(_deliverySystemModeController.text.trim())
@@ -355,6 +371,7 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                             'Address': _addressController.text.trim(),
                             'Phone': _phoneController.text.trim(),
                             'EnableDailyOrders': _enableDailyOrders,
+                            'EnableSalesDiscounts': _enableSalesDiscounts,
                             'DeliverySystemMode': _deliverySystemModeController.text.trim(),
                           };
                           final res = await licenseProvider.saveCompanySettings(payload);

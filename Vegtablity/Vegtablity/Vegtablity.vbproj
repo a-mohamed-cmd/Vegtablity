@@ -383,8 +383,19 @@
     <Compile Include="Views\QuotePage.xaml.vb">
       <DependentUpon>QuotePage.xaml</DependentUpon>
     </Compile>
+    <!-- Sales Discounts Feature -->
+    <Compile Include="Models\ProductDiscount.vb" />
+    <Compile Include="Services\ProductDiscountService.vb" />
+    <Compile Include="ViewModels\SalesDiscountsViewModel.vb" />
+    <Compile Include="Views\SalesDiscountsPage.xaml.vb">
+      <DependentUpon>SalesDiscountsPage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Views\SalesDiscountsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\LicenseWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

@@ -127,6 +127,9 @@ class _DailyOrdersScreenState extends State<DailyOrdersScreen> {
       'voucher_paid_amount': 0.0,
       'remainder': _parseDouble(data['Remainder']),
       
+      'PaymentSplits': data['PaymentSplits'] ?? data['payment_splits'] ?? [],
+      'PaymentAccountName': data['PaymentAccountName'] ?? data['payment_account_name'] ?? data['AccountName'],
+
       // Temporary Customer / Delivery details
       'temp_customer_name': data['CustomerName'],
       'temp_phone': data['Phone'],

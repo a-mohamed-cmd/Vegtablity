@@ -57,6 +57,31 @@ class ApiService {
     }
   }
 
+  // ─── Sales Discounts (خصومات وباقات المبيعات) ──────────────────────────────
+  Future<Response> getActiveDiscountsForPos() async {
+    return await _dio.get('/discounts/pos/active');
+  }
+
+  Future<Response> getAllDiscounts() async {
+    return await _dio.get('/discounts/');
+  }
+
+  Future<Response> getProductsForDiscounts() async {
+    return await _dio.get('/discounts/products');
+  }
+
+  Future<Response> getAttachedProductIdsForDiscount(int discountId) async {
+    return await _dio.get('/discounts/$discountId/products');
+  }
+
+  Future<Response> saveDiscount(Map<String, dynamic> payload) async {
+    return await _dio.post('/discounts/', data: payload);
+  }
+
+  Future<Response> deleteDiscount(int discountId) async {
+    return await _dio.delete('/discounts/$discountId');
+  }
+
   Future<Response> getProductsForPurchase() async {
     return await _dio.get('/products/for-purchase');
   }
@@ -222,6 +247,14 @@ class ApiService {
       'PaymentAmount': amount,
       if (accountId != null) 'PaymentAccountID': accountId,
     });
+  }
+
+  Future<Response> getPaymentAccounts() async {
+    return await _dio.get('/settings/payment-accounts');
+  }
+
+  Future<Response> getInvoicePaymentSplits(int invId) async {
+    return await _dio.get('/invoices/$invId/payment-splits');
   }
 
   Future<Response> getInvoiceDetails(int invId) async {

@@ -276,7 +276,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     ),
                   if (Provider.of<SettingsProvider>(context).isProductionMode)
                     SwitchListTile(
-                      title: const Text('وصفات المنتجات والتصنيع'),
+                      title: Text(context.tr('home_recipes')),
                       value: _showRecipes,
                       onChanged: (val) => _saveBoolSetting('show_recipes', val),
                       activeColor: Colors.teal,

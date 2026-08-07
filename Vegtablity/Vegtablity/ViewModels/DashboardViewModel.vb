@@ -321,6 +321,7 @@ Namespace ViewModels
             Dim salesChildren As New ObservableCollection(Of MenuItem)()
             salesChildren.Add(New MenuItem With {.Title = "فاتورة مبيعات", .Icon = "🛒", .FormName = "Sales", .IsVisible = True})
             salesChildren.Add(New MenuItem With {.Title = "عروض الأسعار", .Icon = "📜", .FormName = "Quotes", .IsVisible = True})
+            salesChildren.Add(New MenuItem With {.Title = "خصومات المبيعات", .Icon = "🏷️", .FormName = "SalesDiscounts", .IsVisible = True})
 
             allItems.Add(New MenuItem With {
                 .Title = "المبيعات",
@@ -568,6 +569,10 @@ Namespace ViewModels
 
                     Case "Quotes"
                         CurrentPage = New Views.QuotePage()
+                        IsHomePage = False
+
+                    Case "SalesDiscounts"
+                        CurrentPage = New Views.SalesDiscountsPage()
                         IsHomePage = False
 
                     Case "Purchases"

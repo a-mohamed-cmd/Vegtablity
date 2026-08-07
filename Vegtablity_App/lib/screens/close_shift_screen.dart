@@ -502,6 +502,25 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                         ),
                       ),
 
+                      // بطاقة تفاصيل طرق الدفع
+                      if (_summary?['PaymentTotals'] != null &&
+                          (_summary!['PaymentTotals'] as List).isNotEmpty)
+                        _buildCard(
+                          title: 'تفاصيل طرق الدفع في الوردية',
+                          titleColor: Colors.tealAccent,
+                          child: Column(
+                            children: (_summary!['PaymentTotals'] as List).map<Widget>((pt) {
+                              final name = pt['PaymentMethodName'] ?? 'طريقة دفع';
+                              final amt = _parseD(pt['TotalAmount']);
+                              final isIncome = pt['InvType'] == 'Sales' || pt['InvType'] == 'Receipt';
+                              final labelType = isIncome ? 'تحصيل / مبيعات' : 'سداد / مشتريات';
+                              final color = isIncome ? Colors.greenAccent : Colors.orangeAccent;
+                              return _buildInfoRow('$name ($labelType)', '${amt.toStringAsFixed(3)} KWD', valueColor: color);
+                            }).toList(),
+                          ),
+                        ),
+
+
 
                       // بطاقة الكاش
                       _buildCard(

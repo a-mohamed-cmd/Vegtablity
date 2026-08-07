@@ -54,4 +54,16 @@ async def get_warehouses():
             detail=f"خطأ أثناء جلب المستودعات: {str(e)}"
         )
 
+@router.get("/payment-accounts", response_model=List[dict])
+async def get_payment_accounts():
+    try:
+        from app.services.voucher_service import VoucherService
+        return VoucherService().get_accounts_for_voucher()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطأ أثناء جلب طرق الدفع: {str(e)}"
+        )
+
+
 

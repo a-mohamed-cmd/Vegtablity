@@ -9,16 +9,15 @@
 ## 📌 الفهرس العام للصفحات والملفات والكلاسات المضافة حديثاً (Index of Recent Additions)
 
 ### 1. الصفحات الجديدة والمعدلة (Added & Modified Pages / Screens):
-*   **شاشة إعدادات الطابعة الحرارية (معدلة):** [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - إضافة خيار تحديد نمط طباعة الشبكة (النص المباشر الافتراضي vs الطباعة الصورية عالية الدقة HD Raster Canvas) بشكل محلي مخصص لكل جهاز، وحفظه في SharedPreferences.
+*   **شاشة إعدادات الطابعة الحرارية (معدلة):** [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - إضافة خيار تحديد نمط طباعة الشبكة (النص المباشر الافتراضي vs الطباعة الصورية عالية الدقة HD Raster Canvas)، وإضافة حقل تحديد عدد نسخ الطباعة (Print Copies) لطابعات الشبكة فقط، وقصر حفظ إعدادات الطباعة كلياً على الذاكرة المحلية للجهاز (SharedPreferences).
 *   **شاشة اختيار الشركاء والموردين (جديدة):** [PartnerSelectionScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart) - شاشة للبحث واختيار العملاء/الموردين عند بدء فاتورة جديدة أو التعديل من الـ POS.
 *   **شاشة إدخال تفاصيل ومواعيد شحن وتوصيل الطلبات للعملاء (جديدة):** [TemporaryOrderScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) - تحديد موعد التسليم والملاحظات للعملاء، وتخصيصها ديناميكياً لإخفاء بطاقة الزبون المؤقت للعملاء المسجلين.
-*   **شاشة نقطة البيع (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) - دمج خيار الدفع (نقدي/آجل) وتبديل الشريك ديناميكياً.
+*   **شاشة نقطة البيع والشاشات المنسدلة (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) & [PartnerBillingScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) & [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - محاذاة باج الخصم لأقصى اليمين بكارت الصنف وتناسب الاسم عبر Expanded وتغليف الخصم بـ Flexible و FittedBox، وإلغاء تعديل سعر البيع بـ POS، إضافة زر إعادة طباعة أحدث إضافة بالنظام 🖨️ بالهيدر العلوي، وحل خطأ RenderFlex Overflow بإضافة `isExpanded: true` شمولياً.
 *   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة خيار تخصيص معروضات الصفحة الرئيسية وخيارات تفعيل وتوجيه نظام التوصيل.
-*   **شاشة الصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - فلترة بطاقات الاختصارات ديناميكياً بناءً على رغبة المستخدم.
+*   **شاشة الصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - فلترة بطاقات الاختصارات ديناميكياً بناءً على رغبة المستخدم وإضافة زر طباعة أحدث مستند مضاف.
 *   **شاشة عروض مبيعات العملاء (معدلة):** [PartnerOffersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) - تكامل شاشة التوصيل قبل الفوترة لعروض العملاء.
-*   **شاشة الفوترة لعروض الشركاء (معدلة):** [PartnerBillingScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) - استقبال تفاصيل التوصيل وحفظها بقاعدة البيانات وطباعتها.
 *   **شاشة تقرير الفواتير اليومية (معدلة):** [DailyInvoicesScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart) - دعم إعادة طباعة تفاصيل ومواعيد التوصيل للعملاء.
-*   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة وتفعيل التصميم المخصص الجديد (UseCustomInvoiceDesign).
+*   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة وتفعيل التصميم المخصص الجديد (UseCustomInvoiceDesign)، وإزالة كروت تفضيلات النظام ليتم التحكم بها من الداتابيز.
 *   **صفحة فاتورة المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - إضافة زر "تصدير PDF" في شريط الأدوات العلوي، وإضافة ميزة الفوكس التلقائي والانتقال لخانة الكمية عند تحديد الصنف.
 *   **صفحة فاتورة المبيعات (معدلة):** [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) - إضافة ميزة الفوكس التلقائي والانتقال لخانة الكمية عند تحديد الصنف.
 *   **شاشة الطلبات اليومية للتوصيل (جديدة):** [DailyOrdersPage](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DailyOrdersPage.xaml) - شاشة سطح المكتب لعرض طلبات التوصيل اليومية وجدولة أوقات الشحن على هيئة كروت مطوية.
@@ -27,10 +26,11 @@
 *   **شاشة إدارة الوصفات للموبايل (جديدة):** [RecipeManagementScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) - شاشة تطبيق الهاتف لاستعراض الوصفات ومكوناتها.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
-*   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - إضافة مراجعة التحقق من الكميات الصفرية (Zero Quantity Validation) قبل الحفظ وعرض قائمة تفصيلية بأرقام الصفوف وأسماء الأصناف مع رسالة تحذيرية وسؤال الاستمرار بالحفظ أم التراجع للتعديل.
-*   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة مراجعة الكميات الصفرية وعرض تحذير تفصيلي بالصفوف والأصناف مع تخيير المستخدم بين الحفظ أو التراجع.
-*   **خدمة الطابعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - تحميل وحفظ نمط طباعة الشبكة networkPrintMode والتنسيق المباشر والصوري محلياً، وتوجيه الطباعة بحسب لغة التطبيق الحالية (عربي / إنجليزي).
-*   **مصمم الفواتير الحرارية والـ Canvas (معدل):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - دعم الطباعة الديناميكية باللغة العربية والإنجليزية بحسب لغة التطبيق، وتحويل الفاتورة واللوجو والتقرير إلى صورة Canvas عالية الدقة لطابعات الشبكة POS 80.
+*   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر البيع = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
+*   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر الشراء = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
+*   **خدمة الطابعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - تسجيل المستندات المضافة ودالة `printLastAddedDocument()` لطباعة أحدث مستند بالنظام فوراً، تكرار طباعة الشبكة لعدد النسخ `printCopies` محلياً، وإلغاء مزامنة الداتابيز لقصر الإعدادات على SharedPreferences الجهاز فقط.
+*   **مصمم الفواتير الحرارية والـ Canvas (معدل):** [InvoicePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart) - إضافة وطباعة وقت الفاتورة `HH:mm:ss A` بجانب التاريخ وإدراج الإجمالي والخصم والصافي (Net Total) بكافة محركات الطباعة، اعتماد مسمى `خصم الصنف` المترجم، وحذف رمز العملة من الخصوم المطبوعة.
+*   **مصمم الإيصالات الحرارية (معدل):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - دعم الطباعة الديناميكية باللغة العربية والإنجليزية بحسب لغة التطبيق، وتحويل الفاتورة واللوجو والتقرير إلى صورة Canvas عالية الدقة لطابعات الشبكة POS 80.
 *   **متحكم الوصفات (معدل):** [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - دعم الربط الدقيق للمستودع `SelectedWarehouseID` مع جلب أسعار التكلفة للمواد الخام وتنشيط إشعارات الـ Snackbar والتنظيف التلقائي للصفوف الفارغة قبل الحفظ.
 *   **خدمة الأصناف (معدلة):** [ProductService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ProductService.vb) - إضافة دالة `GetProductsForRecipeIngredients` لجلب المواد الخام والوسيطة بالتكلفة المرجحة من `ProductStock`.
 *   **خدمة الوصفات (معدلة):** [RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb) - تمرير `WarehouseID` لإجراء حفظ وتحديث الوصفات.
@@ -39,13 +39,12 @@
 *   **إجراء حفظ الوصفة (معدل):** `[Inventory].[sp_Recipe_Save_XML]` - قبول `@WarehouseID` وإدراج/تحديث المنتج المصنع بـ `ProductStock` بالتكلفة الإجمالية وحجم رصيد 0.
 *   **إجراء جلب تفاصيل الوصفة (معدل):** `[Inventory].[sp_Recipe_GetByProduct]` - جلب تفاصيل المكونات والتكلفة بالربط المباشر مع `@WarehouseID` أو التراجع لأقل تكلفة.
 *   **كلاس تصميم الإيصالات وتنسيق الطباعة الحرارية (جديد):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - كلاس تنسيق رأس وتذييل وأصناف الإيصال وتعديل حجم الورق وطباعة الشعار.
-*   **كود التحكم بالطباعة المكتبي:** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة ونوع الفاتورة.
+*   **كود التحكم بالطباعة المكتبي (معدل):** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة وتعديل توسيط موقع رسم نوع الفاتورة `نوع الفاتورة / cash` بمنتصف الصفحة عند `gt(5.0F)` وضبط الملاحظات أسفل اسم العميل.
 *   **كلاس طابعة الفواتير المخصص الجديد (جديد):** [InvoicePrinterCustom](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinterCustom.vb) - كلاس طباعة مستقل مخصص لمحاكاة وتعديل مقاسات الفاتورة وتفقيطها وجدولها بمقدار 1 سم للأسفل للتصميم الرئيسي.
 *   **نموذج بيانات الشركة (معدل):** [CompanyInfo](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) - إضافة خاصيتي `UseDetailedInvoiceDesign` و `UseCustomInvoiceDesign`.
 *   **متحكم صفحة الإعدادات (معدل):** [CompanySettingsViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) - إدارة وتمرير حالتي تصميم الطباعة (المفصل والمخصص) لقاعدة البيانات.
 *   **خدمة إعدادات الشركة (معدلة):** [SettingsService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/SettingsService.vb) - تضمين حقل `UseCustomInvoiceDesign` في جمل الاستعلام والحفظ.
-*   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - توجيه عملية الطباعة إلى كلاس `InvoicePrinterCustom` عند اختيار التصميم المخصص من الإعدادات.
-*   **مزود حالة المبيعات والمشتريات:** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - حساب قيم المدفوع والمتبقي وتنسيق حفظ الفاتورة الآجلة.
+*   **مزود حالة المبيعات والمشتريات (معدل):** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - حفظ إجمالي الخصم المالي بحقل `Discount` وقيم `TotalAmount` (قبل الخصم) و `NetAmount` (الصافي) بـ `InvoiceHeader` بالداتابيز، وحساب قيم المدفوع والمتبقي وتنسيق حفظ الفاتورة الآجلة.
 *   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة ومعالجة أمر تصدير الفاتورة لـ PDF.
 *   **كلاس تصدير التقارير (معدل):** [ReportExporter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - إضافة دالة `ExportInvoiceToPdf` المخصصة لتصدير المبيعات والمشتريات بهيكل PDF احترافي.
 *   **نموذج بيانات طباعة الفاتورة (معدل):** [InvoiceReportHeader](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/InvoiceReportData.vb) - إضافة حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
@@ -1578,3 +1577,87 @@
 * **إزالة خيار التحكم المحلي بنظام التوصيل ومواعيد التسليم من الإعدادات العامة بتطبيق الهاتف (`Vegtablity_App`):**
   - تم حذف قسم القائمة المنسدلة للتحكم الفردي بنظام التوصيل من شاشة [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart).
   - تم ربط الشاشات المختلفة مثل [supplier_selection_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/supplier_selection_screen.dart) و [partner_offers_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) مباشرةً بـ `SettingsProvider.deliverySystemMode` المسجل بالسيرفر والداتابيز (`DeliverySystemMode`).
+
+
+* **🕒 طباعة وقت وحفظ الفاتورة (Invoice Date & Time Printing):**
+  - تم التحديث في [InvoicePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart) لطباعة وقت الفاتورة بصيغة `HH:mm:ss A` بجانب التاريخ `YYYY-MM-DD` في ترويسة جميع فواتير المبيعات والمشتريات عبر جميع محركات الطباعة الثلاثة (Sunmi, Direct ESC/POS, Canvas ESC/POS).
+
+* **🖨️ زر علوي موحد لطباعة أحدث إضافة بالنظام (Global Reprint Last Added Document Button):**
+  - تم إضافة زر علوي ثابت بأعلى شريط التطبيقات (AppBar) برمز الطابعة 🖨️ في شاشات [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)، [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart)، و[PartnerBillingScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart).
+  - يرتبط الزر بـ [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) لإعادة طباعة أحدث مستند تم إضافته بالنظام (سواء كان فاتورة مبيعات، مشتريات، أو سندات) فوراً كنسخة إضافية.
+
+* **🔢 ضبط عدد نسخ طباعة الشبكة (Network Print Copies):**
+  - تم إضافة خيار تحديد عدد النسخ المطبوعة (من 1 إلى 5 نسخ) في شاشة [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) بحيث يظهر ويُفعل **فقط** عند اختيار طابعة شبكة (`Network`).
+  - تقوم دالة الطباعة بالربط مع [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) لتكرار أمر الطباعة لعدد النسخ المحددة.
+
+* **📱 قصر حفظ إعدادات الطباعة على الذاكرة المحلية للجهاز فقط (`Shared Storage`):**
+  - تم الغاء مزامنة وحفظ إعدادات الطباعة مع قاعدة البيانات في [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart)، وقصرها تماماً على ذاكرة الجهاز المحلية (`SharedPreferences`) لضمان استقلالية كل جهاز بالشبكة دون تضارب.
+
+* **🛠️ معالجة وتفادي خطأ الطفح الأفقي (RenderFlex Overflow Fix):**
+  - تم إضافة خاصية `isExpanded: true` شمولياً لكافة القوائم المنسدلة `DropdownButtonFormField` عبر كافة شاشات التطبيق لتقييد العرض وتفادي خطأ `RenderFlex OVERFLOWING: Row ← InputDecorator`.
+
+* **🏷️ مراجعة الكميات الصفرية والأسعار الصفرية قبل الحفظ بفواتير WPF (Zero Qty & Zero Price Validation):**
+  - تم إضافة الدالة الموحدة `ValidateInvoiceItemsBeforeSave` في كل من [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) و[PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb).
+  - تقوم الدالة بجمع الأصناف بدون كمية (`الكمية = 0`) بالأعلى، وإدراج الأصناف بدون سعر (`سعر البيع = 0` / `سعر الشراء = 0`) بقسم خاص أسفل الرسالة التنبيهية بفاصل مميز قبل تخيير المستخدم بين الحفظ أو التعديل.
+
+* **🖨️ نقل وتوسيط نوع الفاتورة بترويسة الطباعة التلقائية (InvoicePrinter.vb Header Layout):**
+  - تم تعديل وتوسيط موقع رسم نوع الفاتورة (`نوع الفاتورة / cash` أو `credit`) في [InvoicePrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) ليرسم موسطاً بمنتصف الصفحة تماماً عند المستوى الرأسي (`gt(5.0F)`).
+  - ضبط واستكمال رسم الملاحظات أسفل اسم العميل مباشرة (`gt(4.0F)`) لمنع أي تداخل بصري بالترويسة.
+
+* **🛒 اعتماد وإرسال سعر الشراء للصنوف الجديدة وتعديله بكارت الفاتورة (Purchase Invoice Unit Price Persistence & Card Editor):**
+  - تم تحديث [pos_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) لدعم نمط فواتير المشتريات (`invoiceType: 'Purchase'`) والاعتماد على `PurchasePrice` كـ `price` لوحدة الشراء بسلة المشتريات، وإرساله بحقل `UnitPrice` للـ API عند حفظ الفاتورة.
+  - تخصيص نوابض الحفظ السريع للأصناف غير المعروفة عند مسح الباركود بفواتير المشتريات لتطلب **"سعر الشراء الافتراضي"** وإرسال `PurchasePrice` لـ `quickAddProduct`.
+  - إضافة مكون محرر السعر `_PriceEditor` بكارت الصنف في [pos_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) لإتاحة تعديل سعر الشراء مباشرة بنقرة واحدة عند اختلافه عن السعر المسجل بالسيرفر، وتحديث الإجمالي الجزئي والكلي آلياً.
+
+* **🏷️ نظام خصومات وباقات المبيعات الشامل (Sales Discounts & Product Bundles System):**
+  - **قاعدة البيانات (`SQLVegtablity.sql`)**:
+    - إضافة العمود `EnableSalesDiscounts` في جدول `[Settings].[CompanySettings]`.
+    - إضافة جدول الخصومات `[Sales].[ProductDiscounts]` وجدول الربط بالأصناف `[Sales].[ProductDiscountItems]`.
+    - إضافة 5 إجراءات مخزنة جديدة: `sp_Products_GetForDiscounts`, `sp_ProductDiscounts_GetAll`, `sp_ProductDiscounts_GetActiveForPos`, `sp_ProductDiscounts_GetProductIDs`, `sp_ProductDiscounts_Save_XML`, `sp_ProductDiscounts_Delete`.
+  - **تطبيق المشرف (`LicenseManagerApp`)**:
+    - إضافة `SwitchListTile` لتفعيل/تعطيل خاصية `EnableSalesDiscounts` بشاشة [company_settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/company_settings_screen.dart).
+  - **برنامج سطح المكتب (`Vegtablity` - WPF)**:
+    - إضافة النموذج `ProductDiscount.vb` والخدمة `ProductDiscountService.vb` ومتحكم `SalesDiscountsViewModel.vb` والصفحة `SalesDiscountsPage.xaml`.
+    - إدراج صلاحية `SalesDiscounts` ("خصومات المبيعات") بشرط التفعيل بقيمتها الافتراضية `False` في [UserManagementViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/UserManagementViewModel.vb).
+    - إضافة الخيار لقائمة "المبيعات" بـ Sidebar في [DashboardViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/DashboardViewModel.vb).
+  - **خادم الـ API (`VegtablityApi`)**:
+    - إضافة الروت `app/routes/discounts.py` والخدمة `app/services/discount_service.py` مع مسارات `GET/POST/DELETE /discounts/` و `GET /discounts/pos/active`.
+  - **تطبيق الموبايل (`Vegtablity_App`)**:
+    - إضافة النموذج [product_discount.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/models/product_discount.dart) والدالة `getActiveDiscountsForPos()` بـ [api_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart).
+    - إضافة منطق **الخصم الحصري (Exclusive Toggle)** بـ [pos_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart).
+    - عرض أزرار الخصومات (ChoiceChips) بكارت الصنف بشاشة [pos_screen.dart](file:///d:/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) وتحديث السعر وإجماليات الخصوم آلياً.
+    - طباعة تفاصيل خصم كل صنف وإجمالي الخصم والصافي النهائي بعد الخصم بـ [invoice_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart).
+
+
+---
+
+## 45. التوثيق الشامل لنظام الخصومات وحفظ الإجماليات وتطوير الطباعة الحرارية للفواتير (أغسطس 2026)
+
+تم بحمد الله إنجاز التحديثات الهيكلية الشاملة لنظام الخصومات وحفظ بيانات الفواتير وتنسيق الطباعة الحرارية لضمان الدقة المالية والجمالية:
+
+### 💾 1. حفظ وتوثيق الخصم في قاعدة البيانات (Database Persistence):
+* **حفظ الخصم بحقل `[Sales].[InvoiceHeader].[Discount]`:**
+  - تم ربط وتمرير قيمة إجمالي الخصوم المطبقة بـ [pos_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) ضمن كائن الفاتورة المعتمد بالـ API والخادم:
+    - `TotalAmount`: الإجمالي الكلي للمنتجات قبل الخصومات (`totalOriginalAmount`).
+    - `Discount`: إجمالي مبلغ الخصم المستقطع بالفاتورة (`totalDiscountAmount`).
+    - `NetAmount`: الصافي النهائي المستحق بعد الخصم (`totalAmount`).
+  - يتم تمرير الخصم للإجراء المخزن `[Sales].[sp_Invoice_Save_XML]` عبر المعامل `@Discount` وحفظه في الجدول الأصلي للفواتير دون التأثير على الإصدارات القديمة أو تداول السجلات.
+
+### 🎨 2. تطوير واجهة كارت الصنف بشاشة نقطة البيع (`pos_screen.dart`):
+* **إلغاء تعديل سعر البيع بـ POS:** تم حظر وتوجيه تعديل أسعار بيع الوحدات من فاتورة المبيعات والاكتفاء بإتاحتها حصرياً في فاتورة المشتريات.
+* **إعادة تموضع باج الخصم في أقصى اليمين:** تم تعديل ترتيب عناصر السطر الموجه لليمين في عنوان كارت المنتجات بـ [pos_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) ليكون باج الخصم هو العنصر الأول (أقصى اليمين `اقصي اليمين`).
+* **التناسب ومنع خطأ الـ RenderFlex Overflow:**
+  - وضع مسمى الصنف بداخل ويدجت `Expanded` وتحديده بـ `maxLines: 1` و `TextOverflow.ellipsis`.
+  - تغليف باج الخصم بـ `Flexible` ودالة الاحتواء الذكي `FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerRight)` لتقليص حجم الباج تلقائياً في الشاشات الصغيرة ومنع خطأ الطفح البكسلي الأصفر والأسود نهائياً.
+
+### 🖨️ 3. تطوير تقرير وطباعة الفواتير المطبوعة (`invoice_print_designer.dart`):
+* **طباعة الإجماليات الثلاثة بالفاتورة والتقرير:** تم تحديث كافة محركات الطباعة (Sunmi POS Thermal, Direct ESC/POS, Canvas HD Raster Image) بـ [invoice_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart) لطباعة:
+  1. **الإجمالي (Gross Total):** المبلغ قبل الخصومات (مثال: `الإجمالي: 10.000 د.ك`).
+  2. **الخصم (Total Discount):** إجمالي الخصم المالي المقتطع (مثال: `الخصم: -1.000`).
+  3. **الصافي النهائي (Net Total):** المبلغ الصافي المستحق للدفع (مثال: `الصافي (Net Total): 9.000 د.ك`).
+* **اعتماد المسمى المترجم (`خصم الصنف`):** ربط طباعة مسمى خصم الصنف بـ `خصم الصنف` للغة العربية و `Item Discount` للغة الإنجليزية.
+* **حذف إلغاء العملة من بنود الخصم:** تم حذف رمز العملة (`د.ك` / `KWD`) من أسطر الخصومات المطبوعة (سواء تحت الصنف أو في إجمالي الخصوم) لتظهر كقيمة مقتطعة مجردة بدون رمز عملة (مثل: `(خصم الصنف: -1.000)` و `الخصم: -1.000`).
+
+
+
+

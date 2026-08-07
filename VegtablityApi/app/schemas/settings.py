@@ -13,6 +13,7 @@ class CompanySettingsResponse(BaseModel):
     ProductionMode: Optional[bool] = None
     EnableDailyOrders: Optional[bool] = False
     DeliverySystemMode: Optional[str] = None
+    EnableSalesDiscounts: Optional[bool] = False
 
     class Config:
         from_attributes = True

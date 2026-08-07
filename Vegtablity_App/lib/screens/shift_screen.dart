@@ -180,6 +180,7 @@ class _ShiftScreenState extends State<ShiftScreen> {
                 
                 // Dropdown to select warehouse
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   value: shiftProvider.selectedWarehouseId,
                   decoration: InputDecoration(
                     labelText: context.tr('shift_warehouse_label'),

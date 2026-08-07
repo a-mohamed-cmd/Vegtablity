@@ -47,6 +47,7 @@ Namespace ViewModels
             Dim compInfo = settingsService.GetCompanyInfo()
             Dim isProductionMode As Boolean = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
             Dim enableDailyOrders As Boolean = (compInfo IsNot Nothing AndAlso compInfo.EnableDailyOrders)
+            Dim enableSalesDiscounts As Boolean = (compInfo IsNot Nothing AndAlso compInfo.EnableSalesDiscounts)
 
             Dim formsMap As New Dictionary(Of String, String) From {
                 {"Dashboard", "لوحة المعلومات الرئيسية"},
@@ -83,6 +84,10 @@ Namespace ViewModels
 
             If isProductionMode Then
                 formsMap.Add("Recipes", "وصفات المنتجات")
+            End If
+
+            If enableSalesDiscounts Then
+                formsMap.Add("SalesDiscounts", "خصومات المبيعات")
             End If
 
             AvailableForms = formsMap

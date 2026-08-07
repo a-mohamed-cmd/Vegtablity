@@ -33,3 +33,14 @@ async def get_general_partner(user_id: int = Depends(get_current_user_id)):
     except Exception as e:
         import traceback
         raise HTTPException(status_code=500, detail=traceback.format_exc())
+
+@router.get("/payment-accounts", response_model=List[Dict[str, Any]])
+async def get_payment_accounts(user_id: int = Depends(get_current_user_id)):
+    """جلب حسابات وطرق الدفع المتاحة (ChartOfAccounts كود يبدأ بـ 11)"""
+    try:
+        from app.services.voucher_service import VoucherService
+        return VoucherService().get_accounts_for_voucher()
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
+

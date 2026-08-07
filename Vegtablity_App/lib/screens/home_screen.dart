@@ -118,6 +118,44 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
+          // Global Reprint Button for Last Added Document
+          Consumer<PrinterService>(
+            builder: (context, printerService, child) {
+              final hasLastDoc = printerService.lastAddedDocument != null;
+              return Tooltip(
+                message: 'طباعة أحدث إضافة بالنظام (نسخة إضافية)',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.print,
+                    color: hasLastDoc ? Colors.white : Colors.white60,
+                  ),
+                  onPressed: () async {
+                    if (!hasLastDoc) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('لا يوجد مستند سابق مضاف حالياً لطباعته', textAlign: TextAlign.right),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+                    final success = await printerService.printLastAddedDocument();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            success ? 'تمت طباعة أحدث إضافة بنجاح' : 'فشلت عملية طباعة أحدث إضافة',
+                            textAlign: TextAlign.right,
+                          ),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              );
+            },
+          ),
           // Connection Status Indicator
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
