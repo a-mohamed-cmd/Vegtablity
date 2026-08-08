@@ -1174,6 +1174,7 @@ class _PosScreenState extends State<PosScreen> {
                     Text('${context.tr('pos_total_discount')}:', style: const TextStyle(fontSize: 14, color: Colors.black54)),
                   ],
                 ),
+                _ExtraDiscountInputField(posProvider: posProvider),
                 const Divider(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1822,6 +1823,7 @@ class _PosScreenState extends State<PosScreen> {
                     Text('${context.tr('pos_total_discount')}:', style: const TextStyle(fontSize: 14, color: Colors.black54)),
                   ],
                 ),
+                _ExtraDiscountInputField(posProvider: posProvider),
                 const Divider(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2202,6 +2204,81 @@ class _PriceEditorState extends State<_PriceEditor> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExtraDiscountInputField extends StatefulWidget {
+  final PosProvider posProvider;
+  const _ExtraDiscountInputField({Key? key, required this.posProvider}) : super(key: key);
+
+  @override
+  State<_ExtraDiscountInputField> createState() => _ExtraDiscountInputFieldState();
+}
+
+class _ExtraDiscountInputFieldState extends State<_ExtraDiscountInputField> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    final double extra = widget.posProvider.extraDiscountAmount;
+    _controller = TextEditingController(text: extra > 0 ? extra.toStringAsFixed(3) : '');
+  }
+
+  @override
+  void didUpdateWidget(covariant _ExtraDiscountInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.posProvider.extraDiscountAmount == 0.0 && _controller.text.isNotEmpty && widget.posProvider.invoiceItems.isEmpty) {
+      _controller.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 38,
+              child: TextField(
+                controller: _controller,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                decoration: InputDecoration(
+                  hintText: '0.000',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  isDense: true,
+                  prefixIcon: const Icon(Icons.local_offer, size: 16, color: Colors.amber),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.amber, width: 1.5),
+                  ),
+                ),
+                onChanged: (val) {
+                  final double parsed = double.tryParse(val) ?? 0.0;
+                  widget.posProvider.setExtraDiscount(parsed);
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'خصم إضافي:',
+            style: TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }

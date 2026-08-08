@@ -158,7 +158,7 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Text="تقرير التدفق النقدي للوردية" FontSize="18" FontWeight="Bold" Foreground="#1a202c" Margin="0,0,0,15"/>
+                                <TextBlock Grid.Row="0" Text="تقرير التدفق النقدي الكاش للوردية" FontSize="18" FontWeight="Bold" Foreground="#1a202c" Margin="0,0,0,15"/>
 
                                 <Grid Grid.Row="1">
                                     <Grid.ColumnDefinitions>
@@ -180,13 +180,18 @@
                                     </StackPanel>
 
                                     <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,15">
-                                        <TextBlock Text="(+) مبيعات محصلة" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="(+) مبيعات كاش محصلة" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
                                         <TextBlock Text="{Binding SelectedShift.TotalPaidSales, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#28a745" Margin="0,5,0,0"/>
                                     </StackPanel>
 
                                     <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,15">
-                                        <TextBlock Text="(-) مشتريات مدفوعة" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
+                                        <TextBlock Text="(-) مشتريات كاش مدفوعة" Foreground="#6c757d" FontSize="13" FontWeight="SemiBold"/>
                                         <TextBlock Text="{Binding SelectedShift.TotalPaidPurchases, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#dc3545" Margin="0,5,0,0"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="3" Margin="0,0,0,15">
+                                        <TextBlock Text="إجمالي صافي الكاش" Foreground="#006666" FontSize="13" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding NetCashFlow, Converter={StaticResource AccountConverter}}" FontSize="18" FontWeight="Bold" Foreground="#008080" Margin="0,5,0,0"/>
                                     </StackPanel>
 
                                     <!-- Row 2: Vouchers -->
@@ -240,6 +245,47 @@
                                         </Grid>
                                     </Border>
                                 </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- Section 1.B: Remaining Payment Methods Card (طرق الدفع الأخرى) -->
+                        <Border Background="#f8f9fa" CornerRadius="10" Padding="20" Margin="0,0,0,20" BorderBrush="#e2e8f0" BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,15">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="💳 باقي طرق الدفع (K-Net / فيزا / بنك)" FontSize="18" FontWeight="Bold" Foreground="#1a202c"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <TextBlock Text="إجمالي باقي طرق الدفع: " FontSize="14" Foreground="#6c757d" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding TotalNonCashAmount, Converter={StaticResource AccountConverter}}" FontSize="16" FontWeight="Bold" Foreground="#007bff" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <DataGrid Grid.Row="1" ItemsSource="{Binding NonCashPaymentSummaries}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                          GridLinesVisibility="None" RowHeight="38" Background="Transparent" BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="كود الحساب" Binding="{Binding AccountCode}" Width="100"/>
+                                        <DataGridTextColumn Header="طريقة الدفع / الحساب" Binding="{Binding PaymentMethodName}" Width="*"/>
+                                        <DataGridTextColumn Header="نوع العملية" Binding="{Binding InvType}" Width="120"/>
+                                        <DataGridTextColumn Header="الإجمالي المحصل" Binding="{Binding TotalAmount, Converter={StaticResource AccountConverter}}" Width="150">
+                                            <DataGridTextColumn.ElementStyle>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                    <Setter Property="Foreground" Value="#007bff"/>
+                                                </Style>
+                                            </DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </Grid>
                         </Border>
 

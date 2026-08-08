@@ -6,6 +6,15 @@ import 'printer_base.dart';
 
 /// Unified Print Designer for Sales and Purchase Invoices (فواتير المبيعات والمشتريات)
 class InvoicePrintDesigner {
+  static double _parseNum(dynamic val, [double fallback = 0.0]) {
+    if (val == null) return fallback;
+    if (val is num) return val.toDouble();
+    if (val is String) {
+      return double.tryParse(val) ?? fallback;
+    }
+    return fallback;
+  }
+
   static String _formatPaymentAccountName(dynamic rawName, double paidAmount, bool isArabic) {
     final name = rawName?.toString().trim() ?? '';
     if (name.isNotEmpty) {
@@ -122,13 +131,13 @@ class InvoicePrintDesigner {
 
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
-      final List items = (invoice['items'] ?? invoice['InvoiceDetails'] ?? []) as List;
+      final List items = (invoice['items'] ?? invoice['InvoiceDetails'] ?? invoice['Details'] ?? []) as List;
       double calculatedTotal = 0.0;
       for (var item in items) {
         final String name = PrinterBase.getProductName(item, isArabic: isArabic);
         final double qty = double.tryParse(item['Quantity']?.toString() ?? item['quantity']?.toString() ?? '0') ?? 0.0;
-        final double price = double.tryParse(item['Price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
-        final double total = double.tryParse(item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
+        final double price = double.tryParse(item['UnitPrice']?.toString() ?? item['Price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
+        final double total = double.tryParse(item['TotalPrice']?.toString() ?? item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
         final double itemDiscount = double.tryParse(item['discountAmount']?.toString() ?? item['DiscountAmount']?.toString() ?? '0') ?? 0.0;
         final String unitName = item['UnitName'] ?? item['unit_name'] ?? item['unit'] ?? item['Unit'] ?? item['unit_symbol'] ?? item['UnitSymbol'] ?? '';
         calculatedTotal += total;
@@ -143,12 +152,12 @@ class InvoicePrintDesigner {
 
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
-      final double netAmount          = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['NetAmount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? calculatedTotal;
-      final double totalDiscount     = (invoice['total_discount'] as num?)?.toDouble() ?? (invoice['TotalDiscount'] as num?)?.toDouble() ?? (invoice['discount_amount'] as num?)?.toDouble() ?? (invoice['Discount'] as num?)?.toDouble() ?? 0.0;
-      final double originalTotal     = (invoice['original_total'] as num?)?.toDouble() ?? (invoice['OriginalTotal'] as num?)?.toDouble() ?? (netAmount + totalDiscount);
-      final double paidAtCreate       = (invoice['paid_amount'] as num?)?.toDouble() ?? (invoice['PaidAmount'] as num?)?.toDouble() ?? 0.0;
-      final double voucherPaidAmount  = (invoice['voucher_paid_amount'] as num?)?.toDouble() ?? 0.0;
-      final double remainder          = (invoice['remainder'] as num?)?.toDouble() ?? (invoice['Remainder'] as num?)?.toDouble() ?? 0.0;
+      final double netAmount          = _parseNum(invoice['total_amount'] ?? invoice['NetAmount'] ?? invoice['TotalAmount'], calculatedTotal);
+      final double totalDiscount     = _parseNum(invoice['total_discount'] ?? invoice['TotalDiscount'] ?? invoice['discount_amount'] ?? invoice['Discount']);
+      final double originalTotal     = _parseNum(invoice['original_total'] ?? invoice['OriginalTotal'], netAmount + totalDiscount);
+      final double paidAtCreate       = _parseNum(invoice['paid_amount'] ?? invoice['PaidAmount']);
+      final double voucherPaidAmount  = _parseNum(invoice['voucher_paid_amount'] ?? invoice['VoucherPaidAmount']);
+      final double remainder          = _parseNum(invoice['remainder'] ?? invoice['Remainder']);
       final double totalPaid = paidAtCreate + voucherPaidAmount;
 
       if (totalDiscount > 0) {
@@ -286,12 +295,12 @@ class InvoicePrintDesigner {
 
     bytes.addAll('$dSep\n'.codeUnits);
 
-    final List items = (invoice['items'] ?? invoice['InvoiceDetails'] ?? []) as List;
+    final List items = (invoice['items'] ?? invoice['InvoiceDetails'] ?? invoice['Details'] ?? []) as List;
     for (var item in items) {
       final String name = PrinterBase.getProductName(item, isArabic: isArabic);
       final double qty = double.tryParse(item['Quantity']?.toString() ?? item['quantity']?.toString() ?? '0') ?? 0.0;
-      final double price = double.tryParse(item['Price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
-      final double total = double.tryParse(item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
+      final double price = double.tryParse(item['UnitPrice']?.toString() ?? item['Price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
+      final double total = double.tryParse(item['TotalPrice']?.toString() ?? item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
       final String unitName = item['UnitName'] ?? item['unit_name'] ?? item['unit'] ?? item['Unit'] ?? item['unit_symbol'] ?? item['UnitSymbol'] ?? '';
 
       final double itemDiscount = double.tryParse(item['discountAmount']?.toString() ?? item['DiscountAmount']?.toString() ?? '0') ?? 0.0;
@@ -305,11 +314,11 @@ class InvoicePrintDesigner {
     }
     bytes.addAll('$dSep\n'.codeUnits);
 
-    final double netAmount      = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['NetAmount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? 0.0;
-    final double totalDiscount = (invoice['total_discount'] as num?)?.toDouble() ?? (invoice['TotalDiscount'] as num?)?.toDouble() ?? (invoice['discount_amount'] as num?)?.toDouble() ?? (invoice['Discount'] as num?)?.toDouble() ?? 0.0;
-    final double originalTotal = (invoice['original_total'] as num?)?.toDouble() ?? (invoice['OriginalTotal'] as num?)?.toDouble() ?? (netAmount + totalDiscount);
-    final double paidAmount    = (invoice['paid_amount'] as num?)?.toDouble() ?? (invoice['PaidAmount'] as num?)?.toDouble() ?? 0.0;
-    final double remainder     = (invoice['remainder'] as num?)?.toDouble() ?? (invoice['Remainder'] as num?)?.toDouble() ?? 0.0;
+    final double netAmount      = _parseNum(invoice['total_amount'] ?? invoice['NetAmount'] ?? invoice['TotalAmount']);
+    final double totalDiscount = _parseNum(invoice['total_discount'] ?? invoice['TotalDiscount'] ?? invoice['discount_amount'] ?? invoice['Discount']);
+    final double originalTotal = _parseNum(invoice['original_total'] ?? invoice['OriginalTotal'], netAmount + totalDiscount);
+    final double paidAmount    = _parseNum(invoice['paid_amount'] ?? invoice['PaidAmount']);
+    final double remainder     = _parseNum(invoice['remainder'] ?? invoice['Remainder']);
     final List splits = (invoice['PaymentSplits'] ?? invoice['payment_splits'] ?? []) as List;
     final String rawAccName = (invoice['PaymentAccountName'] ?? invoice['AccountName'] ?? invoice['payment_account_name'] ?? invoice['PaymentMethodName'] ?? '').toString().trim();
 
@@ -523,15 +532,15 @@ class InvoicePrintDesigner {
     addDivider(dashed: true);
 
     // Items Section
-    final List items = (invoice['items'] ?? invoice['InvoiceDetails'] ?? []) as List;
+    final List items = (invoice['items'] ?? invoice['InvoiceDetails'] ?? invoice['Details'] ?? []) as List;
     final String cSymbol = PrinterBase.getCurrencySymbol(companySettings, isArabic: isArabic);
     double calculatedTotal = 0.0;
 
     for (var item in items) {
       final String name = PrinterBase.getProductName(item, isArabic: isArabic);
       final double qty = double.tryParse(item['Quantity']?.toString() ?? item['quantity']?.toString() ?? '0') ?? 0.0;
-      final double price = double.tryParse(item['Price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
-      final double total = double.tryParse(item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
+      final double price = double.tryParse(item['UnitPrice']?.toString() ?? item['Price']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
+      final double total = double.tryParse(item['TotalPrice']?.toString() ?? item['Total']?.toString() ?? item['total']?.toString() ?? (qty * price).toString()) ?? (qty * price);
       final String unitName = item['UnitName'] ?? item['unit_name'] ?? item['unit'] ?? item['Unit'] ?? item['unit_symbol'] ?? item['UnitSymbol'] ?? '';
       final String qtyFormatted = PrinterBase.formatQuantity(qty, unitName);
       calculatedTotal += total;
@@ -548,11 +557,11 @@ class InvoicePrintDesigner {
     addDivider(dashed: true);
 
     // Totals & Payment Section
-    final double netAmount          = (invoice['total_amount'] as num?)?.toDouble() ?? (invoice['NetAmount'] as num?)?.toDouble() ?? (invoice['TotalAmount'] as num?)?.toDouble() ?? calculatedTotal;
-    final double totalDiscount     = (invoice['total_discount'] as num?)?.toDouble() ?? (invoice['TotalDiscount'] as num?)?.toDouble() ?? (invoice['discount_amount'] as num?)?.toDouble() ?? (invoice['Discount'] as num?)?.toDouble() ?? 0.0;
-    final double originalTotal     = (invoice['original_total'] as num?)?.toDouble() ?? (invoice['OriginalTotal'] as num?)?.toDouble() ?? (netAmount + totalDiscount);
-    final double totalPaid          = (invoice['paid_amount'] as num?)?.toDouble() ?? (invoice['PaidAmount'] as num?)?.toDouble() ?? 0.0;
-    final double remainder          = (invoice['remainder'] as num?)?.toDouble() ?? (invoice['Remainder'] as num?)?.toDouble() ?? 0.0;
+    final double netAmount          = _parseNum(invoice['total_amount'] ?? invoice['NetAmount'] ?? invoice['TotalAmount'], calculatedTotal);
+    final double totalDiscount     = _parseNum(invoice['total_discount'] ?? invoice['TotalDiscount'] ?? invoice['discount_amount'] ?? invoice['Discount']);
+    final double originalTotal     = _parseNum(invoice['original_total'] ?? invoice['OriginalTotal'], netAmount + totalDiscount);
+    final double totalPaid          = _parseNum(invoice['paid_amount'] ?? invoice['PaidAmount']);
+    final double remainder          = _parseNum(invoice['remainder'] ?? invoice['Remainder']);
 
     final String formattedPaid      = PrinterBase.formatCurrency(totalPaid);
     final String formattedRemainder = PrinterBase.formatCurrency(remainder);

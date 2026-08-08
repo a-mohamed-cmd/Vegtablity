@@ -241,6 +241,10 @@ class ApiService {
     });
   }
 
+  Future<Response> getInvoiceById(int invId) async {
+    return await _dio.get('/invoices/$invId');
+  }
+
   Future<Response> payInvoice(int invId, double amount,
       {int? accountId}) async {
     return await _dio.post('/invoices/$invId/pay', data: {

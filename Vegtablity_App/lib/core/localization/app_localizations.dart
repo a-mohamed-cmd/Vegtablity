@@ -70,7 +70,8 @@ class AppLocalizations {
       'home_printer_settings': 'إعدادات الطابعة الحرارية',
       'home_open_cash_drawer': '💰 فتح درج النقدية',
       'cd_open_success': 'تم فتح درج النقدية بنجاح',
-      'cd_open_failed': 'عذراً، تعذر فتح درج النقدية في وضع البلوتوث أو التوصيل الحالي',
+      'cd_open_failed':
+          'عذراً، تعذر فتح درج النقدية في وضع البلوتوث أو التوصيل الحالي',
       'home_daily_invoices': 'تقرير الفواتير اليومية',
       'home_close_shift': 'إغلاق الوردية',
       'home_receipt_voucher': 'سند قبض',
@@ -103,8 +104,10 @@ class AppLocalizations {
       'home_recipes': 'وصفات المنتجات والتصنيع',
       // Settings Screen
       'settings_home_modules_title': 'تخصيص معروضات الصفحة الرئيسية',
-      'settings_home_modules_desc': 'اختر الاختصارات والبطاقات التي تود ظهورها في الصفحة الرئيسية:',
-      'home_no_enabled_cards_warn': 'يرجى تفعيل بطاقة واحدة على الأقل من الإعدادات العامة لعرضها هنا',
+      'settings_home_modules_desc':
+          'اختر الاختصارات والبطاقات التي تود ظهورها في الصفحة الرئيسية:',
+      'home_no_enabled_cards_warn':
+          'يرجى تفعيل بطاقة واحدة على الأقل من الإعدادات العامة لعرضها هنا',
       'settings_save_success':
           'تم حفظ النمط الجديد وتحديث واجهة الشاشة الرئيسية بنجاح',
       'settings_save_error': 'حدث خطأ أثناء حفظ الإعدادات يرجى المحاولة لاحقاً',
@@ -258,13 +261,16 @@ class AppLocalizations {
       'pv_selected_invoices': '{count} فاتورة محددة',
       'pv_submit_button': 'تسجيل الصرف',
       // Receipt Voucher Screen
-      'rv_offline_error': 'أنت في وضع عدم الاتصال. لا يمكن جلب الفواتير. يرجى إدخال مبلغ السداد الحر.',
+      'rv_offline_error':
+          'أنت في وضع عدم الاتصال. لا يمكن جلب الفواتير. يرجى إدخال مبلغ السداد الحر.',
       'rv_customer_required': 'يرجى اختيار عميل أولاً',
-      'rv_invoice_or_free_required': 'يرجى اختيار فاتورة واحدة على الأقل أو إدخال مبلغ سداد حر',
+      'rv_invoice_or_free_required':
+          'يرجى اختيار فاتورة واحدة على الأقل أو إدخال مبلغ سداد حر',
       'rv_account_required': 'يرجى اختيار حساب القبض',
       'rv_no_shift_open': 'لا توجد وردية مفتوحة',
       'rv_confirm_title': 'تأكيد سند القبض',
-      'rv_confirm_desc': 'سيتم تسجيل سند قبض بقيمة\n{amount}\nمن العميل: {partner}',
+      'rv_confirm_desc':
+          'سيتم تسجيل سند قبض بقيمة\n{amount}\nمن العميل: {partner}',
       'rv_cancel': 'إلغاء',
       'rv_confirm': 'تأكيد',
       'rv_default_desc': 'سند قبض - ',
@@ -277,7 +283,8 @@ class AppLocalizations {
       'rv_no_dues': 'لا توجد فواتير مستحقة لهذا العميل',
       'rv_account_label': 'حساب القبض',
       'rv_note_hint': 'ملاحظة (اختياري)...',
-      'rv_no_invoices': 'لا يمكن جلب الفواتير (أو لا توجد فواتير).\nيمكنك إدخال سداد حر (دفعة من الحساب).',
+      'rv_no_invoices':
+          'لا يمكن جلب الفواتير (أو لا توجد فواتير).\nيمكنك إدخال سداد حر (دفعة من الحساب).',
       'rv_free_payment_label': 'مبلغ الدفعة الحرة (سداد من الحساب)',
       'rv_sales_invoice_label': 'فاتورة رقم #',
       'rv_total_label': 'الإجمالي: ',
@@ -289,7 +296,8 @@ class AppLocalizations {
       'gpv_choose_expense_account': 'اختر حساب المصروفات',
       'gpv_search_account_hint': 'ابحث عن حساب...',
       'gpv_account_code': 'كود: {code}',
-      'gpv_expense_account_required': 'الرجاء اختيار الحساب المستهدف (المصروفات)',
+      'gpv_expense_account_required':
+          'الرجاء اختيار الحساب المستهدف (المصروفات)',
       'gpv_amount_required': 'الرجاء إدخال المبلغ',
       'gpv_invalid_amount': 'المبلغ غير صحيح',
       'gpv_cash_account_required': 'الرجاء اختيار حساب الصندوق/البنك',
@@ -307,7 +315,8 @@ class AppLocalizations {
       'gpv_save_button': 'حفظ السند المباشر',
       // General Receipt Voucher Screen
       'grv_choose_revenue_account': 'اختر حساب الإيرادات',
-      'grv_revenue_account_required': 'الرجاء اختيار الحساب المستهدف (الإيرادات)',
+      'grv_revenue_account_required':
+          'الرجاء اختيار الحساب المستهدف (الإيرادات)',
       'grv_save_print_success': 'تم إنشاء وطباعة سند القبض بنجاح (رقم {id})',
       'grv_screen_title': 'سند قبض مباشر (إيرادات)',
       'grv_target_account_label': 'الحساب المستهدف (الإيراد)',
@@ -351,7 +360,8 @@ class AppLocalizations {
       'di_remainder': 'المتبقي: {amount}',
       'di_cashier': 'الكاشير: {name}',
       'di_invoice_items': 'عناصر الفاتورة:',
-      'di_item_details': '{name}  -  الكمية: {qty}  -  السعر: {price}  -  الإجمالي: {total}',
+      'di_item_details':
+          '{name}  -  الكمية: {qty}  -  السعر: {price}  -  الإجمالي: {total}',
       'di_total_col': 'الإجمالي',
       'di_price_col': 'السعر',
       'di_qty_col': 'الكمية',
@@ -387,12 +397,15 @@ class AppLocalizations {
       'di_payment_error': 'خطأ أثناء عملية السداد: {error}',
       'di_fetch_fail': 'فشل جلب تفاصيل الفاتورة من الخادم',
       'di_network_error': 'خطأ أثناء الاتصال بالشبكة: {error}',
-      'cs_summary_fetch_error': 'تعذر جلب ملخص الوردية. تأكد من وجود وردية مفتوحة.',
+      'cs_summary_fetch_error':
+          'تعذر جلب ملخص الوردية. تأكد من وجود وردية مفتوحة.',
       'cs_data_load_error': 'خطأ في تحميل البيانات: {error}',
       'cs_enter_actual_cash': 'الرجاء إدخال النقدية الفعلية أولاً',
-      'cs_offline_data_warning': 'الرجاء التأكد من وجود اتصال بالإنترنت وحفظ كافة الفواتير والسندات قبل إغلاق الوردية.',
+      'cs_offline_data_warning':
+          'الرجاء التأكد من وجود اتصال بالإنترنت وحفظ كافة الفواتير والسندات قبل إغلاق الوردية.',
       'cs_confirm_close_title': 'تأكيد إغلاق الوردية',
-      'cs_confirm_close_msg': 'هل أنت متأكد من إغلاق الوردية الحالية؟\nلا يمكن التراجع عن هذه العملية.',
+      'cs_confirm_close_msg':
+          'هل أنت متأكد من إغلاق الوردية الحالية؟\nلا يمكن التراجع عن هذه العملية.',
       'cs_cancel': 'إلغاء',
       'cs_close_shift': 'إغلاق الوردية',
       'cs_success': 'نجاح',
@@ -413,14 +426,17 @@ class AppLocalizations {
       'cs_difference': 'العجز / الزيادة',
       'cs_close_print_btn': 'إغلاق وطباعة التقرير',
       'cs_unsynced_data_title': 'بيانات غير متزامنة',
-      'cs_unsynced_data_msg': 'يوجد {invoices} فواتير و {vouchers} سندات غير متزامنة.\nيجب مزامنتها مع الخادم قبل إغلاق الوردية.',
+      'cs_unsynced_data_msg':
+          'يوجد {invoices} فواتير و {vouchers} سندات غير متزامنة.\nيجب مزامنتها مع الخادم قبل إغلاق الوردية.',
       'cs_sync_now': 'مزامنة الآن',
-      'cs_sync_failed': 'فشلت مزامنة بعض البيانات. يرجى التحقق من اتصالك بالإنترنت.',
+      'cs_sync_failed':
+          'فشلت مزامنة بعض البيانات. يرجى التحقق من اتصالك بالإنترنت.',
       'cs_sync_success': 'تمت المزامنة بنجاح.',
       'cs_entered_cash': 'الكاش الختامي المُدخل: {amount}',
       'cs_expected_cash_msg': 'الكاش المتوقع: {amount}',
       'cs_difference_msg': 'الفرق: {amount}',
-      'cs_confirm_close_with_print_msg': 'هل أنت متأكد من إغلاق الوردية؟\nسيتم طباعة تقرير اليومية قبل الإغلاق.',
+      'cs_confirm_close_with_print_msg':
+          'هل أنت متأكد من إغلاق الوردية؟\nسيتم طباعة تقرير اليومية قبل الإغلاق.',
       'cs_yes_close_shift': 'نعم، أغلق الوردية',
       'cs_printing': 'جاري الطباعة...',
       'cs_closed_successfully': 'تم الإغلاق بنجاح',
@@ -450,12 +466,15 @@ class AppLocalizations {
       'cs_sub_paid_purchases': '- مشتريات مسددة',
       'cs_sub_payments': '- سندات صرف',
       // Close Shift Screen
-      'cs_error_fetch_summary': 'تعذر جلب ملخص الوردية. تأكد من وجود وردية مفتوحة.',
+      'cs_error_fetch_summary':
+          'تعذر جلب ملخص الوردية. تأكد من وجود وردية مفتوحة.',
       'cs_error_load_data': 'خطأ في تحميل البيانات: {error}',
       'cs_no_open_shift': 'لا توجد وردية مفتوحة',
-      'cs_unsynced_data_content': 'يوجد {invoices} فواتير و {vouchers} سندات غير متزامنة.\nيجب مزامنتها مع الخادم قبل إغلاق الوردية.',
+      'cs_unsynced_data_content':
+          'يوجد {invoices} فواتير و {vouchers} سندات غير متزامنة.\nيجب مزامنتها مع الخادم قبل إغلاق الوردية.',
       'cs_ending_cash_entered': 'الكاش الختامي المُدخل: {amount}',
-      'cs_confirm_close_content': 'هل أنت متأكد من إغلاق الوردية؟\nسيتم طباعة تقرير اليومية قبل الإغلاق.',
+      'cs_confirm_close_content':
+          'هل أنت متأكد من إغلاق الوردية؟\nسيتم طباعة تقرير اليومية قبل الإغلاق.',
       'cs_yes_close': 'نعم، أغلق الوردية',
       'cs_close_success': 'تم إغلاق الوردية بنجاح ✓',
       'cs_close_failed': 'فشل إغلاق الوردية: {error}',
@@ -480,9 +499,11 @@ class AppLocalizations {
       // Printer Settings Screen
       'ps_save_success': 'تم حفظ إعدادات الطابعة بنجاح!',
       'ps_save_failed': 'فشل في حفظ الإعدادات',
-      'ps_test_simulated': 'تمت محاكاة الطباعة التجريبية بنجاح في الكونسول (الطباعة الفعلية معطلة)',
+      'ps_test_simulated':
+          'تمت محاكاة الطباعة التجريبية بنجاح في الكونسول (الطباعة الفعلية معطلة)',
       'ps_test_success': 'تمت الطباعة التجريبية بنجاح على الطابعة المحددة!',
-      'ps_test_failed': 'فشل في طباعة الفاتورة التجريبية، يرجى التحقق من اتصال وإعدادات الطابعة',
+      'ps_test_failed':
+          'فشل في طباعة الفاتورة التجريبية، يرجى التحقق من اتصال وإعدادات الطابعة',
       'ps_screen_title': 'إعدادات الطابعة الحرارية',
       'ps_config_title': 'تكوين طابعة إيصالات الكاشير (POS)',
       'ps_synced': 'مزامنة نشطة مع السيرفر',
@@ -502,8 +523,10 @@ class AppLocalizations {
       'ps_bt_found': 'الطابعات التي تم العثور عليها:',
       'ps_network_mode_label': 'نمط طباعة الشبكة (Network Engine)',
       'ps_network_mode_direct': 'النص المباشر (تلقائي - النظام القديم)',
-      'ps_network_mode_raster': 'طباعة صورية عالية الدقة (صورة Canvas - للغة العربية والشعار)',
-      'ps_network_mode_desc': 'اختر الطباعة الصورية عند توصيل طابعة شبكة POS 80 لحل مشاكل الحروف العربية والشعار على هذا الجهاز فقط.',
+      'ps_network_mode_raster':
+          'طباعة صورية عالية الدقة (صورة Canvas - للغة العربية والشعار)',
+      'ps_network_mode_desc':
+          'اختر الطباعة الصورية عند توصيل طابعة شبكة POS 80 لحل مشاكل الحروف العربية والشعار على هذا الجهاز فقط.',
       'ps_test_print_btn': 'طباعة تجريبية',
       'ps_save_btn': 'حفظ الإعدادات',
 
@@ -529,13 +552,16 @@ class AppLocalizations {
 
       // Stock Take Screen
       'st_empty_cart_error': 'يرجى إضافة أصناف أولاً',
-      'st_save_success_print_failed': 'تم حفظ الجرد بنجاح برقم ({id}) ولكن فشلت الطباعة',
-      'st_save_success_printing': 'تم حفظ الجرد بنجاح برقم ({id}) وجاري الطباعة',
+      'st_save_success_print_failed':
+          'تم حفظ الجرد بنجاح برقم ({id}) ولكن فشلت الطباعة',
+      'st_save_success_printing':
+          'تم حفظ الجرد بنجاح برقم ({id}) وجاري الطباعة',
       'st_save_failed': 'فشل حفظ الجرد كمسودة',
       'st_screen_title': 'جرد المخزون (مسودة)',
       'st_clear_tooltip': 'مسح القائمة',
       'st_warehouse_label': 'مستودع الجرد:',
-      'st_warehouse_locked_warn': 'تم قفل تعديل مستودع الجرد بسبب وجود عناصر في السلة',
+      'st_warehouse_locked_warn':
+          'تم قفل تعديل مستودع الجرد بسبب وجود عناصر في السلة',
       'st_cart_empty_hint': 'السلة فارغة. ابدأ بمسح أو إضافة أصناف',
       'st_item_barcode': 'الباركود: ',
       'st_item_unit': ' | الوحدة: ',
@@ -550,13 +576,16 @@ class AppLocalizations {
 
       // Wastage Screen
       'wt_empty_cart_error': 'يرجى إضافة أصناف أولاً',
-      'wt_save_success_print_failed': 'تم حفظ الهالك بنجاح برقم ({id}) ولكن فشلت الطباعة',
-      'wt_save_success_printing': 'تم حفظ الهالك بنجاح برقم ({id}) وجاري الطباعة',
+      'wt_save_success_print_failed':
+          'تم حفظ الهالك بنجاح برقم ({id}) ولكن فشلت الطباعة',
+      'wt_save_success_printing':
+          'تم حفظ الهالك بنجاح برقم ({id}) وجاري الطباعة',
       'wt_save_failed': 'فشل حفظ الهالك كمسودة',
       'wt_screen_title': 'إهلاك بضاعة (الهالك)',
       'wt_clear_tooltip': 'مسح القائمة',
       'wt_warehouse_label': 'المستودع المالي:',
-      'wt_warehouse_locked_warn': 'تم قفل تعديل المستودع بسبب وجود عناصر في السلة',
+      'wt_warehouse_locked_warn':
+          'تم قفل تعديل المستودع بسبب وجود عناصر في السلة',
       'wt_cart_empty_hint': 'السلة فارغة. ابدأ بمسح أو إضافة أصناف',
       'wt_item_barcode': 'الباركود: ',
       'wt_item_unit': ' | الوحدة: ',
@@ -581,7 +610,8 @@ class AppLocalizations {
       'temp_order_select_date': 'تحديد التاريخ',
       'temp_order_notes_label': 'ملاحظات إضافية حول الطلب والتوصيل',
       'temp_order_proceed_btn': 'متابعة إلى سلة المنتجات ⬅',
-      'temp_order_validation_error': 'الرجاء إدخال بعض البيانات أو اختيار تخطي للمتابعة بنقدي عام مباشر',
+      'temp_order_validation_error':
+          'الرجاء إدخال بعض البيانات أو اختيار تخطي للمتابعة بنقدي عام مباشر',
       // Split Payment Dialog
       'split_paid_now': 'المسدد الآن:',
       'split_remainder_credit': 'المتبقي (آجل تلقائياً):',
@@ -591,6 +621,52 @@ class AppLocalizations {
       'split_confirm_and_save': 'تأكيد وحفظ الفاتورة',
       'split_cancel': 'إلغاء',
       'split_valid_amounts_warn': 'يرجى تحديد مبالغ صحيحة لطرق الدفع',
+      // Invoice Lookup & Extra Discount
+      'home_invoice_lookup': 'البحث عن فاتورة',
+      'home_invoice_lookup_sub': 'استعلام برقم الفاتورة مع الطباعة السريعة',
+      'inv_lookup_title': 'البحث عن فاتورة (مبيعات / مشتريات)',
+      'inv_lookup_by_id': 'البحث عن الفاتورة برقم الفاتورة:',
+      'inv_lookup_hint': 'أدخل رقم الفاتورة (مثال: 101)',
+      'inv_lookup_search_btn': 'بحث',
+      'inv_lookup_reprint_btn': 'طباعة الإيصال 🖨️',
+      'inv_lookup_reprint_full': 'إعادة طباعة الفاتورة حرارياً 🖨️',
+      'inv_lookup_delivery_title': 'بيانات التوصيل والدليفري (Delivery Info):',
+      'inv_lookup_items_title': 'أصناف وبنود الفاتورة:',
+      'inv_lookup_not_found': 'الفاتورة غير موجودة بالخادم',
+      'inv_lookup_invalid_id': 'يرجى إدخال رقم فاتورة صحيح',
+      'inv_lookup_loading': 'جاري البحث عن الفاتورة واسترجاع التفاصيل...',
+      'inv_lookup_empty_hint':
+          'أدخل رقم الفاتورة واضغط على بحث لإظهار كافة التفاصيل والبيانات والطباعة السريعة',
+      'inv_lookup_sales_badge': 'فاتورة مبيعات',
+      'inv_lookup_purchase_badge': 'فاتورة مشتريات',
+      'inv_lookup_reprint_success': 'تمت إعادة طباعة الفاتورة بنجاح',
+      'inv_lookup_reprint_failed': 'فشلت عملية الطباعة الحرارية',
+      'inv_lookup_partner_cust': 'العميل:',
+      'inv_lookup_partner_supp': 'المورد:',
+      'inv_lookup_general_cash': 'عام / سند مباشر',
+      'inv_lookup_inv_date': 'تاريخ الفاتورة:',
+      'inv_lookup_warehouse': 'المستودع:',
+      'inv_lookup_cashier': 'المستخدم / الكاشير:',
+      'inv_lookup_payment_acc': 'حساب الدفع:',
+      'inv_lookup_delivery_schedule': 'موعد التسليم:',
+      'inv_lookup_notes': 'ملاحظات الفاتورة:',
+      'inv_lookup_col_item': 'الصنف',
+      'inv_lookup_col_qty': 'الكمية',
+      'inv_lookup_col_price': 'السعر',
+      'inv_lookup_col_total': 'الإجمالي',
+      'inv_lookup_unknown_item': 'صنف غير معروف',
+      'inv_lookup_gross_total': 'الإجمالي قبل الخصم (Gross):',
+      'inv_lookup_discount': 'خصم الفاتورة (Discount):',
+      'inv_lookup_net_total': 'الصافي النهائي (Net Total):',
+      'inv_lookup_paid_amount': 'المبلغ المدفوع (Paid):',
+      'inv_lookup_remainder': 'المبلغ المتبقي (Remainder):',
+      'inv_lookup_credit': 'آجل',
+      'inv_lookup_paid_status': 'مدفوع',
+      'inv_lookup_split_payments': 'سجل دفعات',
+      'inv_lookup_split_payments_card': 'Split Payments',
+      'inv_lookup_cash': 'نقداً / كاش',
+      'pos_extra_discount': 'خصم إضافي:',
+      'pos_extra_discount_hint': '0.000',
     },
     'en': {
       'language': 'Language',
@@ -640,7 +716,8 @@ class AppLocalizations {
       'shift_open_button': 'Open Shift & Start Work',
       'shift_select_warehouse': 'Select Warehouse for Shift',
       'shift_warehouse_label': 'Warehouse',
-      'shift_warehouse_error': 'Please select a warehouse before opening the shift',
+      'shift_warehouse_error':
+          'Please select a warehouse before opening the shift',
       // Home Screen
       'home_title': 'Smart Cashier System (POS)',
       'home_server_status': 'Server Status: ',
@@ -648,6 +725,187 @@ class AppLocalizations {
       'home_developed_by': 'Developed by Mohamed Ragab',
       'home_printer_settings': 'Thermal Printer Settings',
       'home_open_cash_drawer': '💰 Open Cash Drawer',
+      'home_daily_invoices': 'Daily Invoices Report',
+      'home_close_shift': 'Close Current Shift',
+      'home_receipt_voucher': 'Cash Receipt Voucher',
+      'home_receipt_voucher_sub': 'Direct cash collection from customer',
+      'home_payment_voucher': 'Cash Payment Voucher',
+      'home_payment_voucher_sub': 'Direct cash payment to supplier',
+      'home_classic_stocktake': 'Stock Take (Draft)',
+      'home_classic_wastage': 'Wastage / Damaged Goods',
+      'home_daily_orders': 'Daily Delivery Orders',
+      'home_no_enabled_cards_warn':
+          'No cards enabled. Please enable cards from settings.',
+      'home_premium_new_invoice': 'New Sales Invoice',
+      'home_premium_new_purchase': 'New Purchase Invoice',
+      'home_premium_customer_sales': 'Customer Sales Quotes',
+      'home_premium_supplier_purchases': 'Supplier Purchase Quotes',
+      'home_premium_customer_receipts': 'Customer Receipt Vouchers',
+      'home_premium_supplier_payments': 'Supplier Payment Vouchers',
+      // Printer Settings Screen
+      'ps_title': 'Printer Settings',
+      'ps_connection_type': 'Connection Type:',
+      'ps_type_none': 'Disabled (No Printer)',
+      'ps_type_bluetooth': 'Bluetooth',
+      'ps_type_network': 'Network (LAN / Wi-Fi)',
+      'ps_ip_label': 'Printer IP Address',
+      'ps_port_label': 'Port',
+      'ps_bt_device_label': 'Paired Bluetooth Device',
+      'ps_bt_select_hint': 'Select Bluetooth Printer',
+      'ps_paper_size_label': 'Paper Size (Width)',
+      'ps_paper_80mm': '80 mm (POS Standard)',
+      'ps_paper_58mm': '58 mm (Portable/Mini)',
+      'ps_copies_label': 'Number of Copies',
+      'ps_save_success': 'Printer settings saved successfully',
+      'ps_save_failed': 'Failed to save settings',
+      'ps_test_printing': 'Printing test receipt...',
+      'ps_test_success': 'Test receipt sent to printer',
+      'ps_test_failed': 'Failed to print test receipt',
+      'ps_bt_scan_button': 'Scan Available Printers',
+      'ps_bt_scan_desc': 'Scanning range for active Bluetooth devices...',
+      'ps_bt_found': 'Found Printers:',
+      'ps_network_mode_label': 'Network Print Engine',
+      'ps_network_mode_direct': 'Direct ESC/POS Text',
+      'ps_network_mode_raster': 'High Resolution HD Canvas Image',
+      'ps_network_mode_desc':
+          'Select raster mode for 80mm network printers to solve Arabic alignment and logo issues.',
+      'ps_test_print_btn': 'Test Print',
+      'ps_save_btn': 'Save Settings',
+      // Partner Selection Screen
+      'ps_title_customer': 'Select Customer',
+      'ps_title_supplier': 'Select Supplier',
+      'ps_fetch_customer_failed': 'Failed to fetch customer list from server',
+      'ps_fetch_supplier_failed': 'Failed to fetch supplier list from server',
+      'ps_search_customer_hint':
+          'Search customer by name, phone or account code...',
+      'ps_search_supplier_hint':
+          'Search supplier by name, phone or account code...',
+      'ps_no_results_supplier': 'No matching suppliers found',
+      'ps_general_cash_label': 'General Cash',
+      'ps_general_cash_sub': 'General customer (Quick Sales)',
+      'ps_general_cash_desc': 'Direct Cash',
+      'ps_no_account_code': 'None',
+      'ps_account_code_label': 'Financial Account Code: ',
+      'ps_phone_label': 'Phone: ',
+      'ps_balance_credit': 'Credit Balance',
+      'ps_balance_debit': 'Debit Balance',
+      'ps_unknown_partner': 'Unknown Partner',
+      'ps_retry': 'Retry',
+      'ps_conn_error': 'Network connection error: ',
+      // Stock Take Screen
+      'st_empty_cart_error': 'Please add items first',
+      'st_save_success_print_failed':
+          'Stock take draft saved #{id} but printing failed',
+      'st_save_success_printing': 'Stock take draft saved #{id} and printing',
+      'st_save_failed': 'Failed to save stock take draft',
+      'st_screen_title': 'Stock Take (Draft)',
+      'st_clear_tooltip': 'Clear List',
+      'st_warehouse_label': 'Stock Take Warehouse:',
+      'st_warehouse_locked_warn':
+          'Warehouse selection locked because cart contains items',
+      'st_cart_empty_hint': 'Cart is empty. Scan or add items to begin',
+      'st_item_barcode': 'Barcode: ',
+      'st_item_unit': ' | Unit: ',
+      'st_item_cost': ' | Cost: ',
+      'st_system_qty': 'Book Qty',
+      'st_actual_qty': 'Actual Qty',
+      'st_diff_value': 'Diff Value',
+      'st_difference': 'Difference',
+      'st_total_diff_value': 'Total Diff Value:',
+      'st_notes_hint': 'Additional stock take notes...',
+      'st_save_print_btn': 'Save & Print Stock Take Draft',
+      // Wastage Screen
+      'wt_empty_cart_error': 'Please add items first',
+      'wt_save_success_print_failed':
+          'Wastage draft saved #{id} but printing failed',
+      'wt_save_success_printing': 'Wastage draft saved #{id} and printing',
+      'wt_save_failed': 'Failed to save wastage draft',
+      'wt_screen_title': 'Damaged Goods / Wastage',
+      'wt_clear_tooltip': 'Clear List',
+      'wt_warehouse_label': 'Financial Warehouse:',
+      'wt_warehouse_locked_warn':
+          'Warehouse selection locked because cart contains items',
+      'wt_cart_empty_hint': 'Cart is empty. Scan or add items to begin',
+      'wt_item_barcode': 'Barcode: ',
+      'wt_item_unit': ' | Unit: ',
+      'wt_cost_price': 'Cost Price',
+      'wt_quantity': 'Quantity',
+      'wt_total_cost': 'Total Cost:',
+      'wt_total_wastage_value': 'Total Wastage Value:',
+      'wt_notes_hint': 'Additional notes...',
+      'wt_save_print_btn': 'Save & Print Draft',
+      // Temporary Order / Delivery Info Screen
+      'temp_order_title_general': 'Delivery Info & Temporary Order',
+      'temp_order_title_customer': 'Set Delivery Schedule for Customer',
+      'temp_order_skip_general': 'Skip & proceed as direct general cash',
+      'temp_order_skip_customer': 'Skip & proceed without delivery info',
+      'temp_order_cust_info_title': 'Temporary Customer Info',
+      'temp_order_cust_name_label': 'Customer Name',
+      'temp_order_phone_label': 'Phone Number',
+      'temp_order_address_label': 'Detailed Delivery Address',
+      'temp_order_delivery_schedule_title': 'Delivery Schedule & Notes',
+      'temp_order_select_time': 'Select Time',
+      'temp_order_select_date': 'Select Date',
+      'temp_order_notes_label': 'Additional Order & Delivery Notes',
+      'temp_order_proceed_btn': 'Proceed to Cart ⬅',
+      'temp_order_validation_error':
+          'Please enter some info or choose skip to proceed as general cash',
+      // Split Payment Dialog
+      'split_paid_now': 'Paid Now:',
+      'split_remainder_credit': 'Remaining (Credit automatically):',
+      'split_payment_account': 'Payment Method (Account)',
+      'split_amount_paid': 'Amount Paid',
+      'split_add_another_method': 'Add another payment method',
+      'split_confirm_and_save': 'Confirm and Save Invoice',
+      'split_cancel': 'Cancel',
+      'split_valid_amounts_warn':
+          'Please enter valid amounts for payment methods',
+      // Invoice Lookup & Extra Discount
+      'home_invoice_lookup': 'Search Invoice',
+      'home_invoice_lookup_sub': 'Lookup by Invoice ID with Quick Printing',
+      'inv_lookup_title': 'Search Invoice ',
+      'inv_lookup_by_id': 'Search Invoice by ID:',
+      'inv_lookup_hint': 'Enter Invoice ID (e.g. 101)',
+      'inv_lookup_search_btn': 'Search',
+      'inv_lookup_reprint_btn': 'Print Receipt 🖨️',
+      'inv_lookup_reprint_full': 'Re-print Invoice 🖨️',
+      'inv_lookup_delivery_title': 'Delivery Info:',
+      'inv_lookup_items_title': 'Invoice Line Items:',
+      'inv_lookup_not_found': 'Invoice not found on server',
+      'inv_lookup_invalid_id': 'Please enter a valid Invoice ID',
+      'inv_lookup_loading': 'Searching for invoice and fetching details...',
+      'inv_lookup_empty_hint':
+          'Enter invoice number and tap search to show complete details and quick print',
+      'inv_lookup_sales_badge': 'Sales Invoice',
+      'inv_lookup_purchase_badge': 'Purchase Invoice',
+      'inv_lookup_reprint_success': 'Invoice re-printed successfully',
+      'inv_lookup_reprint_failed': 'Thermal printing failed',
+      'inv_lookup_partner_cust': 'Customer:',
+      'inv_lookup_partner_supp': 'Supplier:',
+      'inv_lookup_general_cash': 'General / Direct Cash',
+      'inv_lookup_inv_date': 'Invoice Date:',
+      'inv_lookup_warehouse': 'Warehouse:',
+      'inv_lookup_cashier': 'User / Cashier:',
+      'inv_lookup_payment_acc': 'Payment Account:',
+      'inv_lookup_delivery_schedule': 'Delivery Schedule:',
+      'inv_lookup_notes': 'Invoice Notes:',
+      'inv_lookup_col_item': 'Item',
+      'inv_lookup_col_qty': 'Qty',
+      'inv_lookup_col_price': 'Price',
+      'inv_lookup_col_total': 'Total',
+      'inv_lookup_unknown_item': 'Unknown Item',
+      'inv_lookup_gross_total': 'Gross Total:',
+      'inv_lookup_discount': 'Invoice Discount:',
+      'inv_lookup_net_total': 'Net Total:',
+      'inv_lookup_paid_amount': 'Paid Amount:',
+      'inv_lookup_remainder': 'Remaining Amount:',
+      'inv_lookup_credit': 'Credit',
+      'inv_lookup_paid_status': 'Paid',
+      'inv_lookup_split_payments': 'Split Payments',
+      'inv_lookup_split_payments_card': 'Split Payments',
+      'inv_lookup_cash': 'Cash',
+      'pos_extra_discount': 'Extra Discount:',
+      'pos_extra_discount_hint': '0.000',
       'cd_open_success': 'Cash drawer opened successfully',
       'cd_open_failed': 'Could not open cash drawer in current printer mode',
       'home_daily_invoices': 'Daily Invoices Report',
@@ -681,8 +939,10 @@ class AppLocalizations {
       'home_recipes': 'Product Recipes & Manufacturing',
       // Settings Screen
       'settings_home_modules_title': 'Customize Home Screen Cards',
-      'settings_home_modules_desc': 'Select shortcuts and cards to display on the Home Screen:',
-      'home_no_enabled_cards_warn': 'Please enable at least one card in General Settings to display it here',
+      'settings_home_modules_desc':
+          'Select shortcuts and cards to display on the Home Screen:',
+      'home_no_enabled_cards_warn':
+          'Please enable at least one card in General Settings to display it here',
       'settings_save_success':
           'New layout saved and Home Screen updated successfully',
       'settings_save_error':
@@ -838,17 +1098,21 @@ class AppLocalizations {
       'pv_selected_invoices': '{count} Selected Invoices',
       'pv_submit_button': 'Record Payment',
       // Receipt Voucher Screen
-      'rv_offline_error': 'You are offline. Cannot fetch invoices. Please enter a free payment amount.',
+      'rv_offline_error':
+          'You are offline. Cannot fetch invoices. Please enter a free payment amount.',
       'rv_customer_required': 'Please select a customer first',
-      'rv_invoice_or_free_required': 'Please select at least one invoice or enter a free payment amount',
+      'rv_invoice_or_free_required':
+          'Please select at least one invoice or enter a free payment amount',
       'rv_account_required': 'Please select a receipt account',
       'rv_no_shift_open': 'No open shift found',
       'rv_confirm_title': 'Confirm Receipt Voucher',
-      'rv_confirm_desc': 'A receipt voucher will be recorded with the amount of\n{amount}\nfrom Customer: {partner}',
+      'rv_confirm_desc':
+          'A receipt voucher will be recorded with the amount of\n{amount}\nfrom Customer: {partner}',
       'rv_cancel': 'Cancel',
       'rv_confirm': 'Confirm',
       'rv_default_desc': 'Receipt Voucher - ',
-      'rv_save_print_success': 'Voucher No. ({id}) saved and printed successfully',
+      'rv_save_print_success':
+          'Voucher No. ({id}) saved and printed successfully',
       'rv_save_error': 'Unexpected error: ',
       'rv_screen_title': 'Receipt Voucher',
       'rv_customer_label': 'Customer: ',
@@ -857,7 +1121,8 @@ class AppLocalizations {
       'rv_no_dues': 'No dues for this customer',
       'rv_account_label': 'Receipt Account',
       'rv_note_hint': 'Note (optional)...',
-      'rv_no_invoices': 'Cannot fetch invoices (or none exist).\nYou can enter a free payment (account payment).',
+      'rv_no_invoices':
+          'Cannot fetch invoices (or none exist).\nYou can enter a free payment (account payment).',
       'rv_free_payment_label': 'Free Payment Amount (Account Payment)',
       'rv_sales_invoice_label': 'Invoice #',
       'rv_total_label': 'Total: ',
@@ -869,13 +1134,15 @@ class AppLocalizations {
       'gpv_choose_expense_account': 'Choose Expense Account',
       'gpv_search_account_hint': 'Search for an account...',
       'gpv_account_code': 'Code: {code}',
-      'gpv_expense_account_required': 'Please select the target account (Expenses)',
+      'gpv_expense_account_required':
+          'Please select the target account (Expenses)',
       'gpv_amount_required': 'Please enter the amount',
       'gpv_invalid_amount': 'Invalid amount',
       'gpv_cash_account_required': 'Please select the cash/bank account',
       'gpv_undefined': 'Undefined',
       'gpv_cash': 'Cash',
-      'gpv_save_print_success': 'Payment voucher created and printed successfully (No. {id})',
+      'gpv_save_print_success':
+          'Payment voucher created and printed successfully (No. {id})',
       'gpv_save_error': 'Error during saving: ',
       'gpv_cannot_save': 'Cannot save: ',
       'gpv_screen_title': 'Direct Payment Voucher (Expenses)',
@@ -887,8 +1154,10 @@ class AppLocalizations {
       'gpv_save_button': 'Save Direct Voucher',
       // General Receipt Voucher Screen
       'grv_choose_revenue_account': 'Choose Revenue Account',
-      'grv_revenue_account_required': 'Please select the target account (Revenues)',
-      'grv_save_print_success': 'Receipt voucher created and printed successfully (No. {id})',
+      'grv_revenue_account_required':
+          'Please select the target account (Revenues)',
+      'grv_save_print_success':
+          'Receipt voucher created and printed successfully (No. {id})',
       'grv_screen_title': 'Direct Receipt Voucher (Revenues)',
       'grv_target_account_label': 'Target Account (Revenue)',
       'grv_receive_to_account': 'Receive to Account (Cash)',
@@ -927,11 +1196,12 @@ class AppLocalizations {
       'di_invoice_details': 'Invoice Details',
       'di_partner_name': 'Customer/Supplier: {name}',
       'di_discount': 'Discount: {amount}',
-'di_paid': 'Paid: {amount}',
+      'di_paid': 'Paid: {amount}',
       'di_remainder': 'Remainder: {amount}',
       'di_cashier': 'Cashier: {name}',
       'di_invoice_items': 'Invoice Items:',
-      'di_item_details': '{name}  -  Qty: {qty}  -  Price: {price}  -  Total: {total}',
+      'di_item_details':
+          '{name}  -  Qty: {qty}  -  Price: {price}  -  Total: {total}',
       'di_total_col': 'Total',
       'di_price_col': 'Price',
       'di_qty_col': 'Qty',
@@ -949,7 +1219,8 @@ class AppLocalizations {
       'di_payment_method_label': 'Payment Method',
       'di_payment_amount_single': 'Amount',
       'di_add_payment_method_btn': 'Add Another Payment Method',
-      'di_invalid_split_amounts': 'Please enter valid amounts for payment methods',
+      'di_invalid_split_amounts':
+          'Please enter valid amounts for payment methods',
       'di_single_payment_mode': 'Single Payment',
       'di_cancel': 'Cancel',
       'di_confirm_payment': 'Confirm Payment',
@@ -961,19 +1232,23 @@ class AppLocalizations {
       'print_total_paid': 'Total Paid',
       'print_balance_due': 'Balance Due',
       'print_payment_breakdown': 'Payment Methods Breakdown:',
-      'di_invalid_payment': 'Please enter a valid amount not exceeding the remainder',
+      'di_invalid_payment':
+          'Please enter a valid amount not exceeding the remainder',
       'di_payment_success': 'Payment recorded and accounting entries updated!',
       'di_payment_fail': 'Failed to record payment: {error}',
       'di_payment_error': 'Error during payment: {error}',
       'di_fetch_fail': 'Failed to fetch invoice details from server',
       'di_network_error': 'Network error: {error}',
       // Close Shift Screen
-      'cs_summary_fetch_error': 'Failed to fetch shift summary. Make sure a shift is open.',
+      'cs_summary_fetch_error':
+          'Failed to fetch shift summary. Make sure a shift is open.',
       'cs_data_load_error': 'Error loading data: {error}',
       'cs_enter_actual_cash': 'Please enter actual cash first',
-      'cs_offline_data_warning': 'Please ensure internet connection and save all offline data before closing the shift.',
+      'cs_offline_data_warning':
+          'Please ensure internet connection and save all offline data before closing the shift.',
       'cs_confirm_close_title': 'Confirm Close Shift',
-      'cs_confirm_close_msg': 'Are you sure you want to close the current shift?\nThis action cannot be undone.',
+      'cs_confirm_close_msg':
+          'Are you sure you want to close the current shift?\nThis action cannot be undone.',
       'cs_cancel': 'Cancel',
       'cs_close_shift': 'Close Shift',
       'cs_success': 'Success',
@@ -994,14 +1269,17 @@ class AppLocalizations {
       'cs_difference': 'Deficit / Surplus',
       'cs_close_print_btn': 'Close & Print Report',
       'cs_unsynced_data_title': 'Unsynced Data',
-      'cs_unsynced_data_msg': 'There are {invoices} invoices and {vouchers} vouchers unsynced.\nThey must be synced before closing the shift.',
+      'cs_unsynced_data_msg':
+          'There are {invoices} invoices and {vouchers} vouchers unsynced.\nThey must be synced before closing the shift.',
       'cs_sync_now': 'Sync Now',
-      'cs_sync_failed': 'Failed to sync some data. Please check your internet connection.',
+      'cs_sync_failed':
+          'Failed to sync some data. Please check your internet connection.',
       'cs_sync_success': 'Synced successfully.',
       'cs_entered_cash': 'Entered Closing Cash: {amount}',
       'cs_expected_cash_msg': 'Expected Cash: {amount}',
       'cs_difference_msg': 'Difference: {amount}',
-      'cs_confirm_close_with_print_msg': 'Are you sure you want to close the shift?\nA daily report will be printed before closing.',
+      'cs_confirm_close_with_print_msg':
+          'Are you sure you want to close the shift?\nA daily report will be printed before closing.',
       'cs_yes_close_shift': 'Yes, Close Shift',
       'cs_printing': 'Printing...',
       'cs_closed_successfully': 'Closed successfully',
@@ -1031,12 +1309,15 @@ class AppLocalizations {
       'cs_sub_paid_purchases': '- Paid Purchases',
       'cs_sub_payments': '- Payment Vouchers',
       // Close Shift Screen
-      'cs_error_fetch_summary': 'Failed to fetch shift summary. Ensure a shift is open.',
+      'cs_error_fetch_summary':
+          'Failed to fetch shift summary. Ensure a shift is open.',
       'cs_error_load_data': 'Error loading data: {error}',
       'cs_no_open_shift': 'No open shift',
-      'cs_unsynced_data_content': 'There are {invoices} invoices and {vouchers} vouchers not synced.\nYou must sync them before closing the shift.',
+      'cs_unsynced_data_content':
+          'There are {invoices} invoices and {vouchers} vouchers not synced.\nYou must sync them before closing the shift.',
       'cs_ending_cash_entered': 'Entered Ending Cash: {amount}',
-      'cs_confirm_close_content': 'Are you sure you want to close the shift?\nThe daily report will be printed before closing.',
+      'cs_confirm_close_content':
+          'Are you sure you want to close the shift?\nThe daily report will be printed before closing.',
       'cs_yes_close': 'Yes, Close Shift',
       'cs_close_success': 'Shift closed successfully ✓',
       'cs_close_failed': 'Failed to close shift: {error}',
@@ -1061,9 +1342,11 @@ class AppLocalizations {
       // Printer Settings Screen
       'ps_save_success': 'Printer settings saved successfully!',
       'ps_save_failed': 'Failed to save settings',
-      'ps_test_simulated': 'Test print simulated in console successfully (Actual printing disabled)',
+      'ps_test_simulated':
+          'Test print simulated in console successfully (Actual printing disabled)',
       'ps_test_success': 'Test printed successfully on the selected printer!',
-      'ps_test_failed': 'Failed to print test invoice, please check printer connection and settings',
+      'ps_test_failed':
+          'Failed to print test invoice, please check printer connection and settings',
       'ps_screen_title': 'Thermal Printer Settings',
       'ps_config_title': 'Cashier POS Printer Configuration',
       'ps_synced': 'Active sync with server',
@@ -1084,7 +1367,8 @@ class AppLocalizations {
       'ps_network_mode_label': 'Network Printing Engine',
       'ps_network_mode_direct': 'Direct Text (Default - Legacy Mode)',
       'ps_network_mode_raster': 'HD Raster Image Canvas (For Arabic & Logo)',
-      'ps_network_mode_desc': 'Select HD Raster Image mode when connected to a POS 80 Network printer to fix Arabic text & logo corruption on this device only.',
+      'ps_network_mode_desc':
+          'Select HD Raster Image mode when connected to a POS 80 Network printer to fix Arabic text & logo corruption on this device only.',
       'ps_test_print_btn': 'Test Print',
       'ps_save_btn': 'Save Settings',
 
@@ -1110,13 +1394,16 @@ class AppLocalizations {
 
       // Stock Take Screen
       'st_empty_cart_error': 'Please add items first',
-      'st_save_success_print_failed': 'Stock Take saved successfully with ID ({id}) but printing failed',
-      'st_save_success_printing': 'Stock Take saved successfully with ID ({id}) and printing...',
+      'st_save_success_print_failed':
+          'Stock Take saved successfully with ID ({id}) but printing failed',
+      'st_save_success_printing':
+          'Stock Take saved successfully with ID ({id}) and printing...',
       'st_save_failed': 'Failed to save Stock Take draft',
       'st_screen_title': 'Stock Take (Draft)',
       'st_clear_tooltip': 'Clear list',
       'st_warehouse_label': 'Stock Warehouse:',
-      'st_warehouse_locked_warn': 'Warehouse editing locked because there are items in the cart',
+      'st_warehouse_locked_warn':
+          'Warehouse editing locked because there are items in the cart',
       'st_cart_empty_hint': 'Cart is empty. Start scanning or adding items',
       'st_item_barcode': 'Barcode: ',
       'st_item_unit': ' | Unit: ',
@@ -1131,13 +1418,16 @@ class AppLocalizations {
 
       // Wastage Screen
       'wt_empty_cart_error': 'Please add items first',
-      'wt_save_success_print_failed': 'Wastage saved successfully with ID ({id}) but printing failed',
-      'wt_save_success_printing': 'Wastage saved successfully with ID ({id}) and printing...',
+      'wt_save_success_print_failed':
+          'Wastage saved successfully with ID ({id}) but printing failed',
+      'wt_save_success_printing':
+          'Wastage saved successfully with ID ({id}) and printing...',
       'wt_save_failed': 'Failed to save Wastage draft',
       'wt_screen_title': 'Wastage (Expired/Damaged)',
       'wt_clear_tooltip': 'Clear list',
       'wt_warehouse_label': 'Financial Warehouse:',
-      'wt_warehouse_locked_warn': 'Warehouse editing locked because there are items in the cart',
+      'wt_warehouse_locked_warn':
+          'Warehouse editing locked because there are items in the cart',
       'wt_cart_empty_hint': 'Cart is empty. Start scanning or adding items',
       'wt_item_barcode': 'Barcode: ',
       'wt_item_unit': ' | Unit: ',
@@ -1162,7 +1452,8 @@ class AppLocalizations {
       'temp_order_select_date': 'Select Date',
       'temp_order_notes_label': 'Additional Order & Delivery Notes',
       'temp_order_proceed_btn': 'Proceed to Cart ⬅',
-      'temp_order_validation_error': 'Please enter some info or choose skip to proceed as general cash',
+      'temp_order_validation_error':
+          'Please enter some info or choose skip to proceed as general cash',
       // Split Payment Dialog
       'split_paid_now': 'Paid Now:',
       'split_remainder_credit': 'Remaining (Credit automatically):',
@@ -1171,7 +1462,8 @@ class AppLocalizations {
       'split_add_another_method': 'Add another payment method',
       'split_confirm_and_save': 'Confirm and Save Invoice',
       'split_cancel': 'Cancel',
-      'split_valid_amounts_warn': 'Please enter valid amounts for payment methods',
+      'split_valid_amounts_warn':
+          'Please enter valid amounts for payment methods',
     },
   };
 
@@ -1202,4 +1494,3 @@ extension TranslateExtension on BuildContext {
     return AppLocalizations.of(this)?.translate(key) ?? key;
   }
 }
-

@@ -26,6 +26,7 @@ import 'inventory/wastage_screen.dart';
 import 'supplier_selection_screen.dart';
 import 'daily_orders_screen.dart';
 import 'recipe_management_screen.dart';
+import 'invoice_lookup_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -251,6 +252,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => const DailyInvoicesScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.search, color: Colors.blueAccent),
+              title: Text(context.tr('home_invoice_lookup'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(context.tr('home_invoice_lookup_sub'), style: const TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const InvoiceLookupScreen()),
                 );
               },
             ),

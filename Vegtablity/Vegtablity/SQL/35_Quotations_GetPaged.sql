@@ -26,7 +26,9 @@ BEGIN
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
     WHERE
-        (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+        q.IsActive = 1 
+        AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+        AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
         AND (
             @SearchText IS NULL
             OR @SearchText = ''
@@ -46,7 +48,9 @@ BEGIN
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
     WHERE
-        (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+        q.IsActive = 1 
+        AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+        AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
         AND (
             @SearchText IS NULL
             OR @SearchText = ''

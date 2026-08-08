@@ -201,6 +201,7 @@
     <Compile Include="Models\InvoiceListItem.vb" />
     <Compile Include="Models\InvoiceReportData.vb" />
     <Compile Include="Models\DashboardModels.vb" />
+    <Compile Include="Models\PaymentMethodSummary.vb" />
     <Compile Include="Services\DatabaseHelper.vb" />
     <Compile Include="Services\PurchaseQuoteService.vb" />
     <Compile Include="Services\SettingsService.vb" />

@@ -60,5 +60,18 @@ Namespace Services
                 Return New List(Of InvoiceHeader)()
             End Try
         End Function
+
+        Public Function GetShiftPaymentMethodTotals(shiftID As Integer) As List(Of PaymentMethodSummary)
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Return conn.Query(Of PaymentMethodSummary)(
+                        Helpers.StoredProcedures.SP_SHIFT_GETPAYMENTMETHODTOTALS,
+                        New With {.ShiftID = shiftID},
+                        commandType:=CommandType.StoredProcedure).AsList()
+                End Using
+            Catch ex As Exception
+                Return New List(Of PaymentMethodSummary)()
+            End Try
+        End Function
     End Class
 End Namespace

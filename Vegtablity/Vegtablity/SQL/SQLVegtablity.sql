@@ -5086,12 +5086,15 @@ BEGIN
     DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
 
     -- Total Count
-    SELECT COUNT(*) AS TotalCount FROM [Sales].[Quotations];
+    SELECT COUNT(*) AS TotalCount 
+    FROM [Sales].[Quotations] q
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE));
 
     -- Page Data
     SELECT q.*, p.PartnerName
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
     ORDER BY q.QuoteDate DESC
     OFFSET @Offset ROWS
     FETCH NEXT @PageSize ROWS ONLY;
@@ -5229,7 +5232,8 @@ BEGIN
     SELECT COUNT(*) AS TotalCount 
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
-    WHERE (@SearchText IS NULL OR @SearchText = ''
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+      AND (@SearchText IS NULL OR @SearchText = ''
            OR p.PartnerName LIKE '%' + @SearchText + '%'
            OR q.Notes LIKE '%' + @SearchText + '%'
            OR CAST(q.QuoteID AS NVARCHAR) = @SearchText);
@@ -5238,7 +5242,8 @@ BEGIN
     SELECT q.*, p.PartnerName
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
-    WHERE (@SearchText IS NULL OR @SearchText = ''
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+      AND (@SearchText IS NULL OR @SearchText = ''
            OR p.PartnerName LIKE '%' + @SearchText + '%'
            OR q.Notes LIKE '%' + @SearchText + '%'
            OR CAST(q.QuoteID AS NVARCHAR) = @SearchText)
@@ -5311,7 +5316,8 @@ BEGIN
     SELECT COUNT(*) AS TotalCount 
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
-    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+      AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
       AND (@SearchText IS NULL OR @SearchText = ''
            OR p.PartnerName LIKE '%' + @SearchText + '%'
            OR q.Notes LIKE '%' + @SearchText + '%'
@@ -5321,7 +5327,8 @@ BEGIN
     SELECT q.*, p.PartnerName
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
-    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+      AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
       AND (@SearchText IS NULL OR @SearchText = ''
            OR p.PartnerName LIKE '%' + @SearchText + '%'
            OR q.Notes LIKE '%' + @SearchText + '%'
@@ -5783,7 +5790,8 @@ BEGIN
     SELECT COUNT(*) AS TotalCount 
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
-    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+      AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
       AND (@SearchText IS NULL OR @SearchText = ''
            OR p.PartnerName LIKE '%' + @SearchText + '%'
            OR q.Notes LIKE '%' + @SearchText + '%'
@@ -5793,7 +5801,8 @@ BEGIN
     SELECT q.*, p.PartnerName
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
-    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+    WHERE q.IsActive = 1 AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+      AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
       AND (@SearchText IS NULL OR @SearchText = ''
            OR p.PartnerName LIKE '%' + @SearchText + '%'
            OR q.Notes LIKE '%' + @SearchText + '%'
@@ -6268,7 +6277,9 @@ BEGIN
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
     WHERE
-        (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+        q.IsActive = 1 
+        AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+        AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
         AND (
             @SearchText IS NULL
             OR @SearchText = ''
@@ -6288,13 +6299,64 @@ BEGIN
     FROM [Sales].[Quotations] q
     INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
     WHERE
-        (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+        q.IsActive = 1 
+        AND (q.ExpiryDate IS NULL OR q.ExpiryDate >= CAST(GETDATE() AS DATE))
+        AND (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
         AND (
             @SearchText IS NULL
             OR @SearchText = ''
             OR p.PartnerName LIKE N'%' + @SearchText + N'%'
             OR CAST(q.QuoteID AS NVARCHAR) LIKE N'%' + @SearchText + N'%'
         )
+    ORDER BY q.QuoteDate DESC
+    OFFSET @Offset ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- [Sales].[sp_Quotations_GetAll_Paged]
+-- يُستدعى من شاشة سجل عروض الأسعار بـ WPF لعرض كافة عروض الأسعار (القديمة والجديدة والفعالة وغير الفعالة)
+IF OBJECT_ID('[Sales].[sp_Quotations_GetAll_Paged]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Quotations_GetAll_Paged];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Quotations_GetAll_Paged]
+    @PageNumber INT = 1,
+    @PageSize   INT = 20,
+    @SearchText NVARCHAR(150) = NULL,
+    @PartnerID  INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- 1. إجمالي عدد السجلات (جميع عروض الأسعار: القديمة والجديدة والفعالة وغير الفعالة)
+    SELECT COUNT(*) AS TotalCount 
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+      AND (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText);
+
+    -- 2. البيانات المرقّمة
+    SELECT 
+        q.QuoteID,
+        q.PartnerID,
+        q.QuoteDate,
+        q.ExpiryDate,
+        q.IsActive,
+        q.Notes,
+        p.PartnerName
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@PartnerID IS NULL OR q.PartnerID = @PartnerID)
+      AND (@SearchText IS NULL OR @SearchText = ''
+           OR p.PartnerName LIKE '%' + @SearchText + '%'
+           OR q.Notes LIKE '%' + @SearchText + '%'
+           OR CAST(q.QuoteID AS NVARCHAR) = @SearchText)
     ORDER BY q.QuoteDate DESC
     OFFSET @Offset ROWS
     FETCH NEXT @PageSize ROWS ONLY;
@@ -12305,12 +12367,18 @@ BEGIN
         w.WarehouseName,
         u.FullName AS UserName,
         acc.AccountName AS PaymentAccountName,
-        acc.AccountCode AS PaymentAccountCode
+        acc.AccountCode AS PaymentAccountCode,
+        temp.CustomerName AS TempCustomerName,
+        temp.Phone AS TempPhone,
+        temp.Address AS TempAddress,
+        temp.DeliveryDate AS TempDeliveryDate,
+        temp.DeliveryTime AS TempDeliveryTime
     FROM [Sales].[InvoiceHeader] h
     LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
     LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
     LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
     LEFT JOIN [Accounting].[ChartOfAccounts] acc ON h.PaymentAccountID = acc.AccountID
+    LEFT JOIN [Sales].[TempOrderInfo] temp ON h.InvID = temp.InvID
     WHERE h.InvID = @InvID;
 END
 GO

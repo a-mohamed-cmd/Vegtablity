@@ -45,6 +45,7 @@ Namespace Helpers
         Public Const SP_SHIFT_GETALL As String = "[Sales].[sp_Shift_GetAll]"
         Public Const SP_SHIFT_GETSUMMARY As String = "[Sales].[sp_Shift_GetSummary]"
         Public Const SP_SHIFT_GETVOUCHERS As String = "[Sales].[sp_Shift_GetVouchers]"
+        Public Const SP_SHIFT_GETPAYMENTMETHODTOTALS As String = "[Sales].[sp_Shift_GetPaymentMethodTotals]"
         Public Const SP_INVOICE_GETALL_POS As String = "[Sales].[sp_Invoice_GetAll_Pos]"
 
         ' =============================================
@@ -186,7 +187,7 @@ Namespace Helpers
         Public Const SP_QUOTATIONDETAILS_INSERT As String = "[Sales].[sp_QuotationDetails_Insert]"
         Public Const SP_QUOTATIONDETAILS_DELETEBYQUOTEID As String = "[Sales].[sp_QuotationDetails_DeleteByQuoteID]"
         Public Const SP_QUOTATION_GETACTIVEPRICE As String = "[Sales].[sp_Quotations_GetActivePrice]"
-        Public Const SP_QUOTATION_GETPAGED As String = "[Sales].[sp_Quotations_GetPaged]"
+        Public Const SP_QUOTATION_GETPAGED As String = "[Sales].[sp_Quotations_GetAll_Paged]"
 
         ' =============================================
         ' Inventory Schema - Stock/Cost

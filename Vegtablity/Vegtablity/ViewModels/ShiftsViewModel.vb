@@ -16,13 +16,16 @@ Namespace ViewModels
         Private _purchaseInvoices As ObservableCollection(Of InvoiceHeader)
         Private _receiptVouchers As ObservableCollection(Of Voucher)
         Private _paymentVouchers As ObservableCollection(Of Voucher)
+        Private _nonCashPaymentSummaries As ObservableCollection(Of PaymentMethodSummary)
         
         Private _isDetailsLoading As Boolean
         Private _isLoading As Boolean
         
         ' Calculated Cash Flow Properties
+        Private _netCashFlow As Decimal
         Private _expectedEndingCash As Decimal
         Private _cashDifference As Decimal
+        Private _totalNonCashAmount As Decimal
 
         Public Sub New()
             Shifts = New ObservableCollection(Of Shift)()
@@ -30,6 +33,7 @@ Namespace ViewModels
             PurchaseInvoices = New ObservableCollection(Of InvoiceHeader)()
             ReceiptVouchers = New ObservableCollection(Of Voucher)()
             PaymentVouchers = New ObservableCollection(Of Voucher)()
+            NonCashPaymentSummaries = New ObservableCollection(Of PaymentMethodSummary)()
             LoadShifts()
         End Sub
 
@@ -90,6 +94,24 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property NonCashPaymentSummaries As ObservableCollection(Of PaymentMethodSummary)
+            Get
+                Return _nonCashPaymentSummaries
+            End Get
+            Set(value As ObservableCollection(Of PaymentMethodSummary))
+                SetProperty(_nonCashPaymentSummaries, value)
+            End Set
+        End Property
+
+        Public Property NetCashFlow As Decimal
+            Get
+                Return _netCashFlow
+            End Get
+            Set(value As Decimal)
+                SetProperty(_netCashFlow, value)
+            End Set
+        End Property
+
         Public Property ExpectedEndingCash As Decimal
             Get
                 Return _expectedEndingCash
@@ -105,6 +127,15 @@ Namespace ViewModels
             End Get
             Set(value As Decimal)
                 SetProperty(_cashDifference, value)
+            End Set
+        End Property
+
+        Public Property TotalNonCashAmount As Decimal
+            Get
+                Return _totalNonCashAmount
+            End Get
+            Set(value As Decimal)
+                SetProperty(_totalNonCashAmount, value)
             End Set
         End Property
 
@@ -137,11 +168,11 @@ Namespace ViewModels
             Await System.Threading.Tasks.Task.Run(Sub()
                                                       Dim data = _shiftService.GetAllShifts()
                                                       System.Windows.Application.Current.Dispatcher.Invoke(Sub()
-                                                                                                               Shifts.Clear()
-                                                                                                               For Each s In data
-                                                                                                                   Shifts.Add(s)
-                                                                                                               Next
-                                                                                                           End Sub)
+                                                                                                                Shifts.Clear()
+                                                                                                                For Each s In data
+                                                                                                                    Shifts.Add(s)
+                                                                                                                Next
+                                                                                                            End Sub)
                                                   End Sub)
             IsLoading = False
         End Sub
@@ -152,50 +183,72 @@ Namespace ViewModels
             PurchaseInvoices.Clear()
             ReceiptVouchers.Clear()
             PaymentVouchers.Clear()
+            NonCashPaymentSummaries.Clear()
 
             Await System.Threading.Tasks.Task.Run(Sub()
                                                       Dim summary = _shiftService.GetShiftSummary(shiftID)
                                                       Dim vouchers = _shiftService.GetShiftVouchers(shiftID)
                                                       Dim salesInvs = _shiftService.GetShiftInvoices(shiftID, "Sales")
                                                       Dim purchaseInvs = _shiftService.GetShiftInvoices(shiftID, "Purchase")
+                                                      Dim paymentTotals = _shiftService.GetShiftPaymentMethodTotals(shiftID)
 
                                                       System.Windows.Application.Current.Dispatcher.Invoke(Sub()
-                                                                                                               If summary IsNot Nothing Then
-                                                                                                                   SelectedShift.TotalSales = summary.TotalSales
-                                                                                                                   SelectedShift.TotalPurchases = summary.TotalPurchases
-                                                                                                                   SelectedShift.TotalPaidSales = summary.TotalPaidSales
-                                                                                                                   SelectedShift.TotalPaidPurchases = summary.TotalPaidPurchases
-                                                                                                                   SelectedShift.TotalReceiptVouchers = summary.TotalReceiptVouchers
-                                                                                                                   SelectedShift.TotalPaymentVouchers = summary.TotalPaymentVouchers
-                                                                                                                   SelectedShift.SalesCount = summary.SalesCount
-                                                                                                                   SelectedShift.PurchasesCount = summary.PurchasesCount
-                                                                                                                   
-                                                                                                                   ' Calculate Cash Flow
-                                                                                                                   Dim startCash As Decimal = SelectedShift.StartingCash
-                                                                                                                   Dim endCash As Decimal = If(SelectedShift.EndingCash.HasValue, SelectedShift.EndingCash.Value, 0)
-                                                                                                                   
-                                                                                                                   ExpectedEndingCash = startCash + summary.TotalPaidSales - summary.TotalPaidPurchases + summary.TotalReceiptVouchers - summary.TotalPaymentVouchers
-                                                                                                                   CashDifference = endCash - ExpectedEndingCash
-                                                                                                                   
-                                                                                                                   OnPropertyChanged(NameOf(SelectedShift))
-                                                                                                               End If
+                                                                                                                If summary IsNot Nothing Then
+                                                                                                                    SelectedShift.TotalSales = summary.TotalSales
+                                                                                                                    SelectedShift.TotalPurchases = summary.TotalPurchases
+                                                                                                                    SelectedShift.TotalPaidSales = summary.TotalPaidSales
+                                                                                                                    SelectedShift.TotalPaidPurchases = summary.TotalPaidPurchases
+                                                                                                                    SelectedShift.TotalReceiptVouchers = summary.TotalReceiptVouchers
+                                                                                                                    SelectedShift.TotalPaymentVouchers = summary.TotalPaymentVouchers
+                                                                                                                    SelectedShift.SalesCount = summary.SalesCount
+                                                                                                                    SelectedShift.PurchasesCount = summary.PurchasesCount
+                                                                                                                    
+                                                                                                                    ' Calculate Cash Flow
+                                                                                                                    Dim startCash As Decimal = SelectedShift.StartingCash
+                                                                                                                    Dim endCash As Decimal = If(SelectedShift.EndingCash.HasValue, SelectedShift.EndingCash.Value, 0)
+                                                                                                                    
+                                                                                                                    ' Net Cash Flow = Cash Sales + Cash Receipts - Cash Purchases - Cash Expenses
+                                                                                                                    NetCashFlow = summary.TotalPaidSales + summary.TotalReceiptVouchers - summary.TotalPaidPurchases - summary.TotalPaymentVouchers
+                                                                                                                    ExpectedEndingCash = startCash + NetCashFlow
+                                                                                                                    CashDifference = endCash - ExpectedEndingCash
+                                                                                                                    
+                                                                                                                    OnPropertyChanged(NameOf(SelectedShift))
+                                                                                                                End If
 
-                                                                                                               For Each v In vouchers
-                                                                                                                   If v.VoucherType = "Receipt" Then
-                                                                                                                       ReceiptVouchers.Add(v)
-                                                                                                                   ElseIf v.VoucherType = "Payment" Then
-                                                                                                                       PaymentVouchers.Add(v)
-                                                                                                                   End If
-                                                                                                               Next
-                                                                                                               
-                                                                                                               For Each i In salesInvs
-                                                                                                                   SalesInvoices.Add(i)
-                                                                                                               Next
-                                                                                                               
-                                                                                                               For Each i In purchaseInvs
-                                                                                                                   PurchaseInvoices.Add(i)
-                                                                                                               Next
-                                                                                                           End Sub)
+                                                                                                                For Each v In vouchers
+                                                                                                                    If v.VoucherType = "Receipt" Then
+                                                                                                                        ReceiptVouchers.Add(v)
+                                                                                                                    ElseIf v.VoucherType = "Payment" Then
+                                                                                                                        PaymentVouchers.Add(v)
+                                                                                                                    End If
+                                                                                                                Next
+                                                                                                                
+                                                                                                                For Each i In salesInvs
+                                                                                                                    SalesInvoices.Add(i)
+                                                                                                                Next
+                                                                                                                
+                                                                                                                For Each i In purchaseInvs
+                                                                                                                    PurchaseInvoices.Add(i)
+                                                                                                                Next
+
+                                                                                                                ' Populate Payment Method Summaries for Non-Cash & Split methods
+                                                                                                                Dim nonCashTotal As Decimal = 0
+                                                                                                                If paymentTotals IsNot Nothing Then
+                                                                                                                    For Each pt In paymentTotals
+                                                                                                                        ' Non-cash accounts or explicit split accounts
+                                                                                                                        Dim isCashAccount As Boolean = (pt.AccountCode IsNot Nothing AndAlso pt.AccountCode.StartsWith("111")) OrElse (pt.PaymentMethodName IsNot Nothing AndAlso (pt.PaymentMethodName.Contains("كاش") OrElse pt.PaymentMethodName.ToLower().Contains("cash")))
+                                                                                                                        If Not isCashAccount Then
+                                                                                                                            NonCashPaymentSummaries.Add(pt)
+                                                                                                                            If pt.InvType = "Sales" OrElse pt.InvType = "Receipt" Then
+                                                                                                                                nonCashTotal += pt.TotalAmount
+                                                                                                                            ElseIf pt.InvType = "Purchase" OrElse pt.InvType = "Payment" Then
+                                                                                                                                nonCashTotal -= pt.TotalAmount
+                                                                                                                            End If
+                                                                                                                        End If
+                                                                                                                    Next
+                                                                                                                End If
+                                                                                                                TotalNonCashAmount = nonCashTotal
+                                                                                                            End Sub)
                                                   End Sub)
             IsDetailsLoading = False
         End Sub

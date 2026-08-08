@@ -24,8 +24,10 @@
 *   **شاشة الطلبات اليومية للتوصيل للهاتف (جديدة):** [DailyOrdersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart) - شاشة تطبيق الموبايل لمتابعة شحنات التوصيل اليومية وإعادة طباعتها حرارياً.
 *   **شاشة إدارة وصفات ومكونات المنتجات لسطح المكتب (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) - إضافة قائمة اختيار المستودع، زري تصدير PDF و Excel، إشعار Snackbar منزلق، وتحسين التنقل بين الخلايا.
 *   **شاشة إدارة الوصفات للموبايل (جديدة):** [RecipeManagementScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) - شاشة تطبيق الهاتف لاستعراض الوصفات ومكوناتها.
+*   **شاشة البحث السريع عن الفواتير (جديدة):** [InvoiceLookupScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart) - شاشة الاستعلام السريع برقم الفاتورة لعرض كافة البيانات المالية والتفاصيل والدليفري وإعادة الطباعة الحرارية 🖨️.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **متحكم استعلام الفواتير (جديد):** [InvoiceLookupViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/invoice_lookup_viewmodel.dart) - متحكم نمط MVVM الخاص بالبحث والاستعلام عن الفواتير وتجهيز الإيصالات للطباعة.
 *   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر البيع = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
 *   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر الشراء = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
 *   **خدمة الطابعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - تسجيل المستندات المضافة ودالة `printLastAddedDocument()` لطباعة أحدث مستند بالنظام فوراً، تكرار طباعة الشبكة لعدد النسخ `printCopies` محلياً، وإلغاء مزامنة الداتابيز لقصر الإعدادات على SharedPreferences الجهاز فقط.
@@ -1657,6 +1659,19 @@
   3. **الصافي النهائي (Net Total):** المبلغ الصافي المستحق للدفع (مثال: `الصافي (Net Total): 9.000 د.ك`).
 * **اعتماد المسمى المترجم (`خصم الصنف`):** ربط طباعة مسمى خصم الصنف بـ `خصم الصنف` للغة العربية و `Item Discount` للغة الإنجليزية.
 * **حذف إلغاء العملة من بنود الخصم:** تم حذف رمز العملة (`د.ك` / `KWD`) من أسطر الخصومات المطبوعة (سواء تحت الصنف أو في إجمالي الخصوم) لتظهر كقيمة مقتطعة مجردة بدون رمز عملة (مثل: `(خصم الصنف: -1.000)` و `الخصم: -1.000`).
+
+### 🏷️ 4. إضافة مربع الخصم الإضافي اليدوي على الفاتورة (Extra Manual Discount):
+* **إدارة الحالة (`pos_provider.dart`):** إضافة متغير `_extraDiscountAmount` والدالة `setExtraDiscount(amount)` لتحديث الخصم اليدوي. يجمع الخصم اليدوي آلياً على خصومات الأصناف `totalItemDiscountAmount` ليكوّنا إجمالي الخصم `totalDiscountAmount` والنعكاس التلقائي على الصافي `totalAmount`.
+* **مكون الواجهة (`pos_screen.dart`):** إضافة المكون `_ExtraDiscountInputField` بداخل لوحة إتمام الفاتورة للشاشات الكبيرة والموبايل، مع التحديث اللحظي المباشر وحفظ وطباعة إجمالي الخصوم الكلية بالداتابيز والإيصال المطبوع.
+
+### 🔍 5. شاشة البحث السريع عن الفواتير والطباعة الحرارية المباشرة (Invoice Lookup & Quick Re-Print):
+* **البنية المعمارية (MVVM):**
+  - **الـ API وخادم البيانات:** اعتماد استدعاء `[Sales].[sp_Invoice_GetByID]` و `[Sales].[sp_InvoiceDetails_GetByInvID]` بالـ `VegtablityApi` عبر المسار `GET /invoices/{inv_id}` وإرجاع كائن الفاتورة الشامل.
+  - **خدمة الـ API ([api_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart)):** إضافة الدالة `getInvoiceById(invId)`.
+  - **متحكم الـ ViewModel ([invoice_lookup_viewmodel.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/invoice_lookup_viewmodel.dart)):** كلاس ViewModel مخصص للتحكم بالبحث وجلب البيانات وتجهيز الفاتورة للطباعة.
+  - **شاشة العرض ([invoice_lookup_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart)):** استعراض تماثيل وبيانات الفاتورة، تاريخها، الكاشير، الإجماليات الثلاثة، وبيانات التوصيل (الدليفري) عند توفرها (الاسم، الهاتف، العنوان، موعد التسليم، والملاحظات).
+  - **زر القائمة الجانبية ([home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)):** إضافة أيقونة "البحث عن فاتورة (مبيعات / مشتريات)" في الـ Drawer Sidebar.
+  - **الطباعة الحرارية السريعة 🖨️:** تزويد الفاتورة بزر طباعة حرارية يستدعي `PrinterService.instance.printReceipt(invoiceData, isReprint: true)` لإعادة الطباعة الحرارية بنفس التصميم الرسمي للفواتير دون أي تغيير أو فقدان للبيانات.
 
 
 

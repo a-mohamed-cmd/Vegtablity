@@ -9,6 +9,7 @@ class PosProvider extends ChangeNotifier {
   final List<Map<String, dynamic>> _invoiceItems = [];
   Map<int, List<ProductDiscount>> _activeDiscountsByProduct = {};
   List<Map<String, dynamic>> _offlineInvoices = [];
+  double _extraDiscountAmount = 0.0;
   bool _isLoading = false;
   String? _errorMessage;
   String? _successMessage;
@@ -25,9 +26,11 @@ class PosProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get successMessage => _successMessage;
+  double get extraDiscountAmount => _extraDiscountAmount;
 
-  double get totalAmount {
-    return _invoiceItems.fold(0.0, (sum, item) => sum + (item['total'] ?? 0.0));
+  void setExtraDiscount(double amount) {
+    _extraDiscountAmount = amount < 0 ? 0.0 : amount;
+    notifyListeners();
   }
 
   double get totalOriginalAmount {
@@ -38,10 +41,19 @@ class PosProvider extends ChangeNotifier {
     });
   }
 
-  double get totalDiscountAmount {
+  double get totalItemDiscountAmount {
     return _invoiceItems.fold(0.0, (sum, item) {
       return sum + ((item['discountAmount'] ?? 0.0) as double);
     });
+  }
+
+  double get totalDiscountAmount {
+    return totalItemDiscountAmount + _extraDiscountAmount;
+  }
+
+  double get totalAmount {
+    final double net = totalOriginalAmount - totalDiscountAmount;
+    return net < 0 ? 0.0 : net;
   }
 
   Future<void> fetchActiveDiscounts() async {
@@ -64,6 +76,7 @@ class PosProvider extends ChangeNotifier {
 
   void clearInvoice() {
     _invoiceItems.clear();
+    _extraDiscountAmount = 0.0;
     _errorMessage = null;
     _successMessage = null;
     notifyListeners();
@@ -377,6 +390,7 @@ class PosProvider extends ChangeNotifier {
         _successMessage = 'تم حفظ الفاتورة بنجاح!';
         final int newInvId = response.data['InvID'] ?? 0;
         _invoiceItems.clear();
+        _extraDiscountAmount = 0.0;
         _isLoading = false;
         notifyListeners();
         return newInvId;
@@ -385,6 +399,7 @@ class PosProvider extends ChangeNotifier {
         await _saveOfflineInvoices();
         _successMessage = 'تم الحفظ محلياً (حدث خطأ في استجابة الخادم: ${response.statusCode})';
         _invoiceItems.clear();
+        _extraDiscountAmount = 0.0;
         _isLoading = false;
         notifyListeners();
         return 0;
@@ -394,6 +409,7 @@ class PosProvider extends ChangeNotifier {
       await _saveOfflineInvoices();
       _successMessage = 'تم الحفظ محلياً بنجاح (وضع العمل دون اتصال)';
       _invoiceItems.clear();
+      _extraDiscountAmount = 0.0;
       _isLoading = false;
       notifyListeners();
       return 0;
