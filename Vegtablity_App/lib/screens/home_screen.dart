@@ -206,24 +206,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            ListTile(
-              leading:
-                  const Icon(Icons.settings_applications, color: Colors.teal),
-              title: Text(context.tr('settings')),
-              onTap: _navigateToSettings,
-            ),
-            ListTile(
-              leading: const Icon(Icons.print, color: Colors.teal),
-              title: Text(context.tr('home_printer_settings')),
-              onTap: () {
-                Navigator.pop(context); // Close drawer
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const PrinterSettingsScreen()),
-                );
-              },
-            ),
+            if (authProvider.isAdmin) ...[
+              ListTile(
+                leading:
+                    const Icon(Icons.settings_applications, color: Colors.teal),
+                title: Text(context.tr('settings')),
+                onTap: _navigateToSettings,
+              ),
+              ListTile(
+                leading: const Icon(Icons.print, color: Colors.teal),
+                title: Text(context.tr('home_printer_settings')),
+                onTap: () {
+                  Navigator.pop(context); // Close drawer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const PrinterSettingsScreen()),
+                  );
+                },
+              ),
+            ],
             ListTile(
               leading: const Icon(Icons.point_of_sale, color: Colors.green),
               title: Text(context.tr('home_open_cash_drawer')),

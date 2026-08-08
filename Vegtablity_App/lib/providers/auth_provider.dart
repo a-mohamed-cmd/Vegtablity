@@ -8,6 +8,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isInitialized = false; // Tracks if auto-login check completed
   String? _token;
   String? _username;
+  String? _roleName;
   String? _errorMessage;
 
   AuthProvider(this._apiService) {
@@ -22,7 +23,18 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _token != null;
   String? get token => _token;
   String? get username => _username;
+  String? get roleName => _roleName;
   String? get errorMessage => _errorMessage;
+
+  bool get isAdmin {
+    if (_username != null && _username!.toLowerCase().trim() == 'admin') {
+      return true;
+    }
+    if (_roleName != null && _roleName!.toLowerCase().contains('admin')) {
+      return true;
+    }
+    return false;
+  }
 
   Future<void> _tryAutoLogin() async {
     try {
@@ -30,6 +42,7 @@ class AuthProvider extends ChangeNotifier {
       if (prefs.containsKey('token') && prefs.containsKey('username')) {
         final savedToken = prefs.getString('token');
         final savedUsername = prefs.getString('username');
+        final savedRoleName = prefs.getString('role_name') ?? 'admin';
         if (savedToken != null && savedToken.isNotEmpty) {
           _apiService.updateToken(savedToken);
           try {
@@ -37,12 +50,12 @@ class AuthProvider extends ChangeNotifier {
             // Token is valid
             _token = savedToken;
             _username = savedUsername;
+            _roleName = savedRoleName;
           } catch (e) {
-            // If onUnauthorized was triggered, _token is now null.
-            // Otherwise (e.g. network timeout or 404 active shift not found), keep the token.
             if (_apiService.getToken() == savedToken) {
               _token = savedToken;
               _username = savedUsername;
+              _roleName = savedRoleName;
             }
           }
         }
@@ -66,14 +79,16 @@ class AuthProvider extends ChangeNotifier {
         final data = response.data;
         _token = data['token'] ?? data['access_token'];
         _username = username;
+        _roleName = data['role_name']?.toString() ?? (username.toLowerCase() == 'admin' ? 'admin' : 'user');
         
         // Update token in apiService
         _apiService.updateToken(_token);
 
-        // Persist token
+        // Persist token and user details
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
         await prefs.setString('username', _username!);
+        await prefs.setString('role_name', _roleName!);
 
         _isLoading = false;
         notifyListeners();
@@ -93,11 +108,13 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _username = null;
+    _roleName = null;
     _apiService.updateToken(null);
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('username');
+    await prefs.remove('role_name');
 
     notifyListeners();
   }

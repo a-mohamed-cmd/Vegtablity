@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/printer_service.dart';
+import '../providers/auth_provider.dart';
 import '../core/localization/app_localizations.dart';
 
 class PrinterSettingsScreen extends StatefulWidget {
@@ -142,6 +143,29 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    if (!authProvider.isAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: Text(context.tr('ps_screen_title'))),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.admin_panel_settings_outlined, size: 72, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              const Text('غير مسموح بالوصول: هذه الشاشة مخصصة للمدير (Admin) فقط',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('الرجوع'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final printerService = context.watch<PrinterService>();
 
     return Scaffold(

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/language_viewmodel.dart';
 import '../providers/settings_provider.dart';
+import '../providers/auth_provider.dart';
 import '../core/localization/app_localizations.dart';
 import '../models/language_model.dart';
 
@@ -140,6 +141,29 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    if (!authProvider.isAdmin) {
+      return Scaffold(
+        appBar: AppBar(title: Text(context.tr('settings'))),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.admin_panel_settings_outlined, size: 72, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              const Text('غير مسموح بالوصول: هذه الشاشة مخصصة للمدير (Admin) فقط',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('الرجوع'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('settings')),
