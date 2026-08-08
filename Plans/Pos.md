@@ -1673,6 +1673,82 @@
   - **زر القائمة الجانبية ([home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)):** إضافة أيقونة "البحث عن فاتورة (مبيعات / مشتريات)" في الـ Drawer Sidebar.
   - **الطباعة الحرارية السريعة 🖨️:** تزويد الفاتورة بزر طباعة حرارية يستدعي `PrinterService.instance.printReceipt(invoiceData, isReprint: true)` لإعادة الطباعة الحرارية بنفس التصميم الرسمي للفواتير دون أي تغيير أو فقدان للبيانات.
 
+---
+
+## 46. تحديثات شاشة البحث عن الفاتورة وتخصيص رأس بطاقة الدفع وطباعة الدليفري (أغسطس 2026)
+
+* **تنسيق التاريخ والوقت (Date & Time Format):**
+  - تم تحسين دالة التنسيق `_formatDateTime` بشاشة [invoice_lookup_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart) لتعرض التاريخ والوقت بصيغة `dd-MM-yyyy HH:mm`.
+
+* **تخصيص رأس حقل الدفع (Payment Account Metadata Header):**
+  - تحديث الدالة `_resolvePaymentAccountName` لتعرض في رأس بطاقة الفاتورة إما **`مدفوع`** (Paid) أو **`آجل`** (Credit) حصراً.
+  - في حال كانت الفاتورة تتضمن تقسيم وسائل دفع متعددة (`Split Payments`)، يتم عرض **`مدفوع`** في رأس الفاتورة دون إدراج أسطر التفاصيل في الخلية العلوية، اعتماداً على وجود البطاقة المستقلة المخصصة للتقسيم بالأسفل.
+
+* **بطاقة وسجلات تقسيم الدفع (`Split Payments Card`):**
+  - تم تبسيط عنوان بطاقة تفاصيل طرق الدفع ليصبح **`Split Payments`** فقط دون أي نصوص أو إضافات أخرى.
+
+* **بيانات التوصيل والدليفري (`[Sales].[TempOrderInfo]`):**
+  - تحديث الإجراء المخزن `[Sales].[sp_Invoice_GetByID]` بـ [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) لربط جدول الطلبات المؤقتة `LEFT JOIN [Sales].[TempOrderInfo]`.
+  - جلب وعرض بيانات الدليفري الحقيقية (`TempCustomerName`, `TempPhone`, `TempAddress`, `TempDeliveryDate`, `TempDeliveryTime`) بداخل كارت منفصل باللون الأزرق بشاشة البحث عن فاتورة، وطباعتها حرارياً بقسم `*** بيانات التوصيل والشحن ***` دون الاعتماد على الملاحظات المالية العامة.
+
+* **تنظيف واجهة الشاشة (UI Button Cleanup):**
+  - تم إزالة زر الطباعة الصغير العلوي بشرائح الهيدر بشاشة البحث عن فاتورة، والاعتماد حصراً على زر إعادة الطباعة الحرارية السفلي العريض **`إعادة طباعة الفاتورة 🖨️`**.
+
+---
+
+## 47. تحديثات صفحة الورديات بتطبيق WPF وكروت التدفق النقدي وطرق الدفع الأخرى (أغسطس 2026)
+
+* **إجراء قاعدة البيانات المخزن (`sp_Shift_GetPaymentMethodTotals`):**
+  - تم إعداد وتطوير الإجراء المخزن `[Sales].[sp_Shift_GetPaymentMethodTotals]` بـ [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) لتجميع مبالغ المقبوضات والمدفوعات لكل طريقة دفع للوردية المحددة، مع الحفاظ المطلق على التوافق الخلفي مع جميع الأنظمة والإصدارات القديمة.
+
+* **نموذج البيانات وتسجيل الملف بالمشروع (`PaymentMethodSummary.vb` & `Vegtablity.vbproj`):**
+  - إنشاء نموذج البيانات [PaymentMethodSummary.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/PaymentMethodSummary.vb) لتمثيل إجماليات وسيلة الدفع.
+  - تسجيل الملف في مشروع الـ Visual Studio بـ [Vegtablity.vbproj](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Vegtablity.vbproj#L204) تحت العنصر `<Compile Include="Models\PaymentMethodSummary.vb" />` لتفادي أخطاء التجميع BC30002.
+
+* **طبقة الخدمات والمتحكمات (`ShiftService.vb` & `ShiftsViewModel.vb`):**
+  - إضافة الثابت `SP_SHIFT_GETPAYMENTMETHODTOTALS` في [StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb).
+  - إضافة الدالة `GetShiftPaymentMethodTotals` في [ShiftService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ShiftService.vb).
+  - تحديث [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) لإضافة الخاصية `NetCashFlow` وتصفية وإضافة وسائط الدفع الإلكترونية إلى القائمة `NonCashPaymentSummaries` وحساب إجمالي باقي طرق الدفع `TotalNonCashAmount`.
+
+* **تصميم واجهة المستخدم بـ XAML (`ShiftsPage.xaml`):**
+  - **كارت إجمالي صافي الكاش (Net Cash Flow Card):** إضافة حقل إبراز `إجمالي صافي الكاش` المحسوب كـ `(مبيعات كاش محصلة + سندات قبض) - (مشتريات كاش مدفوعة + سندات صرف)` بشرائح كارت التدفق النقدي [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml#L187).
+  - **كارت منفصل لباقي طرق الدفع (`💳 باقي طرق الدفع (K-Net / فيزا / بنك)`):** تصميم كارت مستقل بـ [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml#L254) يعرض جدولاً كاملاً لوسائل الدفع الأخرى غير الكاش والعمليات المحصلة بها مع إدراج إجمالي باقي طرق الدفع بوضوح.
+
+---
+
+## 48. تخصيص أيقونة تطبيق الويندوز وبنائه بنجاح (`Windows App Icon & Release Build`) (أغسطس 2026)
+
+* **توليد أيقونة الويندوز (`app_icon.ico`):**
+  - تم تحديث ملف التكوين [pubspec.yaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/pubspec.yaml) وتفعيل خيار بناء أيقونة منصة الويندوز بـ `flutter_launcher_icons` باستخدام الأيقونة الرسمية للتطبيق `lettuce.png` بحجم 256 بكسل.
+  - تم توليد الملف المستهدف `windows/runner/resources/app_icon.ico` بنجاح واستبدال الأيقونة الافتراضية.
+
+* **تجميع وبناء تطبيق الويندوز (`Release Executable`):**
+  - تم تنفيذ وبناء النسخة النهائية التنفيذية بنجاح بنتيجة سليمة 100%:
+    `√ Built build\windows\x64\runner\Release\vegtablity_app.exe`.
+
+---
+
+## 49. تقييد صلاحيات الإعدادات للآدمن وتحليل الحفظ الذاتي بـ `SharedPreferences` (أغسطس 2026)
+
+* **تحليل الحفظ الدائم بـ `SharedPreferences` (Device-Level Persistence Analysis):**
+  - الإعدادات العامة وإعدادات الطباعة المتمثلة بـ `PrinterService` و `SettingsProvider` تحفظ وتعمل على **مستوى الجهاز الفيزيائي (Device Scope)** في ملف الذاكرة الدائمة `SharedPreferences`.
+  - عند خروج المستخدم الأدمن وتسجيل الدخول بمستخدم جديد عادي، يتم مسح بيانات الـ Token فقط من الذاكرة بـ `logout()` بـ [AuthProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/auth_provider.dart#L93)، **وتظل إعدادات الشبكة والطباعة والإعدادات العامة محفوظة 100% وتعمل آلياً لخدمة الكاشير**.
+
+* **ترقية خادم الـ API لتمرير اسم الدور (`RoleName`):**
+  - تم تحديث [auth.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/auth.py) و [auth.py Schema](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/auth.py) لإرجاع `role_name` مستخرجاً من الإجراء المخزن `sp_User_Login` في استجابة تسجيل الدخول.
+
+* **إدارة الصلاحية والتحقق (`AuthProvider.dart`):**
+  - إضافة الخاصية `isAdmin` بـ [AuthProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/auth_provider.dart#L28) للتحقق مما إذا كان المستخدم هو `admin` أو أن دور حسابه ينتمي لـ `admin`.
+  - حفظ الـ `role_name` في `SharedPreferences` وتحديثه عند الدخول/الخروج.
+
+* **تقييد واجهة القائمة الجانبية (`HomeScreen.dart`):**
+  - تغليف عنصري القائمة الجانبية "الإعدادات العامة" و "إعدادات الطباعة" بشرط `if (authProvider.isAdmin) ...[...]` بـ [HomeScreen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart#L209) لإخفائهما تماماً عن المستخدمين غير المصرح لهم.
+
+* **حماية الشاشات الداخلية (`GeneralSettingsScreen` & `PrinterSettingsScreen`):**
+  - تزويد دالة `build` بكل من [settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart#L143) و [printer_settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart#L144) بشرط حماية داخلي يمنع فتح الشاشات لغير الأدمن ويعرض لوحة تنبيه: **`غير مسموح بالوصول: هذه الشاشة مخصصة للمدير (Admin) فقط`**.
+
+
+
 
 
 

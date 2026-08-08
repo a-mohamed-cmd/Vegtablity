@@ -10,3 +10,4 @@ class TokenResponse(BaseModel):
     token_type: str
     username: str
     user_id: int
+    role_name: Optional[str] = "admin"
