@@ -73,12 +73,12 @@ Namespace Services
         End Function
 
         ' 5. Aging Unpaid Invoices
-        Public Function GetUnpaidInvoicesAging(asOfDate As DateTime?) As List(Of ReportUnpaidInvoice)
+        Public Function GetUnpaidInvoicesAging(asOfDate As DateTime?, Optional partnerID As Integer? = Nothing) As List(Of ReportUnpaidInvoice)
             Try
                 Using conn As IDbConnection = _dbHelper.GetConnection()
                     Return conn.Query(Of ReportUnpaidInvoice)(
                         StoredProcedures.SP_REPORT_UNPAIDINVOICESAGING,
-                        New With {.AsOfDate = asOfDate},
+                        New With {.AsOfDate = asOfDate, .PartnerID = partnerID},
                         commandType:=CommandType.StoredProcedure
                     ).AsList()
                 End Using

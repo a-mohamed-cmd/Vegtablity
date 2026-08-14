@@ -64,6 +64,7 @@ Namespace Services
                     p.Add("@IsPosted", header.IsPosted)
                     p.Add("@ReferenceNo", header.ReferenceNo)
                     p.Add("@PaymentAccountID", header.PaymentAccountID)
+                    p.Add("@ShiftID", header.ShiftID, dbType:=DbType.Int32)
                     p.Add("@DetailsXml", detailsXml, dbType:=DbType.Xml)
 
                     ' استخدام الإجراء الجديد _XML لتجنب التعارض مع النسخة القديمة

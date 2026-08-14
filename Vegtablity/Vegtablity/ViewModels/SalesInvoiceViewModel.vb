@@ -387,6 +387,7 @@ Namespace ViewModels
                 .ReferenceNo = Nothing,
                 .Discount = 0,
                 .PaidAmount = 0,
+                .ShiftID = Nothing,
                 .Details = New ObservableCollection(Of InvoiceDetail)()
             }
             If Warehouses.Any() Then

@@ -585,8 +585,8 @@ Namespace ViewModels
 
         Private Function CanExport(parameter As Object) As Boolean
             Return CurrentQuote IsNot Nothing AndAlso
-                   CurrentQuote.Details IsNot Nothing AndAlso
-                   CurrentQuote.Details.Count > 0
+                   _allQuoteDetails IsNot Nothing AndAlso
+                   _allQuoteDetails.Count > 0
         End Function
 
         Private Function GetCurrentCustomerName() As String
@@ -596,11 +596,17 @@ Namespace ViewModels
         End Function
 
         Private Sub ExecuteExportCsv(parameter As Object)
+            If CurrentQuote Is Nothing OrElse _allQuoteDetails Is Nothing Then Return
+            CurrentQuote.Details = New ObservableCollection(Of QuoteDetail)(_allQuoteDetails)
             ReportExporter.ExportQuoteToCsv(CurrentQuote, GetCurrentCustomerName())
+            UpdateDetailsPagination()
         End Sub
 
         Private Sub ExecuteExportPdf(parameter As Object)
+            If CurrentQuote Is Nothing OrElse _allQuoteDetails Is Nothing Then Return
+            CurrentQuote.Details = New ObservableCollection(Of QuoteDetail)(_allQuoteDetails)
             ReportExporter.ExportQuoteToPdf(CurrentQuote, GetCurrentCustomerName())
+            UpdateDetailsPagination()
         End Sub
 
         Private Sub ExecuteDownloadTemplate(parameter As Object)

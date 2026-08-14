@@ -1699,7 +1699,7 @@
 ## 47. تحديثات صفحة الورديات بتطبيق WPF وكروت التدفق النقدي وطرق الدفع الأخرى (أغسطس 2026)
 
 * **إجراء قاعدة البيانات المخزن (`sp_Shift_GetPaymentMethodTotals`):**
-  - تم إعداد وتطوير الإجراء المخزن `[Sales].[sp_Shift_GetPaymentMethodTotals]` بـ [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) لتجميع مبالغ المقبوضات والمدفوعات لكل طريقة دفع للوردية المحددة، مع الحفاظ المطلق على التوافق الخلفي مع جميع الأنظمة والإصدارات القديمة.
+  - تم تحديث الإجراء المخزن `[Sales].[sp_Shift_GetPaymentMethodTotals]` بـ [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) و [37_PaymentMethods_SplitPayment.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/37_PaymentMethods_SplitPayment.sql) ليجمع مبالغ المقبوضات والمدفوعات من الفواتير **المسددة مباشرة عبر `InvoiceHeader` (مثل الكي نت المباشر أو الكاش المباشر عند `PaidAmount > 0`) بالإضافة إلى الفواتير المسددة بالتجزئة عبر `InvoicePaymentSplits`** والسندات المالية، مع تجميع الشروط بشرط مانع للتكرار (`NOT EXISTS`) لضمان صحة الأرقام المالية ودقتها بنسبة 100%.
 
 * **نموذج البيانات وتسجيل الملف بالمشروع (`PaymentMethodSummary.vb` & `Vegtablity.vbproj`):**
   - إنشاء نموذج البيانات [PaymentMethodSummary.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/PaymentMethodSummary.vb) لتمثيل إجماليات وسيلة الدفع.
@@ -1746,6 +1746,19 @@
 
 * **حماية الشاشات الداخلية (`GeneralSettingsScreen` & `PrinterSettingsScreen`):**
   - تزويد دالة `build` بكل من [settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart#L143) و [printer_settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart#L144) بشرط حماية داخلي يمنع فتح الشاشات لغير الأدمن ويعرض لوحة تنبيه: **`غير مسموح بالوصول: هذه الشاشة مخصصة للمدير (Admin) فقط`**.
+
+---
+
+## 50. التصحيح المالي وتخصيص مبيعات الكاش النقدية الفعلية بملخص الوردية (`Physical Cash Flow Optimization`) (أغسطس 2026)
+
+* **تصحيح الإجراء المخزن (`sp_Shift_GetSummary`):**
+  - تم تحديث الإجراء المخزن `[Sales].[sp_Shift_GetSummary]` بـ [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) ليفصل **مبيعات الكاش النقدي الورقي (`TotalPaidSales`)** و **مشتريات الكاش النقدي (`TotalPaidPurchases`)** و **سندات القبض/الصرف النقدية** عن عمليات الـ K-Net والفيزا والبنك.
+  - إدراج حقل مخصص جديد `TotalNonCashSales` لإرجاع إجمالي المقبوضات غير النقدية (كي نت / فيزا / تحويل بنكي) بشكل مستقل دون خلطها بصندوق الكاش الورقي.
+
+* **ضبط معادلة نهاية الوردية المتوقع وجرد النقدية (`Expected Ending Cash`):**
+  - **تطبيقات الـ Flutter (`CloseShiftScreen.dart` & `ShiftReportPrintDesigner.dart`):** أصبح حساب المبلغ المتوقع في الدرج يعتمد حصراً على النقدية الكاش الورقية `Starting Cash + Cash Sales + Cash Receipts - Cash Purchases - Cash Payments` ليظهر للكاشير الجرد الفعلي الدقيق المطابق للدرج، وإبراز مبيعات الكي نت والفيزا في خانات مستقلة بالتقرير والشاشة والطباعة دون أي عجز وهمي.
+  - **تطبيقات الـ WPF (`ShiftsViewModel.vb` & `ShiftsPage.xaml`):** مطابقة تامة للمعادلة واستعراض صافي الكاش الحقيقي بالصندوق وإبراز جدول باقي طرق الدفع بشكل منفصل.
+
 
 
 

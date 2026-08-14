@@ -74,6 +74,6 @@ BEGIN
     SELECT TOP 1 ShiftID, UserID, StartTime, StartingCash, Status
     FROM [Sales].[Shifts]
     WHERE UserID = @UserID AND Status = 'Open'
-    ORDER BY StartTime DESC;
+    ORDER BY ShiftID DESC, StartTime DESC;
 END
 GO

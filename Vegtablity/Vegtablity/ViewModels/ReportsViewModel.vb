@@ -58,10 +58,10 @@ Namespace ViewModels
                 Products = New ObservableCollection(Of Product)()
             End If
 
-            ' Load Customers for Filters
-            Dim customerList = _partnerService.GetAllPartners("Customer")
+            ' Load Partners (Customers & Suppliers) for Filters
+            Dim customerList = _partnerService.GetAllPartners("All")
             Partners = New ObservableCollection(Of Partner)()
-            Partners.Add(New Partner() With {.PartnerID = 0, .PartnerName = "اختر عميل..."})
+            Partners.Add(New Partner() With {.PartnerID = 0, .PartnerName = "الكل (جميع العملاء والموردين)"})
             If customerList IsNot Nothing Then
                 For Each c In customerList
                     Partners.Add(c)
@@ -552,7 +552,8 @@ Namespace ViewModels
                         Next
 
                     Case 4 ' أعمار الديون
-                        Dim data = _reportService.GetUnpaidInvoicesAging(DateTime.Now)
+                        Dim partnerIdParam As Integer? = If(SelectedPartnerID > 0, CType(SelectedPartnerID, Integer?), Nothing)
+                        Dim data = _reportService.GetUnpaidInvoicesAging(DateTime.Now, partnerIdParam)
                         For Each item In data
                             _allReportData.Add(item)
                         Next

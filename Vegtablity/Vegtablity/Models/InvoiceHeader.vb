@@ -163,6 +163,17 @@ Namespace Models
             End Set
         End Property
 
+        Private _shiftID As Integer?
+        Public Property ShiftID As Integer?
+            Get
+                Return _shiftID
+            End Get
+            Set(value As Integer?)
+                _shiftID = value
+                OnPropertyChanged(NameOf(ShiftID))
+            End Set
+        End Property
+
         Private _referenceNo As String
         Public Property ReferenceNo As String
             Get

@@ -27,6 +27,7 @@ class InvoiceCreate(BaseModel):
     IsPosted: bool = False
     ReferenceNo: Optional[str] = None
     PaymentAccountID: Optional[int] = None
+    ShiftID: Optional[int] = None
     TempCustomerName: Optional[str] = None
     TempPhone: Optional[str] = None
     TempAddress: Optional[str] = None

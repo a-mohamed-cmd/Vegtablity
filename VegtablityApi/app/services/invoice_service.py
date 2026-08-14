@@ -176,8 +176,9 @@ class InvoiceService:
                     fallback_row3 = cursor.fetchone()
                     resolved_payment_account_id = fallback_row3[0] if fallback_row3 else 1
 
-        # ✨ جلب ShiftID من الكاش مباشرة (صفر roundtrip إضافي)
-        active_shift_id = _shift_service.get_active_shift_id(user_id)
+        # ✨ استخدام ShiftID القادم من الجوال/التطبيق مباشرة دون استعلامات إضافية
+        active_shift_id = invoice.ShiftID or _shift_service.get_active_shift_id(user_id)
+
         try:
             cursor.execute(SP.INVOICE_SAVE_XML, (
                 invoice.InvType,

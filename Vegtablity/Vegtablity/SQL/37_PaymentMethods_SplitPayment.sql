@@ -861,38 +861,67 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- إجماليات طرق الدفع من فواتير المبيعات/المشتريات
-    SELECT
-        c.AccountID,
-        c.AccountCode,
-        c.AccountName  AS PaymentMethodName,
-        h.InvType,
-        SUM(CAST(sp.Amount AS DECIMAL(18,3))) AS TotalAmount,
-        'Invoice'      AS SourceType
-    FROM [Sales].[InvoicePaymentSplits] sp
-    INNER JOIN [Sales].[InvoiceHeader]          h ON sp.InvID    = h.InvID
-    INNER JOIN [Accounting].[ChartOfAccounts]   c ON sp.PaymentAccountID = c.AccountID
-    WHERE h.ShiftID = @ShiftID
-    GROUP BY c.AccountID, c.AccountCode, c.AccountName, h.InvType
+    SELECT 
+        AccountID,
+        AccountCode,
+        PaymentMethodName,
+        InvType,
+        SUM(TotalAmount) AS TotalAmount,
+        MAX(SourceType)  AS SourceType
+    FROM (
+        -- 1. إجماليات طرق الدفع من فواتير المبيعات/المشتريات المقسمة (Splits)
+        SELECT
+            c.AccountID,
+            c.AccountCode,
+            c.AccountName  AS PaymentMethodName,
+            h.InvType,
+            SUM(CAST(sp.Amount AS DECIMAL(18,3))) AS TotalAmount,
+            'InvoiceSplit' AS SourceType
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader]          h ON sp.InvID    = h.InvID
+        INNER JOIN [Accounting].[ChartOfAccounts]   c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.ShiftID = @ShiftID
+        GROUP BY c.AccountID, c.AccountCode, c.AccountName, h.InvType
 
-    UNION ALL
+        UNION ALL
 
-    -- إجماليات طرق الدفع من السندات المالية
-    SELECT
-        c.AccountID,
-        c.AccountCode,
-        c.AccountName  AS PaymentMethodName,
-        v.VoucherType  AS InvType,
-        SUM(CAST(v.Amount AS DECIMAL(18,3))) AS TotalAmount,
-        'Voucher'      AS SourceType
-    FROM [Accounting].[Vouchers]                v
-    INNER JOIN [Accounting].[ChartOfAccounts]   c ON v.AccountID = c.AccountID
-    WHERE v.ShiftID = @ShiftID
-      AND c.AccountCode LIKE '11%'
-    GROUP BY c.AccountID, c.AccountCode, c.AccountName, v.VoucherType
+        -- 2. إجماليات طرق الدفع المباشرة من فواتير المبيعات/المشتريات (غير المقسمة / Direct)
+        SELECT
+            c.AccountID,
+            c.AccountCode,
+            c.AccountName  AS PaymentMethodName,
+            h.InvType,
+            SUM(CAST(h.PaidAmount AS DECIMAL(18,3))) AS TotalAmount,
+            'InvoiceDirect' AS SourceType
+        FROM [Sales].[InvoiceHeader]                h
+        INNER JOIN [Accounting].[ChartOfAccounts]   c ON h.PaymentAccountID = c.AccountID
+        WHERE h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (
+              SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID
+          )
+        GROUP BY c.AccountID, c.AccountCode, c.AccountName, h.InvType
 
-    ORDER BY c.AccountCode, InvType;
+        UNION ALL
+
+        -- 3. إجماليات طرق الدفع من السندات المالية (قبض وصرف)
+        SELECT
+            c.AccountID,
+            c.AccountCode,
+            c.AccountName  AS PaymentMethodName,
+            v.VoucherType  AS InvType,
+            SUM(CAST(v.Amount AS DECIMAL(18,3))) AS TotalAmount,
+            'Voucher'      AS SourceType
+        FROM [Accounting].[Vouchers]                v
+        INNER JOIN [Accounting].[ChartOfAccounts]   c ON v.AccountID = c.AccountID
+        WHERE v.ShiftID = @ShiftID
+          AND c.AccountCode LIKE '11%'
+        GROUP BY c.AccountID, c.AccountCode, c.AccountName, v.VoucherType
+    ) CombinedPaymentTotals
+    GROUP BY AccountID, AccountCode, PaymentMethodName, InvType
+    ORDER BY AccountCode, InvType;
 END
+GO
 GO
 
 -- =============================================

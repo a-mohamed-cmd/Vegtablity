@@ -232,7 +232,8 @@ GO
 IF OBJECT_ID('[Reports].[sp_Report_UnpaidInvoicesAging]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_UnpaidInvoicesAging]
 GO
 CREATE PROCEDURE [Reports].[sp_Report_UnpaidInvoicesAging]
-    @AsOfDate DATE = NULL
+    @AsOfDate DATE = NULL,
+    @PartnerID INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -257,6 +258,7 @@ BEGIN
     WHERE i.Remainder > 0 
       AND i.IsPosted = 1
       AND CAST(i.InvDate AS DATE) <= @AsOfDate
+      AND (@PartnerID IS NULL OR @PartnerID = 0 OR i.PartnerID = @PartnerID)
     ORDER BY DaysOverdue DESC;
 END
 GO

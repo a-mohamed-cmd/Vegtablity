@@ -513,11 +513,13 @@ Namespace ViewModels
             ' Ensure master details are sync'd to CurrentQuote for exporter
             CurrentQuote.Details = New ObservableCollection(Of PurchaseQuoteDetail)(_allDetails)
             Helpers.ReportExporter.ExportPurchaseQuoteToCsv(CurrentQuote, GetCurrentSupplierName())
+            UpdateDetailsPagination()
         End Sub
 
         Private Sub ExecuteExportPdf(parameter As Object)
             CurrentQuote.Details = New ObservableCollection(Of PurchaseQuoteDetail)(_allDetails)
             Helpers.ReportExporter.ExportPurchaseQuoteToPdf(CurrentQuote, GetCurrentSupplierName())
+            UpdateDetailsPagination()
         End Sub
 
         Private Sub ExecuteDownloadTemplate(parameter As Object)

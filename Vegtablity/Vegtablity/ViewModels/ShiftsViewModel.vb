@@ -235,8 +235,8 @@ Namespace ViewModels
                                                                                                                 Dim nonCashTotal As Decimal = 0
                                                                                                                 If paymentTotals IsNot Nothing Then
                                                                                                                     For Each pt In paymentTotals
-                                                                                                                        ' Non-cash accounts or explicit split accounts
-                                                                                                                        Dim isCashAccount As Boolean = (pt.AccountCode IsNot Nothing AndAlso pt.AccountCode.StartsWith("111")) OrElse (pt.PaymentMethodName IsNot Nothing AndAlso (pt.PaymentMethodName.Contains("كاش") OrElse pt.PaymentMethodName.ToLower().Contains("cash")))
+                                                                                                                        ' Check Cash Account (Code = 1101 or Name contains صندوق/كاش)
+                                                                                                                        Dim isCashAccount As Boolean = (pt.AccountCode IsNot Nothing AndAlso pt.AccountCode = "1101") OrElse (pt.PaymentMethodName IsNot Nothing AndAlso (pt.PaymentMethodName.Contains("كاش") OrElse pt.PaymentMethodName.Contains("صندوق") OrElse pt.PaymentMethodName.ToLower().Contains("cash")))
                                                                                                                         If Not isCashAccount Then
                                                                                                                             NonCashPaymentSummaries.Add(pt)
                                                                                                                             If pt.InvType = "Sales" OrElse pt.InvType = "Receipt" Then

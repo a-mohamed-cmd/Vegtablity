@@ -34,31 +34,30 @@ class ShiftService:
             cursor.execute(SP.SHIFT_GET_ACTIVE, (user_id,))
             row = cursor.fetchone()
             if row:
-                # ✨ تحديث الكاش عند جلب الوردية من DB (مثلاً بعد إعادة تشغيل السيرفر)
-                _active_shift_cache[user_id] = row.ShiftID
-                return {
+                shift_data = {
                     "ShiftID": row.ShiftID,
                     "UserID": row.UserID,
                     "StartTime": row.StartTime,
                     "StartingCash": float(row.StartingCash),
                     "Status": row.Status
                 }
+                if row.Status == 'Open':
+                    _active_shift_cache[user_id] = row.ShiftID
+                    return shift_data
+            _active_shift_cache.pop(user_id, None)
             return None
         finally:
             conn.close()
 
     def get_active_shift_id(self, user_id: int) -> int | None:
         """
-        ✨ يُرجع ShiftID من الذاكرة مباشرة إذا كان موجوداً،
-        وإلا يستعلم من DB مرة واحدة ويحفظه في الكاش.
+        ✨ يرجع ShiftID النشطة والمفتوحة فقط مباشرة من الداتابيز،
+        مما يضمن عدم إرجاع أي وردية مغلقة أبداً.
         """
-        if user_id in _active_shift_cache:
-            return _active_shift_cache[user_id]
-
-        # Fallback: جلب من DB وتحديث الكاش
         shift = self.get_active_shift(user_id)
-        if shift:
+        if shift and shift.get("Status") == "Open":
             return shift["ShiftID"]
+        _active_shift_cache.pop(user_id, None)
         return None
 
     def close_shift(self, shift_id: int, ending_cash: float):
@@ -67,7 +66,7 @@ class ShiftService:
         try:
             cursor.execute(SP.SHIFT_CLOSE, (shift_id, ending_cash))
             conn.commit()
-            # ✨ مسح الكاش عند إغلاق الوردية
+            # ✨ مسح الكاش بالكامل عند إغلاق الوردية
             user_ids_to_remove = [uid for uid, sid in _active_shift_cache.items() if sid == shift_id]
             for uid in user_ids_to_remove:
                 _active_shift_cache.pop(uid, None)
