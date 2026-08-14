@@ -308,6 +308,7 @@ class PosProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final warehouseId = prefs.getInt('selected_warehouse_id') ?? 1;
     final finalPartnerId = partnerId ?? prefs.getInt('general_partner_id') ?? 1;
+    final activeShiftId = prefs.getInt('active_shift_id');
 
     int? resolvedPaymentAccountId = paymentAccountId;
     if (resolvedPaymentAccountId == null && isCash) {
@@ -380,7 +381,8 @@ class PosProvider extends ChangeNotifier {
       'TempDeliveryDate': tempDeliveryDate,
       'TempDeliveryTime': tempDeliveryTime,
       'Details': details,
-      if (isCash && resolvedPaymentAccountId != null) 'PaymentAccountID': resolvedPaymentAccountId,
+      if (activeShiftId != null) 'ShiftID': activeShiftId,
+      if (resolvedPaymentAccountId != null) 'PaymentAccountID': resolvedPaymentAccountId,
       if (paymentSplits != null && paymentSplits.isNotEmpty) 'PaymentSplits': paymentSplits,
     };
 

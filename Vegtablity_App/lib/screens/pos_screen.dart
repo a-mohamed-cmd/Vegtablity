@@ -1078,7 +1078,7 @@ class _PosScreenState extends State<PosScreen> {
     // 2. Perform save (either online or offline local persistence fallback)
     final newInvId = await posProvider.saveInvoice(
       widget.type,
-      paymentAccountId: _isCash ? _selectedAccountId : null,
+      paymentAccountId: _selectedAccountId,
       partnerId: _selectedPartner?['PartnerID'],
       isCash: _isCash,
       paymentSplits: paymentSplits,

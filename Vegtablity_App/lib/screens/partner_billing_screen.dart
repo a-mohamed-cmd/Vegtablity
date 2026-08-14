@@ -690,7 +690,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'Notes': '${context.tr('pb_offer_notes')}${widget.quoteId}${widget.tempNotes != null && widget.tempNotes!.isNotEmpty ? " | " + widget.tempNotes! : ""}',
       'IsPosted': false,
       'Details': details,
-      if (isCash && (paymentAccountId ?? _selectedAccountId) != null)
+      if ((paymentAccountId ?? _selectedAccountId) != null)
         'PaymentAccountID': paymentAccountId ?? _selectedAccountId,
       if (paymentSplits != null && paymentSplits.isNotEmpty)
         'PaymentSplits': paymentSplits,

@@ -87,6 +87,12 @@ class ShiftProvider extends ChangeNotifier {
         _startingCash = startingCash;
         _shiftStartTime = DateTime.now().toIso8601String();
         _shiftId = response.data['ShiftID'];
+
+        final prefs = await SharedPreferences.getInstance();
+        if (_shiftId != null) {
+          await prefs.setInt('active_shift_id', _shiftId!);
+        }
+
         _isLoading = false;
         notifyListeners();
         return true;
@@ -113,7 +119,7 @@ class ShiftProvider extends ChangeNotifier {
       _selectedWarehouseName = prefs.getString('selected_warehouse_name');
 
       final response = await _apiService.getActiveShift();
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && response.data != null) {
         _isShiftOpen = true;
         _shiftStartTime = response.data['StartTime'];
         _shiftId = response.data['ShiftID'];
@@ -125,17 +131,26 @@ class ShiftProvider extends ChangeNotifier {
         } else {
           _startingCash = null;
         }
+
+        if (_shiftId != null) {
+          await prefs.setInt('active_shift_id', _shiftId!);
+        }
+
         _isLoading = false;
         notifyListeners();
         return true;
       }
     } catch (e) {
       // Quietly ignore and set status to not open (no active shift found)
-      _isShiftOpen = false;
-      _startingCash = null;
-      _shiftStartTime = null;
-      _shiftId = null;
     }
+
+    _isShiftOpen = false;
+    _startingCash = null;
+    _shiftStartTime = null;
+    _shiftId = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('active_shift_id');
 
     _isLoading = false;
     notifyListeners();
@@ -162,16 +177,23 @@ class ShiftProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _apiService.closeShift(shiftId, endingCash);
-      _isShiftOpen = false;
-      _startingCash = null;
-      _shiftStartTime = null;
-      _shiftId = null;
-      _shiftSummary = null;
+      await clearShiftData();
     } catch (e) {
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> clearShiftData() async {
+    _isShiftOpen = false;
+    _startingCash = null;
+    _shiftStartTime = null;
+    _shiftId = null;
+    _shiftSummary = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('active_shift_id');
+    notifyListeners();
   }
 }

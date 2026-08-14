@@ -115,6 +115,7 @@ class AuthProvider extends ChangeNotifier {
     await prefs.remove('token');
     await prefs.remove('username');
     await prefs.remove('role_name');
+    await prefs.remove('active_shift_id');
 
     notifyListeners();
   }
