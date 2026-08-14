@@ -15,9 +15,11 @@ import 'providers/recipe_provider.dart';
 import 'screens/license_check_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/language_viewmodel.dart';
+import 'viewmodels/barcode_print_viewmodel.dart';
 import 'core/localization/app_localizations.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   final apiService = ApiService();
   final printerService = PrinterService(apiService);
 
@@ -58,6 +60,9 @@ void main() {
         ),
         ChangeNotifierProvider<LanguageViewModel>(
           create: (context) => LanguageViewModel(),
+        ),
+        ChangeNotifierProvider<BarcodePrintViewModel>(
+          create: (context) => BarcodePrintViewModel(apiService),
         ),
       ],
       child: const MyApp(),

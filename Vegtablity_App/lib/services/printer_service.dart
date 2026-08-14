@@ -9,6 +9,7 @@ import 'printing/shift_report_print_designer.dart';
 import 'printing/voucher_print_designer.dart';
 import 'printing/recipe_print_designer.dart';
 import 'printing/inventory_print_designer.dart';
+import 'printing/barcode_print_designer.dart';
 
 /// ViewModel & Central Printer Service Dispatcher
 class PrinterService extends ChangeNotifier {
@@ -547,6 +548,54 @@ class PrinterService extends ChangeNotifier {
 
 
   // =========================================================================
+  Future<bool> printBarcodeLabel(Map<String, dynamic> product, {int copies = 1, bool? isArabic}) async {
+    final effectiveIsArabic = isArabic ?? true;
+    final int effectiveCopies = copies > 0 ? copies : 1;
+
+    try {
+      if (_companySettings == null) await _loadCompanySettings();
+      await _loadSettings();
+
+      if (_connectionType == 'Network') {
+        final List<int> bytes = await BarcodePrintDesigner.generateCanvasRasterBytes(
+          product,
+          _companySettings,
+          paperSize: _paperSize,
+          isArabic: effectiveIsArabic,
+        );
+        if (bytes.isEmpty) return false;
+
+        for (int i = 0; i < effectiveCopies; i++) {
+          final socket = await Socket.connect(_ipAddress, _port, timeout: const Duration(seconds: 5));
+          socket.add(bytes);
+          await socket.flush();
+          await socket.close();
+          if (effectiveCopies > 1 && i < effectiveCopies - 1) {
+            await Future.delayed(const Duration(milliseconds: 300));
+          }
+        }
+        return true;
+      } else {
+        // Bluetooth / Sunmi hardware printer
+        for (int i = 0; i < effectiveCopies; i++) {
+          await BarcodePrintDesigner.printSunmiBarcodeLabel(
+            product: product,
+            companySettings: _companySettings,
+            paperSize: _paperSize,
+            isArabic: effectiveIsArabic,
+          );
+          if (effectiveCopies > 1 && i < effectiveCopies - 1) {
+            await Future.delayed(const Duration(milliseconds: 300));
+          }
+        }
+        return true;
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error printing barcode label: $e');
+      return false;
+    }
+  }
+
   // MANUAL CASH DRAWER OPEN (فتح درج النقدية يددياً)
   // =========================================================================
 

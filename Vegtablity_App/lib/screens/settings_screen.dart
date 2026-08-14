@@ -28,6 +28,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   bool _showWastage = true;
   bool _showDailyOrders = true;
   bool _showRecipes = true;
+  bool _showBarcodePrinting = true;
 
   @override
   void initState() {
@@ -53,6 +54,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
         _showWastage = prefs.getBool('show_wastage') ?? true;
         _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
         _showRecipes = prefs.getBool('show_recipes') ?? true;
+        _showBarcodePrinting = prefs.getBool('show_barcode_printing') ?? true;
         _isLoading = false;
       });
     } catch (e) {
@@ -131,6 +133,9 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
             break;
           case 'show_recipes':
             _showRecipes = value;
+            break;
+          case 'show_barcode_printing':
+            _showBarcodePrinting = value;
             break;
         }
       });
@@ -305,6 +310,12 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                       onChanged: (val) => _saveBoolSetting('show_recipes', val),
                       activeColor: Colors.teal,
                     ),
+                  SwitchListTile(
+                    title: Text(context.tr('settings_show_barcode_print')),
+                    value: _showBarcodePrinting,
+                    onChanged: (val) => _saveBoolSetting('show_barcode_printing', val),
+                    activeColor: Colors.teal,
+                  ),
                 ],
               ),
             ),

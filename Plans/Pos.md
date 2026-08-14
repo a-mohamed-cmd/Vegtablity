@@ -58,6 +58,19 @@
 *   **خدمة جلب وإدارة الطلبات (جديد):** [OrderService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/OrderService.vb) - استدعاء إجراءات التوصيل والطلبات اليومية من قاعدة البيانات.
 *   **نموذج بيانات الطلبات المجدولة (جديد):** [DailyOrder](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/DailyOrder.vb) - تمثيل بيانات الشحن والتسجيل والتوصيل للعملاء.
 *   **خدمة الـ API للتطبيق المحمول (معدلة):** [ApiService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart) - إضافة دالة جلب الطلبات اليومية `getDailyOrders(String date)`.
+*   **مزود حالة الوردية للموبايل (معدل):** [ShiftProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart) - حفظ واسترجاع ومسح `active_shift_id` بالذاكرة الدائمة `SharedPreferences` عند فتح وإغلاق الوردية، وتوفير دالة `clearShiftData()` للتنظيف الشامل.
+*   **مزود نقاط البيع للموبايل (معدل):** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - إرفاق `active_shift_id` بحقل `ShiftID` تلقائياً عند حفظ الفاتورة بالـ API أو بالذاكرة المحلية للأوفلاين.
+*   **خدمة ومخطط الفواتير بالـ API (معدلة):** [invoices.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/invoices.py) & [invoice_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/invoice_service.py) - دعم إرسال واستقبال `ShiftID` في الفاتورة والاعتماد عليه مباشرة وتسهيل حفظ الفواتير بوردية الكاشير.
+*   **خدمة الورديات بالـ API (معدلة):** [shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py) - التثبت الجازم من كون الوردية مفتوحة `Open` ومسح الكاش `_active_shift_cache` كلياً عند إغلاق الوردية لعدم الربط بوردية مغلقة.
+*   **متحكم الورديات لسطح المكتب (معدل):** [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) - تحسين التعرف على حساب الكاش الرئيسي `AccountCode = "1101"` ومسميات الصندوق وتصحيح خطوات الحفظ ومنع استثناءات التحويل.
+*   **الإجراءات المخزنة وسكربتات قاعدة البيانات (معدلة):** [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) & [sp_Shift_GetSummary_and_Close.sql](file:///d:/VB.NET/backup/Vegtablity/SQL/sp_Shift_GetSummary_and_Close.sql) & [37_PaymentMethods_SplitPayment.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/37_PaymentMethods_SplitPayment.sql) - تصحيح وحساب ملخص إغلاق الوردية وتجميع وسائل الدفع المقسمة والمباشرة، وإضافة معامل تصفية الشريك `@PartnerID` لتقرير أعمار الديون.
+*   **ملف حزمة التثبيت (معدل):** [Washa.iss](file:///d:/VB.NET/backup/Vegtablity/setup/Washa.iss) - ترقية إصدار حزمة التثبيت إلى `SetupV7` واستهداف التحديثات النهائية.
+*   **شاشة طباعة ملصقات الباركود (جديدة):** [BarcodePrintScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/barcode_print_screen.dart) - شاشة جديدة مخصصة لاستعراض وتصفية طباعة ملصقات الباركود للمنتجات (عادية / تصنيع / وسيط) وتحديد عدد النسخ ومعاينة الملصق والطباعة الحرارية المباشرة.
+*   **مصمم ملصقات الباركود (جديد):** [BarcodePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/barcode_print_designer.dart) - مصمم ومولد ملصقات الباركود عالي الدقة (HD Canvas Raster Bitmap + Bluetooth ESC/POS Code128) لجميع أنواع طابعات الملصقات الحرارية.
+*   **خدمة الطباعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - إضافة دالة `printBarcodeLabel()` لمعالجة وتكرار إرسال الملصق حسب عدد النسخ المطلوبة على كافة وسائط الاتصال.
+*   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة مفتاح التحكم `show_barcode_printing` لإظهار أو إخفاء الشاشة من القائمة الجانبية.
+*   **القائمة الجانبية بالصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - إضافة بند "طباعة ملصقات الباركود" بالـ Drawer الجانبي بربط ديناميكي بشرط تفعيله من الإعدادات العامة.
+*   **ملف الترجمة واللغات (معدل):** [AppLocalizations](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart) - إضافة نصوص ومفاتيح الترجمة لطباعة الباركود باللغتين العربية والإنجليزية وتأمين التفاعل مع التغيير بين اللغات.
 
 
 ## 1. الهيكل المعماري (System Architecture)
@@ -1758,6 +1771,54 @@
 * **ضبط معادلة نهاية الوردية المتوقع وجرد النقدية (`Expected Ending Cash`):**
   - **تطبيقات الـ Flutter (`CloseShiftScreen.dart` & `ShiftReportPrintDesigner.dart`):** أصبح حساب المبلغ المتوقع في الدرج يعتمد حصراً على النقدية الكاش الورقية `Starting Cash + Cash Sales + Cash Receipts - Cash Purchases - Cash Payments` ليظهر للكاشير الجرد الفعلي الدقيق المطابق للدرج، وإبراز مبيعات الكي نت والفيزا في خانات مستقلة بالتقرير والشاشة والطباعة دون أي عجز وهمي.
   - **تطبيقات الـ WPF (`ShiftsViewModel.vb` & `ShiftsPage.xaml`):** مطابقة تامة للمعادلة واستعراض صافي الكاش الحقيقي بالصندوق وإبراز جدول باقي طرق الدفع بشكل منفصل.
+
+---
+
+## 51. تحديث وتأمين نظام الورديات وتزامن الـ ShiftID بين الجوال والـ API والـ Desktop (أغسطس 2026)
+
+* **تزامن واستدامة معرف الوردية بالجوال (`SharedPreferences & ShiftProvider`):**
+  - **التخزين المحلي المستمر:** تم تحديث [ShiftProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart) لتخزين `ShiftID` الخاص بالوردية المفتوحة حالياً في الذاكرة الدائمة `SharedPreferences` تحت مفتاح `active_shift_id` فور فتح الوردية أو التحقق من وجود وردية نشطة.
+  - **مسح بيانات الوردية:** إضافة دالة `clearShiftData()` ومسح مفتاح `active_shift_id` من الذاكرة المحلية والـ Provider عند تسجيل الخروج بـ [AuthProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/auth_provider.dart) وعند إغلاق الوردية لتفادي استخدام وردية منتهية.
+
+* **تمرير `ShiftID` بالفواتير المحفوظة (`PosProvider` & `PartnerBillingScreen`):**
+  - تم تحديث [PosProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) و [PartnerBillingScreen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) ليتم جلب `active_shift_id` وإرفاقه تلقائياً بحقل `ShiftID` بداخل جسم الفاتورة (`JSON Payload`) سواء عند الحفظ المباشر عبر الـ API أو التخزين الأوفلاين.
+
+* **تحديث نماذج وخدمات الـ API (`FastAPI Backend`):**
+  - **مخطط البيانات ([invoices.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/invoices.py)):** إضافة حقل `ShiftID: Optional[int] = None` بداخل نموذج `InvoiceCreate`.
+  - **خدمة الفواتير ([invoice_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/invoice_service.py)):** اعتماد `ShiftID` القادم مباشرة من تطبيق الجوال بداخل جسم الفاتورة `invoice.ShiftID` لتقليل زمن الاستعلام، مع التراجع التلقائي لاستدعاء `get_active_shift_id(user_id)`.
+  - **خدمة الورديات ([shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py)):** تعديل دالة `get_active_shift_id` للتأكد الجازم من أن حالة الوردية المسترجعة هي `Open` حصراً ومسح `_active_shift_cache` كلياً عند إغلاق الوردية لمنع ربط أي فاتورة بوردية مغلقة نهائياً.
+
+* **تصحيح خطوات حفظ أرقام الورديات والتدفق النقدي بـ WPF:**
+  - **متحكم الورديات ([ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb)):** تحسين التعرف على حسابات الكاش `AccountCode = "1101"` أو المسمى `صندوق`/`كاش` بشكل دقيق، ومعالجة تحويلات الأرقام والخطوات عند حفظ وإغلاق الوردية لمنع حدوث استثناءات التحويل `Format Exceptions`.
+  - **الإجراءات المخزنة ([SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql)):** تحديث `[Sales].[sp_Shift_GetSummary_and_Close]` لتجميع إجماليات الكاش والمبيعات والـ Split Payments وحساب مبيعات النقدية بدقة.
+  - **تقرير أعمار الديون ([SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql)):** إضافة المعامل `@PartnerID` للإجراء `[Reports].[sp_Report_UnpaidInvoicesAging]` لتصفية ديون عميل محدد.
+
+* **تحديث ملف حزمة التثبيت (`Washa.iss`):**
+  - تحديث ثوابت السكربت بـ [Washa.iss](file:///d:/VB.NET/backup/Vegtablity/setup/Washa.iss) لرفع رقم الإصدار إلى `MyAppVersion "7"` وإنتاج ملف التثبيت باسم `WhashaApp_SetupV7`.
+
+---
+
+## 52. إضافة شاشة طباعة ملصقات الباركود للمنتجات مع تكامل الإعدادات العامة والسايدبار والمحرك المزدوج (أغسطس 2026)
+
+* **التحكم والربط بالإعدادات العامة (`GeneralSettingsScreen & HomeScreen`):**
+  - تم تحديث [settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) لإدراج مفتاح `show_barcode_printing` وحفظ تفضيلات المستخدم محلياً بـ `SharedPreferences`.
+  - تم تحديث [home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) لإضافة خيار "طباعة ملصقات الباركود" بأيقونة `Icons.qr_code_2` بالقائمة الجانبية (Drawer)، يظهر ويختفي تلقائياً حسب تفضيل المستخدم.
+
+* **محرك طباعة ملصقات الباركود الحرارية المزدوج (`BarcodePrintDesigner & PrinterService`):**
+  - **طريقة Canvas HD Raster:** بناء [barcode_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/barcode_print_designer.dart) لرسم ملصق الباركود بـ `ui.Canvas` بترميز Code 128 الصريح ومصفوفة بكسلات عالية الوضوح تناسب طابعات الـ IP والشبكة وطابعات الملصقات.
+  - **طريقة Bluetooth & Direct Thermal:** دعم إرسال أوامر Code 128 النقطية والنسيجية المباشرة وطباعة الباركود بنجاح وقراءته بجميع ماسحات الباركود على طابعات البلوتوث المربوطة حالياً.
+  - **خدمة الطباعة (`PrinterService.dart`):** إضافة الدالة `printBarcodeLabel({required Map<String, dynamic> product, required int copies})` لطباعة وتكرار الملصقات بعدد النسخ المحدد.
+
+* **شاشة طباعة الباركود وتصفية الأصناف (`BarcodePrintScreen.dart`):**
+  - بناء الشاشة التفاعلية [barcode_print_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/barcode_print_screen.dart) لاستدعاء `[Inventory].[sp_Product_GetForSales]` عبر `ApiService` لجلب كافة الأصناف (العادية، المصنعة، والوسيطة).
+  - شريط بحث بالاسم ورقم الباركود وشريط تصفية الفئات (Category Chips).
+  - شبكة الأصناف (Grid View) مع شارات توضح نوع المنتج والسعر والباركود.
+  - نافذة تحديد عدد النسخ `Print Copies Dialog` مع معاينة حية للملصق وزر الطباعة الحرارية المباشرة.
+
+* **الدعم الكامل للغتين (`app_localizations.dart`):**
+  - تحديث [app_localizations.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart) وإضافة جميع المفاتيح باللغتين العربية والإنجليزية والتفاعل اللحظي مع تغيير لغة التطبيق.
+
+
 
 
 

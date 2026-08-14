@@ -27,6 +27,7 @@ import 'supplier_selection_screen.dart';
 import 'daily_orders_screen.dart';
 import 'recipe_management_screen.dart';
 import 'invoice_lookup_screen.dart';
+import 'barcode_print_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -49,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showWastage = true;
   bool _showDailyOrders = true;
   bool _showRecipes = true;
+  bool _showBarcodePrinting = true;
 
   @override
   void initState() {
@@ -78,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _showWastage = prefs.getBool('show_wastage') ?? true;
         _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
         _showRecipes = prefs.getBool('show_recipes') ?? true;
+        _showBarcodePrinting = prefs.getBool('show_barcode_printing') ?? true;
         _isLoadingLayout = false;
       });
     } catch (e) {
@@ -329,6 +332,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const RecipeManagementScreen()));
+                },
+              ),
+            if (_showBarcodePrinting)
+              ListTile(
+                leading: const Icon(Icons.qr_code_2, color: Colors.indigo),
+                title: Text(context.tr('home_barcode_print'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const BarcodePrintScreen()),
+                  );
                 },
               ),
             const Divider(),
