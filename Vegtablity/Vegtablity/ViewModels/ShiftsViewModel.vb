@@ -197,7 +197,12 @@ Namespace ViewModels
                                                                                                                     SelectedShift.TotalSales = summary.TotalSales
                                                                                                                     SelectedShift.TotalPurchases = summary.TotalPurchases
                                                                                                                     SelectedShift.TotalPaidSales = summary.TotalPaidSales
+                                                                                                                    SelectedShift.TotalCashSales = summary.TotalCashSales
+                                                                                                                    SelectedShift.TotalNonCashSales = summary.TotalNonCashSales
+                                                                                                                    SelectedShift.TotalKnetSales = summary.TotalKnetSales
                                                                                                                     SelectedShift.TotalPaidPurchases = summary.TotalPaidPurchases
+                                                                                                                    SelectedShift.TotalCashPurchases = summary.TotalCashPurchases
+                                                                                                                    SelectedShift.TotalNonCashPurchases = summary.TotalNonCashPurchases
                                                                                                                     SelectedShift.TotalReceiptVouchers = summary.TotalReceiptVouchers
                                                                                                                     SelectedShift.TotalPaymentVouchers = summary.TotalPaymentVouchers
                                                                                                                     SelectedShift.SalesCount = summary.SalesCount
@@ -235,8 +240,8 @@ Namespace ViewModels
                                                                                                                 Dim nonCashTotal As Decimal = 0
                                                                                                                 If paymentTotals IsNot Nothing Then
                                                                                                                     For Each pt In paymentTotals
-                                                                                                                        ' Check Cash Account (Code = 1101 or Name contains صندوق/كاش)
-                                                                                                                        Dim isCashAccount As Boolean = (pt.AccountCode IsNot Nothing AndAlso pt.AccountCode = "1101") OrElse (pt.PaymentMethodName IsNot Nothing AndAlso (pt.PaymentMethodName.Contains("كاش") OrElse pt.PaymentMethodName.Contains("صندوق") OrElse pt.PaymentMethodName.ToLower().Contains("cash")))
+                                                                                                                        ' Check Cash Account (Code = 1101 or StartsWith 1101)
+                                                                                                                        Dim isCashAccount As Boolean = (pt.AccountCode IsNot Nothing AndAlso (pt.AccountCode = "1101" OrElse pt.AccountCode.StartsWith("1101"))) OrElse (pt.PaymentMethodName IsNot Nothing AndAlso (pt.PaymentMethodName.Contains("كاش") OrElse pt.PaymentMethodName.Contains("صندوق") OrElse pt.PaymentMethodName.ToLower().Contains("cash")) AndAlso Not (pt.PaymentMethodName.Contains("شبك") OrElse pt.PaymentMethodName.Contains("بنك") OrElse pt.PaymentMethodName.ToLower().Contains("knet") OrElse pt.PaymentMethodName.ToLower().Contains("visa") OrElse pt.PaymentMethodName.ToLower().Contains("card")))
                                                                                                                         If Not isCashAccount Then
                                                                                                                             NonCashPaymentSummaries.Add(pt)
                                                                                                                             If pt.InvType = "Sales" OrElse pt.InvType = "Receipt" Then

@@ -295,7 +295,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,5">
                                     <TextBlock Text="الإيرادات" FontSize="18" FontWeight="Bold" Foreground="#1a202c" Margin="0,0,15,0"/>
                                     <TextBlock Text="{Binding SelectedShift.SalesCount, StringFormat='المبيعات: {0} فاتورة'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBlock Text="{Binding SelectedShift.TotalPaidSales, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#28a745" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.TotalSales, StringFormat='(إجمالي {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#28a745" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,0"/>
                                     <TextBlock Text="|" FontSize="14" Foreground="#ced4da" VerticalAlignment="Center" Margin="0,0,15,0"/>
                                     <TextBlock Text="{Binding ReceiptVouchers.Count, StringFormat='سندات قبض: {0}'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <TextBlock Text="{Binding SelectedShift.TotalReceiptVouchers, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#007bff" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -353,7 +353,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,5">
                                     <TextBlock Text="المدفوعات" FontSize="18" FontWeight="Bold" Foreground="#1a202c" Margin="0,0,15,0"/>
                                     <TextBlock Text="{Binding SelectedShift.PurchasesCount, StringFormat='المشتريات: {0} فاتورة'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBlock Text="{Binding SelectedShift.TotalPaidPurchases, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#dc3545" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                                    <TextBlock Text="{Binding SelectedShift.TotalPurchases, StringFormat='(إجمالي {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#dc3545" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,15,0"/>
                                     <TextBlock Text="|" FontSize="14" Foreground="#ced4da" VerticalAlignment="Center" Margin="0,0,15,0"/>
                                     <TextBlock Text="{Binding PaymentVouchers.Count, StringFormat='سندات صرف: {0}'}" FontSize="14" Foreground="#6c757d" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <TextBlock Text="{Binding SelectedShift.TotalPaymentVouchers, StringFormat='(بقيمة {0:N3})', Converter={StaticResource AccountConverter}}" FontSize="14" Foreground="#fd7e14" FontWeight="Bold" VerticalAlignment="Center"/>

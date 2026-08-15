@@ -2848,46 +2848,121 @@ BEGIN
         WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
 
         -- ==========================================================
-        -- C. PAYMENT JOURNAL ENTRIES
-        -- قيد السداد الجزئي عند الترحيل (إذا كان PaidAmount > 0 وتم اختيار حساب دفع)
+        -- C. PAYMENT JOURNAL ENTRIES (دعم التجزئة Split والتحصيل المباشر)
         -- ==========================================================
 
-        -- Purchase: Dr Vendor Account / Cr Cash Account (11xx)
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        -- ──────────────────────────────────────────────────────────
+        -- المسار 1: SPLIT PAYMENTS (عند وجود تقسيم في InvoicePaymentSplits)
+        -- ──────────────────────────────────────────────────────────
+
+        -- 1.1 مشتريات Split: Dr المورد / Cr حساب طريقة الدفع
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            ISNULL(p.AccountID, @VendorAcc),  -- Dr حساب المورد
+            sp.Amount, 0,
+            N'سداد [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Purchase' AND sp.Amount > 0;
+
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            sp.PaymentAccountID,              -- Cr حساب طريقة الدفع
+            0, sp.Amount,
+            N'سداد [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Purchase' AND sp.Amount > 0;
+
+        -- 1.2 مبيعات Split: Dr حساب طريقة الدفع / Cr العميل
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            sp.PaymentAccountID,              -- Dr حساب طريقة الدفع (خزينة/بنك/كي نت)
+            sp.Amount, 0,
+            N'تحصيل [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Sales' AND sp.Amount > 0;
+
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            ISNULL(p.AccountID, @CustomerAcc), -- Cr حساب العميل
+            0, sp.Amount,
+            N'تحصيل [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Sales' AND sp.Amount > 0;
+
+        -- ──────────────────────────────────────────────────────────
+        -- المسار 2: SINGLE PAYMENT FALLBACK (عند عدم وجود تجزئة)
+        -- ──────────────────────────────────────────────────────────
+
+        -- 2.1 مشتريات مباشر: Dr المورد / Cr حساب الدفع المباشر
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               ISNULL(p.AccountID, @VendorAcc),  -- Dr حساب المورد
+               ISNULL(p.AccountID, @VendorAcc),
                i.PaidAmount, 0,
                N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
         LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               i.PaymentAccountID, 0, i.PaidAmount,  -- Cr حساب الدفع المختار (نقدية)
+               i.PaymentAccountID, 0, i.PaidAmount,
                N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
-        -- Sales: Dr Cash Account (11xx) / Cr Customer Account
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        -- 2.2 مبيعات مباشر: Dr حساب التحصيل المباشر / Cr العميل
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               i.PaymentAccountID, i.PaidAmount, 0,  -- Dr حساب الدفع المختار (نقدية)
-               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+               i.PaymentAccountID, i.PaidAmount, 0,
+               N'تحصيل جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               ISNULL(p.AccountID, @CustomerAcc), 0, i.PaidAmount,  -- Cr حساب العميل
-               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+               ISNULL(p.AccountID, @CustomerAcc), 0, i.PaidAmount,
+               N'تحصيل جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
         LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
     END
 END
@@ -6822,182 +6897,259 @@ GO
 
 
 -- ============================================================
+-- ============================================================
 -- SP 1: sp_Shift_GetSummary
--- جلب ملخص الوردية (المبيعات، المشتريات، الكاش المتوقع)
+-- جلب ملخص الوردية الكامل (المبيعات، الكاش، K-Net، السندات، العجز/الزيادة)
 -- ============================================================
 IF OBJECT_ID('[Sales].[sp_Shift_GetSummary]', 'P') IS NOT NULL
     DROP PROCEDURE [Sales].[sp_Shift_GetSummary];
 GO
 
-CREATE PROCEDURE [Sales].[sp_Shift_GetSummary]
+CREATE PROCEDURE [Sales].[sp_Shift_GetSummary] 
     @ShiftID INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- 1. تحديد ID حساب الصندوق الرئيسي (1101)
-    DECLARE @CashAccountID INT;
-    SELECT TOP 1 @CashAccountID = AccountID 
-    FROM [Accounting].[ChartOfAccounts] 
-    WHERE AccountCode = '1101';
+    -- جلب المتغيرات الأساسية للوردية
+    DECLARE @StartingCash DECIMAL(18,3) = 0;
+    DECLARE @EndingCash   DECIMAL(18,3) = NULL;
 
-    -- احتياطي في حال عدم وجود الكود 1101
-    IF @CashAccountID IS NULL
-    BEGIN
-        SELECT TOP 1 @CashAccountID = AccountID 
-        FROM [Accounting].[ChartOfAccounts] 
-        WHERE AccountName LIKE N'%صندوق%' AND IsTransactional = 1;
-    END
+    SELECT @StartingCash = ISNULL(StartingCash, 0), @EndingCash = EndingCash
+    FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
 
-    -- 2. جلب بيانات الوردية الأساسية والملخص المالي
+    -- حسابات الكاش والمبيعات والشبكة
+    DECLARE @TotalSales              DECIMAL(18,3) = 0;
+    DECLARE @TotalPurchases          DECIMAL(18,3) = 0;
+    DECLARE @SalesCount              INT = 0;
+    DECLARE @PurchasesCount          INT = 0;
+    DECLARE @TotalPaidSalesCash      DECIMAL(18,3) = 0;
+    DECLARE @TotalPaidSalesNonCash   DECIMAL(18,3) = 0;
+    DECLARE @TotalRemainder          DECIMAL(18,3) = 0;
+    DECLARE @TotalPaidPurchasesCash  DECIMAL(18,3) = 0;
+    DECLARE @TotalPaidPurchasesNonCash DECIMAL(18,3) = 0;
+    DECLARE @TotalPurchasesRemainder DECIMAL(18,3) = 0;
+    DECLARE @TotalReceiptVouchers    DECIMAL(18,3) = 0;
+    DECLARE @TotalPaymentVouchers    DECIMAL(18,3) = 0;
+
+    -- 1. إجماليات فواتير المبيعات
+    SELECT 
+        @TotalSales = ISNULL(SUM(CAST(NetAmount AS DECIMAL(18,3))), 0),
+        @SalesCount = COUNT(*),
+        @TotalRemainder = ISNULL(SUM(CAST(Remainder AS DECIMAL(18,3))), 0)
+    FROM [Sales].[InvoiceHeader]
+    WHERE InvType = 'Sales' AND ShiftID = @ShiftID;
+
+    -- 2. إجماليات فواتير المشتريات
+    SELECT 
+        @TotalPurchases = ISNULL(SUM(CAST(NetAmount AS DECIMAL(18,3))), 0),
+        @PurchasesCount = COUNT(*),
+        @TotalPurchasesRemainder = ISNULL(SUM(CAST(Remainder AS DECIMAL(18,3))), 0)
+    FROM [Sales].[InvoiceHeader]
+    WHERE InvType = 'Purchase' AND ShiftID = @ShiftID;
+
+    -- 3. مبيعات الكاش النقدية الفعلية بالدرج (Splits الكاش + Direct الكاش)
+    SELECT @TotalPaidSalesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+    FROM (
+        -- فواتير مجزأة: الدفعات النقدية
+        SELECT sp.Amount AS PaidCash
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND (
+              c.AccountID IS NULL
+              OR NOT (
+                  c.AccountCode LIKE '112%' 
+                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+              )
+          )
+
+        UNION ALL
+
+        -- فواتير مباشرة (غير مجزأة): مسددة كاش
+        SELECT h.PaidAmount AS PaidCash
+        FROM [Sales].[InvoiceHeader] h
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+          AND (
+              c.AccountID IS NULL
+              OR NOT (
+                  c.AccountCode LIKE '112%' 
+                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+              )
+          )
+    ) CashSalesUnion;
+
+    -- 4. مبيعات الشبكة K-Net / فيزا / بطاقات / بنك (Splits + Direct)
+    SELECT @TotalPaidSalesNonCash = ISNULL(SUM(CAST(PaidNonCash AS DECIMAL(18,3))), 0)
+    FROM (
+        -- فواتير مجزأة: الدفعات غير النقدية
+        SELECT sp.Amount AS PaidNonCash
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+        INNER JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND (
+              c.AccountCode LIKE '112%' 
+              OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+              OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+              OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+              OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+          )
+
+        UNION ALL
+
+        -- فواتير مباشرة (غير مجزأة): مسددة شبكة/KNET
+        SELECT h.PaidAmount AS PaidNonCash
+        FROM [Sales].[InvoiceHeader] h
+        INNER JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+          AND (
+              c.AccountCode LIKE '112%' 
+              OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+              OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+              OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+              OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+          )
+    ) NonCashSalesUnion;
+
+    -- 5. مشتريات الكاش النقدية الفعلية من الصندوق
+    SELECT @TotalPaidPurchasesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+    FROM (
+        SELECT sp.Amount AS PaidCash
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+          AND (
+              c.AccountID IS NULL
+              OR NOT (
+                  c.AccountCode LIKE '112%' 
+                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+              )
+          )
+
+        UNION ALL
+
+        SELECT h.PaidAmount AS PaidCash
+        FROM [Sales].[InvoiceHeader] h
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+          AND (
+              c.AccountID IS NULL
+              OR NOT (
+                  c.AccountCode LIKE '112%' 
+                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+              )
+          )
+    ) CashPurchasesUnion;
+
+    -- 6. سندات القبض الكاش بالدرج
+    SELECT @TotalReceiptVouchers = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+    FROM [Accounting].[Vouchers] v
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON v.AccountID = c.AccountID
+    WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+      AND (
+          c.AccountID IS NULL
+          OR NOT (
+              c.AccountCode LIKE '112%' 
+              OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+              OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+              OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+              OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+          )
+      );
+
+    -- 7. سندات الصرف الكاش من الدرج (المصروفات النقدية)
+    SELECT @TotalPaymentVouchers = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+    FROM [Accounting].[Vouchers] v
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON v.AccountID = c.AccountID
+    WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+      AND (
+          c.AccountID IS NULL
+          OR NOT (
+              c.AccountCode LIKE '112%' 
+              OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+              OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+              OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+              OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+          )
+      );
+
+    -- 8. حساب النقدية المتوقعة بالدرج
+    DECLARE @ExpectedCash DECIMAL(18,3) = @StartingCash 
+                                        + @TotalPaidSalesCash 
+                                        - @TotalPaidPurchasesCash 
+                                        + @TotalReceiptVouchers 
+                                        - @TotalPaymentVouchers;
+
+    DECLARE @Difference DECIMAL(18,3) = ISNULL(@EndingCash, @ExpectedCash) - @ExpectedCash;
+
+    -- النتيجة النهائية مع التوافق التام لكافة المنصات
     SELECT
         s.ShiftID,
         s.UserID,
         s.StartTime,
         s.EndTime,
         s.StartingCash,
+        s.EndingCash,
         s.Status,
         u.FullName AS UserName,
 
-        -- إجمالي المبيعات (NetAmount) في الوردية
-        ISNULL((
-            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Sales'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalSales,
+        @TotalSales             AS TotalSales,
+        @TotalPurchases         AS TotalPurchases,
+        @SalesCount             AS SalesCount,
+        @PurchasesCount         AS PurchasesCount,
 
-        -- إجمالي المشتريات (NetAmount) في الوردية
-        ISNULL((
-            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Purchase'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalPurchases,
+        @TotalPaidSalesCash     AS TotalPaidSales,        -- التوافق مع الكود القديم (مبيعات الكاش فقط)
+        @TotalPaidSalesCash     AS TotalCashSales,        -- لشاشة إغلاق الوردية والطباعة
+        @TotalPaidSalesCash     AS CashSales,             -- لطباعة وتقارير Flutter
+        @TotalPaidSalesNonCash  AS TotalNonCashSales,     -- مبيعات غير نقدية
+        @TotalPaidSalesNonCash  AS TotalKnetSales,        -- لطباعة وتقارير Flutter
+        @TotalPaidSalesNonCash  AS KnetSales,             -- لطباعة Flutter
+        @TotalPaidSalesNonCash  AS CardSales,             -- للبطاقات
+        @TotalRemainder         AS TotalRemainder,
 
-        -- عدد فواتير المبيعات
-        ISNULL((
-            SELECT COUNT(*)
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Sales'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS SalesCount,
+        @TotalPaidPurchasesCash AS TotalPaidPurchases,    -- مشتريات كاش فقط
+        @TotalPaidPurchasesCash AS TotalCashPurchases,
+        @TotalPurchasesRemainder AS TotalPurchasesRemainder,
 
-        -- عدد فواتير المشتريات
-        ISNULL((
-            SELECT COUNT(*)
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Purchase'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS PurchasesCount,
+        @TotalReceiptVouchers   AS TotalReceiptVouchers,
+        @TotalPaymentVouchers   AS TotalPaymentVouchers,
+        @TotalPaymentVouchers   AS TotalExpenses,
 
-        -- ✅ 1. مبيعات الكاش النقدية الفعلية لحساب الصندوق 1101 بالدرج
-        ISNULL((
-            SELECT SUM(CAST(PaidCash AS DECIMAL(18,3)))
-            FROM (
-                SELECT sp.Amount AS PaidCash
-                FROM [Sales].[InvoicePaymentSplits] sp
-                INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND sp.PaymentAccountID = @CashAccountID
-
-                UNION ALL
-
-                SELECT h.PaidAmount AS PaidCash
-                FROM [Sales].[InvoiceHeader] h
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND h.PaidAmount > 0
-                  AND (h.PaymentAccountID = @CashAccountID OR h.PaymentAccountID IS NULL)
-                  AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
-            ) CashSalesUnion
-        ), 0) AS TotalPaidSales,
-
-        -- المتبقي الآجل للمبيعات
-        ISNULL((
-            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Sales'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalRemainder,
-
-        -- ✅ 2. مشتريات الكاش النقدية الفعلية من الصندوق 1101
-        ISNULL((
-            SELECT SUM(CAST(PaidCash AS DECIMAL(18,3)))
-            FROM (
-                SELECT sp.Amount AS PaidCash
-                FROM [Sales].[InvoicePaymentSplits] sp
-                INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
-                WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
-                  AND sp.PaymentAccountID = @CashAccountID
-
-                UNION ALL
-
-                SELECT h.PaidAmount AS PaidCash
-                FROM [Sales].[InvoiceHeader] h
-                WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
-                  AND h.PaidAmount > 0
-                  AND (h.PaymentAccountID = @CashAccountID OR h.PaymentAccountID IS NULL)
-                  AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
-            ) CashPurchasesUnion
-        ), 0) AS TotalPaidPurchases,
-
-        -- المتبقي الآجل للمشتريات
-        ISNULL((
-            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Purchase'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalPurchasesRemainder,
-
-        -- ✅ 3. إجمالي سندات القبض الكاش لحساب الصندوق 1101
-        ISNULL((
-            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
-            FROM [Accounting].[Vouchers] v
-            WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
-              AND (v.AccountID = @CashAccountID OR v.AccountID IS NULL)
-        ), 0) AS TotalReceiptVouchers,
-
-        -- ✅ 4. إجمالي سندات الصرف الكاش لحساب الصندوق 1101
-        ISNULL((
-            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
-            FROM [Accounting].[Vouchers] v
-            WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
-              AND (v.AccountID = @CashAccountID OR v.AccountID IS NULL)
-        ), 0) AS TotalPaymentVouchers,
-
-        -- ✅ 5. إجمالي التحصيلات غير النقدية (كي نت / فيزا / بنك) - أي حساب غير 1101
-        ISNULL((
-            SELECT SUM(CAST(PaidNonCash AS DECIMAL(18,3)))
-            FROM (
-                SELECT sp.Amount AS PaidNonCash
-                FROM [Sales].[InvoicePaymentSplits] sp
-                INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND sp.PaymentAccountID <> @CashAccountID
-
-                UNION ALL
-
-                SELECT h.PaidAmount AS PaidNonCash
-                FROM [Sales].[InvoiceHeader] h
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND h.PaidAmount > 0
-                  AND h.PaymentAccountID IS NOT NULL
-                  AND h.PaymentAccountID <> @CashAccountID
-                  AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
-            ) NonCashSalesUnion
-        ), 0) AS TotalNonCashSales
+        @ExpectedCash           AS ExpectedCash,
+        ISNULL(s.EndingCash, @ExpectedCash) AS ActualCash,
+        @Difference             AS Difference
 
     FROM [Sales].[Shifts] s
     LEFT JOIN [Security].[Users] u ON s.UserID = u.UserID
     WHERE s.ShiftID = @ShiftID;
 END
 GO
- 
-
 
 -- ============================================================
 -- SP 2: sp_Shift_Close
--- إغلاق الوردية + قيد محاسبي لفرق الكاش
+-- إغلاق الوردية وترحيل الفواتير والسندات وقيد تسوية فرق الكاش
 -- ============================================================
 IF OBJECT_ID('[Sales].[sp_Shift_Close]', 'P') IS NOT NULL
     DROP PROCEDURE [Sales].[sp_Shift_Close];
@@ -7011,60 +7163,149 @@ BEGIN
     SET NOCOUNT ON;
     BEGIN TRANSACTION;
     BEGIN TRY
-
-        -- =====================================================
-        -- 1. إغلاق الوردية
-        -- =====================================================
+        -- ① إغلاق الوردية
         UPDATE [Sales].[Shifts]
-        SET
-            EndTime    = GETDATE(),
+        SET EndTime    = GETDATE(),
             EndingCash = @EndingCash,
             Status     = 'Closed'
-        WHERE ShiftID = @ShiftID
-          AND Status  = 'Open';
+        WHERE ShiftID = @ShiftID AND Status = 'Open';
 
         IF @@ROWCOUNT = 0
             THROW 50001, 'الوردية غير موجودة أو مغلقة بالفعل', 1;
 
-        -- =====================================================
-        -- 2. حساب الكاش المتوقع والفرق
-        -- ExpectedCash = StartingCash - TotalPaidPurchases + TotalPaidSales
-        -- =====================================================
-        DECLARE @StartingCash       DECIMAL(18,3);
-        DECLARE @StartTime          DATETIME;
+        -- ② جلب بيانات الوردية
+        DECLARE @StartingCash       DECIMAL(18,3) = 0;
         DECLARE @UserID             INT;
-        DECLARE @TotalPaidSales     DECIMAL(18,3) = 0;
-        DECLARE @TotalPaidPurchases DECIMAL(18,3) = 0;
-        DECLARE @ExpectedCash       DECIMAL(18,3);
-        DECLARE @Difference         DECIMAL(18,3);
+        DECLARE @TotalPaidSalesCash DECIMAL(18,3) = 0;
+        DECLARE @TotalPaidPurchasesCash DECIMAL(18,3) = 0;
+        DECLARE @TotalReceiptV      DECIMAL(18,3) = 0;
+        DECLARE @TotalPaymentV      DECIMAL(18,3) = 0;
+        DECLARE @ExpectedCash       DECIMAL(18,3) = 0;
+        DECLARE @Difference         DECIMAL(18,3) = 0;
 
-        SELECT
-            @StartingCash = StartingCash,
-            @StartTime    = StartTime,
-            @UserID       = UserID
-        FROM [Sales].[Shifts]
-        WHERE ShiftID = @ShiftID;
+        SELECT @StartingCash = ISNULL(StartingCash, 0), @UserID = UserID
+        FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
 
-        -- مبيعات مسددة خلال الوردية
-        SELECT @TotalPaidSales = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
-        FROM [Sales].[InvoiceHeader]
-        WHERE InvType = 'Sales'
-          AND CreatedAt >= @StartTime
-          AND UserID = @UserID;
+        -- مبيعات مسددة كاش فقط بالدرج (Splits + Direct Cash)
+        SELECT @TotalPaidSalesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+        FROM (
+            SELECT sp.Amount AS PaidCash
+            FROM [Sales].[InvoicePaymentSplits] sp
+            INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+              AND (
+                  c.AccountID IS NULL
+                  OR NOT (
+                      c.AccountCode LIKE '112%' 
+                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+                  )
+              )
 
-        -- مشتريات مسددة خلال الوردية
-        SELECT @TotalPaidPurchases = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
-        FROM [Sales].[InvoiceHeader]
-        WHERE InvType = 'Purchase'
-          AND CreatedAt >= @StartTime
-          AND UserID = @UserID;
+            UNION ALL
 
-        SET @ExpectedCash = @StartingCash - @TotalPaidPurchases + @TotalPaidSales;
-        SET @Difference   = @EndingCash - @ExpectedCash;
+            SELECT h.PaidAmount AS PaidCash
+            FROM [Sales].[InvoiceHeader] h
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+              AND h.PaidAmount > 0
+              AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+              AND (
+                  c.AccountID IS NULL
+                  OR NOT (
+                      c.AccountCode LIKE '112%' 
+                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+                  )
+              )
+        ) CashSalesUnion;
 
-        -- =====================================================
-        -- 3. قيد محاسبي فقط إذا كان الفرق غير صفر
-        -- =====================================================
+        -- مشتريات مسددة كاش فقط من الدرج (Splits + Direct Cash)
+        SELECT @TotalPaidPurchasesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+        FROM (
+            SELECT sp.Amount AS PaidCash
+            FROM [Sales].[InvoicePaymentSplits] sp
+            INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+              AND (
+                  c.AccountID IS NULL
+                  OR NOT (
+                      c.AccountCode LIKE '112%' 
+                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+                  )
+              )
+
+            UNION ALL
+
+            SELECT h.PaidAmount AS PaidCash
+            FROM [Sales].[InvoiceHeader] h
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+              AND h.PaidAmount > 0
+              AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+              AND (
+                  c.AccountID IS NULL
+                  OR NOT (
+                      c.AccountCode LIKE '112%' 
+                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+                  )
+              )
+        ) CashPurchasesUnion;
+
+        -- سندات القبض الكاش
+        SELECT @TotalReceiptV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers] v
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON v.AccountID = c.AccountID
+        WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+          AND (
+              c.AccountID IS NULL
+              OR NOT (
+                  c.AccountCode LIKE '112%' 
+                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+              )
+          );
+
+        -- سندات الصرف الكاش
+        SELECT @TotalPaymentV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers] v
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON v.AccountID = c.AccountID
+        WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+          AND (
+              c.AccountID IS NULL
+              OR NOT (
+                  c.AccountCode LIKE '112%' 
+                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
+                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' OR c.AccountName LIKE N'%شبك%' OR c.AccountName LIKE N'%مدى%' OR c.AccountName LIKE N'%لينك%' OR c.AccountName LIKE N'%رابط%'
+                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' OR LOWER(c.AccountName) LIKE '%link%'
+                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%' OR LOWER(c.AccountName) LIKE '%master%'
+              )
+          );
+
+        -- الكاش المتوقع = كاش الافتتاح + مبيعات نقدية - مشتريات نقدية + سندات قبض نقدية - سندات صرف نقدية
+        SET @ExpectedCash = @StartingCash
+                          + @TotalPaidSalesCash
+                          - @TotalPaidPurchasesCash
+                          + @TotalReceiptV
+                          - @TotalPaymentV;
+
+        SET @Difference = @EndingCash - @ExpectedCash;
+
+        -- ③ قيد تسوية فرق الكاش (إن وُجد)
         IF ABS(@Difference) > 0.001
         BEGIN
             DECLARE @CashboxID      INT;
@@ -7075,13 +7316,11 @@ BEGIN
             DECLARE @DebitAccID     INT;
             DECLARE @CreditAccID    INT;
 
-            -- جلب حساب الصندوق
             SELECT TOP 1 @CashboxID = AccountID
             FROM [Accounting].[ChartOfAccounts]
-            WHERE (AccountName LIKE N'%صندوق%' OR AccountName LIKE N'%cash%' OR AccountCode LIKE '11%')
+            WHERE (AccountCode = '1101' OR AccountName LIKE N'%صندوق%' OR AccountName LIKE N'%كاش%' OR AccountCode LIKE '110%')
               AND IsTransactional = 1;
 
-            -- جلب حساب الإيرادات الأخرى (412)
             SELECT TOP 1 @RevenueIDchild = AccountID
             FROM [Accounting].[ChartOfAccounts]
             WHERE AccountCode = '412';
@@ -7098,58 +7337,55 @@ BEGIN
             BEGIN
                 IF @Difference > 0
                 BEGIN
-                    -- *** فائض: مدين الصندوق / دائن إيرادات أخرى (412) ***
-                    SET @JournalDesc = N'فائض كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                    SET @JournalDesc = N'فائض كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
                     SET @DebitAccID  = @CashboxID;
                     SET @CreditAccID = @RevenueIDchild;
                 END
                 ELSE
                 BEGIN
-                    -- *** عجز: مدين إيرادات أخرى (412) / دائن الصندوق ***
-                    SET @JournalDesc = N'عجز كاش عند إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                    SET @JournalDesc = N'عجز كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
                     SET @DebitAccID  = @RevenueIDchild;
                     SET @CreditAccID = @CashboxID;
                 END
 
                 IF OBJECT_ID('[Accounting].[seq_EntryNo]', 'SO') IS NOT NULL
                 BEGIN
-                    -- جلب رقم القيد التالي من الـ Sequence (مشترك بين السطرين)
                     SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
-
-                    -- السطر 1: المدين
                     INSERT INTO [Accounting].[JournalEntries]
                         (EntryNo, EntryDate, ReferenceType, ReferenceID,
                          AccountID, DebitAmount, CreditAmount, Description, UserID)
                     VALUES
                         (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
-                         @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID);
-
-                    -- السطر 2: الدائن
-                    INSERT INTO [Accounting].[JournalEntries]
-                        (EntryNo, EntryDate, ReferenceType, ReferenceID,
-                         AccountID, DebitAmount, CreditAmount, Description, UserID)
-                    VALUES
+                         @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID),
                         (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
                          @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
                 END
             END
         END
 
-        -- =====================================================
-        -- 4. ترحيل الفواتير المرتبطة بهذه الوردية
-        -- =====================================================
-        -- بدلاً من ShiftID غير الموجود، نربط الفواتير بوقت فتح وإغلاق الوردية
-        DECLARE @ShiftEnd DATETIME;
-        SELECT @ShiftEnd = EndTime FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
-
+        -- ④ ترحيل الفواتير المرتبطة بهذه الوردية
         UPDATE [Sales].[InvoiceHeader]
         SET IsPosted = 1
-        WHERE CreatedAt >= @StartTime 
-          AND CreatedAt <= @ShiftEnd 
-          AND UserID = @UserID
-          AND IsPosted = 0;
+        WHERE ShiftID = @ShiftID AND IsPosted = 0;
+
+        -- ⑤ ترحيل السندات المرتبطة بهذه الوردية
+        UPDATE [Accounting].[Vouchers]
+        SET IsPosted = 1
+        WHERE ShiftID = @ShiftID AND IsPosted = 0;
 
         COMMIT TRANSACTION;
+
+        -- إرجاع ملخص للإغلاق
+        SELECT
+            @ShiftID            AS ShiftID,
+            @StartingCash       AS StartingCash,
+            @TotalPaidSalesCash AS TotalPaidSales,
+            @TotalPaidPurchasesCash AS TotalPaidPurchases,
+            @TotalReceiptV      AS TotalReceiptVouchers,
+            @TotalPaymentV      AS TotalPaymentVouchers,
+            @ExpectedCash       AS ExpectedCash,
+            @EndingCash         AS ActualCash,
+            @Difference         AS Difference;
     END TRY
     BEGIN CATCH
         ROLLBACK TRANSACTION;
@@ -7737,6 +7973,8 @@ GO
 -- ============================================================
 -- STEP 5: تعديل sp_Shift_GetSummary لإضافة إجمالي السندات
 -- ============================================================
+-- STEP 5: تعديل sp_Shift_GetSummary لإضافة إجمالي السندات وحساب الكاش بدقة
+-- ============================================================
 IF OBJECT_ID('[Sales].[sp_Shift_GetSummary]', 'P') IS NOT NULL
     DROP PROCEDURE [Sales].[sp_Shift_GetSummary];
 GO
@@ -7747,198 +7985,227 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- جلب بيانات الوردية الأساسية
+    -- 1. المتغيرات الأساسية للوردية
+    DECLARE @StartingCash DECIMAL(18,3) = 0;
+    DECLARE @EndingCash   DECIMAL(18,3) = NULL;
+
+    SELECT @StartingCash = ISNULL(StartingCash, 0), @EndingCash = EndingCash
+    FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
+
+    -- حسابات الكاش والمبيعات والشبكة
+    DECLARE @TotalSales              DECIMAL(18,3) = 0;
+    DECLARE @TotalPurchases          DECIMAL(18,3) = 0;
+    DECLARE @SalesCount              INT = 0;
+    DECLARE @PurchasesCount          INT = 0;
+    DECLARE @TotalPaidSalesCash      DECIMAL(18,3) = 0;
+    DECLARE @TotalPaidSalesNonCash   DECIMAL(18,3) = 0;
+    DECLARE @TotalRemainder          DECIMAL(18,3) = 0;
+    DECLARE @TotalPaidPurchasesCash  DECIMAL(18,3) = 0;
+    DECLARE @TotalPaidPurchasesNonCash DECIMAL(18,3) = 0;
+    DECLARE @TotalPurchasesRemainder DECIMAL(18,3) = 0;
+    DECLARE @TotalReceiptVouchers    DECIMAL(18,3) = 0;
+    DECLARE @TotalPaymentVouchers    DECIMAL(18,3) = 0;
+
+    -- 2. إجماليات فواتير المبيعات
+    SELECT 
+        @TotalSales     = ISNULL(SUM(CAST(NetAmount AS DECIMAL(18,3))), 0),
+        @SalesCount     = COUNT(*),
+        @TotalRemainder = ISNULL(SUM(CAST(Remainder AS DECIMAL(18,3))), 0)
+    FROM [Sales].[InvoiceHeader]
+    WHERE InvType = 'Sales' AND ShiftID = @ShiftID;
+
+    -- 3. إجماليات فواتير المشتريات
+    SELECT 
+        @TotalPurchases          = ISNULL(SUM(CAST(NetAmount AS DECIMAL(18,3))), 0),
+        @PurchasesCount          = COUNT(*),
+        @TotalPurchasesRemainder = ISNULL(SUM(CAST(Remainder AS DECIMAL(18,3))), 0)
+    FROM [Sales].[InvoiceHeader]
+    WHERE InvType = 'Purchase' AND ShiftID = @ShiftID;
+
+    -- 4. مبيعات الكاش النقدية الفعلية بالدرج (الحساب 1101 ومشتقاته حصراً + الفواتير المباشرة)
+    SELECT @TotalPaidSalesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+    FROM (
+        -- فواتير مجزأة: الدفعات النقدية على حساب الصندوق 1101
+        SELECT sp.Amount AS PaidCash
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND (
+              c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          )
+
+        UNION ALL
+
+        -- فواتير مباشرة (غير مجزأة): مسددة كاش
+        SELECT h.PaidAmount AS PaidCash
+        FROM [Sales].[InvoiceHeader] h
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+          AND (
+              c.AccountID IS NULL
+              OR c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          )
+    ) CashSalesUnion;
+
+    -- 5. مبيعات الشبكة K-Net / فيزا / بطاقات / بنك (أي حساب دفع بخلاف 1101)
+    SELECT @TotalPaidSalesNonCash = ISNULL(SUM(CAST(PaidNonCash AS DECIMAL(18,3))), 0)
+    FROM (
+        -- فواتير مجزأة: الدفعات غير النقدية
+        SELECT sp.Amount AS PaidNonCash
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+        INNER JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND c.AccountCode <> '1101'
+          AND c.AccountCode NOT LIKE '1101%'
+
+        UNION ALL
+
+        -- فواتير مباشرة (غير مجزأة): مسددة شبكة/KNET/بنك
+        SELECT h.PaidAmount AS PaidNonCash
+        FROM [Sales].[InvoiceHeader] h
+        INNER JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+          AND c.AccountCode <> '1101'
+          AND c.AccountCode NOT LIKE '1101%'
+    ) NonCashSalesUnion;
+
+    -- 6. مشتريات الكاش النقدية الفعلية من الصندوق (الحساب 1101 حصراً)
+    SELECT @TotalPaidPurchasesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+    FROM (
+        SELECT sp.Amount AS PaidCash
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+          AND (
+              c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          )
+
+        UNION ALL
+
+        SELECT h.PaidAmount AS PaidCash
+        FROM [Sales].[InvoiceHeader] h
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+          AND (
+              c.AccountID IS NULL
+              OR c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          )
+    ) CashPurchasesUnion;
+
+    -- مشتريات غير نقدية
+    SELECT @TotalPaidPurchasesNonCash = ISNULL(SUM(CAST(PaidNonCash AS DECIMAL(18,3))), 0)
+    FROM (
+        SELECT sp.Amount AS PaidNonCash
+        FROM [Sales].[InvoicePaymentSplits] sp
+        INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+        INNER JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+          AND c.AccountCode <> '1101'
+          AND c.AccountCode NOT LIKE '1101%'
+
+        UNION ALL
+
+        SELECT h.PaidAmount AS PaidNonCash
+        FROM [Sales].[InvoiceHeader] h
+        INNER JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+        WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+          AND h.PaidAmount > 0
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+          AND c.AccountCode <> '1101'
+          AND c.AccountCode NOT LIKE '1101%'
+    ) NonCashPurchasesUnion;
+
+    -- 7. سندات القبض الكاش بالدرج
+    SELECT @TotalReceiptVouchers = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+    FROM [Accounting].[Vouchers] v
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+        CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+    ) = c.AccountID
+    WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+      AND (
+          c.AccountCode = '1101'
+          OR c.AccountCode LIKE '1101%'
+          OR v.PaymentMethod = 'Cash'
+          OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+      );
+
+    -- 8. سندات الصرف الكاش من الدرج (المصروفات النقدية)
+    SELECT @TotalPaymentVouchers = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+    FROM [Accounting].[Vouchers] v
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+        CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+    ) = c.AccountID
+    WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+      AND (
+          c.AccountCode = '1101'
+          OR c.AccountCode LIKE '1101%'
+          OR v.PaymentMethod = 'Cash'
+          OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+      );
+
+    -- 9. حساب النقدية المتوقعة بالدرج
+    DECLARE @ExpectedCash DECIMAL(18,3) = @StartingCash 
+                                        + @TotalPaidSalesCash 
+                                        - @TotalPaidPurchasesCash 
+                                        + @TotalReceiptVouchers 
+                                        - @TotalPaymentVouchers;
+
+    DECLARE @Difference DECIMAL(18,3) = ISNULL(@EndingCash, @ExpectedCash) - @ExpectedCash;
+
+    -- 10. إرجاع النتائج المتوافقة مع كافة الأنظمة والشاشات والطباعة
     SELECT
         s.ShiftID,
         s.UserID,
         s.StartTime,
         s.EndTime,
         s.StartingCash,
+        s.EndingCash,
         s.Status,
         u.FullName AS UserName,
 
-        -- إجمالي المبيعات (NetAmount) في الوردية
-        ISNULL((
-            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Sales'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalSales,
+        @TotalSales                 AS TotalSales,
+        @TotalPurchases             AS TotalPurchases,
+        @SalesCount                 AS SalesCount,
+        @PurchasesCount             AS PurchasesCount,
 
-        -- إجمالي المشتريات (NetAmount) في الوردية
-        ISNULL((
-            SELECT SUM(CAST(h.NetAmount AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Purchase'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalPurchases,
+        @TotalPaidSalesCash         AS TotalPaidSales,        -- مبيعات الكاش النقدية الفعلية (توافق قديم وجديد)
+        @TotalPaidSalesCash         AS TotalCashSales,        -- لشاشة إغلاق الوردية والطباعة
+        @TotalPaidSalesCash         AS CashSales,             -- لطباعة وتقارير Flutter
+        @TotalPaidSalesNonCash      AS TotalNonCashSales,     -- مبيعات غير نقدية (شبكة / بطاقات)
+        @TotalPaidSalesNonCash      AS TotalKnetSales,        -- لطباعة وتقارير Flutter (K-Net)
+        @TotalPaidSalesNonCash      AS KnetSales,             -- لطباعة Flutter
+        @TotalPaidSalesNonCash      AS CardSales,             -- للبطاقات
+        @TotalRemainder             AS TotalRemainder,
 
-        -- عدد فواتير المبيعات
-        ISNULL((
-            SELECT COUNT(*)
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Sales'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS SalesCount,
+        @TotalPaidPurchasesCash     AS TotalPaidPurchases,    -- مشتريات كاش فقط
+        @TotalPaidPurchasesCash     AS TotalCashPurchases,
+        @TotalPaidPurchasesNonCash  AS TotalNonCashPurchases,
+        @TotalPurchasesRemainder    AS TotalPurchasesRemainder,
 
-        -- عدد فواتير المشتريات
-        ISNULL((
-            SELECT COUNT(*)
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Purchase'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS PurchasesCount,
+        @TotalReceiptVouchers       AS TotalReceiptVouchers,
+        @TotalPaymentVouchers       AS TotalPaymentVouchers,
+        @TotalPaymentVouchers       AS TotalExpenses,
 
-        -- ✅ 1. مبيعات الكاش النقدية الفعلية بالدرج (أي تحصيل ليس K-Net / فيزا / بنك / شيك)
-        ISNULL((
-            SELECT SUM(CAST(PaidCash AS DECIMAL(18,3)))
-            FROM (
-                SELECT sp.Amount AS PaidCash
-                FROM [Sales].[InvoicePaymentSplits] sp
-                INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
-                LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND NOT (
-                      c.AccountCode LIKE '112%' 
-                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-                  )
-
-                UNION ALL
-
-                SELECT h.PaidAmount AS PaidCash
-                FROM [Sales].[InvoiceHeader] h
-                LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND h.PaidAmount > 0
-                  AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
-                  AND NOT (
-                      c.AccountCode LIKE '112%' 
-                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-                  )
-            ) CashSalesUnion
-        ), 0) AS TotalPaidSales,
-
-        -- المتبقي الآجل للمبيعات
-        ISNULL((
-            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Sales'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalRemainder,
-
-        -- ✅ 2. مشتريات الكاش النقدية الفعلية فقط من درج الوردية
-        ISNULL((
-            SELECT SUM(CAST(PaidCash AS DECIMAL(18,3)))
-            FROM (
-                SELECT sp.Amount AS PaidCash
-                FROM [Sales].[InvoicePaymentSplits] sp
-                INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
-                LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
-                WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
-                  AND NOT (
-                      c.AccountCode LIKE '112%' 
-                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-                  )
-
-                UNION ALL
-
-                SELECT h.PaidAmount AS PaidCash
-                FROM [Sales].[InvoiceHeader] h
-                LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
-                WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
-                  AND h.PaidAmount > 0
-                  AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
-                  AND NOT (
-                      c.AccountCode LIKE '112%' 
-                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-                  )
-            ) CashPurchasesUnion
-        ), 0) AS TotalPaidPurchases,
-
-        -- المتبقي الآجل للمشتريات
-        ISNULL((
-            SELECT SUM(CAST(h.Remainder AS DECIMAL(18,3)))
-            FROM [Sales].[InvoiceHeader] h
-            WHERE h.InvType = 'Purchase'
-              AND h.ShiftID = @ShiftID
-        ), 0) AS TotalPurchasesRemainder,
-
-        -- ✅ 3. إجمالي سندات القبض الكاش بالدرج
-        ISNULL((
-            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
-            FROM [Accounting].[Vouchers] v
-            LEFT JOIN [Accounting].[ChartOfAccounts] c ON v.AccountID = c.AccountID
-            WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
-              AND NOT (
-                  c.AccountCode LIKE '112%' 
-                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-              )
-        ), 0) AS TotalReceiptVouchers,
-
-        -- ✅ 4. إجمالي سندات الصرف الكاش من الدرج
-        ISNULL((
-            SELECT SUM(CAST(v.Amount AS DECIMAL(18,3)))
-            FROM [Accounting].[Vouchers] v
-            LEFT JOIN [Accounting].[ChartOfAccounts] c ON v.AccountID = c.AccountID
-            WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
-              AND NOT (
-                  c.AccountCode LIKE '112%' 
-                  OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                  OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                  OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                  OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-              )
-        ), 0) AS TotalPaymentVouchers,
-
-        -- ✅ 5. إجمالي التحصيلات غير النقدية (كي نت / فيزا / بنك / شيك) للمبيعات
-        ISNULL((
-            SELECT SUM(CAST(PaidNonCash AS DECIMAL(18,3)))
-            FROM (
-                SELECT sp.Amount AS PaidNonCash
-                FROM [Sales].[InvoicePaymentSplits] sp
-                INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
-                INNER JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND (
-                      c.AccountCode LIKE '112%' 
-                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-                  )
-
-                UNION ALL
-
-                SELECT h.PaidAmount AS PaidNonCash
-                FROM [Sales].[InvoiceHeader] h
-                INNER JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
-                WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
-                  AND h.PaidAmount > 0
-                  AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
-                  AND (
-                      c.AccountCode LIKE '112%' 
-                      OR c.AccountName LIKE N'%كي نت%' OR c.AccountName LIKE N'%فيزا%' OR c.AccountName LIKE N'%بنك%' 
-                      OR c.AccountName LIKE N'%شيك%' OR c.AccountName LIKE N'%بطاق%' 
-                      OR LOWER(c.AccountName) LIKE '%knet%' OR LOWER(c.AccountName) LIKE '%k-net%' 
-                      OR LOWER(c.AccountName) LIKE '%visa%' OR LOWER(c.AccountName) LIKE '%bank%' OR LOWER(c.AccountName) LIKE '%card%'
-                  )
-            ) NonCashSalesUnion
-        ), 0) AS TotalNonCashSales
+        @ExpectedCash               AS ExpectedCash,
+        ISNULL(s.EndingCash, @ExpectedCash) AS ActualCash,
+        @Difference                 AS Difference
 
     FROM [Sales].[Shifts] s
     LEFT JOIN [Security].[Users] u ON s.UserID = u.UserID
@@ -7946,13 +8213,13 @@ BEGIN
 END
 GO
 
-
 -- ============================================================
--- STEP 6: تعديل sp_Shift_Close - ترحيل السندات عند الإغلاق
+-- STEP 6: تعديل sp_Shift_Close - ترحيل السندات عند الإغلاق وحساب الكاش بدقة
 -- ============================================================
 IF OBJECT_ID('[Sales].[sp_Shift_Close]', 'P') IS NOT NULL
     DROP PROCEDURE [Sales].[sp_Shift_Close];
 GO
+
 CREATE PROCEDURE [Sales].[sp_Shift_Close]
     @ShiftID    INT,
     @EndingCash DECIMAL(18,3)
@@ -7967,42 +8234,120 @@ BEGIN
             EndingCash = @EndingCash,
             Status     = 'Closed'
         WHERE ShiftID = @ShiftID AND Status = 'Open';
+
         IF @@ROWCOUNT = 0
             THROW 50001, 'الوردية غير موجودة أو مغلقة بالفعل', 1;
+
         -- ② جلب بيانات الوردية
-        DECLARE @StartingCash       DECIMAL(18,3);
-        DECLARE @UserID             INT;
-        DECLARE @TotalPaidSales     DECIMAL(18,3) = 0;
-        DECLARE @TotalPaidPurchases DECIMAL(18,3) = 0;
-        DECLARE @TotalReceiptV      DECIMAL(18,3) = 0;
-        DECLARE @TotalPaymentV      DECIMAL(18,3) = 0;
-        DECLARE @ExpectedCash       DECIMAL(18,3);
-        DECLARE @Difference         DECIMAL(18,3);
-        SELECT @StartingCash = StartingCash, @UserID = UserID
+        DECLARE @StartingCash           DECIMAL(18,3) = 0;
+        DECLARE @UserID                 INT;
+        DECLARE @TotalPaidSalesCash     DECIMAL(18,3) = 0;
+        DECLARE @TotalPaidPurchasesCash DECIMAL(18,3) = 0;
+        DECLARE @TotalReceiptV          DECIMAL(18,3) = 0;
+        DECLARE @TotalPaymentV          DECIMAL(18,3) = 0;
+        DECLARE @ExpectedCash           DECIMAL(18,3) = 0;
+        DECLARE @Difference             DECIMAL(18,3) = 0;
+
+        SELECT @StartingCash = ISNULL(StartingCash, 0), @UserID = UserID
         FROM [Sales].[Shifts] WHERE ShiftID = @ShiftID;
-        -- مبيعات مسددة نقداً فقط (PaidAmount - لا VoucherPaidAmount)
-        SELECT @TotalPaidSales = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
-        FROM [Sales].[InvoiceHeader]
-        WHERE InvType = 'Sales' AND ShiftID = @ShiftID;
-        -- مشتريات مسددة نقداً فقط
-        SELECT @TotalPaidPurchases = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
-        FROM [Sales].[InvoiceHeader]
-        WHERE InvType = 'Purchase' AND ShiftID = @ShiftID;
-        -- سندات القبض المرتبطة بهذه الوردية
-        SELECT @TotalReceiptV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
-        FROM [Accounting].[Vouchers]
-        WHERE VoucherType = 'Receipt' AND ShiftID = @ShiftID;
-        -- سندات الصرف المرتبطة بهذه الوردية
-        SELECT @TotalPaymentV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
-        FROM [Accounting].[Vouchers]
-        WHERE VoucherType = 'Payment' AND ShiftID = @ShiftID;
-        -- الكاش المتوقع = البداية + مبيعات نقدية - مشتريات نقدية + سندات قبض - سندات صرف
+
+        -- مبيعات مسددة كاش فقط بالدرج (الحساب 1101 ومشتقاته حصراً)
+        SELECT @TotalPaidSalesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+        FROM (
+            SELECT sp.Amount AS PaidCash
+            FROM [Sales].[InvoicePaymentSplits] sp
+            INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+              AND (
+                  c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+
+            UNION ALL
+
+            SELECT h.PaidAmount AS PaidCash
+            FROM [Sales].[InvoiceHeader] h
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+              AND h.PaidAmount > 0
+              AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+              AND (
+                  c.AccountID IS NULL
+                  OR c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+        ) CashSalesUnion;
+
+        -- مشتريات مسددة كاش فقط من الدرج (الحساب 1101 ومشتقاته حصراً)
+        SELECT @TotalPaidPurchasesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+        FROM (
+            SELECT sp.Amount AS PaidCash
+            FROM [Sales].[InvoicePaymentSplits] sp
+            INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+              AND (
+                  c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+
+            UNION ALL
+
+            SELECT h.PaidAmount AS PaidCash
+            FROM [Sales].[InvoiceHeader] h
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+              AND h.PaidAmount > 0
+              AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+              AND (
+                  c.AccountID IS NULL
+                  OR c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+        ) CashPurchasesUnion;
+
+        -- سندات القبض الكاش
+        SELECT @TotalReceiptV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers] v
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+            CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+        ) = c.AccountID
+        WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+          AND (
+              c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR v.PaymentMethod = 'Cash'
+              OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          );
+
+        -- سندات الصرف الكاش
+        SELECT @TotalPaymentV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers] v
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+            CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+        ) = c.AccountID
+        WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+          AND (
+              c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR v.PaymentMethod = 'Cash'
+              OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          );
+
+        -- الكاش المتوقع = كاش الافتتاح + مبيعات نقدية - مشتريات نقدية + سندات قبض نقدية - سندات صرف نقدية
         SET @ExpectedCash = @StartingCash
-                          + @TotalPaidSales
-                          - @TotalPaidPurchases
+                          + @TotalPaidSalesCash
+                          - @TotalPaidPurchasesCash
                           + @TotalReceiptV
                           - @TotalPaymentV;
+
         SET @Difference = @EndingCash - @ExpectedCash;
+
         -- ③ قيد تسوية فرق الكاش (إن وُجد)
         IF ABS(@Difference) > 0.001
         BEGIN
@@ -8013,9 +8358,10 @@ BEGIN
             DECLARE @EntryNo        INT;
             DECLARE @DebitAccID     INT;
             DECLARE @CreditAccID    INT;
+
             SELECT TOP 1 @CashboxID = AccountID
             FROM [Accounting].[ChartOfAccounts]
-            WHERE (AccountName LIKE N'%صندوق%' OR AccountName LIKE N'%كاش%' OR AccountCode LIKE '11%')
+            WHERE (AccountCode = '1101' OR AccountCode LIKE '1101%' OR LOWER(AccountName) LIKE '%cash%' OR AccountName LIKE N'%كاش%' OR AccountName LIKE N'%صندوق%')
               AND IsTransactional = 1;
 
             SELECT TOP 1 @RevenueIDchild = AccountID
@@ -8059,26 +8405,33 @@ BEGIN
                 END
             END
         END
+
         -- ④ ترحيل الفواتير المرتبطة بهذه الوردية
         UPDATE [Sales].[InvoiceHeader]
         SET IsPosted = 1
         WHERE ShiftID = @ShiftID AND IsPosted = 0;
+
         -- ⑤ ترحيل السندات المرتبطة بهذه الوردية (تُولّد القيود عبر trg_Voucher_Post)
         UPDATE [Accounting].[Vouchers]
         SET IsPosted = 1
         WHERE ShiftID = @ShiftID AND IsPosted = 0;
+
         COMMIT TRANSACTION;
+
         -- إرجاع ملخص للإغلاق
         SELECT
-            @ShiftID        AS ShiftID,
-            @StartingCash   AS StartingCash,
-            @TotalPaidSales AS TotalPaidSales,
-            @TotalPaidPurchases AS TotalPaidPurchases,
-            @TotalReceiptV  AS TotalReceiptVouchers,
-            @TotalPaymentV  AS TotalPaymentVouchers,
-            @ExpectedCash   AS ExpectedCash,
-            @EndingCash     AS ActualCash,
-            @Difference     AS Difference;
+            @ShiftID                AS ShiftID,
+            @StartingCash           AS StartingCash,
+            @TotalPaidSalesCash     AS TotalPaidSales,
+            @TotalPaidSalesCash     AS TotalCashSales,
+            @TotalPaidSalesCash     AS CashSales,
+            @TotalPaidPurchasesCash AS TotalPaidPurchases,
+            @TotalPaidPurchasesCash AS TotalCashPurchases,
+            @TotalReceiptV          AS TotalReceiptVouchers,
+            @TotalPaymentV          AS TotalPaymentVouchers,
+            @ExpectedCash           AS ExpectedCash,
+            @EndingCash             AS ActualCash,
+            @Difference             AS Difference;
     END TRY
     BEGIN CATCH
         ROLLBACK TRANSACTION;
@@ -8088,6 +8441,7 @@ END
 GO
 PRINT N'✅ تم تحديث sp_Shift_Close';
 GO
+
 
 
 IF OBJECT_ID('[Sales].[sp_Shift_GetVouchers]', 'P') IS NOT NULL
@@ -10330,13 +10684,31 @@ BEGIN
             LEFT JOIN [Settings].[Warehouses] w ON i.WarehouseID = w.WarehouseID
             WHERE i.InvType = 'Sales' AND cogs.TotalCost > 0;
 
-            -- ز. قيود السداد (Payments)
+            -- ز. قيود السداد (Payments: دعم التجزئة Split والتحصيل المباشر)
+            
+            -- 1. مشتريات Split
+            INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, ISNULL(p.AccountID, @VendorAcc), sp.Amount, 0, N'سداد [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID WHERE i.InvType = 'Purchase' AND sp.Amount > 0
+            UNION ALL
+            SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, sp.PaymentAccountID, 0, sp.Amount, N'سداد [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID WHERE i.InvType = 'Purchase' AND sp.Amount > 0;
+
+            -- 2. مبيعات Split
+            INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+            SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, sp.PaymentAccountID, sp.Amount, 0, N'تحصيل [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID WHERE i.InvType = 'Sales' AND sp.Amount > 0
+            UNION ALL
+            SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, ISNULL(p.AccountID, @CustomerAcc), 0, sp.Amount, N'تحصيل [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR), i.UserID
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID WHERE i.InvType = 'Sales' AND sp.Amount > 0;
+
+            -- 3. سداد/تحصيل مباشر Fallback (عند عدم وجود تجزئة)
             INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
             SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN ISNULL(p.AccountID, @VendorAcc) ELSE i.PaymentAccountID END, i.PaidAmount, 0, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
-            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID)
             UNION ALL
             SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID, CASE WHEN i.InvType = 'Purchase' THEN i.PaymentAccountID ELSE ISNULL(p.AccountID, @CustomerAcc) END, 0, i.PaidAmount, N'سداد فاتورة ' + CAST(i.InvID AS NVARCHAR), i.UserID
-            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+            FROM inserted i JOIN @EntryMap m ON i.InvID = m.InvID LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID WHERE i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
         End
         
         -- ==========================================================
@@ -12443,14 +12815,15 @@ BEGIN
         (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
     SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
            ISNULL(p.AccountID, @CustomerAcc), -- Cr العميل
-           0, i.PaidAmount,
-           N'سداد فاتورة مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
+           0, sp.Amount,
+           N'تحصيل [' + c.AccountName + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
            i.UserID
     FROM #TrgInserted i
     JOIN #TrgEntryMap m ON m.InvID = i.InvID
     LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-    WHERE i.InvType = 'Sales' AND i.PaidAmount > 0
-      AND EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] WHERE InvID = i.InvID);
+    INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+    INNER JOIN [Accounting].[ChartOfAccounts] c  ON c.AccountID = sp.PaymentAccountID
+    WHERE i.InvType = 'Sales' AND sp.Amount > 0;
 
     -- ─────────────────────────────────────────────────────────────────────────────
     -- مسار 2: FALLBACK — PaymentAccountID الفردي
@@ -12801,6 +13174,18 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @DefaultCashID INT;
+    DECLARE @DefaultCashCode NVARCHAR(50) = '1101';
+    DECLARE @DefaultCashName NVARCHAR(100) = N'نقدي (كاش)';
+
+    SELECT TOP 1 
+        @DefaultCashID = AccountID,
+        @DefaultCashCode = AccountCode,
+        @DefaultCashName = AccountName
+    FROM [Accounting].[ChartOfAccounts]
+    WHERE (AccountCode = '1101' OR AccountName LIKE N'%صندوق%' OR AccountName LIKE N'%كاش%' OR AccountCode LIKE '110%')
+      AND IsTransactional = 1;
+
     SELECT 
         AccountID,
         AccountCode,
@@ -12811,52 +13196,52 @@ BEGIN
     FROM (
         -- 1. إجماليات طرق الدفع من فواتير المبيعات/المشتريات المقسمة (Splits)
         SELECT
-            c.AccountID,
-            c.AccountCode,
-            c.AccountName  AS PaymentMethodName,
+            ISNULL(c.AccountID, @DefaultCashID)     AS AccountID,
+            ISNULL(c.AccountCode, @DefaultCashCode) AS AccountCode,
+            ISNULL(c.AccountName, @DefaultCashName) AS PaymentMethodName,
             h.InvType,
-            SUM(CAST(sp.Amount AS DECIMAL(18,3))) AS TotalAmount,
+            SUM(CAST(sp.Amount AS DECIMAL(18,3)))   AS TotalAmount,
             'InvoiceSplit' AS SourceType
         FROM [Sales].[InvoicePaymentSplits] sp
-        INNER JOIN [Sales].[InvoiceHeader]          h ON sp.InvID    = h.InvID
-        INNER JOIN [Accounting].[ChartOfAccounts]   c ON sp.PaymentAccountID = c.AccountID
+        INNER JOIN [Sales].[InvoiceHeader]          h ON sp.InvID = h.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts]    c ON sp.PaymentAccountID = c.AccountID
         WHERE h.ShiftID = @ShiftID
-        GROUP BY c.AccountID, c.AccountCode, c.AccountName, h.InvType
+        GROUP BY ISNULL(c.AccountID, @DefaultCashID), ISNULL(c.AccountCode, @DefaultCashCode), ISNULL(c.AccountName, @DefaultCashName), h.InvType
 
         UNION ALL
 
         -- 2. إجماليات طرق الدفع المباشرة من فواتير المبيعات/المشتريات (غير المقسمة / Direct)
         SELECT
-            c.AccountID,
-            c.AccountCode,
-            c.AccountName  AS PaymentMethodName,
+            ISNULL(c.AccountID, @DefaultCashID)     AS AccountID,
+            ISNULL(c.AccountCode, @DefaultCashCode) AS AccountCode,
+            ISNULL(c.AccountName, @DefaultCashName) AS PaymentMethodName,
             h.InvType,
             SUM(CAST(h.PaidAmount AS DECIMAL(18,3))) AS TotalAmount,
             'InvoiceDirect' AS SourceType
         FROM [Sales].[InvoiceHeader]                h
-        INNER JOIN [Accounting].[ChartOfAccounts]   c ON h.PaymentAccountID = c.AccountID
+        LEFT JOIN [Accounting].[ChartOfAccounts]    c ON h.PaymentAccountID = c.AccountID
         WHERE h.ShiftID = @ShiftID
           AND h.PaidAmount > 0
           AND NOT EXISTS (
               SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID
           )
-        GROUP BY c.AccountID, c.AccountCode, c.AccountName, h.InvType
+        GROUP BY ISNULL(c.AccountID, @DefaultCashID), ISNULL(c.AccountCode, @DefaultCashCode), ISNULL(c.AccountName, @DefaultCashName), h.InvType
 
         UNION ALL
 
         -- 3. إجماليات طرق الدفع من السندات المالية (قبض وصرف)
         SELECT
-            c.AccountID,
-            c.AccountCode,
-            c.AccountName  AS PaymentMethodName,
+            ISNULL(c.AccountID, @DefaultCashID)     AS AccountID,
+            ISNULL(c.AccountCode, @DefaultCashCode) AS AccountCode,
+            ISNULL(c.AccountName, @DefaultCashName) AS PaymentMethodName,
             v.VoucherType  AS InvType,
             SUM(CAST(v.Amount AS DECIMAL(18,3))) AS TotalAmount,
             'Voucher'      AS SourceType
         FROM [Accounting].[Vouchers]                v
-        INNER JOIN [Accounting].[ChartOfAccounts]   c ON v.AccountID = c.AccountID
+        LEFT JOIN [Accounting].[ChartOfAccounts]    c ON v.AccountID = c.AccountID
         WHERE v.ShiftID = @ShiftID
-          AND c.AccountCode LIKE '11%'
-        GROUP BY c.AccountID, c.AccountCode, c.AccountName, v.VoucherType
+          AND (c.AccountCode LIKE '11%' OR c.AccountID IS NULL)
+        GROUP BY ISNULL(c.AccountID, @DefaultCashID), ISNULL(c.AccountCode, @DefaultCashCode), ISNULL(c.AccountName, @DefaultCashName), v.VoucherType
     ) CombinedPaymentTotals
     GROUP BY AccountID, AccountCode, PaymentMethodName, InvType
     ORDER BY AccountCode, InvType;

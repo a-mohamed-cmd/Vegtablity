@@ -2721,46 +2721,121 @@ BEGIN
         WHERE i.InvType = 'Sales' AND cogs.TotalCOGS > 0;
 
         -- ==========================================================
-        -- C. PAYMENT JOURNAL ENTRIES
-        -- قيد السداد الجزئي عند الترحيل (إذا كان PaidAmount > 0 وتم اختيار حساب دفع)
+        -- C. PAYMENT JOURNAL ENTRIES (دعم التجزئة Split والتحصيل المباشر)
         -- ==========================================================
 
-        -- Purchase: Dr Vendor Account / Cr Cash Account (11xx)
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        -- ──────────────────────────────────────────────────────────
+        -- المسار 1: SPLIT PAYMENTS (عند وجود تقسيم في InvoicePaymentSplits)
+        -- ──────────────────────────────────────────────────────────
+
+        -- 1.1 مشتريات Split: Dr المورد / Cr حساب طريقة الدفع
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            ISNULL(p.AccountID, @VendorAcc),  -- Dr حساب المورد
+            sp.Amount, 0,
+            N'سداد [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Purchase' AND sp.Amount > 0;
+
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            sp.PaymentAccountID,              -- Cr حساب طريقة الدفع
+            0, sp.Amount,
+            N'سداد [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Purchase' AND sp.Amount > 0;
+
+        -- 1.2 مبيعات Split: Dr حساب طريقة الدفع / Cr العميل
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            sp.PaymentAccountID,              -- Dr حساب طريقة الدفع (خزينة/بنك/كي نت)
+            sp.Amount, 0,
+            N'تحصيل [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Sales' AND sp.Amount > 0;
+
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        SELECT 
+            m.EntryNo, i.InvDate, 'Payment', i.InvID,
+            ISNULL(p.AccountID, @CustomerAcc), -- Cr حساب العميل
+            0, sp.Amount,
+            N'تحصيل [' + ISNULL(c.AccountName, N'طريقة دفع') + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR), 
+            i.UserID
+        FROM inserted i
+        JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
+        LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+        INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON c.AccountID = sp.PaymentAccountID
+        WHERE i.InvType = 'Sales' AND sp.Amount > 0;
+
+        -- ──────────────────────────────────────────────────────────
+        -- المسار 2: SINGLE PAYMENT FALLBACK (عند عدم وجود تجزئة)
+        -- ──────────────────────────────────────────────────────────
+
+        -- 2.1 مشتريات مباشر: Dr المورد / Cr حساب الدفع المباشر
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               ISNULL(p.AccountID, @VendorAcc),  -- Dr حساب المورد
+               ISNULL(p.AccountID, @VendorAcc),
                i.PaidAmount, 0,
                N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
         LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               i.PaymentAccountID, 0, i.PaidAmount,  -- Cr حساب الدفع المختار (نقدية)
+               i.PaymentAccountID, 0, i.PaidAmount,
                N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
-        -- Sales: Dr Cash Account (11xx) / Cr Customer Account
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        -- 2.2 مبيعات مباشر: Dr حساب التحصيل المباشر / Cr العميل
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               i.PaymentAccountID, i.PaidAmount, 0,  -- Dr حساب الدفع المختار (نقدية)
-               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+               i.PaymentAccountID, i.PaidAmount, 0,
+               N'تحصيل جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
-        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
-        INSERT INTO [Accounting].[JournalEntries] (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+        INSERT INTO [Accounting].[JournalEntries] 
+            (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
         SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
-               ISNULL(p.AccountID, @CustomerAcc), 0, i.PaidAmount,  -- Cr حساب العميل
-               N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
+               ISNULL(p.AccountID, @CustomerAcc), 0, i.PaidAmount,
+               N'تحصيل جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR), i.UserID
         FROM inserted i
         JOIN @InvoiceEntryMap m ON m.InvID = i.InvID
         LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
-        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL;
+        WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND i.PaymentAccountID IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = i.InvID);
 
     END
 END

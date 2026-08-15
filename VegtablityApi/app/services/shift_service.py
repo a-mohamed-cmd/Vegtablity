@@ -83,24 +83,48 @@ class ShiftService:
             cursor.execute(SP.SHIFT_GET_SUMMARY, (shift_id,))
             row = cursor.fetchone()
             if row:
+                cash_sales = float(row.TotalCashSales) if hasattr(row, 'TotalCashSales') and row.TotalCashSales is not None else float(row.TotalPaidSales)
+                knet_sales = float(row.TotalKnetSales) if hasattr(row, 'TotalKnetSales') and row.TotalKnetSales is not None else (float(row.TotalNonCashSales) if hasattr(row, 'TotalNonCashSales') and row.TotalNonCashSales is not None else 0.0)
+                starting_cash = float(row.StartingCash) if row.StartingCash is not None else 0.0
+                cash_purchases = float(row.TotalCashPurchases) if hasattr(row, 'TotalCashPurchases') and row.TotalCashPurchases is not None else (float(row.TotalPaidPurchases) if row.TotalPaidPurchases is not None else 0.0)
+                non_cash_purchases = float(row.TotalNonCashPurchases) if hasattr(row, 'TotalNonCashPurchases') and row.TotalNonCashPurchases is not None else 0.0
+                receipt_vouchers = float(row.TotalReceiptVouchers) if hasattr(row, 'TotalReceiptVouchers') and row.TotalReceiptVouchers is not None else 0.0
+                payment_vouchers = float(row.TotalPaymentVouchers) if hasattr(row, 'TotalPaymentVouchers') and row.TotalPaymentVouchers is not None else 0.0
+                expected_cash = float(row.ExpectedCash) if hasattr(row, 'ExpectedCash') and row.ExpectedCash is not None else (starting_cash + cash_sales - cash_purchases + receipt_vouchers - payment_vouchers)
+                ending_cash = float(row.EndingCash) if hasattr(row, 'EndingCash') and row.EndingCash is not None else (float(row.ActualCash) if hasattr(row, 'ActualCash') and row.ActualCash is not None else None)
+                difference = float(row.Difference) if hasattr(row, 'Difference') and row.Difference is not None else ((ending_cash - expected_cash) if ending_cash is not None else 0.0)
+
                 return {
                     "ShiftID": row.ShiftID,
                     "UserID": row.UserID,
                     "UserName": row.UserName,
                     "StartTime": row.StartTime,
                     "EndTime": row.EndTime,
-                    "StartingCash": float(row.StartingCash),
+                    "StartingCash": starting_cash,
+                    "EndingCash": ending_cash,
+                    "ActualCash": ending_cash,
                     "Status": row.Status,
                     "TotalSales": float(row.TotalSales),
                     "TotalPurchases": float(row.TotalPurchases),
                     "SalesCount": int(row.SalesCount),
                     "PurchasesCount": int(row.PurchasesCount),
-                    "TotalPaidSales": float(row.TotalPaidSales),
+                    "TotalPaidSales": cash_sales,
+                    "TotalCashSales": cash_sales,
+                    "CashSales": cash_sales,
+                    "TotalKnetSales": knet_sales,
+                    "KnetSales": knet_sales,
+                    "TotalNonCashSales": knet_sales,
+                    "CardSales": knet_sales,
                     "TotalRemainder": float(row.TotalRemainder),
-                    "TotalPaidPurchases": float(row.TotalPaidPurchases),
+                    "TotalPaidPurchases": cash_purchases,
+                    "TotalCashPurchases": cash_purchases,
+                    "TotalNonCashPurchases": non_cash_purchases,
                     "TotalPurchasesRemainder": float(row.TotalPurchasesRemainder),
-                    "TotalReceiptVouchers": float(row.TotalReceiptVouchers) if hasattr(row, 'TotalReceiptVouchers') and row.TotalReceiptVouchers is not None else 0.0,
-                    "TotalPaymentVouchers": float(row.TotalPaymentVouchers) if hasattr(row, 'TotalPaymentVouchers') and row.TotalPaymentVouchers is not None else 0.0,
+                    "TotalReceiptVouchers": receipt_vouchers,
+                    "TotalPaymentVouchers": payment_vouchers,
+                    "TotalExpenses": payment_vouchers,
+                    "ExpectedCash": expected_cash,
+                    "Difference": difference,
                     "Vouchers": self.get_shift_vouchers(shift_id),
                     "PaymentTotals": self.get_shift_payment_totals(shift_id)
                 }

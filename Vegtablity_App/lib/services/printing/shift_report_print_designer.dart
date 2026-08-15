@@ -81,11 +81,12 @@ class ShiftReportPrintDesigner {
 
       final int purchasesCount = int.tryParse(summary['PurchasesCount']?.toString() ?? '0') ?? (purchaseInvoices?.length ?? 0);
       final double totalPurchases = double.tryParse(summary['TotalPurchases']?.toString() ?? '0') ?? 0.0;
+      final double cashPurchases = double.tryParse(summary['TotalCashPurchases']?.toString() ?? summary['CashPurchases']?.toString() ?? summary['TotalPaidPurchases']?.toString() ?? '0') ?? 0.0;
       final double receiptVouchers = double.tryParse(summary['TotalReceiptVouchers']?.toString() ?? '0') ?? 0.0;
       final double paymentVouchers = double.tryParse(summary['TotalPaymentVouchers']?.toString() ?? '0') ?? 0.0;
       final double totalExpenses = double.tryParse(summary['TotalExpenses']?.toString() ?? '0') ?? 0.0;
 
-      final double expectedCash = double.tryParse(summary['ExpectedCash']?.toString() ?? '0') ?? (startCash + cashSales + receiptVouchers - paymentVouchers - totalExpenses);
+      final double expectedCash = double.tryParse(summary['ExpectedCash']?.toString() ?? '0') ?? (startCash + cashSales - cashPurchases + receiptVouchers - paymentVouchers - totalExpenses);
       final double actualEndingCash = endingCash ?? double.tryParse(summary['EndingCash']?.toString() ?? '0') ?? expectedCash;
 
       await SunmiPrinter.printText(isArabic ? '*** الملخص المالي ***' : '*** FINANCIAL SUMMARY ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
@@ -309,11 +310,12 @@ class ShiftReportPrintDesigner {
 
     final int purchasesCount = int.tryParse(summary['PurchasesCount']?.toString() ?? '0') ?? (purchaseInvoices?.length ?? 0);
     final double totalPurchases = double.tryParse(summary['TotalPurchases']?.toString() ?? '0') ?? 0.0;
+    final double cashPurchases = double.tryParse(summary['TotalCashPurchases']?.toString() ?? summary['CashPurchases']?.toString() ?? summary['TotalPaidPurchases']?.toString() ?? '0') ?? 0.0;
     final double receiptVouchers = double.tryParse(summary['TotalReceiptVouchers']?.toString() ?? '0') ?? 0.0;
     final double paymentVouchers = double.tryParse(summary['TotalPaymentVouchers']?.toString() ?? '0') ?? 0.0;
     final double totalExpenses = double.tryParse(summary['TotalExpenses']?.toString() ?? '0') ?? 0.0;
 
-    final double expectedCash = double.tryParse(summary['ExpectedCash']?.toString() ?? '0') ?? (startCash + cashSales + receiptVouchers - paymentVouchers - totalExpenses);
+    final double expectedCash = double.tryParse(summary['ExpectedCash']?.toString() ?? '0') ?? (startCash + cashSales - cashPurchases + receiptVouchers - paymentVouchers - totalExpenses);
     final double actualEndingCash = endingCash ?? double.tryParse(summary['EndingCash']?.toString() ?? '0') ?? expectedCash;
 
     addText(isArabic ? '*** الملخص المالي للوردية ***' : '*** FINANCIAL SUMMARY ***', bold: true, fontSize: headerSize);

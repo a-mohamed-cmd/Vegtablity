@@ -15,8 +15,13 @@ Namespace Models
         Public Property SalesCount As Integer
         Public Property PurchasesCount As Integer
         Public Property TotalPaidSales As Decimal
+        Public Property TotalCashSales As Decimal
+        Public Property TotalNonCashSales As Decimal
+        Public Property TotalKnetSales As Decimal
         Public Property TotalRemainder As Decimal
         Public Property TotalPaidPurchases As Decimal
+        Public Property TotalCashPurchases As Decimal
+        Public Property TotalNonCashPurchases As Decimal
         Public Property TotalPurchasesRemainder As Decimal
         Public Property TotalReceiptVouchers As Decimal
         Public Property TotalPaymentVouchers As Decimal

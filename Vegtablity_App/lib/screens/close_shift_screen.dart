@@ -36,12 +36,18 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
 
   double get _endingCash => double.tryParse(_cashController.text.trim()) ?? 0.0;
   double get _startingCash => _parseD(_summary?['StartingCash']);
-  double get _totalPaidSales => _parseD(_summary?['TotalPaidSales']);
-  double get _totalPaidPurchases => _parseD(_summary?['TotalPaidPurchases']);
+  double get _totalSales => _parseD(_summary?['TotalSales']);
+  double get _totalCashSales => _parseD(_summary?['TotalCashSales'] ?? _summary?['CashSales'] ?? _summary?['TotalPaidSales']);
+  double get _totalKnetSales => _parseD(_summary?['TotalKnetSales'] ?? _summary?['KnetSales'] ?? _summary?['TotalNonCashSales']);
+  double get _totalRemainder => _parseD(_summary?['TotalRemainder']);
+  double get _totalPurchases => _parseD(_summary?['TotalPurchases']);
+  double get _totalCashPurchases => _parseD(_summary?['TotalCashPurchases'] ?? _summary?['CashPurchases'] ?? _summary?['TotalPaidPurchases']);
+  double get _totalNonCashPurchases => _parseD(_summary?['TotalNonCashPurchases']);
+  double get _totalPurchasesRemainder => _parseD(_summary?['TotalPurchasesRemainder']);
   double get _totalReceiptVouchers => _parseD(_summary?['TotalReceiptVouchers']);
   double get _totalPaymentVouchers => _parseD(_summary?['TotalPaymentVouchers']);
-  // معادلة الكاش: عهدة الافتتاح + مبيعات مسددة - مشتريات مسددة + سندات قبض - سندات صرف
-  double get _expectedCash => _startingCash + _totalPaidSales - _totalPaidPurchases
+  // معادلة الكاش النقدية الفعلية بالدرج: عهدة الافتتاح + مبيعات كاش محصلة - مشتريات كاش مدفوعة + سندات قبض كاش - سندات صرف كاش
+  double get _expectedCash => _startingCash + _totalCashSales - _totalCashPurchases
       + _totalReceiptVouchers - _totalPaymentVouchers;
   double get _difference => _endingCash - _expectedCash;
 
@@ -445,15 +451,19 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                 context.tr('cs_invoice_count').replaceAll('{count}', (_summary?['SalesCount'] ?? 0).toString())),
                             _buildInfoRow(
                                 context.tr('cs_total_sales_label'),
-                                '${_parseD(_summary?['TotalSales']).toStringAsFixed(3)} KWD',
+                                '${_totalSales.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.blue[300]),
                             _buildInfoRow(
-                                context.tr('cs_paid_sales_label'),
-                                '${_parseD(_summary?['TotalPaidSales']).toStringAsFixed(3)} KWD',
+                                context.tr('cs_cash_sales_label'),
+                                '${_totalCashSales.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.greenAccent),
                             _buildInfoRow(
+                                context.tr('cs_knet_sales_label'),
+                                '${_totalKnetSales.toStringAsFixed(3)} KWD',
+                                valueColor: Colors.cyanAccent),
+                            _buildInfoRow(
                                 context.tr('cs_credit_sales_label'),
-                                '${_parseD(_summary?['TotalRemainder']).toStringAsFixed(3)} KWD',
+                                '${_totalRemainder.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.orangeAccent),
                           ],
                         ),
@@ -470,15 +480,20 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                 context.tr('cs_invoice_count').replaceAll('{count}', (_summary?['PurchasesCount'] ?? 0).toString())),
                             _buildInfoRow(
                                 context.tr('cs_total_purchases_label'),
-                                '${_parseD(_summary?['TotalPurchases']).toStringAsFixed(3)} KWD',
+                                '${_totalPurchases.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.orange[300]),
                             _buildInfoRow(
-                                context.tr('cs_paid_purchases_label'),
-                                '${_parseD(_summary?['TotalPaidPurchases']).toStringAsFixed(3)} KWD',
+                                context.tr('cs_cash_purchases_label'),
+                                '${_totalCashPurchases.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.redAccent[100]),
+                            if (_totalNonCashPurchases > 0)
+                              _buildInfoRow(
+                                  context.tr('cs_non_cash_purchases_label'),
+                                  '${_totalNonCashPurchases.toStringAsFixed(3)} KWD',
+                                  valueColor: Colors.orangeAccent),
                             _buildInfoRow(
                                 context.tr('cs_credit_purchases_label'),
-                                '${_parseD(_summary?['TotalPurchasesRemainder']).toStringAsFixed(3)} KWD',
+                                '${_totalPurchasesRemainder.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.orangeAccent),
                           ],
                         ),
@@ -520,9 +535,7 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                           ),
                         ),
 
-
-
-                      // بطاقة الكاش
+                      // بطاقة تسوية وجرد الكاش بالدرج
                       _buildCard(
                         title: context.tr('cs_cash_drawer_calc'),
                         titleColor: Colors.greenAccent,
@@ -533,12 +546,12 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                 context.tr('cs_starting_cash'),
                                 '${_startingCash.toStringAsFixed(3)} KWD'),
                             _buildInfoRow(
-                                context.tr('cs_add_paid_sales'),
-                                '${_totalPaidSales.toStringAsFixed(3)} KWD',
+                                context.tr('cs_add_cash_sales'),
+                                '${_totalCashSales.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.greenAccent),
                             _buildInfoRow(
-                                context.tr('cs_sub_paid_purchases'),
-                                '${_totalPaidPurchases.toStringAsFixed(3)} KWD',
+                                context.tr('cs_sub_cash_purchases'),
+                                '${_totalCashPurchases.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.redAccent[100]),
                             if (_totalReceiptVouchers > 0)
                               _buildInfoRow(
@@ -547,7 +560,7 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                   valueColor: Colors.greenAccent[200]),
                             if (_totalPaymentVouchers > 0)
                               _buildInfoRow(
-                                  context.tr('cs_sub_payments'),
+                                  context.tr('cs_subtract_payments'),
                                   '${_totalPaymentVouchers.toStringAsFixed(3)} KWD',
                                   valueColor: Colors.orangeAccent),
                             Container(
