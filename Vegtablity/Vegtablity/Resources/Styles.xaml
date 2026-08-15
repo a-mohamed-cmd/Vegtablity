@@ -22,14 +22,19 @@
     <SolidColorBrush x:Key="TextLightBrush" Color="{StaticResource TextLightColor}"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}"/>
 
+    <!-- Global Embedded Fonts -->
+    <FontFamily x:Key="CairoFont">pack://application:,,,/Resources/Fonts/#Cairo, Cairo</FontFamily>
+    <FontFamily x:Key="CairoBoldFont">pack://application:,,,/Resources/Fonts/#Cairo, Cairo</FontFamily>
+
     <!-- Modern Button Style -->
     <Style x:Key="ModernButtonStyle" TargetType="Button">
+        <Setter Property="FontFamily" Value="{StaticResource CairoBoldFont}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
         <Setter Property="Foreground" Value="White"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="13"/>
         <Setter Property="Padding" Value="10,5"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -59,7 +64,8 @@
 
     <!-- Modern TextBox Style -->
     <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
-        <Setter Property="Padding" Value="10"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="BorderBrush" Value="#bdc3c7"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -67,8 +73,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
-                    <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="5">
-                        <ScrollViewer x:Name="PART_ContentHost"/>
+                    <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">
@@ -83,7 +89,8 @@
 
     <!-- Modern PasswordBox Style (Basic) -->
     <Style x:Key="ModernPasswordBoxStyle" TargetType="PasswordBox">
-        <Setter Property="Padding" Value="10"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="BorderBrush" Value="#bdc3c7"/>
         <Setter Property="BorderThickness" Value="1"/>
@@ -91,8 +98,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PasswordBox">
-                    <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="5">
-                        <ScrollViewer x:Name="PART_ContentHost"/>
+                    <Border x:Name="border" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                        <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsFocused" Value="True">

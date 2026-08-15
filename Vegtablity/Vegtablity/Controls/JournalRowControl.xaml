@@ -1,0 +1,107 @@
+<UserControl x:Class="Controls.JournalRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
+
+    <UserControl.Resources>
+        <helpers:BooleanInverterConverter x:Key="BoolToInvertedConverter"/>
+    </UserControl.Resources>
+
+    <Border Background="White" BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="4,4" MinHeight="46">
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <!-- 0: Account SearchableDropdown -->
+                <ColumnDefinition Width="280"/>
+                <!-- 1: Debit -->
+                <ColumnDefinition Width="120"/>
+                <!-- 2: Credit -->
+                <ColumnDefinition Width="120"/>
+                <!-- 3: Notes (Expanding) -->
+                <ColumnDefinition Width="*"/>
+                <!-- 4: Delete Action -->
+                <ColumnDefinition Width="40"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: Account Dropdown -->
+            <controls:SearchableDropdown x:Name="AccountDropdown"
+                                         Grid.Column="0"
+                                         Height="38"
+                                         Margin="3,2"
+                                         DisplayMemberPath="DisplayText"
+                                         Watermark="اختر أو ابحث عن الحساب..."
+                                         IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                                         SearchChanged="AccountDropdown_SearchChanged"
+                                         ItemSelected="AccountDropdown_ItemSelected"
+                                         ConfirmedAndMoveNext="AccountDropdown_ConfirmedAndMoveNext"/>
+
+            <!-- 1: Debit TextBox -->
+            <TextBox x:Name="DebitBox"
+                     Grid.Column="1"
+                     Height="38"
+                     Margin="3,2"
+                     Padding="6,4"
+                     Text="{Binding Debit, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="Bold"
+                     Foreground="#c0392b"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     LostFocus="DebitBox_LostFocus"
+                     PreviewTextInput="AmountBox_PreviewTextInput"
+                     PreviewKeyDown="DebitBox_PreviewKeyDown"/>
+
+            <!-- 2: Credit TextBox -->
+            <TextBox x:Name="CreditBox"
+                     Grid.Column="2"
+                     Height="38"
+                     Margin="3,2"
+                     Padding="6,4"
+                     Text="{Binding Credit, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="Bold"
+                     Foreground="#27ae60"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     LostFocus="CreditBox_LostFocus"
+                     PreviewTextInput="AmountBox_PreviewTextInput"
+                     PreviewKeyDown="CreditBox_PreviewKeyDown"/>
+
+            <!-- 3: Notes TextBox -->
+            <TextBox x:Name="NotesBox"
+                     Grid.Column="3"
+                     Height="38"
+                     Margin="3,2"
+                     Padding="10,4"
+                     Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     PreviewKeyDown="NotesBox_PreviewKeyDown"/>
+
+            <!-- 4: Delete Button -->
+            <Button x:Name="DeleteButton"
+                    Grid.Column="4"
+                    Content="❌"
+                    Width="32"
+                    Height="32"
+                    Margin="2,2"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Foreground="#e74c3c"
+                    FontSize="12"
+                    Cursor="Hand"
+                    ToolTip="حذف هذا السطر"
+                    IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                    Click="DeleteButton_Click"/>
+        </Grid>
+    </Border>
+</UserControl>

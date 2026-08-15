@@ -101,6 +101,95 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' === Pagination Properties ===
+        Private _currentPageIndex As Integer = 1
+        Public Property CurrentPageIndex As Integer
+            Get
+                Return _currentPageIndex
+            End Get
+            Set(value As Integer)
+                _currentPageIndex = Math.Max(1, value)
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(HasPreviousPage))
+                OnPropertyChanged(NameOf(HasNextPage))
+                OnPropertyChanged(NameOf(PageInfoText))
+            End Set
+        End Property
+
+        Private _pageSize As Integer = 20
+        Public Property PageSize As Integer
+            Get
+                Return _pageSize
+            End Get
+            Set(value As Integer)
+                _pageSize = Math.Max(1, value)
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(TotalPages))
+                OnPropertyChanged(NameOf(HasPreviousPage))
+                OnPropertyChanged(NameOf(HasNextPage))
+                OnPropertyChanged(NameOf(PageInfoText))
+            End Set
+        End Property
+
+        Private _totalCount As Integer = 0
+        Public Property TotalCount As Integer
+            Get
+                Return _totalCount
+            End Get
+            Set(value As Integer)
+                _totalCount = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(TotalPages))
+                OnPropertyChanged(NameOf(HasPreviousPage))
+                OnPropertyChanged(NameOf(HasNextPage))
+                OnPropertyChanged(NameOf(PageInfoText))
+            End Set
+        End Property
+
+        Public ReadOnly Property TotalPages As Integer
+            Get
+                If PageSize <= 0 Then Return 1
+                Return Math.Max(1, CInt(Math.Ceiling(TotalCount / CDbl(PageSize))))
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPreviousPage As Boolean
+            Get
+                Return CurrentPageIndex > 1
+            End Get
+        End Property
+
+        Public ReadOnly Property HasNextPage As Boolean
+            Get
+                Return CurrentPageIndex < TotalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property PageInfoText As String
+            Get
+                Return "صفحة " & CurrentPageIndex & " من " & TotalPages & " (" & TotalCount & " قيد)"
+            End Get
+        End Property
+
+        ' === Sidebar Collapse Property ===
+        Private _isJournalListCollapsed As Boolean = False
+        Public Property IsJournalListCollapsed As Boolean
+            Get
+                Return _isJournalListCollapsed
+            End Get
+            Set(value As Boolean)
+                _isJournalListCollapsed = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(ToggleIconText))
+            End Set
+        End Property
+
+        Public ReadOnly Property ToggleIconText As String
+            Get
+                Return If(IsJournalListCollapsed, "▶", "◀")
+            End Get
+        End Property
+
         ' --- Calculations ---
         Private _totalDebit As Decimal
         Public Property TotalDebit As Decimal
@@ -111,6 +200,9 @@ Namespace ViewModels
                 _totalDebit = value
                 OnPropertyChanged()
                 OnPropertyChanged(NameOf(Difference))
+                OnPropertyChanged(NameOf(DifferenceFormatted))
+                OnPropertyChanged(NameOf(DifferenceColor))
+                OnPropertyChanged(NameOf(IsBalanced))
             End Set
         End Property
 
@@ -123,12 +215,40 @@ Namespace ViewModels
                 _totalCredit = value
                 OnPropertyChanged()
                 OnPropertyChanged(NameOf(Difference))
+                OnPropertyChanged(NameOf(DifferenceFormatted))
+                OnPropertyChanged(NameOf(DifferenceColor))
+                OnPropertyChanged(NameOf(IsBalanced))
             End Set
         End Property
 
         Public ReadOnly Property Difference As Decimal
             Get
                 Return TotalDebit - TotalCredit
+            End Get
+        End Property
+
+        Public ReadOnly Property DifferenceFormatted As String
+            Get
+                Dim diff = Difference
+                If diff = 0 Then
+                    Return "متزن (0.000)"
+                ElseIf diff < 0 Then
+                    Return "الفرق: (" & Math.Abs(diff).ToString("N3") & ")"
+                Else
+                    Return "الفرق: " & diff.ToString("N3")
+                End If
+            End Get
+        End Property
+
+        Public ReadOnly Property DifferenceColor As String
+            Get
+                Return If(Difference = 0, "#27ae60", "#e74c3c")
+            End Get
+        End Property
+
+        Public ReadOnly Property IsBalanced As Boolean
+            Get
+                Return TotalDebit = TotalCredit AndAlso TotalDebit > 0
             End Get
         End Property
 
@@ -140,6 +260,12 @@ Namespace ViewModels
         Public Property AddLineCommand As RelayCommand
         Public Property DeleteLineCommand As RelayCommand
         Public Property PrintCommand As RelayCommand
+        Public Property ExportPdfCommand As RelayCommand
+        Public Property NextPageCommand As RelayCommand
+        Public Property PreviousPageCommand As RelayCommand
+        Public Property ToggleListCommand As RelayCommand
+        Public Property AutoBalanceCommand As RelayCommand
+        Public Property RefreshCommand As RelayCommand
 
         Public Sub New()
             LoadPermissions("JournalEntries")
@@ -154,37 +280,79 @@ Namespace ViewModels
             AddLineCommand = New RelayCommand(AddressOf AddLine)
             DeleteLineCommand = New RelayCommand(AddressOf DeleteLine)
             PrintCommand = New RelayCommand(AddressOf ExecutePrint, AddressOf CanPrint)
+            ExportPdfCommand = New RelayCommand(AddressOf ExecuteExportPdf, AddressOf CanPrint)
+            NextPageCommand = New RelayCommand(AddressOf GoToNextPage, Function(o) HasNextPage)
+            PreviousPageCommand = New RelayCommand(AddressOf GoToPreviousPage, Function(o) HasPreviousPage)
+            ToggleListCommand = New RelayCommand(AddressOf ToggleList)
+            AutoBalanceCommand = New RelayCommand(AddressOf ExecuteAutoBalance)
+            RefreshCommand = New RelayCommand(AddressOf ExecuteRefresh)
         End Sub
 
         ' === Methods ===
 
-        Private Sub LoadAccounts()
-            Accounts = New ObservableCollection(Of Account)(_accountingService.GetAllAccounts().Where(Function(a) a.IsTransactional))
+        Public Sub ExecuteRefresh(Optional obj As Object = Nothing)
+            LoadAccounts()
+            LoadList()
+            NewJournal()
         End Sub
 
-        Private Sub LoadList()
-            JournalList = New ObservableCollection(Of JournalHeader)(_accountingService.GetAllJournalHeaders())
+        Private Sub LoadAccounts()
+            Dim accs = _accountingService.GetAllAccounts().Where(Function(a) a.IsTransactional).ToList()
+            Accounts = New ObservableCollection(Of Account)(accs)
+            FilteredAccounts = Accounts
+        End Sub
+
+        Public Sub LoadList()
+            Try
+                Dim count As Integer = 0
+                Dim headers = _accountingService.GetPagedJournalHeaders(CurrentPageIndex, PageSize, count)
+                TotalCount = count
+                JournalList = New ObservableCollection(Of JournalHeader)(headers)
+            Catch ex As Exception
+                ' Fallback to old GetAll if GetPaged SP fails
+                Dim all = _accountingService.GetAllJournalHeaders()
+                TotalCount = all.Count
+                Dim paged = all.Skip((CurrentPageIndex - 1) * PageSize).Take(PageSize)
+                JournalList = New ObservableCollection(Of JournalHeader)(paged)
+            End Try
+        End Sub
+
+        Private Sub GoToNextPage(obj As Object)
+            If HasNextPage Then
+                CurrentPageIndex += 1
+                LoadList()
+            End If
+        End Sub
+
+        Private Sub GoToPreviousPage(obj As Object)
+            If HasPreviousPage Then
+                CurrentPageIndex -= 1
+                LoadList()
+            End If
+        End Sub
+
+        Private Sub ToggleList(obj As Object)
+            IsJournalListCollapsed = Not IsJournalListCollapsed
         End Sub
 
         Private Sub LoadJournal(jid As Integer)
-            ' Find the header in the list
+            ' Fetch details from DB directly to ensure header & details are complete
+            Dim details = _accountingService.GetJournalDetails(jid)
+            
             Dim header = JournalList.FirstOrDefault(Function(j) j.JID = jid)
-            If header IsNot Nothing Then
-                ' Fetch details from DB
-                Dim details = _accountingService.GetJournalDetails(jid)
-                
-                ' Populate Details first
-                header.Details = New ObservableCollection(Of JournalDetail)(details)
-                
-                ' Add listeners to existing rows
-                For Each d In header.Details
-                    AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
-                Next
-                
-                ' Now set as CurrentJournal to trigger UI notification
-                CurrentJournal = header
-                UpdateTotals()
+            If header Is Nothing Then
+                header = New JournalHeader() With {.JID = jid}
             End If
+
+            header.Details = New ObservableCollection(Of JournalDetail)(details)
+            
+            ' Add listeners to existing rows
+            For Each d In header.Details
+                AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
+            Next
+            
+            CurrentJournal = header
+            UpdateTotals()
         End Sub
 
         Private Sub NewJournal()
@@ -193,13 +361,12 @@ Namespace ViewModels
                 .UserID = Session.CurrentUser?.UserID,
                 .Details = New ObservableCollection(Of JournalDetail)()
             }
-            ' Add two default lines
-            AddLine()
+            ' Add one default line
             AddLine()
             UpdateTotals()
         End Sub
 
-        Private Sub AddLine()
+        Public Sub AddLine()
             Dim d As New JournalDetail()
             AddHandler d.PropertyChanged, AddressOf OnDetailPropertyChanged
             CurrentJournal.Details.Add(d)
@@ -239,6 +406,38 @@ Namespace ViewModels
             End If
         End Sub
 
+        ''' <summary>تنظيف وحذف أي صفوف فارغة بدون حساب وبمبالغ صفرية قبل الحفظ</summary>
+        Public Sub CleanupEmptyLines()
+            If CurrentJournal Is Nothing OrElse CurrentJournal.Details Is Nothing Then Return
+            
+            Dim toRemove = CurrentJournal.Details.Where(Function(d) d.AccountID <= 0 AndAlso d.Debit = 0 AndAlso d.Credit = 0 AndAlso String.IsNullOrWhiteSpace(d.Notes)).ToList()
+            
+            For Each line In toRemove
+                RemoveHandler line.PropertyChanged, AddressOf OnDetailPropertyChanged
+                CurrentJournal.Details.Remove(line)
+            Next
+            
+            UpdateTotals()
+        End Sub
+
+        Private Sub ExecuteAutoBalance(obj As Object)
+            If CurrentJournal Is Nothing OrElse CurrentJournal.Details Is Nothing OrElse CurrentJournal.Details.Count = 0 Then Return
+            
+            UpdateTotals()
+            Dim diff = Difference
+            If diff = 0 Then Return
+
+            Dim targetRow = CurrentJournal.Details.LastOrDefault()
+            If targetRow IsNot Nothing Then
+                If diff > 0 Then
+                    targetRow.Credit += diff
+                Else
+                    targetRow.Debit += Math.Abs(diff)
+                End If
+                UpdateTotals()
+            End If
+        End Sub
+
         Private Function CanSave(obj As Object) As Boolean
             If CurrentPermissions Is Nothing Then Return False
             If CurrentJournal Is Nothing OrElse CurrentJournal.IsPosted Then Return False
@@ -250,9 +449,12 @@ Namespace ViewModels
         End Function
 
         Private Sub ExecuteSave(obj As Object)
+            ' 0. تنظيف وحذف الصفوف الفارغة قبل الحفظ أو التعديل
+            CleanupEmptyLines()
+
             ' 1. التحقق من اتزان القيد
             If TotalDebit <> TotalCredit Then
-                MessageBox.Show("القيد غير متزن! يجب أن يتساوى إجمالي المدين مع إجمالي الدائن." & vbCrLf & "الفرق الحالي: " & Difference.ToString("N2"),
+                MessageBox.Show("القيد غير متزن! يجب أن يتساوى إجمالي المدين مع إجمالي الدائن." & vbCrLf & DifferenceFormatted,
                                 "خطأ في الاتزان", MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -263,7 +465,7 @@ Namespace ViewModels
                 Return
             End If
 
-            ' 3. التحقق من اختيار الحسابات لكافة الأسطر
+            ' 3. التحقق من اختيار الحسابات لكافة الأسطر المتبقية
             If CurrentJournal.Details.Any(Function(d) d.AccountID = 0) Then
                 MessageBox.Show("يجب اختيار حساب لجميع الأسطر الموجودة في القيد.", "بيانات ناقصة", MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
@@ -334,7 +536,30 @@ Namespace ViewModels
         End Function
 
         Private Sub ExecutePrint(obj As Object)
-            ReportExporter.ExportJournalToPdf(CurrentJournal)
+            Try
+                If CurrentJournal Is Nothing OrElse CurrentJournal.Details Is Nothing OrElse CurrentJournal.Details.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات للطباعة.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+
+                Dim printer As New Helpers.JournalPrinter()
+                printer.PrintJournal(CurrentJournal)
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء الطباعة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub ExecuteExportPdf(obj As Object)
+            Try
+                If CurrentJournal Is Nothing OrElse CurrentJournal.Details Is Nothing OrElse CurrentJournal.Details.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات لتصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+
+                ReportExporter.ExportJournalToPdf(CurrentJournal)
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير PDF: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
         End Sub
 
     End Class

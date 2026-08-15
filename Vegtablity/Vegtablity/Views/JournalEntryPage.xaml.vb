@@ -1,4 +1,7 @@
-﻿Imports System.Windows.Controls
+Imports System.Windows
+Imports System.Windows.Controls
+Imports System.Windows.Input
+Imports System.Windows.Media
 
 Namespace Views
     Partial Public Class JournalEntryPage
@@ -6,13 +9,124 @@ Namespace Views
             InitializeComponent()
         End Sub
 
-        ' Update totals if user finishes editing a cell
-        Public Sub DataGrid_CellEditEnding(sender As Object, e As DataGridCellEditEndingEventArgs)
+        ' ══════════════════════════════════════════════════
+        '  Global Page Keyboard Shortcuts (F2, F5, Ctrl+S, Ctrl+P)
+        ' ══════════════════════════════════════════════════
+        Private Sub UserControl_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+            If vm Is Nothing Then Return
+
+            ' 1. F2: قيد جديد (يعمل من أي مكان بالشاشة)
+            If e.Key = Key.F2 Then
+                e.Handled = True
+                If vm.NewCommand IsNot Nothing AndAlso vm.NewCommand.CanExecute(Nothing) Then
+                    vm.NewCommand.Execute(Nothing)
+                End If
+                Return
+            End If
+
+            ' 2. F5: تحديث البيانات وإعادة تحميل القائمة
+            If e.Key = Key.F5 Then
+                e.Handled = True
+                If vm.RefreshCommand IsNot Nothing AndAlso vm.RefreshCommand.CanExecute(Nothing) Then
+                    vm.RefreshCommand.Execute(Nothing)
+                End If
+                Return
+            End If
+
+            ' 3. Ctrl + S: حفظ القيد
+            If (Keyboard.Modifiers = ModifierKeys.Control) AndAlso e.Key = Key.S Then
+                e.Handled = True
+                If vm.SaveCommand IsNot Nothing AndAlso vm.SaveCommand.CanExecute(Nothing) Then
+                    vm.SaveCommand.Execute(Nothing)
+                End If
+                Return
+            End If
+
+            ' 4. Ctrl + P: طباعة القيد
+            If (Keyboard.Modifiers = ModifierKeys.Control) AndAlso e.Key = Key.P Then
+                e.Handled = True
+                If vm.PrintCommand IsNot Nothing AndAlso vm.PrintCommand.CanExecute(Nothing) Then
+                    vm.PrintCommand.Execute(Nothing)
+                End If
+                Return
+            End If
+
+            ' 5. Ctrl + D: ترحيل القيد إلى الدفتر العام
+            If (Keyboard.Modifiers = ModifierKeys.Control) AndAlso e.Key = Key.D Then
+                e.Handled = True
+                If vm.PostCommand IsNot Nothing AndAlso vm.PostCommand.CanExecute(Nothing) Then
+                    vm.PostCommand.Execute(Nothing)
+                End If
+                Return
+            End If
+        End Sub
+
+        ' ══════════════════════════════════════════════════
+        '  JournalRowControl Event Handlers
+        ' ══════════════════════════════════════════════════
+
+        Private Sub JournalRow_RequestAddNewRow(sender As Object, e As EventArgs)
             Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
             If vm IsNot Nothing Then
-                ' Use Dispatcher to wait for the value to be committed to the model
-                Dispatcher.BeginInvoke(Sub() vm.UpdateTotals(), Windows.Threading.DispatcherPriority.Background)
+                vm.AddLine()
+                
+                ' التركيز المباشر على اختيار الحساب في السطر المضاف الجديد
+                Dispatcher.BeginInvoke(New Action(Sub()
+                    If DetailsItemsControl IsNot Nothing AndAlso DetailsItemsControl.Items.Count > 0 Then
+                        Dim lastIndex = DetailsItemsControl.Items.Count - 1
+                        Dim container = DetailsItemsControl.ItemContainerGenerator.ContainerFromIndex(lastIndex)
+                        If container IsNot Nothing Then
+                            Dim rowCtrl = FindVisualChild(Of Controls.JournalRowControl)(container)
+                            If rowCtrl IsNot Nothing Then
+                                rowCtrl.FocusAccount()
+                            End If
+                        End If
+                    End If
+                End Sub), Windows.Threading.DispatcherPriority.Background)
             End If
+        End Sub
+
+        Private Sub JournalRow_RequestDeleteRow(sender As Object, e As EventArgs)
+            Dim rowCtrl = TryCast(sender, Controls.JournalRowControl)
+            If rowCtrl Is Nothing Then Return
+            Dim detail = TryCast(rowCtrl.DataContext, Models.JournalDetail)
+            Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+            If vm IsNot Nothing AndAlso detail IsNot Nothing Then
+                vm.DeleteLineCommand.Execute(detail)
+            End If
+        End Sub
+
+        Private Sub JournalRow_AmountChanged(sender As Object, e As EventArgs)
+            Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+            If vm IsNot Nothing Then
+                vm.UpdateTotals()
+            End If
+        End Sub
+
+        ' ══════════════════════════════════════════════════
+        '  Sidebar Collapse / Expand Animation
+        ' ══════════════════════════════════════════════════
+        Private Sub ToggleButton_Click(sender As Object, e As RoutedEventArgs)
+            If ListColumn Is Nothing OrElse JournalListBorder Is Nothing Then Return
+            Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+            
+            Dim isCollapsing As Boolean = (ListColumn.Width.Value > 50)
+            Dim startVal As Double = If(isCollapsing, 310, 0)
+            Dim endVal As Double = If(isCollapsing, 0, 310)
+
+            Dim anim As New System.Windows.Media.Animation.DoubleAnimation() With {
+                .From = startVal,
+                .To = endVal,
+                .Duration = TimeSpan.FromMilliseconds(220),
+                .EasingFunction = New System.Windows.Media.Animation.CubicEase() With {.EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut}
+            }
+            
+            AddHandler anim.Completed, Sub(s, args)
+                                          ListColumn.Width = New GridLength(endVal)
+                                       End Sub
+            JournalListBorder.BeginAnimation(FrameworkElement.WidthProperty, anim)
+            ListColumn.Width = New GridLength(endVal)
         End Sub
 
         ' ══════════════════════════════════════════════════
@@ -66,135 +180,20 @@ Namespace Views
             Await System.Threading.Tasks.Task.Delay(3000)
             SnackbarBorder.Visibility = Visibility.Collapsed
         End Sub
-        ' ═══════════════════════════════════════════════════════════════════
-        '  Account ComboBox — منطق البحث والاختيار (نهج نظيف موحد)
-        ' ═══════════════════════════════════════════════════════════════════
 
-        Private _cbSuppressEvents As Boolean = False
-
-        Private Sub AccountComboBox_TextChanged(sender As Object, e As TextChangedEventArgs)
-            If _cbSuppressEvents Then Return
-            Dim cb = TryCast(sender, ComboBox)
-            If cb Is Nothing Then Return
-            Dim tb = TryCast(e.OriginalSource, TextBox)
-            If tb Is Nothing Then Return
-
-            Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
-            If vm Is Nothing Then Return
-
-            Dim selected = TryCast(cb.SelectedItem, Models.Account)
-            If selected IsNot Nothing Then
-                Dim expectedText = selected.AccountCode & " - " & selected.AccountName
-                If tb.Text = expectedText Then Return
-            End If
-
-            _cbSuppressEvents = True
-            cb.SelectedItem = Nothing
-            _cbSuppressEvents = False
-
-            Dim searchText = tb.Text.Trim()
-            vm.FilterAccounts(searchText)
-
-            cb.IsDropDownOpen = True
-
-            Dispatcher.BeginInvoke(New Action(Sub()
-                tb.CaretIndex = tb.Text.Length
-            End Sub), System.Windows.Threading.DispatcherPriority.Input)
-        End Sub
-
-        Private Sub AccountComboBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
-            If _cbSuppressEvents Then Return
-            Dim cb = TryCast(sender, ComboBox)
-            If cb Is Nothing Then Return
-            Dim selected = TryCast(cb.SelectedItem, Models.Account)
-            If selected Is Nothing Then Return
-
-            _cbSuppressEvents = True
-            Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-            If tb IsNot Nothing Then
-                tb.Text = selected.AccountCode & " - " & selected.AccountName
-                tb.CaretIndex = tb.Text.Length
-            End If
-            cb.IsDropDownOpen = False
-            _cbSuppressEvents = False
-        End Sub
-
-        Private Sub AccountComboBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key <> Key.Enter Then Return
-            e.Handled = True
-
-            Dim cb = TryCast(sender, ComboBox)
-            If cb Is Nothing Then Return
-            If cb.IsDropDownOpen Then cb.IsDropDownOpen = False
-
-            Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
-            If vm Is Nothing Then Return
-
-            If cb.SelectedItem IsNot Nothing Then
-                AccountComboBox_MoveNext(cb)
-                Return
-            End If
-
-            Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-            If tb Is Nothing OrElse String.IsNullOrWhiteSpace(tb.Text) Then
-                ShowSnackbar("الرجاء اختيار أو كتابة اسم/رقم الحساب")
-                Return
-            End If
-
-            Dim searchText = tb.Text.Trim().ToLower()
-            Dim allSource = If(vm.Accounts, New System.Collections.ObjectModel.ObservableCollection(Of Models.Account)())
-            Dim filtered = If(vm.FilteredAccounts, allSource)
-
-            Dim match As Models.Account = Nothing
-
-            match = System.Linq.Enumerable.FirstOrDefault(allSource,
-                Function(a) String.Equals(a.AccountCode, searchText, StringComparison.OrdinalIgnoreCase) OrElse
-                            String.Equals(a.AccountName, searchText, StringComparison.OrdinalIgnoreCase))
-
-            If match Is Nothing Then
-                match = System.Linq.Enumerable.FirstOrDefault(filtered,
-                    Function(a) (a.AccountName IsNot Nothing AndAlso a.AccountName.ToLower().Contains(searchText)) OrElse
-                                (a.AccountCode IsNot Nothing AndAlso a.AccountCode.Contains(searchText)))
-            End If
-
-            If match Is Nothing AndAlso filtered.Count = 1 Then
-                match = filtered(0)
-            End If
-
-            If match IsNot Nothing Then
-                _cbSuppressEvents = True
-                cb.SelectedItem = match
-                _cbSuppressEvents = False
-                AccountComboBox_MoveNext(cb)
-            Else
-                ShowSnackbar("لم يُعثر على حساب بهذا الاسم أو الرقم")
-            End If
-        End Sub
-
-        Private Sub AccountComboBox_LostFocus(sender As Object, e As RoutedEventArgs)
-            If _cbSuppressEvents Then Return
-            Dim cb = TryCast(sender, ComboBox)
-            If cb Is Nothing Then Return
-            Dim selected = TryCast(cb.SelectedItem, Models.Account)
-            If selected Is Nothing Then Return
-
-            Dim tb = TryCast(cb.Template.FindName("PART_EditableTextBox", cb), TextBox)
-            If tb IsNot Nothing Then
-                _cbSuppressEvents = True
-                tb.Text = selected.AccountCode & " - " & selected.AccountName
-                _cbSuppressEvents = False
-            End If
-        End Sub
-
-        Private Sub AccountComboBox_MoveNext(cb As ComboBox)
-            Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-            Dim focused = TryCast(System.Windows.Input.Keyboard.FocusedElement, System.Windows.UIElement)
-            If focused IsNot Nothing Then
-                focused.MoveFocus(request)
-            Else
-                cb.MoveFocus(request)
-            End If
-        End Sub
+        Private Function FindVisualChild(Of T As Visual)(parent As Visual) As T
+            If parent Is Nothing Then Return Nothing
+            For i As Integer = 0 To VisualTreeHelper.GetChildrenCount(parent) - 1
+                Dim child = VisualTreeHelper.GetChild(parent, i)
+                If child IsNot Nothing AndAlso TypeOf child Is T Then
+                    Return CType(child, T)
+                Else
+                    Dim childOfChild = FindVisualChild(Of T)(child)
+                    If childOfChild IsNot Nothing Then Return childOfChild
+                End If
+            Next
+            Return Nothing
+        End Function
 
     End Class
 End Namespace

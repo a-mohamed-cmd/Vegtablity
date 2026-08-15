@@ -115,6 +115,23 @@ Namespace Services
             End Using
         End Function
 
+        Public Function GetPagedJournalHeaders(pageIndex As Integer, pageSize As Integer, ByRef totalCount As Integer) As List(Of JournalHeader)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim p As New DynamicParameters()
+                p.Add("@PageIndex", pageIndex)
+                p.Add("@PageSize", pageSize)
+                p.Add("@TotalCount", dbType:=DbType.Int32, direction:=ParameterDirection.Output)
+
+                Dim list = conn.Query(Of JournalHeader)(
+                    Helpers.StoredProcedures.SP_JOURNALENTRY_GETPAGED,
+                    p,
+                    commandType:=CommandType.StoredProcedure).AsList()
+
+                totalCount = p.Get(Of Integer)("@TotalCount")
+                Return list
+            End Using
+        End Function
+
         Public Function GetJournalDetails(jid As Integer) As List(Of JournalDetail)
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Return conn.Query(Of JournalDetail)(

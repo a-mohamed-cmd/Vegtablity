@@ -126,6 +126,7 @@ Namespace Helpers
         ' Accounting Schema - Journal Entries
         ' =============================================
         Public Const SP_JOURNALENTRY_GETALL As String = "[Accounting].[sp_JournalEntry_GetAll]"
+        Public Const SP_JOURNALENTRY_GETPAGED As String = "[Accounting].[sp_JournalEntry_GetPaged]"
         Public Const SP_JOURNALENTRY_GETDETAILS As String = "[Accounting].[sp_JournalEntry_GetDetails]"
         Public Const SP_JOURNALENTRY_SAVE As String = "[Accounting].[sp_JournalEntry_Save]"
         Public Const SP_JOURNALENTRY_POST As String = "[Accounting].[sp_JournalEntry_Post]"

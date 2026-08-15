@@ -66,7 +66,9 @@
 *   **الإجراءات المخزنة وسكربتات قاعدة البيانات (معدلة):** [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) & [sp_Shift_GetSummary_and_Close.sql](file:///d:/VB.NET/backup/Vegtablity/SQL/sp_Shift_GetSummary_and_Close.sql) & [37_PaymentMethods_SplitPayment.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/37_PaymentMethods_SplitPayment.sql) - تصحيح وحساب ملخص إغلاق الوردية وتجميع وسائل الدفع المقسمة والمباشرة، وإضافة معامل تصفية الشريك `@PartnerID` لتقرير أعمار الديون.
 *   **ملف حزمة التثبيت (معدل):** [Washa.iss](file:///d:/VB.NET/backup/Vegtablity/setup/Washa.iss) - ترقية إصدار حزمة التثبيت إلى `SetupV7` واستهداف التحديثات النهائية.
 *   **شاشة طباعة ملصقات الباركود (جديدة):** [BarcodePrintScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/barcode_print_screen.dart) - شاشة جديدة مخصصة لاستعراض وتصفية طباعة ملصقات الباركود للمنتجات (عادية / تصنيع / وسيط) وتحديد عدد النسخ ومعاينة الملصق والطباعة الحرارية المباشرة.
-*   **مصمم ملصقات الباركود (جديد):** [BarcodePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/barcode_print_designer.dart) - مصمم ومولد ملصقات الباركود عالي الدقة (HD Canvas Raster Bitmap + Bluetooth ESC/POS Code128) لجميع أنواع طابعات الملصقات الحرارية.
+*   **متحكم شاشة طباعة الباركود (جديد):** [BarcodePrintViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/barcode_print_viewmodel.dart) - متحكم النمط المعماري MVVM الخاص بشاشة طباعة ملصقات الباركود لإدارة جلب الأصناف والتصفية واقتناص أخطاء الـ API والتحقق من مصادقة المستخدم Token.
+*   **الملف الرئيسي للتطبيق المحمول (معدل):** [main.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/main.dart) - تسجيل `BarcodePrintViewModel` في `MultiProvider` وإضافة `WidgetsFlutterBinding.ensureInitialized()` لتهيئة البيئة والتفضيلات المحلية.
+*   **مصمم ملصقات الباركود (جديد):** [BarcodePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/barcode_print_designer.dart) - مصمم ومولد ملصقات الباركود عالي الدقة (HD Canvas Raster Bitmap + Bluetooth ESC/POS Code128 + Sunmi Native Printer) لجميع أنواع طابعات الملصقات والإيصالات الحرارية.
 *   **خدمة الطباعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - إضافة دالة `printBarcodeLabel()` لمعالجة وتكرار إرسال الملصق حسب عدد النسخ المطلوبة على كافة وسائط الاتصال.
 *   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة مفتاح التحكم `show_barcode_printing` لإظهار أو إخفاء الشاشة من القائمة الجانبية.
 *   **القائمة الجانبية بالصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - إضافة بند "طباعة ملصقات الباركود" بالـ Drawer الجانبي بربط ديناميكي بشرط تفعيله من الإعدادات العامة.
@@ -1815,8 +1817,66 @@
   - شبكة الأصناف (Grid View) مع شارات توضح نوع المنتج والسعر والباركود.
   - نافذة تحديد عدد النسخ `Print Copies Dialog` مع معاينة حية للملصق وزر الطباعة الحرارية المباشرة.
 
-* **الدعم الكامل للغتين (`app_localizations.dart`):**
-  - تحديث [app_localizations.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart) وإضافة جميع المفاتيح باللغتين العربية والإنجليزية والتفاعل اللحظي مع تغيير لغة التطبيق.
+* **تطبيق نمط المعمارية MVVM وتصحيح استثناء 401 Unauthorized (`BarcodePrintViewModel` & `main.dart`):**
+  - إنشاء [barcode_print_viewmodel.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/barcode_print_viewmodel.dart) لإدارة حالة وجلب الأصناف بالـ MVVM واقتناص أخطاء الاتصال، وحقن كائن `ApiService` المعتمد بالـ JWT Token المحدث عند الدخول لتفادي أخطاء الـ `401 Unauthorized`.
+  - تحديث [main.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/main.dart) وتسجيل الـ ViewModel بـ `MultiProvider` وإضافة `WidgetsFlutterBinding.ensureInitialized()` في أول دالة `main()`.
+
+* **حل استثناءات طفح البكسلات (`RenderFlex OVERFLOWING`) بـ [barcode_print_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/barcode_print_screen.dart):**
+  - تعديل كروت الأصناف بالشبكة وإحاطة المكونات بـ `Expanded` واستخدام `FittedBox` للسعر والتصنيف وتعديل نسبة التناسب إلى `childAspectRatio: 0.95` لمنع أخطاء الطفح البصري كلياً.
+
+* **تكامل دالة الطباعة الحرارية لطابعات الإيصالات و Sunmi (`barcode_print_designer.dart` & `printer_service.dart`):**
+  - دعم الطباعة المباشرة لطابعات Sunmi والإيصالات الحرارية عبر `SunmiPrinter.printText` وطباعة رمز الـ 2D/QR Code عبر `SunmiPrinter.printQRCode` وتمرير شفرات Code 128 / Code 39 الهاردويرية.
+
+---
+
+## 53. تطوير وتحديث منظومة القيود المحاسبية اليدوية (Journal Entries System) وتكامل الطباعة والتصدير والـ MVVM (أغسطس 2026)
+
+* **الواجهات والأدوات التفاعلية المخصصة (Views & Custom UserControls):**
+  - **صفحة القيود اليومية ([JournalEntryPage.xaml / .vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml)):**
+    - بناء واجهة متقدمة لإدارة القيود المحاسبية بنمط MVVM كامل.
+    - **شريط علوي متكامل:** أزرار قيد جديد (`F2`)، تحديث (`F5`)، حفظ (`Ctrl + S`)، ترحيل (`Ctrl + D`)، إلغاء الترحيل، موازنة تلقائية، طباعة مباشرة مع اختيار الطابعة (`Ctrl + P`)، وتصدير PDF (`📤`).
+    - **قائمة القيود الجانبية (Collapsible Sidebar):** قائمة جانبية قابلة للطي والإظهار السلس لعرض القيود المسجلة مع شارات الحالة (مرحل / قيد الانتظار) والترقيم الصفحي (Pagination).
+    - **محرر القيد والجدول:** ترويسة التاريخ والبيان العام، جدول تفاصيل السطور التفاعلي، وصندوق إجماليات المدين والدائن الموزون مع مؤشر فرق الاتزان الملون لحظياً.
+  - **أداة سطر القيد المخصصة ([JournalRowControl.xaml / .vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/JournalRowControl.xaml)):**
+    - تحويل سطور القيد إلى `UserControl` مخصص فائق الاستجابة والخفة دون الاعتماد على مشاكل DataGrid الافتراضية.
+    - تثبيت عرض حقل الحساب على `Width="280"` لمنح وضوح تام للاسم ورقم الحساب، وجعل حقل البيان متمدداً تلقائياً (`Width="*"`) لاستغلال كامل المساحة عند تكبير الشاشة.
+    - توسيط مبالغ المدين والدائن في منتصف الخانات (`TextAlignment="Center"` و `HorizontalContentAlignment="Center"`).
+    - ضبط الهوامش والبادينج الداخلي (`Padding="8,4"` و `MinHeight="46"`) لحل مشكلة تآكل الحروف والأرقام من الأسفل نهائياً.
+    - دعم التنقل السلس بمفتاح `Enter` بين خانات السطر وإضافة سطر جديد تلقائياً عند الضغط على `Enter` في خانة البيان.
+  - **أداة البحث المنسدلة السريعة ([SearchableDropdown.xaml / .vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml)):**
+    - توفير بحث فوري ذكي برقم واسم الحساب مع نافذة منبثقة تفاعلية ودعم الاختيار بالأسهم و `Enter` والانتقال المباشر للخانة التالية.
+
+* **نمط المعمارية ومنطق الأعمال ([JournalEntryViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/JournalEntryViewModel.vb)):**
+  - تطبيق نمط MVVM بالكامل مع ربط الأوامر التفاعلية: `NewCommand`, `SaveCommand`, `PostCommand`, `UnpostCommand`, `AutoBalanceCommand`, `AddLineCommand`, `DeleteLineCommand`, `PrintCommand`, `ExportPdfCommand`, `RefreshCommand`, `NextPageCommand`, `PreviousPageCommand`.
+  - حساب فوري وتحديث حي لإجماليات المدين والدائن وفارق الاتزان ولون الحالة (`DifferenceFormatted`, `DifferenceColor`).
+  - التحقق الصارم من قواعد القيود المحاسبية قبل الحفظ (سطرين على الأقل، اتزان المدين والدائن، اختيار الحسابات لكافة الأسطر، ومنع القيود الصفرية، وتنظيف الأسطر الفارغة تلقائياً).
+  - معالجة التحديث السلس لتفادي تجميد الواجهة أثناء التحميل وإعادة جلب البيانات.
+
+* **محرك الطباعة المباشرة واختيار الطابعة ([JournalPrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/JournalPrinter.vb)):**
+  - بناء محرك طباعة مستقل لسندات القيود اليومية بالاعتماد على `System.Drawing.Printing.PrintDocument` و `System.Windows.Forms.PrintDialog`.
+  - إظهار نافذة إعدادات وخيارات الطابعة القياسية لتحديد الطابعة وعدد النسخ وخيارات الورق.
+  - تخطيط هندسي دقيق لسند القيد على ورق A4 يشمل:
+    1. ترويسة وشعار الشركة وبيانات التواصل.
+    2. صندوق عنوان السند ورقم القيد والتاريخ والحالة والبيان العام.
+    3. جدول الحسابات والبيان والمدين والدائن بتنسيق عالي الدقة يدعم اللغة العربية (RTL).
+    4. صندوق الإجماليات وحالة اتزان القيد.
+    5. صناديق الاعتماد والتوقيعات الرسمية (المحاسب، المراجعة والتدقيق، اعتماد المدير).
+    6. دعم الترقيم والطباعة متعددة الصفحات تلقائياً للقيود الطويلة.
+
+* **تصدير ملفات PDF ([ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb)):**
+  - تخصيص زر التصدير `📤` لحفظ واستخراج القيد كملف PDF رقمي عبر `SaveFileDialog` باستخدام مكتبة `PdfSharp`.
+
+* **تحسين الستايل العام والقوالب ([Styles.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Resources/Styles.xaml)):**
+  - تحديث `ModernTextBoxStyle` و `ModernPasswordBoxStyle` بربط `Padding="{TemplateBinding Padding}"` و `VerticalAlignment="{TemplateBinding VerticalContentAlignment}"` على `PART_ContentHost` لضمان توسيط النصوص ومنع اقتطاع الخطوط السفلية في جميع حقول النظام.
+
+* **اختصارات لوحة المفاتيح المعتمدة:**
+  - **`F2`**: قيد جديد فارغ.
+  - **`F5`**: تحديث البيانات وإعادة تحميل قائمة القيود.
+  - **`Ctrl + S`**: حفظ القيد المحاسبي.
+  - **`Ctrl + D`**: ترحيل القيد إلى الدفتر العام.
+  - **`Ctrl + P`**: فتح نافذة إعدادات واختيار الطابعة والطباعة المباشرة.
+
+
 
 
 

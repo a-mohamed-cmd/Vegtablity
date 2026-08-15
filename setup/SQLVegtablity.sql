@@ -1323,6 +1323,32 @@ BEGIN
 END
 GO
 
+-- 5.1 جلب القيود اليدوية مصفحة (Pagination)
+IF OBJECT_ID('[Accounting].[sp_JournalEntry_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_JournalEntry_GetPaged];
+GO
+CREATE PROCEDURE [Accounting].[sp_JournalEntry_GetPaged]
+    @PageIndex INT = 1,
+    @PageSize INT = 20,
+    @TotalCount INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- الإجمالي الأقصى للقيود اليدوية
+    SELECT @TotalCount = COUNT(1)
+    FROM [Accounting].[JournalHeader]
+    WHERE ReferenceType IN ('Manual', 'YearEndClose');
+
+    -- جلب صفحة القيود المطلوبة
+    SELECT JID, JournalNo, JDate, Description, TotalAmount, IsPosted, ReferenceType
+    FROM [Accounting].[JournalHeader]
+    WHERE ReferenceType IN ('Manual', 'YearEndClose')
+    ORDER BY JID DESC
+    OFFSET (@PageIndex - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
 -- 6. جلب تفاصيل قيد معين
 IF OBJECT_ID('[Accounting].[sp_JournalEntry_GetDetails]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_JournalEntry_GetDetails];
 GO
@@ -5655,8 +5681,6 @@ GO
 -- عروض المشتريات (Purchase Quotations)
 -- Tables and Stored Procedures
 -- =============================================
-USE [VegtablityDB]
-GO
 
 -- 1. إنشاء الـ Schema إذا لم تكن موجودة
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Purchases')
@@ -5848,22 +5872,28 @@ IF OBJECT_ID('[Sales].[sp_Invoice_Save_XML]', 'P') IS NOT NULL DROP PROCEDURE [S
 GO
 
 CREATE PROCEDURE [Sales].[sp_Invoice_Save_XML]
-    @InvID INT OUTPUT,
-    @InvType NVARCHAR(20),
-    @InvDate DATETIME,
-    @PartnerID INT,
-    @WarehouseID INT,
-    @TotalAmount DECIMAL(18, 2),
-    @Discount DECIMAL(18, 2),
-    @NetAmount DECIMAL(18, 2),
-    @PaidAmount DECIMAL(18, 2),
-    @Remainder DECIMAL(18, 2),
-    @UserID INT,
-    @Notes NVARCHAR(255),
-    @IsPosted BIT = 0,
-    @ReferenceNo NVARCHAR(50) = NULL,
-    @PaymentAccountID INT = NULL,
-    @DetailsXml XML 
+    @InvID            INT OUTPUT,
+    @InvType          NVARCHAR(20),
+    @InvDate          DATETIME,
+    @PartnerID        INT,
+    @WarehouseID      INT,
+    @TotalAmount      DECIMAL(18, 3),
+    @Discount         DECIMAL(18, 3),
+    @NetAmount        DECIMAL(18, 3),
+    @PaidAmount       DECIMAL(18, 3),
+    @Remainder        DECIMAL(18, 3),
+    @UserID           INT,
+    @Notes            NVARCHAR(255),
+    @IsPosted         BIT           = 0,
+    @ReferenceNo      NVARCHAR(50)  = NULL,
+    @PaymentAccountID INT           = NULL,
+    @ShiftID          INT           = NULL,
+    @DetailsXml       XML           = NULL,
+    @TempCustomerName NVARCHAR(150) = NULL,
+    @TempPhone        VARCHAR(20)   = NULL,
+    @TempAddress      NVARCHAR(255) = NULL,
+    @TempDeliveryDate DATE          = NULL,
+    @TempDeliveryTime VARCHAR(50)   = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -5873,9 +5903,9 @@ BEGIN
         IF @InvID = 0
         BEGIN
             INSERT INTO [Sales].[InvoiceHeader] 
-                (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID)
+                (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount, PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID, ShiftID)
             VALUES 
-                (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID);
+                (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID, @ShiftID);
             SET @InvID = CAST(SCOPE_IDENTITY() AS INT);
         END
         ELSE
@@ -5884,22 +5914,64 @@ BEGIN
             SET InvType = @InvType, InvDate = @InvDate, PartnerID = @PartnerID, WarehouseID = @WarehouseID, 
                 TotalAmount = @TotalAmount, Discount = @Discount, NetAmount = @NetAmount, 
                 PaidAmount = @PaidAmount, Remainder = @Remainder, UserID = @UserID, Notes = @Notes,
-                IsPosted = @IsPosted, ReferenceNo = @ReferenceNo, PaymentAccountID = @PaymentAccountID
+                IsPosted = @IsPosted, ReferenceNo = @ReferenceNo, PaymentAccountID = @PaymentAccountID,
+                ShiftID = ISNULL(@ShiftID, ShiftID)
             WHERE InvID = @InvID;
             
-            DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+            IF EXISTS (SELECT 1 FROM sys.tables WHERE object_id = OBJECT_ID('[Sales].[InvoiceDetail]'))
+                DELETE FROM [Sales].[InvoiceDetail] WHERE InvID = @InvID;
+            ELSE IF EXISTS (SELECT 1 FROM sys.tables WHERE object_id = OBJECT_ID('[Sales].[InvoiceDetails]'))
+                DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
         END
 
         -- إدراج التفاصيل من الـ XML
-        INSERT INTO [Sales].[InvoiceDetails] (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
-        SELECT 
-            @InvID,
-            T.Item.value('@ProductID', 'INT'),
-            T.Item.value('@UnitPrice', 'DECIMAL(18,2)'),
-            T.Item.value('@Quantity', 'DECIMAL(18,2)'),
-            T.Item.value('@TotalPrice', 'DECIMAL(18,2)'),
-            T.Item.value('@CostPrice', 'DECIMAL(18,2)')
-        FROM @DetailsXml.nodes('//Item') AS T(Item);
+        IF @DetailsXml IS NOT NULL
+        BEGIN
+            IF EXISTS (SELECT 1 FROM sys.tables WHERE object_id = OBJECT_ID('[Sales].[InvoiceDetail]'))
+            BEGIN
+                INSERT INTO [Sales].[InvoiceDetail] (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+                SELECT 
+                    @InvID,
+                    T.Item.value('@ProductID', 'INT'),
+                    T.Item.value('@UnitPrice', 'DECIMAL(18,3)'),
+                    T.Item.value('@Quantity', 'DECIMAL(18,3)'),
+                    T.Item.value('@TotalPrice', 'DECIMAL(18,3)'),
+                    T.Item.value('@CostPrice', 'DECIMAL(18,3)')
+                FROM @DetailsXml.nodes('//Item') AS T(Item);
+            END
+            ELSE IF EXISTS (SELECT 1 FROM sys.tables WHERE object_id = OBJECT_ID('[Sales].[InvoiceDetails]'))
+            BEGIN
+                INSERT INTO [Sales].[InvoiceDetails] (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+                SELECT 
+                    @InvID,
+                    T.Item.value('@ProductID', 'INT'),
+                    T.Item.value('@UnitPrice', 'DECIMAL(18,3)'),
+                    T.Item.value('@Quantity', 'DECIMAL(18,3)'),
+                    T.Item.value('@TotalPrice', 'DECIMAL(18,3)'),
+                    T.Item.value('@CostPrice', 'DECIMAL(18,3)')
+                FROM @DetailsXml.nodes('//Item') AS T(Item);
+            END
+        END
+
+        -- حفظ بيانات التوصيل المؤقتة إن وجدت
+        IF @TempCustomerName IS NOT NULL OR @TempPhone IS NOT NULL OR @TempAddress IS NOT NULL
+        BEGIN
+            IF EXISTS (SELECT 1 FROM sys.tables WHERE object_id = OBJECT_ID('[Sales].[TempOrderInfo]'))
+            BEGIN
+                IF EXISTS (SELECT 1 FROM [Sales].[TempOrderInfo] WHERE InvID = @InvID)
+                BEGIN
+                    UPDATE [Sales].[TempOrderInfo]
+                    SET CustomerName = @TempCustomerName, Phone = @TempPhone, Address = @TempAddress,
+                        DeliveryDate = @TempDeliveryDate, DeliveryTime = @TempDeliveryTime
+                    WHERE InvID = @InvID;
+                END
+                ELSE
+                BEGIN
+                    INSERT INTO [Sales].[TempOrderInfo] (InvID, CustomerName, Phone, Address, DeliveryDate, DeliveryTime)
+                    VALUES (@InvID, @TempCustomerName, @TempPhone, @TempAddress, @TempDeliveryDate, @TempDeliveryTime);
+                END
+            END
+        END
 
         COMMIT TRANSACTION;
         SELECT @InvID AS InvID;

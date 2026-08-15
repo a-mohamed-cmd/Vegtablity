@@ -109,6 +109,14 @@
       <DependentUpon>SearchableDropdown.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Controls\JournalRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\JournalRowControl.xaml.vb">
+      <DependentUpon>JournalRowControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -273,6 +281,7 @@
     <Compile Include="Helpers\ProfitColorConverter.vb" />
     <Compile Include="Helpers\InvoicePrinter.vb" />
     <Compile Include="Helpers\InvoicePrinterCustom.vb" />
+    <Compile Include="Helpers\JournalPrinter.vb" />
     <Compile Include="Helpers\ExcelImporter.vb" />
     <Compile Include="Views\LicenseWindow.xaml.vb">
       <DependentUpon>LicenseWindow.xaml</DependentUpon>
@@ -533,6 +542,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Resources\Fonts\Cairo-Bold.ttf" />
+    <Resource Include="Resources\Fonts\Cairo.ttf" />
+    <Resource Include="Resources\Fonts\Cairo-VariableFont.ttf" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>
