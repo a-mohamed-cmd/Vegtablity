@@ -25,8 +25,15 @@
 *   **شاشة إدارة وصفات ومكونات المنتجات لسطح المكتب (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) - إضافة قائمة اختيار المستودع، زري تصدير PDF و Excel، إشعار Snackbar منزلق، وتحسين التنقل بين الخلايا.
 *   **شاشة إدارة الوصفات للموبايل (جديدة):** [RecipeManagementScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) - شاشة تطبيق الهاتف لاستعراض الوصفات ومكوناتها.
 *   **شاشة البحث السريع عن الفواتير (جديدة):** [InvoiceLookupScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart) - شاشة الاستعلام السريع برقم الفاتورة لعرض كافة البيانات المالية والتفاصيل والدليفري وإعادة الطباعة الحرارية 🖨️.
+*   **شاشة إغلاق الوردية وجرد وتسوية الكاش (معدلة):** [CloseShiftScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/close_shift_screen.dart) - إعادة تنظيم بطاقة تسوية وجرد الكاش بالدرج لعرض مبيعات ومشتريات الكاش النقدية الفعلية فقط وسندات القبض والصرف، وتقسيم بطاقة المبيعات لـ (كاش / شبكة K-Net / آجل) وبطاقة المشتريات لـ (كاش / غير نقدي / آجل)، وعرض بطاقة تفاصيل طرق الدفع.
+*   **صفحة الورديات وإدارة التدفق النقدي المكتبي (معدلة):** [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml) - ضبط وتوحيد رؤوس أقسام الإيرادات والمدفوعات لإظهار إجمالي المبيعات والمشتريات، وحصر مبالغ التدفق النقدي بالكاش الفعلي بالدرج.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **إجراءات ملخص وإغلاق الوردية المحاسبية (معدلة):** `[Sales].[sp_Shift_GetSummary]` & `[Sales].[sp_Shift_Close]` - تثبيت حساب الصندوق الرئيسي على الحساب `1101` و `1101%` حصراً، وعزل مبيعات ومشتريات الشبكة والبنوك `1102` لحساب الكاش المتوقع بالدرج بدقة 100%.
+*   **خدمة ومخطط الورديات بالـ API (معدلة):** [shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py) & [shift.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/shift.py) - دعم `TotalCashSales`, `TotalKnetSales`, `TotalCashPurchases`, `TotalNonCashPurchases` وحساب النقدية المتوقعة بالدرج.
+*   **نموذج ومتحكم الورديات لسطح المكتب (معدل):** [Shift.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/Shift.vb) & [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) - إضافة خصائص الكاش والشبكة المخصصة وتثبيت فحص حساب الكاش على `1101`.
+*   **مصمم تقرير الوردية الحراري (معدل):** [ShiftReportPrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/shift_report_print_designer.dart) - فصل مبيعات الكاش والشبكة وخصم مشتريات الكاش من النقدية المتوقعة بالدرج.
+*   **سكربتات بناء تطبيقات Flutter التلقائية (جديدة):** [build_all.bat](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/build_all.bat) & [build_all.ps1](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/build_all.ps1) - سكربتات لتحديث الحزم وبناء تطبيق Android APK و Windows Desktop EXE بضغطة زر واحدة.
 *   **متحكم استعلام الفواتير (جديد):** [InvoiceLookupViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/invoice_lookup_viewmodel.dart) - متحكم نمط MVVM الخاص بالبحث والاستعلام عن الفواتير وتجهيز الإيصالات للطباعة.
 *   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر البيع = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
 *   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر الشراء = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
@@ -1875,6 +1882,92 @@
   - **`Ctrl + S`**: حفظ القيد المحاسبي.
   - **`Ctrl + D`**: ترحيل القيد إلى الدفتر العام.
   - **`Ctrl + P`**: فتح نافذة إعدادات واختيار الطابعة والطباعة المباشرة.
+
+---
+
+## 54. تحديثات وتوحيد جرد وتسوية الكاش للوردية وتثبيت حساب الصندوق على 1101 (أغسطس 2026)
+
+* **تثبيت وتحديد حساب الكاش الرئيسي (Cash Account Anchoring):**
+  - تم توجيه وتثبيت حساب الصندوق النقدي حصراً على كود الحساب **`1101`** و **`1101%`** في كافة الإجراءات المخزنة ونظام الـ API وواجهات الديسكتوب وتطبيق الفلاتر، بصرف النظر عن اختلاف وتغيير اسم الحساب (سواء كان اسمه `Cash` أو `الصندوق الرئيسي` أو `كاش الخزينة`).
+  - تم عزل الحسابات البنكية وحسابات الشبكة K-Net (مثل الحساب `1102` أو الحسابات غير النقدية) ومنع احتسابها ضمن الكاش الورقي للدرج، لضمان تطابق الجرد الفعلي مع النقدية الملموسة في الدرج.
+
+* **تعديلات قاعدة البيانات (`SQL Server Stored Procedures`):**
+  - **الإجراءان المخزنان ([sp_Shift_GetSummary_and_Close.sql](file:///d:/VB.NET/backup/Vegtablity/SQL/sp_Shift_GetSummary_and_Close.sql) & [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql)):**
+    - تم تحديث `[Sales].[sp_Shift_GetSummary]` و `[Sales].[sp_Shift_Close]` ليحصرا المبيعات والمشتريات النقدية المسددة بالدرج `@TotalPaidSalesCash` و `@TotalPaidPurchasesCash` على الحساب `1101` ومشتقاته حصراً.
+    - تم عزل مبيعات ومشتريات الشبكة والبطاقات في `@TotalPaidSalesNonCash` و `@TotalPaidPurchasesNonCash`.
+    - ضبط معادلة الكاش المتوقع بالدرج بدقة:
+      $$\text{ExpectedCash} = \text{StartingCash} + \text{TotalPaidSalesCash} - \text{TotalPaidPurchasesCash} + \text{ReceiptVouchers} - \text{PaymentVouchers}$$
+    - قيد تسوية فرق الكاش (العجز / الزيادة) عند إغلاق الوردية يرحل آلياً إلى حساب الصندوق `1101` وحساب الأرباح/الإيرادات `412`.
+
+* **تحديثات الواجهة الخلفية (`FastAPI Backend`):**
+  - **خدمة الورديات ([shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py)):**
+    - تحديث دالة `get_shift_summary` لتعيين كاش المبيعات `TotalCashSales`، ومبيعات الشبكة `TotalKnetSales` / `TotalNonCashSales`، وكاش المشتريات `TotalCashPurchases`، والمشتريات غير النقدية `TotalNonCashPurchases`.
+    - ربط وتطبيق معادلة الكاش المتوقع `ExpectedCash` بدقة واحتساب فارق الجرد `Difference`.
+  - **مخطط البيانات ([shift.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/shift.py)):**
+    - تحديث نموذج الاستجابة `ShiftSummaryResponse` ليتضمن الحقول المالية الجديدة مع قيم افتراضية متوافقة.
+
+* **تحديثات تطبيق الفلاتر (`Flutter App`):**
+  - **شاشة إغلاق الوردية ([close_shift_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/close_shift_screen.dart)):**
+    - **بطاقة تسوية وجرد الكاش بالدرج (`cs_cash_drawer_calc`)**: أصبحت تعرض كاش المبيعات المحصل فقط `(+) مبيعات كاش محصلة`، وكاش المشتريات `(-) مشتريات كاش مدفوعة`، وسندات القبض `(+)` والصرف `(-)`، ومبلغ الكاش المتوقع بالدرج وحقل إدخال الكاش الفعلي واحتساب العجز/الفائض لحظياً.
+    - **بطاقة ملخص المبيعات (`cs_sales_summary`)**: تعرض إجمالي المبيعات، وتفصيل المبيعات النقدية (كاش)، ومبيعات الشبكة والبطاقات (K-Net)، والآجل المتبقي.
+    - **بطاقة ملخص المشتريات (`cs_purchases_summary`)**: تعرض إجمالي المشتريات، والمشتريات النقدية (كاش)، والمشتريات غير النقدية، والآجل المتبقي.
+    - **بطاقة تفاصيل طرق الدفع**: تعرض التقسيم المفصل لجميع وسائل الدفع بالوردية.
+  - **ملف الترجمة واللغات ([app_localizations.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart)):**
+    - إضافة النصوص ومفاتيح الترجمة `cs_cash_sales_label`, `cs_knet_sales_label`, `cs_cash_purchases_label`, `cs_non_cash_purchases_label`, `cs_add_cash_sales`, `cs_sub_cash_purchases` باللغتين العربية والإنجليزية.
+  - **مصمم تقرير الوردية الحراري ([shift_report_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/shift_report_print_designer.dart)):**
+    - تحديث منطق الطباعة الحرارية (لطابعات Sunmi وطابعات ESC/POS المكتبية) لخصم مشتريات الكاش من النقدية المتوقعة وفصل مبيعات الكاش عن مبيعات الشبكة.
+
+* **تحديثات تطبيق سطح المكتب (`WPF Desktop App`):**
+  - **نموذج البيانات ([Shift.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/Shift.vb)):**
+    - إضافة خصائص `TotalCashSales`, `TotalNonCashSales`, `TotalKnetSales`, `TotalCashPurchases`, `TotalNonCashPurchases`.
+  - **متحكم الورديات ([ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb)):**
+    - تحديث معالجة ملخص الوردية، وتثبيت فحص حساب الكاش على كود الحساب `1101` واستبعاد حسابات البنوك والشبكة.
+  - **واجهة العرض ([ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml)):**
+    - تحديث ترويسة أقسام الإيرادات والمدفوعات لعرض إجمالي المبيعات وإجمالي المشتريات، مع إبراز كارت التدفق النقدي الفعلي بالدرج.
+
+---
+
+## 55. سكربتات بناء جميع نسخ Flutter دفعة واحدة (`Android APK + Windows Desktop Build Scripts`) (أغسطس 2026)
+
+* **سكربت الدُفعات التنفيذي ([build_all.bat](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/build_all.bat)):**
+  - بناء سكربت تنفيذي بنقرة واحدة (Double Click) يقوم بـ:
+    1. تحديث وجلب حزم المشروع عبر `flutter pub get`.
+    2. بناء نسخة أندرويد واشا `flutter build apk --flavor washa --release` لإنتاج `app-washa-release.apk`.
+    3. بناء نسخة أندرويد الجوهرة `flutter build apk --flavor jawhara --release` لإنتاج `app-jawhara-release.apk`.
+    4. بناء نسخة الويندوز `flutter build windows --release` لإنتاج `vegtablity_app.exe`.
+    5. فتح مجلدات المخرجات تلقائياً بعد اكتمال البناء.
+
+* **سكربت PowerShell المتقدم ([build_all.ps1](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/build_all.ps1)):**
+  - سكربت PowerShell يدعم بناء نسختي الأندرويد والويندوز مع مخرجات ملونة وتنسيق UTF-8 وفتح المجلدات تلقائياً.
+
+---
+
+## 56. إعداد نظام الـ Product Flavors لشركتي واشا والجوهرة (`Washa & Jawhara App Variants`) (أغسطس 2026)
+
+* **تهيئة Gradle للأندرويد ([build.gradle.kts](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/android/app/build.gradle.kts)):**
+  - إضافة `flavorDimensions += "default"` وتعريف نسختين منفصلتين:
+    1. **نسخة `washa`:**
+       - **Application ID:** `com.example.vegtablity_app` (الاحتفاظ بالمعرف الأصلي لمنع تعارض التثبيت والتحديثات).
+       - **App Name (`@string/app_name`):** "واشا POS".
+    2. **نسخة `jawhara`:**
+       - **Application ID:** `com.jawhara.vegtablity_app` (معرف مستقل تماماً يتيح التثبيت جنباً إلى جنب على نفس الجهاز).
+       - **App Name (`@string/app_name`):** "الجوهرة POS".
+  - تحديث [AndroidManifest.xml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/android/app/src/main/AndroidManifest.xml) لاعتماد `android:label="@string/app_name"`.
+
+* **توجيه الـ API التلقائي حسب الـ Flavor ([api_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart)):**
+  - اعتماد المتغير `appFlavor` من `package:flutter/services.dart` لتحديد سيرفر الاتصال ديناميكياً:
+    - نسخة **`jawhara`** تتصل تلقائياً بسيرفر الجوهرة: `185.216.203.50:8001`.
+    - نسخة **`washa`** (والافتراضي) تتصل بسيرفر واشا: `185.216.203.50:8000`.
+
+* **أوامر التشغيل والبناء لكل شركة:**
+  - **تشغيل في بيئة التطوير (Debug Run):**
+    - تشغيل واشا: `flutter run --flavor washa`
+    - تشغيل الجوهرة: `flutter run --flavor jawhara`
+  - **بناء حزمة APK النهائية (Release APK):**
+    - بناء واشا: `flutter build apk --flavor washa --release`
+    - بناء الجوهرة: `flutter build apk --flavor jawhara --release`
+
+
 
 
 

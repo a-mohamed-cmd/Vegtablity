@@ -1,9 +1,24 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 
 class ApiService {
+  /// عنوان السيرفر الافتراضي بناءً على نوع النسخة (Flavor: washa / jawhara)
+  static String get defaultIpAddress {
+    const String envFlavor = String.fromEnvironment('FLAVOR');
+    final String currentFlavor = envFlavor.isNotEmpty ? envFlavor : (appFlavor ?? 'washa');
+    switch (currentFlavor.toLowerCase()) {
+      case 'jawhara':
+        return '185.216.203.50:8001'; // سيرفر الجوهرة
+      case 'washa':
+      default:
+        return '185.216.203.50:8000'; // سيرفر واشا
+    }
+  }
+
+  static String ipAddress = defaultIpAddress;
+
   final Dio _dio = Dio(BaseOptions(
-    //baseUrl: 'http://192.168.43.129:8000', // Update with actual API URL
-    baseUrl: 'http://185.216.203.50:8000', // Update with actual API URL
+    baseUrl: 'http://$defaultIpAddress', // Update with actual API URL
     connectTimeout: const Duration(seconds: 10),
     receiveTimeout: const Duration(seconds: 10),
   ));

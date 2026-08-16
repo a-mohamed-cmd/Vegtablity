@@ -20,14 +20,24 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.vegtablity_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "default"
+    productFlavors {
+        create("washa") {
+            dimension = "default"
+            applicationId = "com.example.vegtablity_app"
+            resValue("string", "app_name", "washa POS")
+        }
+        create("jawhara") {
+            dimension = "default"
+            applicationId = "com.jawhara.vegtablity_app"
+            resValue("string", "app_name", "jawhara POS")
+        }
     }
 
     buildTypes {
