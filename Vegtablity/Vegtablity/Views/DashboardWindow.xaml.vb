@@ -1,4 +1,5 @@
 Imports System.Windows
+Imports Vegtablity.Services
 
 Namespace Views
     Public Class DashboardWindow
@@ -14,6 +15,21 @@ Namespace Views
             If vm IsNot Nothing Then
                 AddHandler vm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             End If
+            CheckUpdatesAsync()
+        End Sub
+
+        Private Async Sub CheckUpdatesAsync()
+            Try
+                Dim updateService As New AutoUpdateService()
+                Dim updateInfo = Await updateService.CheckForUpdateAsync()
+                If updateInfo IsNot Nothing AndAlso updateInfo.HasUpdate Then
+                    Dim dialog As New UpdateAvailableDialog(updateInfo, updateService)
+                    dialog.Owner = Me
+                    dialog.ShowDialog()
+                End If
+            Catch ex As Exception
+                System.Diagnostics.Debug.WriteLine("Dashboard update check error: " & ex.Message)
+            End Try
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)

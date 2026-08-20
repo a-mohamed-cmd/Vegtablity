@@ -1,0 +1,113 @@
+{
+  "android": {
+    "washa": {
+      "latest_version": "1.0.5",
+      "version_code": 5,
+      "min_supported_version": "1.0.0",
+      "is_mandatory": false,
+      "download_url": "/static/updates/android/washa_v1.0.5.apk",
+      "file_size_mb": 42.5,
+      "release_notes": "1. تفعيل تعديل الفواتير غير المرحلة.\n2. تحسين طباعة إيصالات الكاشير وتفاصيل العميل.\n3. معالجة تسوية الوردية المحاسبية."
+    },
+    "jawhara": {
+      "latest_version": "1.0.3",
+      "version_code": 3,
+      "min_supported_version": "1.0.0",
+      "is_mandatory": false,
+      "download_url": "/static/updates/android/jawhara_v1.0.3.apk",
+      "file_size_mb": 42.1,
+      "release_notes": "تحسينات عامة واستقرار الأداء ونقاط البيع."
+    },
+    "vegtablity": {
+      "latest_version": "1.0.5",
+      "version_code": 5,
+      "min_supported_version": "1.0.0",
+      "is_mandatory": false,
+      "download_url": "/static/updates/android/vegtablity_v1.0.5.apk",
+      "file_size_mb": 42.5,
+      "release_notes": "تحديثات لنظام الخضار والفواكه وإدارة الكاشير."
+    },
+    "zatter": {
+      "latest_version": "1.0.0",
+      "version_code": 1,
+      "min_supported_version": "1.0.0",
+      "is_mandatory": false,
+      "download_url": "/static/updates/android/zatter_v1.0.0.apk",
+      "file_size_mb": 42.0,
+      "release_notes": "النسخة المعتمدة لمطاعم زعتر."
+    },
+    "oman": {
+      "latest_version": "1.0.0",
+      "version_code": 1,
+      "min_supported_version": "1.0.0",
+      "is_mandatory": false,
+      "download_url": "/static/updates/android/oman_v1.0.0.apk",
+      "file_size_mb": 42.0,
+      "release_notes": "النسخة المعتمدة لعملاء سلطنة عمان."
+    }
+  },
+  "windows_flutter": {
+    "washa": {
+      "latest_version": "1.0.5",
+      "download_url": "/static/updates/windows_flutter/washa_flutter_v1.0.5.zip",
+      "release_notes": "تحديثات وإصلاحات نقاط البيع وطباعة الفواتير."
+    },
+    "jawhara": {
+      "latest_version": "1.0.3",
+      "download_url": "/static/updates/windows_flutter/jawhara_flutter_v1.0.3.zip",
+      "release_notes": "تحديثات شاملة لنظام الجوهرة."
+    },
+    "vegtablity": {
+      "latest_version": "1.0.5",
+      "download_url": "/static/updates/windows_flutter/vegtablity_flutter_v1.0.5.zip",
+      "release_notes": "تحديثات وإصلاحات لنقاط بيع الخضار."
+    },
+    "zatter": {
+      "latest_version": "1.0.0",
+      "download_url": "/static/updates/windows_flutter/zatter_flutter_v1.0.0.zip",
+      "release_notes": "تحديثات شاشات الكاشير."
+    },
+    "oman": {
+      "latest_version": "1.0.0",
+      "download_url": "/static/updates/windows_flutter/oman_flutter_v1.0.0.zip",
+      "release_notes": "تحديثات نقاط البيع لسلطنة عمان."
+    }
+  },
+  "wpf": {
+    "washa": {
+      "database_catalog": "WashaDB",
+      "latest_version": "2.4.0",
+      "download_url": "/static/updates/wpf/WashaSetup_v2.4.0.exe",
+      "installer_name": "WashaSetup.exe",
+      "release_notes": "تحديث محرك الترحيل المحاسبي وتعديل الفواتير وتقارير الأرباح."
+    },
+    "jawhara": {
+      "database_catalog": "JawharaDB",
+      "latest_version": "2.4.0",
+      "download_url": "/static/updates/wpf/JawharaSetup_v2.4.0.exe",
+      "installer_name": "JawharaSetup.exe",
+      "release_notes": "تحديث نظام الجوهرة المحاسبي والمخزون وإدارة الفواتير."
+    },
+    "vegtablity": {
+      "database_catalog": "VegtablityDB",
+      "latest_version": "2.4.0",
+      "download_url": "/static/updates/wpf/VegtablitySetup_v2.4.0.exe",
+      "installer_name": "VegtablitySetup.exe",
+      "release_notes": "تحديثات النظام المحاسبي وإدارة الأصناف والخصومات."
+    },
+    "zatter": {
+      "database_catalog": "zatterDB",
+      "latest_version": "2.0.0",
+      "download_url": "/static/updates/wpf/ZatterSetup_v2.0.0.exe",
+      "installer_name": "ZatterSetup.exe",
+      "release_notes": "تحديثات مطاعم زعتر وإدارة الفواتير."
+    },
+    "oman": {
+      "database_catalog": "OmanCustmerDB",
+      "latest_version": "2.0.0",
+      "download_url": "/static/updates/wpf/OmanCustomerSetup_v2.0.0.exe",
+      "installer_name": "OmanCustomerSetup.exe",
+      "release_notes": "تحديثات نظام سلطنة عمان والضريبة المضافة."
+    }
+  }
+}

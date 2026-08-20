@@ -1,6 +1,8 @@
+import os
 from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, invoices, partners, products, purchase_quotes, shifts, sales_quotes, security, settings, vouchers, accounts, inventory, license_control, recipes, discounts
+from fastapi.staticfiles import StaticFiles
+from app.routes import auth, invoices, partners, products, purchase_quotes, shifts, sales_quotes, security, settings, vouchers, accounts, inventory, license_control, recipes, discounts, updates
 from app.routes.invoices import create_invoice
 
 app = FastAPI(title="Vegtablity POS API", version="1.0.0")
@@ -13,6 +15,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static files mount for In-App Auto-Updates (APKs, Installers, Zips)
+static_updates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "updates")
+os.makedirs(static_updates_dir, exist_ok=True)
+app.mount("/static/updates", StaticFiles(directory=static_updates_dir), name="updates_static")
 
 @app.get("/")
 async def root():
@@ -34,11 +41,11 @@ app.include_router(inventory.router, prefix="/inventory", tags=["Inventory"])
 app.include_router(license_control.router, prefix="/ctrl", tags=["License Control"])
 app.include_router(recipes.router, prefix="/recipes", tags=["Recipes"])
 app.include_router(discounts.router)
-
-
+app.include_router(updates.router)
 
 # Alias / Compatibility router for Flutter Mobile POS client (/sales/invoice)
 sales_compat_router = APIRouter(prefix="/sales", tags=["Sales Invoices Compatible"])
 sales_compat_router.add_api_route("/invoice", create_invoice, methods=["POST"])
 app.include_router(sales_compat_router)
+
 

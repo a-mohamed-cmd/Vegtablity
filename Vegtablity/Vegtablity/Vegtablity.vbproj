@@ -397,11 +397,17 @@
     <Compile Include="Models\ProductDiscount.vb" />
     <Compile Include="Services\ProductDiscountService.vb" />
     <Compile Include="ViewModels\SalesDiscountsViewModel.vb" />
-    <Compile Include="Views\SalesDiscountsPage.xaml.vb">
-      <DependentUpon>SalesDiscountsPage.xaml</DependentUpon>
+    <!-- In-App Auto Update -->
+    <Compile Include="Services\AutoUpdateService.vb" />
+    <Compile Include="Views\UpdateAvailableDialog.xaml.vb">
+      <DependentUpon>UpdateAvailableDialog.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Views\UpdateAvailableDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\SalesDiscountsPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

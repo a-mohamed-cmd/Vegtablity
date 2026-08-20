@@ -4,6 +4,7 @@ import '../core/localization/app_localizations.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
 import '../viewmodels/invoice_lookup_viewmodel.dart';
+import 'pos_screen.dart';
 
 class InvoiceLookupScreen extends StatelessWidget {
   final int? initialInvId;
@@ -533,7 +534,42 @@ class InvoiceLookupScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Bottom Re-print Button Only
+            // Edit Invoice Button (Shown if enabled in settings and invoice is unposted)
+            if (vm.allowEditUnposted && (inv['IsPosted'] != true)) ...[
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final result = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PosScreen(
+                        type: inv['InvType']?.toString() == 'Purchase' ? 'Purchase' : 'Sales',
+                        editingInvoice: inv,
+                      ),
+                    ),
+                  );
+                  if (result == true) {
+                    final invId = _parseInt(inv['InvID']);
+                    if (invId > 0) {
+                      vm.searchInvoice(invId: invId);
+                    }
+                  }
+                },
+                icon: const Icon(Icons.edit_note, color: Colors.white),
+                label: Text(
+                  context.tr('inv_lookup_edit_btn'),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange[800],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Bottom Re-print Button
             ElevatedButton.icon(
               onPressed: () async {
                 final printerService = Provider.of<PrinterService>(context, listen: false);

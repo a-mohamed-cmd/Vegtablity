@@ -6,6 +6,7 @@ import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
 import '../core/localization/app_localizations.dart';
 import '../models/language_model.dart';
+import '../widgets/update_dialog.dart';
 
 class GeneralSettingsScreen extends StatefulWidget {
   const GeneralSettingsScreen({super.key});
@@ -15,7 +16,6 @@ class GeneralSettingsScreen extends StatefulWidget {
 }
 
 class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
-  String _selectedSalesMode = 'direct';
   bool _isLoading = true;
 
   bool _showNewInvoice = true;
@@ -29,6 +29,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   bool _showDailyOrders = true;
   bool _showRecipes = true;
   bool _showBarcodePrinting = true;
+  bool _allowEditUnpostedInvoices = false;
 
   @override
   void initState() {
@@ -43,7 +44,6 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _selectedSalesMode = prefs.getString('cash_sale_mode') ?? 'direct';
         _showNewInvoice = prefs.getBool('show_new_invoice') ?? true;
         _showNewPurchase = prefs.getBool('show_new_purchase') ?? true;
         _showCustomerSales = prefs.getBool('show_customer_sales') ?? true;
@@ -55,46 +55,13 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
         _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
         _showRecipes = prefs.getBool('show_recipes') ?? true;
         _showBarcodePrinting = prefs.getBool('show_barcode_printing') ?? true;
+        _allowEditUnpostedInvoices = prefs.getBool('pref_allow_edit_unposted_invoices') ?? false;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-    }
-  }
-
-  Future<void> _saveSalesMode(String mode) async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('cash_sale_mode', mode);
-      setState(() {
-        _selectedSalesMode = mode;
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('settings_save_success'), textAlign: TextAlign.right),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('settings_save_error'), textAlign: TextAlign.right),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 
@@ -136,6 +103,9 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
             break;
           case 'show_barcode_printing':
             _showBarcodePrinting = value;
+            break;
+          case 'pref_allow_edit_unposted_invoices':
+            _allowEditUnpostedInvoices = value;
             break;
         }
       });
@@ -315,6 +285,46 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     value: _showBarcodePrinting,
                     onChanged: (val) => _saveBoolSetting('show_barcode_printing', val),
                     activeColor: Colors.teal,
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.edit_document, color: Colors.teal),
+                    title: Text(
+                      context.tr('settings_allow_edit_unposted_invoices'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      context.tr('settings_allow_edit_unposted_invoices_desc'),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    value: _allowEditUnpostedInvoices,
+                    onChanged: (val) => _saveBoolSetting('pref_allow_edit_unposted_invoices', val),
+                    activeColor: Colors.teal,
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.system_update_rounded, color: Colors.teal),
+                    ),
+                    title: Text(
+                      context.tr('settings_check_updates'),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      context.tr('settings_check_updates_desc'),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                    onTap: () => UpdateDialog.showIfAvailable(context, showNoUpdateToast: true),
                   ),
                 ],
               ),

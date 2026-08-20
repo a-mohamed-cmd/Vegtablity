@@ -24,6 +24,7 @@ class PosScreen extends StatefulWidget {
   final String? tempDeliveryDate;
   final String? tempDeliveryTime;
   final String? tempNotes;
+  final Map<String, dynamic>? editingInvoice;
 
   const PosScreen({
     super.key,
@@ -35,6 +36,7 @@ class PosScreen extends StatefulWidget {
     this.tempDeliveryDate,
     this.tempDeliveryTime,
     this.tempNotes,
+    this.editingInvoice,
   });
 
   @override
@@ -61,6 +63,28 @@ class _PosScreenState extends State<PosScreen> {
   void initState() {
     super.initState();
     _selectedPartner = widget.partner;
+    if (widget.editingInvoice != null) {
+      final inv = widget.editingInvoice!;
+      final rawPartnerId = inv['PartnerID'] ?? inv['partner_id'];
+      final rawPartnerName = inv['PartnerName'] ?? inv['partner_name'];
+      if (_selectedPartner == null && rawPartnerId != null) {
+        _selectedPartner = {
+          'PartnerID': rawPartnerId is num ? rawPartnerId.toInt() : int.tryParse(rawPartnerId.toString()) ?? 1,
+          'PartnerName': rawPartnerName?.toString() ?? '',
+        };
+      }
+      final double paid = (inv['PaidAmount'] is num)
+          ? (inv['PaidAmount'] as num).toDouble()
+          : double.tryParse(inv['PaidAmount']?.toString() ?? '0') ?? 0.0;
+      _isCash = paid > 0;
+      final rawAccId = inv['PaymentAccountID'] ?? inv['payment_account_id'];
+      _selectedAccountId = rawAccId is num ? rawAccId.toInt() : int.tryParse(rawAccId?.toString() ?? '');
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final posProv = Provider.of<PosProvider>(context, listen: false);
+        posProv.loadInvoiceIntoCart(inv);
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
       _fetchAndProcessProducts(); // Initial pre-fetch of catalog in background
@@ -692,17 +716,21 @@ class _PosScreenState extends State<PosScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.type == 'Sales'
-              ? (_selectedPartner != null
-                  ? context.tr('pos_sales_title_with_partner').replaceAll(
-                      '{name}',
-                      _selectedPartner!['PartnerName']?.toString() ?? '')
-                  : context.tr('pos_sales_title'))
-              : (_selectedPartner != null
-                  ? context.tr('pos_purchase_title_with_partner').replaceAll(
-                      '{name}',
-                      _selectedPartner!['PartnerName']?.toString() ?? '')
-                  : context.tr('pos_purchase_title'))),
+          title: Text(widget.editingInvoice != null
+              ? (widget.type == 'Sales'
+                  ? context.tr('pos_editing_invoice_sales').replaceAll('{id}', widget.editingInvoice!['InvID']?.toString() ?? '')
+                  : context.tr('pos_editing_invoice_purchase').replaceAll('{id}', widget.editingInvoice!['InvID']?.toString() ?? ''))
+              : (widget.type == 'Sales'
+                  ? (_selectedPartner != null
+                      ? context.tr('pos_sales_title_with_partner').replaceAll(
+                          '{name}',
+                          _selectedPartner!['PartnerName']?.toString() ?? '')
+                      : context.tr('pos_sales_title'))
+                  : (_selectedPartner != null
+                      ? context.tr('pos_purchase_title_with_partner').replaceAll(
+                          '{name}',
+                          _selectedPartner!['PartnerName']?.toString() ?? '')
+                      : context.tr('pos_purchase_title')))),
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -1053,10 +1081,39 @@ class _PosScreenState extends State<PosScreen> {
       }
     }
 
+    int? editId;
+    String? origInvDate;
+    int? origShiftId;
+
+    if (widget.editingInvoice != null) {
+      final rawId = widget.editingInvoice!['InvID'] ?? widget.editingInvoice!['inv_id'] ?? widget.editingInvoice!['InvoiceID'];
+      if (rawId is int) {
+        editId = rawId;
+      } else if (rawId is num) {
+        editId = rawId.toInt();
+      } else if (rawId is String) {
+        editId = int.tryParse(rawId);
+      }
+
+      origInvDate = widget.editingInvoice!['InvDate']?.toString() ?? widget.editingInvoice!['created_at']?.toString();
+
+      final rawShift = widget.editingInvoice!['ShiftID'] ?? widget.editingInvoice!['shift_id'];
+      if (rawShift is int) {
+        origShiftId = rawShift;
+      } else if (rawShift is num) {
+        origShiftId = rawShift.toInt();
+      } else if (rawShift is String) {
+        origShiftId = int.tryParse(rawShift);
+      }
+    }
+
     // 1. Capture invoice elements BEFORE clearing provider state upon save
     final invoiceToPrint = {
       'type': widget.type,
-      'created_at': DateTime.now().toIso8601String(),
+      'created_at': origInvDate ?? DateTime.now().toIso8601String(),
+      'InvDate': origInvDate ?? DateTime.now().toIso8601String(),
+      'PartnerName': _selectedPartner != null ? (_selectedPartner!['PartnerName']?.toString() ?? '') : '',
+      'partner_name': _selectedPartner != null ? (_selectedPartner!['PartnerName']?.toString() ?? '') : '',
       'total_amount': total,
       'original_total': posProvider.totalOriginalAmount,
       'discount_amount': posProvider.totalDiscountAmount,
@@ -1067,12 +1124,12 @@ class _PosScreenState extends State<PosScreen> {
         'PaymentSplits': paymentSplits,
       if (paymentAccountName != null && paymentAccountName.isNotEmpty)
         'PaymentAccountName': paymentAccountName,
-      'temp_customer_name': widget.tempCustomerName,
-      'temp_phone': widget.tempPhone,
-      'temp_address': widget.tempAddress,
-      'temp_delivery_date': widget.tempDeliveryDate,
-      'temp_delivery_time': widget.tempDeliveryTime,
-      'temp_notes': widget.tempNotes,
+      'temp_customer_name': widget.tempCustomerName ?? widget.editingInvoice?['TempCustomerName'],
+      'temp_phone': widget.tempPhone ?? widget.editingInvoice?['TempPhone'],
+      'temp_address': widget.tempAddress ?? widget.editingInvoice?['TempAddress'],
+      'temp_delivery_date': widget.tempDeliveryDate ?? widget.editingInvoice?['TempDeliveryDate'],
+      'temp_delivery_time': widget.tempDeliveryTime ?? widget.editingInvoice?['TempDeliveryTime'],
+      'temp_notes': widget.tempNotes ?? widget.editingInvoice?['Notes'],
     };
 
     // 2. Perform save (either online or offline local persistence fallback)
@@ -1082,12 +1139,15 @@ class _PosScreenState extends State<PosScreen> {
       partnerId: _selectedPartner?['PartnerID'],
       isCash: _isCash,
       paymentSplits: paymentSplits,
-      tempCustomerName: widget.tempCustomerName,
-      tempPhone: widget.tempPhone,
-      tempAddress: widget.tempAddress,
-      tempDeliveryDate: widget.tempDeliveryDate,
-      tempDeliveryTime: widget.tempDeliveryTime,
-      tempNotes: widget.tempNotes,
+      tempCustomerName: widget.tempCustomerName ?? widget.editingInvoice?['TempCustomerName'],
+      tempPhone: widget.tempPhone ?? widget.editingInvoice?['TempPhone'],
+      tempAddress: widget.tempAddress ?? widget.editingInvoice?['TempAddress'],
+      tempDeliveryDate: widget.tempDeliveryDate ?? widget.editingInvoice?['TempDeliveryDate'],
+      tempDeliveryTime: widget.tempDeliveryTime ?? widget.editingInvoice?['TempDeliveryTime'],
+      tempNotes: widget.tempNotes ?? widget.editingInvoice?['Notes'],
+      existingInvId: editId,
+      invDate: origInvDate,
+      shiftId: origShiftId,
     );
 
     if (newInvId != null) {
@@ -1118,6 +1178,10 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ),
       );
+
+      if (widget.editingInvoice != null && mounted) {
+        Navigator.pop(context, true);
+      }
     } else {
       messenger.showSnackBar(
         SnackBar(
@@ -1333,9 +1397,23 @@ class _PosScreenState extends State<PosScreen> {
       }
     }
 
-    List<Map<String, dynamic>> splits = [
-      {'PaymentAccountID': _accounts.first['AccountID'], 'Amount': totalAmount}
-    ];
+    List<Map<String, dynamic>> splits = [];
+    final existingSplits = widget.editingInvoice?['PaymentSplits'] ?? widget.editingInvoice?['payment_splits'];
+    if (existingSplits is List && existingSplits.isNotEmpty) {
+      for (var s in existingSplits) {
+        splits.add({
+          'PaymentAccountID': s['PaymentAccountID'] ?? s['payment_account_id'] ?? _accounts.first['AccountID'],
+          'PaymentMethodName': s['PaymentMethodName'] ?? s['AccountName'] ?? '',
+          'Amount': (s['Amount'] is num)
+              ? (s['Amount'] as num).toDouble()
+              : double.tryParse(s['Amount']?.toString() ?? '0') ?? 0.0,
+        });
+      }
+    } else {
+      splits = [
+        {'PaymentAccountID': _accounts.first['AccountID'], 'Amount': totalAmount}
+      ];
+    }
 
     showDialog(
       context: context,

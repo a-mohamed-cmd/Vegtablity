@@ -144,7 +144,7 @@ class StoredProcedures:
     
     # Saves a new invoice and its line items using XML format
     INVOICE_SAVE_XML = """
-        DECLARE @InvID INT = 0;
+        DECLARE @InvID INT = ?;
         EXEC [Sales].[sp_Invoice_Save_XML] 
             @InvID = @InvID OUTPUT,
             @InvType = ?,

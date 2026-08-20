@@ -11018,6 +11018,7 @@ BEGIN
                 THROW 50002, N'فشل تحديث الفاتورة — لم يُعثر على InvID المطلوب في InvoiceHeader.', 1;
 
             DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+            DELETE FROM [Sales].[InvoicePaymentSplits] WHERE InvID = @InvID;
         END
 
         -- حفظ تفاصيل أصناف الفاتورة
@@ -13495,9 +13496,54 @@ CREATE PROCEDURE [Sales].[sp_ProductDiscounts_Delete]
 AS
 BEGIN
     SET NOCOUNT ON;
-    DELETE FROM [Sales].[ProductDiscounts] WHERE DiscountID = @DiscountID;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        DELETE FROM [Sales].[ProductDiscountItems] WHERE DiscountID = @DiscountID;
+        DELETE FROM [Sales].[ProductDiscounts] WHERE DiscountID = @DiscountID;
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE() <> 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
 
 PRINT N'=== [38] Sales Discounts & Product Bundles System Created Successfully ===';
+GO
+
+-- ============================================================
+-- [39] Trigger: Cascading Deletion for InvoiceHeader
+-- Automatically deletes details, payment splits, and delivery info
+-- ============================================================
+IF OBJECT_ID('[Sales].[trg_InvoiceHeader_DeleteCascade]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_InvoiceHeader_DeleteCascade];
+GO
+
+CREATE TRIGGER [Sales].[trg_InvoiceHeader_DeleteCascade]
+ON [Sales].[InvoiceHeader]
+AFTER DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- 1. حذف تفاصيل الأصناف المرتبطة بالفواتير المحذوفة
+    DELETE d
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN deleted del ON d.InvID = del.InvID;
+
+    -- 2. حذف تقسيمات طرق الدفع المرتبطة بالفواتير المحذوفة
+    DELETE s
+    FROM [Sales].[InvoicePaymentSplits] s
+    INNER JOIN deleted del ON s.InvID = del.InvID;
+
+    -- 3. حذف بيانات التوصيل المرتبطة إن وُجدت
+    DELETE t
+    FROM [Sales].[TempOrderInfo] t
+    INNER JOIN deleted del ON t.InvID = del.InvID;
+END
+GO
+
+PRINT N'=== [39] InvoiceHeader Cascading Delete Trigger Created Successfully ===';
+
 

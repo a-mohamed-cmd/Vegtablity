@@ -7,11 +7,9 @@ import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
 import '../providers/account_provider.dart';
 import '../providers/settings_provider.dart';
-import '../viewmodels/language_viewmodel.dart';
+import '../providers/shift_provider.dart';
 import '../core/localization/app_localizations.dart';
-import '../models/language_model.dart';
 import 'login_screen.dart';
-import 'pos_screen.dart';
 import 'printer_settings_screen.dart';
 import 'settings_screen.dart';
 import 'partner_offers_screen.dart';
@@ -28,6 +26,7 @@ import 'daily_orders_screen.dart';
 import 'recipe_management_screen.dart';
 import 'invoice_lookup_screen.dart';
 import 'barcode_print_screen.dart';
+import '../widgets/update_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,6 +61,14 @@ class _HomeScreenState extends State<HomeScreen> {
       Provider.of<VoucherProvider>(context, listen: false).refreshCache();
       Provider.of<AccountProvider>(context, listen: false).fetchGeneralPartnerId();
       Provider.of<SettingsProvider>(context, listen: false).fetchSettings();
+      Provider.of<ShiftProvider>(context, listen: false).checkActiveShiftStatus();
+
+      // Silent Auto-Update Check on Startup
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          UpdateDialog.showIfAvailable(context);
+        }
+      });
     });
   }
 
@@ -105,8 +112,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final posProvider = Provider.of<PosProvider>(context);
     final voucherProv = Provider.of<VoucherProvider>(context);
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+    final shiftProvider = Provider.of<ShiftProvider>(context);
     final int unsyncedCount = posProvider.offlineInvoicesCount;
     final int unsyncedVouchers = voucherProv.offlineVouchersCount;
+
+    final rawCompanyName = settingsProvider.companyName.trim();
+    final String appTitle = rawCompanyName.isNotEmpty ? '$rawCompanyName POS' : 'Vegtablity POS';
 
     return Scaffold(
       appBar: AppBar(
@@ -194,18 +206,74 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Vegtablity POS',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold)),
+                  Text(
+                    appTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   const SizedBox(height: 8),
-                  Text('${context.tr('home_welcome')}${authProvider.username ?? ''}',
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 16)),
+                  Row(
+                    children: [
+                      const Icon(Icons.account_circle, color: Colors.white70, size: 18),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${context.tr('home_welcome')}${authProvider.username ?? ''}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
-                  Text(context.tr('home_developed_by'),
-                      style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  // Active Shift Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: shiftProvider.isShiftOpen ? Colors.greenAccent.withOpacity(0.6) : Colors.white24,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.access_time_filled,
+                          size: 14,
+                          color: shiftProvider.isShiftOpen ? Colors.greenAccent : Colors.orangeAccent,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          shiftProvider.isShiftOpen && shiftProvider.shiftId != null
+                              ? '${context.tr('home_active_shift')}${shiftProvider.shiftId}'
+                              : context.tr('home_no_active_shift'),
+                          style: TextStyle(
+                            color: shiftProvider.isShiftOpen ? Colors.white : Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.tr('home_developed_by'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
                 ],
               ),
             ),
@@ -311,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.inventory_outlined, color: Colors.teal),
-              title: const Text('جرد المخزون (مسودة)', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(context.tr('home_drawer_stocktake'), style: const TextStyle(fontWeight: FontWeight.bold)),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const StockTakeScreen()));
@@ -319,7 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.delete_sweep_outlined, color: Colors.teal),
-              title: const Text('إهلاك بضاعة (الهالك)', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(context.tr('home_drawer_wastage'), style: const TextStyle(fontWeight: FontWeight.bold)),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => const WastageScreen()));
@@ -328,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
             if (Provider.of<SettingsProvider>(context).isProductionMode)
               ListTile(
                 leading: const Icon(Icons.restaurant_menu, color: Colors.teal),
-                title: const Text('وصفات المنتجات والتصنيع', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(context.tr('home_drawer_recipes'), style: const TextStyle(fontWeight: FontWeight.bold)),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (context) => const RecipeManagementScreen()));
@@ -580,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isProductionMode = Provider.of<SettingsProvider>(context).isProductionMode;
     if (_showRecipes && isProductionMode) {
       cards.add(_buildActionCard(
-          context, 'وصفات المنتجات', Icons.restaurant_menu, Colors.green[700]!,
+          context, context.tr('home_classic_recipes'), Icons.restaurant_menu, Colors.green[700]!,
           () {
         Navigator.push(
             context,

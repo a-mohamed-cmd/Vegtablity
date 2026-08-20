@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class InvoiceLookupViewModel extends ChangeNotifier {
   final ApiService _apiService;
 
@@ -11,12 +13,24 @@ class InvoiceLookupViewModel extends ChangeNotifier {
   Map<String, dynamic>? _invoiceData;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _allowEditUnposted = false;
 
-  InvoiceLookupViewModel(this._apiService);
+  InvoiceLookupViewModel(this._apiService) {
+    _loadSettings();
+  }
 
   Map<String, dynamic>? get invoiceData => _invoiceData;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get allowEditUnposted => _allowEditUnposted;
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _allowEditUnposted = prefs.getBool('pref_allow_edit_unposted_invoices') ?? false;
+      notifyListeners();
+    } catch (_) {}
+  }
 
   Future<void> searchInvoice({int? invId}) async {
     final int? idToSearch = invId ?? int.tryParse(searchController.text.trim());
@@ -102,10 +116,16 @@ class InvoiceLookupViewModel extends ChangeNotifier {
     final double paidAmount = _parseDouble(raw['PaidAmount'] ?? raw['paid_amount']);
     final double remainder = _parseDouble(raw['Remainder'] ?? raw['remainder']);
 
+    normalized['InvID'] = raw['InvID'] ?? raw['inv_id'] ?? raw['InvoiceID'];
     normalized['type'] = raw['InvType'] ?? raw['type'] ?? 'Sales';
     normalized['InvType'] = normalized['type'];
     normalized['created_at'] = raw['InvDate'] ?? raw['created_at'] ?? DateTime.now().toIso8601String();
     normalized['InvDate'] = normalized['created_at'];
+    normalized['PartnerID'] = raw['PartnerID'] ?? raw['partner_id'];
+    normalized['WarehouseID'] = raw['WarehouseID'] ?? raw['warehouse_id'];
+    normalized['ShiftID'] = raw['ShiftID'] ?? raw['shift_id'];
+    normalized['IsPosted'] = raw['IsPosted'] ?? raw['is_posted'];
+    normalized['PaymentAccountID'] = raw['PaymentAccountID'] ?? raw['payment_account_id'];
 
     normalized['original_total'] = totalAmount;
     normalized['TotalAmount'] = totalAmount;
@@ -123,6 +143,7 @@ class InvoiceLookupViewModel extends ChangeNotifier {
     normalized['Remainder'] = remainder;
 
     normalized['PartnerName'] = raw['PartnerName'] ?? raw['partner_name'];
+    normalized['partner_name'] = normalized['PartnerName'];
     normalized['WarehouseName'] = raw['WarehouseName'];
     normalized['UserName'] = raw['UserName'];
     normalized['PaymentAccountName'] = raw['PaymentAccountName'];

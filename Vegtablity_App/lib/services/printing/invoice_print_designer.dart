@@ -67,7 +67,16 @@ class InvoicePrintDesigner {
 
       final dynamic invId = invoice['id'] ?? invoice['InvoiceID'] ?? invoice['InvID'] ?? invoice['invoice_id'];
       final String invIdStr = invId != null && invId != 0 ? '#$invId' : (isArabic ? 'جديدة' : 'New');
-      final String partnerName = invoice['PartnerName'] ?? invoice['partner_name'] ?? (typeName.contains('Sales') || typeName == 'مبيعات' ? (isArabic ? 'عميل نقدي' : 'Cash Customer') : (isArabic ? 'مورد نقدي' : 'Cash Supplier'));
+      
+      final String rawPartner = (invoice['PartnerName'] ?? invoice['partner_name'] ?? '').toString().trim();
+      final bool hasValidPartner = rawPartner.isNotEmpty && rawPartner != 'نقدي عام' && rawPartner != 'سند مباشر' && rawPartner != 'بدون شريك' && rawPartner != '-';
+      final bool isSales = typeName.contains('Sales') || typeName == 'مبيعات';
+      final String partnerName = hasValidPartner
+          ? rawPartner
+          : (isSales ? (isArabic ? 'عميل نقدي' : 'Cash Customer') : (isArabic ? 'مورد نقدي' : 'Cash Supplier'));
+      final String partnerLabel = isSales
+          ? (isArabic ? 'العميل: ' : 'Customer: ')
+          : (isArabic ? 'المورد: ' : 'Supplier: ');
 
       DateTime printDateTime;
       try {
@@ -90,7 +99,7 @@ class InvoicePrintDesigner {
         await SunmiPrinter.printText(isArabic ? 'المستودع: $openWarehouseName' : 'Warehouse: $openWarehouseName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       }
       await SunmiPrinter.printText(isArabic ? 'رقم الفاتورة: $invIdStr' : 'Invoice No: $invIdStr', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-      await SunmiPrinter.printText(isArabic ? 'العميل/المورد: $partnerName' : 'Partner: $partnerName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+      await SunmiPrinter.printText('$partnerLabel$partnerName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       await SunmiPrinter.printText(isArabic ? 'التاريخ والوقت: $shortDate $timeStr' : 'Date & Time: $shortDate $timeStr', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
 
       // Shipping & Delivery Details
@@ -230,9 +239,18 @@ class InvoicePrintDesigner {
         ? (isArabic ? 'مبيعات' : 'Sales')
         : (isArabic ? 'مشتريات' : 'Purchases');
 
-    final dynamic invId = invoice['id'] ?? invoice['InvoiceID'] ?? invoice['InvID'];
+    final dynamic invId = invoice['id'] ?? invoice['InvoiceID'] ?? invoice['InvID'] ?? invoice['invoice_id'];
     final String invIdStr = invId != null && invId != 0 ? '#$invId' : (isArabic ? 'جديدة' : 'New');
-    final String partnerName = invoice['PartnerName'] ?? invoice['partner_name'] ?? (isArabic ? 'عميل نقدي' : 'Cash Customer');
+
+    final String rawPartner = (invoice['PartnerName'] ?? invoice['partner_name'] ?? '').toString().trim();
+    final bool hasValidPartner = rawPartner.isNotEmpty && rawPartner != 'نقدي عام' && rawPartner != 'سند مباشر' && rawPartner != 'بدون شريك' && rawPartner != '-';
+    final bool isSales = typeName.contains('Sales') || typeName == 'مبيعات';
+    final String partnerName = hasValidPartner
+        ? rawPartner
+        : (isSales ? (isArabic ? 'عميل نقدي' : 'Cash Customer') : (isArabic ? 'مورد نقدي' : 'Cash Supplier'));
+    final String partnerLabel = isSales
+        ? (isArabic ? 'العميل: ' : 'Customer: ')
+        : (isArabic ? 'المورد: ' : 'Supplier: ');
 
     DateTime printDateTime;
     try {
@@ -254,7 +272,7 @@ class InvoicePrintDesigner {
       bytes.addAll(isArabic ? 'المستودع: $openWarehouseName\n'.codeUnits : 'Warehouse: $openWarehouseName\n'.codeUnits);
     }
     bytes.addAll(isArabic ? 'رقم الفاتورة: $invIdStr\n'.codeUnits : 'Invoice No: $invIdStr\n'.codeUnits);
-    bytes.addAll(isArabic ? 'العميل/المورد: $partnerName\n'.codeUnits : 'Partner: $partnerName\n'.codeUnits);
+    bytes.addAll('$partnerLabel$partnerName\n'.codeUnits);
     bytes.addAll(isArabic ? 'التاريخ والوقت: $shortDate $timeStr\n'.codeUnits : 'Date & Time: $shortDate $timeStr\n'.codeUnits);
 
     // Shipping & Delivery Details
@@ -463,7 +481,16 @@ class InvoicePrintDesigner {
 
     final dynamic invId = invoice['id'] ?? invoice['InvoiceID'] ?? invoice['InvID'] ?? invoice['invoice_id'];
     final String invIdStr = invId != null && invId != 0 ? '#$invId' : (isArabic ? 'جديدة' : 'New');
-    final String partnerName = invoice['PartnerName'] ?? invoice['partner_name'] ?? (typeName.contains('Sales') || typeName == 'مبيعات' ? (isArabic ? 'عميل نقدي' : 'Cash Customer') : (isArabic ? 'مورد نقدي' : 'Cash Supplier'));
+    
+    final String rawPartner = (invoice['PartnerName'] ?? invoice['partner_name'] ?? '').toString().trim();
+    final bool hasValidPartner = rawPartner.isNotEmpty && rawPartner != 'نقدي عام' && rawPartner != 'سند مباشر' && rawPartner != 'بدون شريك' && rawPartner != '-';
+    final bool isSales = typeName.contains('Sales') || typeName == 'مبيعات';
+    final String partnerName = hasValidPartner
+        ? rawPartner
+        : (isSales ? (isArabic ? 'عميل نقدي' : 'Cash Customer') : (isArabic ? 'مورد نقدي' : 'Cash Supplier'));
+    final String partnerLabel = isSales
+        ? (isArabic ? 'العميل: ' : 'Customer: ')
+        : (isArabic ? 'المورد: ' : 'Supplier: ');
 
     DateTime printDateTime;
     try {
@@ -490,7 +517,7 @@ class InvoicePrintDesigner {
       addText(isArabic ? 'المستودع: $openWarehouseName' : 'Warehouse: $openWarehouseName', fontSize: bodySize);
     }
     addText(isArabic ? 'رقم الفاتورة: $invIdStr' : 'Invoice No: $invIdStr', fontSize: bodySize);
-    addText(isArabic ? 'العميل/المورد: $partnerName' : 'Partner: $partnerName', fontSize: bodySize);
+    addText('$partnerLabel$partnerName', fontSize: bodySize);
     addText(isArabic ? 'التاريخ والوقت: $shortDate $timeStr ($dayName)' : 'Date & Time: $shortDate $timeStr ($dayName)', fontSize: smallSize);
     addText(isArabic ? 'نوع العملية: $typeName' : 'Operation Type: $typeName', fontSize: smallSize);
 

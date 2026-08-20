@@ -1,7 +1,7 @@
 name: vegtablity_app
 description: POS system for Vegtablity.
 publish_to: 'none'
-version: 1.0.0+1
+version: 2.2.0+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -16,6 +16,9 @@ dependencies:
   mobile_scanner: ^3.5.5
   url_launcher: ^6.2.5
   sunmi_printer_plus: 4.1.1
+  path_provider: ^2.1.2
+  open_filex: ^4.5.0
+  package_info_plus: ^8.0.0
   flutter_localizations:
     sdk: flutter
 

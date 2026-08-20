@@ -9,12 +9,15 @@
 ## 📌 الفهرس العام للصفحات والملفات والكلاسات المضافة حديثاً (Index of Recent Additions)
 
 ### 1. الصفحات الجديدة والمعدلة (Added & Modified Pages / Screens):
+*   **نافذة التحديث التلقائي لسطح المكتب (جديدة):** [UpdateAvailableDialog.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/UpdateAvailableDialog.xaml) - نافذة عصرية لعرض تفاصيل الإصدار الجديد وملاحظات التحديث وشريط تقدم التنزيل الفوري.
+*   **نافذة حوار التحديث التلقائي للموبايل (جديدة):** [UpdateDialog](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/update_dialog.dart) - نافذة تفاعلية لتنزيل حزم الـ APK وتثبيتها تلقائياً عبر `open_filex`.
+*   **شاشة تسجيل الدخول والشاشة الرئيسية لسطح المكتب (معدلة):** [LoginWindow.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/LoginWindow.xaml.vb) & [DashboardWindow.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DashboardWindow.xaml.vb) - فحص السيرفر تلقائياً عند بدء التشغيل وإظهار نافذة التحديث فوراً عند توفر إصدار أحدث.
 *   **شاشة إعدادات الطابعة الحرارية (معدلة):** [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - إضافة خيار تحديد نمط طباعة الشبكة (النص المباشر الافتراضي vs الطباعة الصورية عالية الدقة HD Raster Canvas)، وإضافة حقل تحديد عدد نسخ الطباعة (Print Copies) لطابعات الشبكة فقط، وقصر حفظ إعدادات الطباعة كلياً على الذاكرة المحلية للجهاز (SharedPreferences).
 *   **شاشة اختيار الشركاء والموردين (جديدة):** [PartnerSelectionScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart) - شاشة للبحث واختيار العملاء/الموردين عند بدء فاتورة جديدة أو التعديل من الـ POS.
 *   **شاشة إدخال تفاصيل ومواعيد شحن وتوصيل الطلبات للعملاء (جديدة):** [TemporaryOrderScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) - تحديد موعد التسليم والملاحظات للعملاء، وتخصيصها ديناميكياً لإخفاء بطاقة الزبون المؤقت للعملاء المسجلين.
 *   **شاشة نقطة البيع والشاشات المنسدلة (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) & [PartnerBillingScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) & [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - محاذاة باج الخصم لأقصى اليمين بكارت الصنف وتناسب الاسم عبر Expanded وتغليف الخصم بـ Flexible و FittedBox، وإلغاء تعديل سعر البيع بـ POS، إضافة زر إعادة طباعة أحدث إضافة بالنظام 🖨️ بالهيدر العلوي، وحل خطأ RenderFlex Overflow بإضافة `isExpanded: true` شمولياً.
-*   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة خيار تخصيص معروضات الصفحة الرئيسية وخيارات تفعيل وتوجيه نظام التوصيل.
-*   **شاشة الصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - فلترة بطاقات الاختصارات ديناميكياً بناءً على رغبة المستخدم وإضافة زر طباعة أحدث مستند مضاف.
+*   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة زر التحقق اليدوي من وجود تحديثات، إضافة خيار تخصيص معروضات الصفحة الرئيسية وخيارات تفعيل وتوجيه نظام التوصيل.
+*   **شاشة الصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - الفحص الصامت التلقائي للتحديثات عند الإقلاع، فلترة بطاقات الاختصارات ديناميكياً بناءً على رغبة المستخدم وإضافة زر طباعة أحدث مستند مضاف.
 *   **شاشة عروض مبيعات العملاء (معدلة):** [PartnerOffersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) - تكامل شاشة التوصيل قبل الفوترة لعروض العملاء.
 *   **شاشة تقرير الفواتير اليومية (معدلة):** [DailyInvoicesScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart) - دعم إعادة طباعة تفاصيل ومواعيد التوصيل للعملاء.
 *   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة وتفعيل التصميم المخصص الجديد (UseCustomInvoiceDesign)، وإزالة كروت تفضيلات النظام ليتم التحكم بها من الداتابيز.
@@ -29,6 +32,10 @@
 *   **صفحة الورديات وإدارة التدفق النقدي المكتبي (معدلة):** [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml) - ضبط وتوحيد رؤوس أقسام الإيرادات والمدفوعات لإظهار إجمالي المبيعات والمشتريات، وحصر مبالغ التدفق النقدي بالكاش الفعلي بالدرج.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **خدمة تهيئة قاعدة البيانات والتشفير (معدلة ومؤمنة):** [DatabaseHelper.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/DatabaseHelper.vb) - تشفير قالب الاتصال وبيانات السيرفر والمستخدم داخلياً، استيراد اسم قاعدة البيانات فقط مشفراً بـ AES-256 من ملف `dbconfig.dat` الخارجي، إلغاء القيم الافتراضية، وإظهار خطأ صريح عند غياب الملف.
+*   **خدمة التحديث التلقائي لسطح المكتب (جديدة):** [AutoUpdateService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AutoUpdateService.vb) - فحص السيرفر وتنزيل ملفات التثبيت وتشغيل Inno Setup صامتاً مع إغلاق وإعادة فتح التطبيق المحدث.
+*   **خدمة التحديث التلقائي للموبايل (جديدة):** [UpdateService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/update_service.dart) - قراءة الإصدار و Version Code ديناميكياً عبر `package_info_plus` وتنزيل الـ APK وفتحه للتثبيت التلقائي عبر `open_filex`.
+*   **مركز تحكم وإدارة التحديثات بالـ API (جديد):** [updates_manifest.json](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/data/updates_manifest.json) & [update_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/update_service.py) & [updates.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/updates.py) - مسارات التحقق `GET /updates/check` والنشر `POST /updates/publish` واستضافة الملفات الثابتة عبر `/static/updates/` مع مقارنة الإصدارات الدقيقة بـ 4 أرقام.
 *   **إجراءات ملخص وإغلاق الوردية المحاسبية (معدلة):** `[Sales].[sp_Shift_GetSummary]` & `[Sales].[sp_Shift_Close]` - تثبيت حساب الصندوق الرئيسي على الحساب `1101` و `1101%` حصراً، وعزل مبيعات ومشتريات الشبكة والبنوك `1102` لحساب الكاش المتوقع بالدرج بدقة 100%.
 *   **خدمة ومخطط الورديات بالـ API (معدلة):** [shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py) & [shift.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/shift.py) - دعم `TotalCashSales`, `TotalKnetSales`, `TotalCashPurchases`, `TotalNonCashPurchases` وحساب النقدية المتوقعة بالدرج.
 *   **نموذج ومتحكم الورديات لسطح المكتب (معدل):** [Shift.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/Shift.vb) & [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) - إضافة خصائص الكاش والشبكة المخصصة وتثبيت فحص حساب الكاش على `1101`.
@@ -1966,6 +1973,91 @@
   - **بناء حزمة APK النهائية (Release APK):**
     - بناء واشا: `flutter build apk --flavor washa --release`
     - بناء الجوهرة: `flutter build apk --flavor jawhara --release`
+  - **بناء حزمة Windows Desktop النهائية:**
+    - بناء واشا: `flutter build windows --release --dart-define=FLAVOR=washa`
+    - بناء الجوهرة: `flutter build windows --release --dart-define=FLAVOR=jawhara`
+
+---
+
+## 57. ديناميكية عنوان القائمة الجانبية (اسم الشركة + POS) وعرض رقم الوردية المفتوحة (أغسطس 2026)
+
+* **عرض اسم الشركة ديناميكياً في الـ Sidebar ([home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)):**
+  - استبدال العنوان الثابت `Vegtablity POS` بعنوان ديناميكي يستقبل اسم الشركة المحفوظ من `SettingsProvider` المحمل مسبقاً من `CompanySettings` (`<CompanyName> POS`) دون استدعاءات إضافية متكررة للـ API.
+  - إضافة خاصية `companyName` والتخزين المحلي `cached_company_name` في [SettingsProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/settings_provider.dart) للظهور الفوري حتى في وضع عدم الاتصال.
+
+* **عرض رقم الوردية المفتوحة أسفل اسم المستخدم:**
+  - إضافة بادج تفاعلي أنيق داخل `DrawerHeader` يعرض:
+    - في حال وجود وردية مفتوحة: أيقونة خضراء مع نص `الوردية رقم: #X` (`Shift No: #X`).
+    - في حال عدم وجود وردية: أيقونة تنبيه مع نص `لا توجد وردية مفتوحة` (`No Active Shift`).
+  - تحديث [ShiftProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart) لتحميل رقم وحالة الوردية من الذاكرة المحلية `active_shift_id` فورياً عند بدء التطبيق والتحقق من السيرفر في الخلفية.
+
+* **تعريب عناصر القائمة الجانبية والشاشة الرئيسية بالكامل ([app_localizations.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart)):**
+  - إضافة مفاتيح الترجمة لعناصر السايد بار وبطاقات الشاشة الرئيسية باللغتين العربية والإنجليزية:
+    - `home_drawer_stocktake`: "جرد المخزون (مسودة)" / "Stock Take (Draft)"
+    - `home_drawer_wastage`: "إهلاك بضاعة (الهالك)" / "Wastage / Damaged Goods"
+    - `home_drawer_recipes`: "وصفات المنتجات والتصنيع" / "Product Recipes & Manufacturing"
+    - `home_classic_recipes`: "وصفات المنتجات" / "Product Recipes"
+
+---
+
+## 58. تفعيل وتخصيص تعديل الفواتير غير المرحلة (Sales & Purchases) وإدارتها في التطبيق (أغسطس 2026)
+
+* **خيار جديد في الإعدادات العامة ([settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart)):**
+  - إضافة خيار `pref_allow_edit_unposted_invoices` (تفعيل تعديل الفواتير غير المرحلة لهذا الجهاز).
+  - يُحفظ الإعداد محلياً في `SharedPreferences` للتحكم في الصلاحية على مستوى كل جهاز كاشير.
+
+* **تعديل الفواتير من شاشة البحث ([invoice_lookup_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart)):**
+  - عند البحث عن فاتورة، إذا كان الإعداد مفعلاً والفاتورة غير مرحلة (`IsPosted != true`)، يظهر زر "تعديل الفاتورة ✏️" ليتم فتح الفاتورة بكافة أصنافها وكمياتها وبياناتها في شاشة الـ POS.
+  - عند حفظ التعديل، يتم تحديث بيانات الفاتورة وإعادة عرضها في شاشة البحث فورياً.
+
+* **تعديل الفواتير من تقرير الفواتير اليومية ([daily_invoices_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart)):**
+  - في نافذة تفاصيل الفاتورة، يظهر زر "تعديل الفاتورة ✏️" إذا كانت الفاتورة غير مرحلة، مع فتحها للتعديل وتحديث إجماليات التقرير اليومي تلقائياً.
+
+* **دعم وضع التعديل وتقسيم طرق الدفع في شاشة الـ POS ([pos_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) & [pos_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart)):**
+  - استقبال `editingInvoice` وتعبئة السلة `loadInvoiceIntoCart` بالأصناف والكميات والأسعار والخصومات والعميل/المورد.
+  - دعم استرجاع وتعديل تقسيم طرق الدفع السابقة (`PaymentSplits`) داخل حوار الدفع.
+  - إرسال المعامل `InvID` إلى الـ API لحفظ التعديل تحت نفس رقم الفاتورة دون إنشاء فاتورة مكررة.
+
+* **تحديث الـ Backend و SQL بالتوافق الكامل مع كافة الإصدارات السابقة ([SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) & [db_procedures.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures.py)):**
+  - الإجراء المخزن `[Sales].[sp_Invoice_Save_XML]` يدعم تحديث الرأس والتفاصيل وحذف وإعادة إدراج `[Sales].[InvoicePaymentSplits]` عند تمرير `@InvID > 0`.
+  - تحديث [invoice_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/invoice_service.py) و [invoices.py Schema](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/invoices.py) لدعم `InvID: Optional[int] = 0`.
+
+---
+
+## 59. منظومة التحديث التلقائي الشاملة (In-App Auto Update) وتشفير بيانات الاتصال بـ AES-256 (أغسطس 2026)
+
+تم بناء منظومة تحديث تلقائي سحابية موحدة وذكية لكافة المنصات والأنظمة (WPF Desktop، Flutter Android APK، و Windows Flutter) مع تشفير مشدد لبيانات الاتصال بقواعد البيانات لمنع أي تسريب أو وصول غير مصرح به.
+
+### أ- تشفير بيانات الاتصال واستيراد اسم قاعدة البيانات خارجياً بـ AES-256 ([DatabaseHelper.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/DatabaseHelper.vb)):
+* **تشفير قالب السيرفر داخلياً:** تم تشفير وإخفاء عنوان السيرفر (`185.216.203.50,1422`) واسم المستخدم وكلمة المرور داخلياً في ثابت مشفر (`ENCODED_CONN_TEMPLATE`) لحمايتها من الاستخراج.
+* **استيراد اسم قاعدة البيانات فقط من الخارج:** ملف `dbconfig.dat` الخارجي يحتوي **فقط على اسم قاعدة البيانات** (مثل `WashaDB` أو `JawharaDB` أو `VegtablityDB` أو `zatterDB` أو `OmanCustmerDB`) مشفراً بخوارزمية AES-256 (Key 32 bytes + IV 16 bytes).
+* **إلغاء القيم الافتراضية (Strict Error Handling):**
+  - إذا لم يوجد ملف `dbconfig.dat` بجوار ملف التشغيل، يرمي النظام فوراً `FileNotFoundException` صريح يمنع تشغيل البرنامج ويطلب ملف التهيئة الخاص بالشركة.
+  - تم تجهيز المجلد `d:\VB.NET\backup\Vegtablity\TenantConfigs\` بكافة ملفات التهيئة المشفرة الجاهزة للشركات.
+
+### ب- التحديث التلقائي لبرنامج الـ WPF مع Inno Setup ([AutoUpdateService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AutoUpdateService.vb)):
+* **الفحص والمقارنة التلقائية:** عند فتح شاشة تسجيل الدخول [LoginWindow.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/LoginWindow.xaml.vb) أو الشاشة الرئيسية [DashboardWindow.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DashboardWindow.xaml.vb)، يتصل البرنامج بـ `GET /updates/check?platform=wpf&flavor=<Flavor>&current_version=<Version>`.
+* **واجهة التحديث التفاعلية ([UpdateAvailableDialog.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/UpdateAvailableDialog.xaml)):** عرض رقم الإصدار الجديد وملاحظات التحديث وشريط تقدم التحميل بالنسبة المئوية.
+* **التثبيت الصامت الذكي:** يقوم بتنزيل ملف الـ `Setup.exe` إلى `%TEMP%` وتشغيله بالوضع الصامت `/SILENT /CLOSEAPPLICATIONS` واستبدال الملفات دون مساس بملف `dbconfig.dat` الخاص بالعميل.
+* **تكامل Inno Setup:** استخدام خاصية `Flags: onlyifdoesntexist uninsneveruninstall` لملف `dbconfig.dat` في سكريبت التثبيت لضمان الحفاظ على قاعدة بيانات العميل للأبد أثناء التحديثات التلقائية.
+
+### ج- التحديث التلقائي لتطبيق Flutter للموبايل والويندوز ([update_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/update_service.dart)):
+* **قراءة الإصدار الديناميكي:** استخدام حزمة `package_info_plus` لقراءة `version` و `version_code` تلقائياً من [pubspec.yaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/pubspec.yaml) دون الحاجة لتعديل الكود البرمجي عند كل إصدار.
+* **تنزيل وتثبيت الـ APK مباشرة ([update_dialog.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/update_dialog.dart)):** تنزيل حزمة الـ APK مع شريط تقدم تفاعلي وتشغيل معالج التثبيت فوراً عبر مكتبة `open_filex`.
+* **الفحص الصامت واليدوي:** فحص صامت مع تأخير ثانيتين عند تشغيل [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)، وزر فحص يدوي في شاشة الإعدادات العامة [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart).
+
+### د- مركز التحكم والتحديثات بالخادم الخلفي ([VegtablityApi](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi)):
+* **قاعدة بيانات التحديثات ([updates_manifest.json](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/data/updates_manifest.json)):** ملف JSON مركزي يحدد الإصدارات ورابط التنزيل وملاحظات التحديث لكل منصة (`wpf`, `android`, `windows_flutter`) ولكل شركة (`washa`, `jawhara`, `vegtablity`, `zatter`, `oman`).
+* **مقارنة الإصدارات الدقيقة ([update_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/update_service.py)):** خوارزمية تطبيع أرقام الإصدارات لـ 4 خانات عددية (`2.1.0` vs `2.1.0.0`) لمنع تكرار طلب التحديث بعد التثبيت.
+* **مسارات الـ API المباشرة ([updates.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/updates.py)):**
+  - `GET /updates/check`: فحص التحديثات والمقارنة.
+  - `GET /updates/manifest`: جلب ملف الـ Manifest الكامل.
+  - `POST /updates/publish`: نشر تحديث جديد بضغطة زر.
+  - استضافة ملفات التثبيت الثابتة عبر مسار `/static/updates/`.
+
+
+
+
 
 
 

@@ -8,6 +8,7 @@ class SettingsProvider with ChangeNotifier {
   Map<String, dynamic>? _companySettings;
   String _currencySymbol = "د.ك";
   bool _isLoading = false;
+  String? _cachedCompanyName;
   bool _cachedEnableDailyOrders = false;
   bool _cachedUseCustomInvoiceDesign = false;
   bool _cachedIsProductionMode = false;
@@ -22,9 +23,25 @@ class SettingsProvider with ChangeNotifier {
   String get currencySymbol => _currencySymbol;
   bool get isLoading => _isLoading;
 
+  String get companyName {
+    if (_companySettings != null) {
+      for (final entry in _companySettings!.entries) {
+        final key = entry.key.toString().toLowerCase().replaceAll('_', '');
+        if (key == 'companyname' || key == 'name') {
+          final val = entry.value;
+          if (val != null && val.toString().trim().isNotEmpty) {
+            return val.toString().trim();
+          }
+        }
+      }
+    }
+    return _cachedCompanyName ?? '';
+  }
+
   Future<void> _loadCachedSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      _cachedCompanyName = prefs.getString('cached_company_name');
       _cachedEnableDailyOrders = prefs.getBool('cached_enable_daily_orders') ?? false;
       _cachedUseCustomInvoiceDesign = prefs.getBool('cached_use_custom_invoice_design') ?? false;
       _cachedIsProductionMode = prefs.getBool('cached_is_production_mode') ?? false;
@@ -114,6 +131,9 @@ class SettingsProvider with ChangeNotifier {
           _companySettings = Map<String, dynamic>.from(data);
           
           final prefs = await SharedPreferences.getInstance();
+          if (companyName.isNotEmpty) {
+            await prefs.setString('cached_company_name', companyName);
+          }
           await prefs.setBool('cached_enable_daily_orders', enableDailyOrders);
           await prefs.setBool('cached_use_custom_invoice_design', useCustomInvoiceDesign);
           await prefs.setBool('cached_is_production_mode', isProductionMode);

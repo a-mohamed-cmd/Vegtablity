@@ -14,6 +14,7 @@ class PaymentSplitItem(BaseModel):
     Amount: float
 
 class InvoiceCreate(BaseModel):
+    InvID: Optional[int] = 0
     InvType: str # Sales or Purchase
     InvDate: datetime
     PartnerID: int

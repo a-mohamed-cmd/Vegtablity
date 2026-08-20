@@ -5,7 +5,8 @@ class ApiService {
   /// عنوان السيرفر الافتراضي بناءً على نوع النسخة (Flavor: washa / jawhara)
   static String get defaultIpAddress {
     const String envFlavor = String.fromEnvironment('FLAVOR');
-    final String currentFlavor = envFlavor.isNotEmpty ? envFlavor : (appFlavor ?? 'washa');
+    final String currentFlavor =
+        envFlavor.isNotEmpty ? envFlavor : (appFlavor ?? 'washa');
     switch (currentFlavor.toLowerCase()) {
       case 'jawhara':
         return '185.216.203.50:8001'; // سيرفر الجوهرة
@@ -53,6 +54,14 @@ class ApiService {
       return authHeader.substring(7);
     }
     return null;
+  }
+
+  Dio get dio => _dio;
+  String get baseUrl => _dio.options.baseUrl;
+
+  Future<Response> get(String path,
+      {Map<String, dynamic>? queryParameters}) async {
+    return await _dio.get(path, queryParameters: queryParameters);
   }
 
   Future<Response> getCompanySettings() async {

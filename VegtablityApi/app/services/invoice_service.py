@@ -181,6 +181,7 @@ class InvoiceService:
 
         try:
             cursor.execute(SP.INVOICE_SAVE_XML, (
+                invoice.InvID or 0,
                 invoice.InvType,
                 invoice.InvDate,
                 invoice.PartnerID,
@@ -211,7 +212,9 @@ class InvoiceService:
             inv_id = row[0]
 
             # ✅ حفظ تقسيم طرق الدفع (PaymentSplits) إذا وُجدت
-            if invoice.PaymentSplits and len(invoice.PaymentSplits) > 0:
+            if invoice.PaymentSplits is not None:
+                # حذف أي تقسيمات سابقة إن وُجدت لمنع التكرار عند التعديل
+                cursor.execute("DELETE FROM [Sales].[InvoicePaymentSplits] WHERE InvID = ?", (inv_id,))
                 for split in invoice.PaymentSplits:
                     cursor.execute(SP.INVOICE_SPLITS_SAVE, (inv_id, split.PaymentAccountID, split.Amount))
 

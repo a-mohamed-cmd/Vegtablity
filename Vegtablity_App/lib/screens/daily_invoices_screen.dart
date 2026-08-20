@@ -1,6 +1,7 @@
 import '../providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../providers/auth_provider.dart';
 import '../services/printer_service.dart';
@@ -8,6 +9,7 @@ import '../providers/shift_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
 import '../core/localization/app_localizations.dart';
+import 'pos_screen.dart';
 
 double _parseDouble(dynamic value) {
   if (value == null) return 0.0;
@@ -1178,11 +1180,24 @@ class _InvoiceDetailsBottomSheetState
   bool _isLoading = true;
   String _error = '';
   Map<String, dynamic>? _invoiceData;
+  bool _allowEditUnposted = false;
 
   @override
   void initState() {
     super.initState();
+    _loadEditPref();
     _fetchDetails();
+  }
+
+  Future<void> _loadEditPref() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (mounted) {
+        setState(() {
+          _allowEditUnposted = prefs.getBool('pref_allow_edit_unposted_invoices') ?? false;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchDetails() async {
@@ -1854,6 +1869,35 @@ class _InvoiceDetailsBottomSheetState
               }
               return const SizedBox.shrink();
             }),
+
+          // Edit Invoice Button
+          if (_allowEditUnposted && _invoiceData != null && _invoiceData!['IsPosted'] != true) ...[
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context); // Close bottom sheet
+                await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PosScreen(
+                      type: _invoiceData!['InvType']?.toString() == 'Purchase' ? 'Purchase' : 'Sales',
+                      editingInvoice: _invoiceData,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.edit_note),
+              label: Text(context.tr('di_edit_invoice_btn'),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[800],
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
 
           // Print + Close
           Row(

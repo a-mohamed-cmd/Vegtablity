@@ -135,7 +135,7 @@ Namespace ViewModels
             LoadPermissions()
         End Sub
 
-        Private Sub LoadPermissions()
+        Private Overloads Sub LoadPermissions()
             Try
                 If Services.Session.CurrentUser Is Nothing Then Return
                 Dim perm = _permissionService.GetPermissionsForForm(Services.Session.CurrentUser.RoleID, "Wastage")

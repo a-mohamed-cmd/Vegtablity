@@ -16,7 +16,21 @@ class ShiftProvider extends ChangeNotifier {
   int? _selectedWarehouseId;
   String? _selectedWarehouseName;
 
-  ShiftProvider(this._apiService);
+  ShiftProvider(this._apiService) {
+    _loadCachedShift();
+  }
+
+  Future<void> _loadCachedShift() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedShiftId = prefs.getInt('active_shift_id');
+      if (savedShiftId != null) {
+        _shiftId = savedShiftId;
+        _isShiftOpen = true;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
 
   List<Map<String, dynamic>> get warehouses => _warehouses;
   int? get selectedWarehouseId => _selectedWarehouseId;

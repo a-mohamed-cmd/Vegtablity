@@ -281,6 +281,46 @@ class PosProvider extends ChangeNotifier {
   }
 
 
+  void loadInvoiceIntoCart(Map<String, dynamic> invoiceData) {
+    _invoiceItems.clear();
+    _errorMessage = null;
+    _successMessage = null;
+
+    final double discount = (invoiceData['Discount'] is num)
+        ? (invoiceData['Discount'] as num).toDouble()
+        : double.tryParse(invoiceData['Discount']?.toString() ?? '0') ?? 0.0;
+    _extraDiscountAmount = discount;
+
+    final List<dynamic> rawDetails = invoiceData['Details'] ?? [];
+    for (var d in rawDetails) {
+      if (d is Map) {
+        final double qty = (d['Quantity'] is num)
+            ? (d['Quantity'] as num).toDouble()
+            : double.tryParse(d['Quantity']?.toString() ?? '1') ?? 1.0;
+        final double price = (d['UnitPrice'] is num)
+            ? (d['UnitPrice'] as num).toDouble()
+            : double.tryParse(d['UnitPrice']?.toString() ?? '0') ?? 0.0;
+        final double total = (d['TotalPrice'] is num)
+            ? (d['TotalPrice'] as num).toDouble()
+            : (qty * price);
+
+        _invoiceItems.add({
+          'ProductID': d['ProductID'] ?? 1,
+          'barcode': d['Barcode'] ?? d['barcode'] ?? '',
+          'name': d['ProductName'] ?? d['name'] ?? 'منتج',
+          'originalPrice': price,
+          'price': price,
+          'quantity': qty,
+          'total': total,
+          'discountAmount': 0.0,
+          'appliedDiscount': null,
+          'UnitName': d['UnitName'] ?? d['unitName'] ?? d['unit_name'] ?? '',
+        });
+      }
+    }
+    notifyListeners();
+  }
+
   Future<int?> saveInvoice(
     String invoiceType, {
     int? paymentAccountId,
@@ -293,6 +333,9 @@ class PosProvider extends ChangeNotifier {
     String? tempDeliveryDate,
     String? tempDeliveryTime,
     String? tempNotes,
+    int? existingInvId,
+    String? invDate,
+    int? shiftId,
   }) async {
     if (_invoiceItems.isEmpty) {
       _errorMessage = 'السلة فارغة، يرجى إضافة منتجات أولاً';
@@ -364,8 +407,9 @@ class PosProvider extends ChangeNotifier {
     final double netTotal = totalAmount;
 
     final invoiceData = {
+      if (existingInvId != null && existingInvId > 0) 'InvID': existingInvId,
       'InvType': invoiceType == 'Sales' ? 'Sales' : 'Purchase',
-      'InvDate': DateTime.now().toIso8601String(),
+      'InvDate': invDate ?? DateTime.now().toIso8601String(),
       'PartnerID': finalPartnerId,
       'WarehouseID': warehouseId,
       'TotalAmount': grossTotal,
@@ -381,7 +425,7 @@ class PosProvider extends ChangeNotifier {
       'TempDeliveryDate': tempDeliveryDate,
       'TempDeliveryTime': tempDeliveryTime,
       'Details': details,
-      if (activeShiftId != null) 'ShiftID': activeShiftId,
+      if (shiftId != null || activeShiftId != null) 'ShiftID': shiftId ?? activeShiftId,
       if (resolvedPaymentAccountId != null) 'PaymentAccountID': resolvedPaymentAccountId,
       if (paymentSplits != null && paymentSplits.isNotEmpty) 'PaymentSplits': paymentSplits,
     };
@@ -389,8 +433,11 @@ class PosProvider extends ChangeNotifier {
     try {
       final response = await _apiService.saveInvoice(invoiceData);
       if (response.statusCode == 200 || response.statusCode == 201) {
-        _successMessage = 'تم حفظ الفاتورة بنجاح!';
-        final int newInvId = response.data['InvID'] ?? 0;
+        _successMessage = existingInvId != null && existingInvId > 0
+            ? 'تم تعديل الفاتورة بنجاح!'
+            : 'تم حفظ الفاتورة بنجاح!';
+        final dynamic respData = response.data;
+        final int newInvId = (respData is Map ? (respData['InvID'] ?? respData['id']) : null) ?? existingInvId ?? 0;
         _invoiceItems.clear();
         _extraDiscountAmount = 0.0;
         _isLoading = false;
@@ -404,7 +451,7 @@ class PosProvider extends ChangeNotifier {
         _extraDiscountAmount = 0.0;
         _isLoading = false;
         notifyListeners();
-        return 0;
+        return existingInvId ?? 0;
       }
     } catch (e) {
       _offlineInvoices.add(invoiceData);
@@ -414,7 +461,7 @@ class PosProvider extends ChangeNotifier {
       _extraDiscountAmount = 0.0;
       _isLoading = false;
       notifyListeners();
-      return 0;
+      return existingInvId ?? 0;
     }
   }
 
