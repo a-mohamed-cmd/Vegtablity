@@ -19,6 +19,20 @@ Namespace Services
             End Using
         End Function
 
+        Public Function GetRecipesPaged(pageNumber As Integer, pageSize As Integer) As (Data As List(Of Recipe), TotalCount As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim p As New DynamicParameters()
+                p.Add("@PageNumber", pageNumber)
+                p.Add("@PageSize", pageSize)
+
+                Using multi = conn.QueryMultiple(Helpers.StoredProcedures.SP_RECIPE_GETALL, p, commandType:=CommandType.StoredProcedure)
+                    Dim totalCount = multi.Read(Of Integer)().FirstOrDefault()
+                    Dim data = multi.Read(Of Recipe)().ToList()
+                    Return (data, totalCount)
+                End Using
+            End Using
+        End Function
+
         Public Function GetRecipeByProduct(productID As Integer, Optional warehouseID As Integer? = Nothing) As Recipe
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Dim p As New DynamicParameters()

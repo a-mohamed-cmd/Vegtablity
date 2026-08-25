@@ -116,11 +116,13 @@ Namespace Helpers
         ' Accounting Schema - Vouchers
         ' =============================================
         Public Const SP_VOUCHER_GETALL As String = "[Accounting].[sp_Voucher_GetAll]"
+        Public Const SP_VOUCHER_GETPAGED As String = "[Accounting].[sp_Voucher_GetPaged]"
         Public Const SP_VOUCHER_GETBYID As String = "[Accounting].[sp_Voucher_GetByID]"
         Public Const SP_VOUCHER_SAVE As String = "[Accounting].[sp_Voucher_Save]"
         Public Const SP_VOUCHER_DELETE As String = "[Accounting].[sp_Voucher_Delete]"
         Public Const SP_VOUCHER_SEARCH As String = "[Accounting].[sp_Voucher_Search]"
         Public Const SP_VOUCHER_POST As String = "[Accounting].[sp_Voucher_Post]"
+        Public Const SP_VOUCHER_UNPOST As String = "[Accounting].[sp_Voucher_Unpost]"
 
         ' =============================================
         ' Accounting Schema - Journal Entries

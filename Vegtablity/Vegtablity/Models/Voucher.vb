@@ -10,7 +10,21 @@ Namespace Models
         Public Property AccountName As String             ' من JOIN
         Public Property Amount As Decimal
         Public Property Description As String
-        Public Property PaymentMethod As String           ' Cash / Bank
+        Public Property PaymentMethod As String           ' معرف حساب طريقة الدفع (Cash/Bank AccountID)
+
+        Private _paymentMethodName As String
+        Public Property PaymentMethodName As String       ' اسم حساب طريقة الدفع من JOIN
+            Get
+                If Not String.IsNullOrEmpty(_paymentMethodName) Then
+                    Return _paymentMethodName
+                End If
+                Return If(PaymentMethod, "")
+            End Get
+            Set(value As String)
+                _paymentMethodName = value
+            End Set
+        End Property
+
         Public Property UserID As Integer?
         Public Property UserName As String                ' من JOIN
         Public Property IsPosted As Boolean

@@ -34,11 +34,36 @@ Namespace ViewModels
         End Property
 
         Public Property Recipes As ObservableCollection(Of Recipe)
+        Public Property FilteredRecipes As ObservableCollection(Of Recipe)
         Public Property ManufacturedProducts As ObservableCollection(Of Product)
         Public Property RawMaterialProducts As ObservableCollection(Of Product)
         Public Property FilteredManufacturedProducts As ObservableCollection(Of Product)
         Public Property FilteredRawMaterialProducts As ObservableCollection(Of Product)
         Public Property CurrentRecipeDetails As ObservableCollection(Of RecipeDetail)
+
+        Private _recipeSearchBarcode As String = ""
+        Public Property RecipeSearchBarcode As String
+            Get
+                Return _recipeSearchBarcode
+            End Get
+            Set(value As String)
+                If SetProperty(_recipeSearchBarcode, value) Then
+                    FilterRecipes()
+                End If
+            End Set
+        End Property
+
+        Private _recipeSearchName As String = ""
+        Public Property RecipeSearchName As String
+            Get
+                Return _recipeSearchName
+            End Get
+            Set(value As String)
+                If SetProperty(_recipeSearchName, value) Then
+                    FilterRecipes()
+                End If
+            End Set
+        End Property
 
         Private _targetSearchText As String = ""
         Public Property TargetSearchText As String
@@ -153,11 +178,63 @@ Namespace ViewModels
             End Set
         End Property
 
+        ' Pagination (10 records per page)
+        Private _currentPage As Integer = 1
+        Public Property CurrentPage As Integer
+            Get
+                Return _currentPage
+            End Get
+            Set(value As Integer)
+                SetProperty(_currentPage, value)
+            End Set
+        End Property
+
+        Public Const PageSize As Integer = 10
+
+        Private _totalRecords As Integer = 0
+        Public Property TotalRecords As Integer
+            Get
+                Return _totalRecords
+            End Get
+            Set(value As Integer)
+                SetProperty(_totalRecords, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property TotalPages As Integer
+            Get
+                Return Math.Max(1, CInt(Math.Ceiling(TotalRecords / CDbl(PageSize))))
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPreviousPage As Boolean
+            Get
+                Return CurrentPage > 1
+            End Get
+        End Property
+
+        Public ReadOnly Property HasNextPage As Boolean
+            Get
+                Return CurrentPage < TotalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property PageInfo As String
+            Get
+                Return $"صفحة {CurrentPage} من {TotalPages} (إجمالي: {TotalRecords})"
+            End Get
+        End Property
+
         Public Property AddIngredientCommand As ICommand
         Public Property RemoveIngredientCommand As ICommand
         Public Property SaveRecipeCommand As ICommand
         Public Property DeleteRecipeCommand As ICommand
         Public Property NewRecipeCommand As ICommand
+        Public Property ClearRecipeFilterCommand As ICommand
+        Public Property NextPageCommand As ICommand
+        Public Property PreviousPageCommand As ICommand
+        Public Property FirstPageCommand As ICommand
+        Public Property LastPageCommand As ICommand
 
         ''' <summary>Fired to display a Snackbar notification</summary>
         Public Event RequestSnackbar As Action(Of String)
@@ -172,6 +249,7 @@ Namespace ViewModels
 
             Warehouses = New ObservableCollection(Of Warehouse)()
             Recipes = New ObservableCollection(Of Recipe)()
+            FilteredRecipes = New ObservableCollection(Of Recipe)()
             ManufacturedProducts = New ObservableCollection(Of Product)()
             RawMaterialProducts = New ObservableCollection(Of Product)()
             FilteredManufacturedProducts = New ObservableCollection(Of Product)()
@@ -183,6 +261,11 @@ Namespace ViewModels
             SaveRecipeCommand = New RelayCommand(AddressOf SaveRecipe)
             DeleteRecipeCommand = New RelayCommand(AddressOf DeleteRecipe)
             NewRecipeCommand = New RelayCommand(AddressOf ResetForm)
+            ClearRecipeFilterCommand = New RelayCommand(AddressOf ClearRecipeFilter)
+            NextPageCommand = New RelayCommand(AddressOf GoToNextPage, Function() HasNextPage)
+            PreviousPageCommand = New RelayCommand(AddressOf GoToPreviousPage, Function() HasPreviousPage)
+            FirstPageCommand = New RelayCommand(AddressOf GoToFirstPage, Function() HasPreviousPage)
+            LastPageCommand = New RelayCommand(AddressOf GoToLastPage, Function() HasNextPage)
 
             LoadPermissions("Recipes")
             LoadInitialData()
@@ -287,11 +370,78 @@ Namespace ViewModels
         End Sub
 
         Private Sub LoadAllRecipes()
-            Recipes.Clear()
-            Dim list = _recipeService.GetAllRecipes()
-            For Each r In list
-                Recipes.Add(r)
+            Try
+                Dim result = _recipeService.GetRecipesPaged(_currentPage, PageSize)
+                Recipes.Clear()
+                For Each r In result.Data
+                    Recipes.Add(r)
+                Next
+                _totalRecords = result.TotalCount
+                NotifyPaginationChanged()
+                FilterRecipes()
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء جلب الوصفات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub NotifyPaginationChanged()
+            OnPropertyChanged(NameOf(CurrentPage))
+            OnPropertyChanged(NameOf(TotalRecords))
+            OnPropertyChanged(NameOf(TotalPages))
+            OnPropertyChanged(NameOf(HasPreviousPage))
+            OnPropertyChanged(NameOf(HasNextPage))
+            OnPropertyChanged(NameOf(PageInfo))
+            CommandManager.InvalidateRequerySuggested()
+        End Sub
+
+        Public Sub GoToNextPage()
+            If HasNextPage Then
+                CurrentPage += 1
+                LoadAllRecipes()
+            End If
+        End Sub
+
+        Public Sub GoToPreviousPage()
+            If HasPreviousPage Then
+                CurrentPage -= 1
+                LoadAllRecipes()
+            End If
+        End Sub
+
+        Public Sub GoToFirstPage()
+            If CurrentPage <> 1 Then
+                CurrentPage = 1
+                LoadAllRecipes()
+            End If
+        End Sub
+
+        Public Sub GoToLastPage()
+            If CurrentPage <> TotalPages Then
+                CurrentPage = TotalPages
+                LoadAllRecipes()
+            End If
+        End Sub
+
+        Public Sub FilterRecipes()
+            FilteredRecipes.Clear()
+            Dim bCode = If(RecipeSearchBarcode, "").Trim().ToLower()
+            Dim pName = If(RecipeSearchName, "").Trim().ToLower()
+
+            For Each r In Recipes
+                Dim matchBarcode = String.IsNullOrWhiteSpace(bCode) OrElse (r.Barcode IsNot Nothing AndAlso r.Barcode.ToLower().Contains(bCode))
+                Dim matchName = String.IsNullOrWhiteSpace(pName) OrElse (r.ProductName IsNot Nothing AndAlso r.ProductName.ToLower().Contains(pName))
+                If matchBarcode AndAlso matchName Then
+                    FilteredRecipes.Add(r)
+                End If
             Next
+        End Sub
+
+        Public Sub ClearRecipeFilter(parameter As Object)
+            _recipeSearchBarcode = ""
+            _recipeSearchName = ""
+            OnPropertyChanged(NameOf(RecipeSearchBarcode))
+            OnPropertyChanged(NameOf(RecipeSearchName))
+            FilterRecipes()
         End Sub
 
         Private Sub LoadRecipeDetails(productID As Integer)

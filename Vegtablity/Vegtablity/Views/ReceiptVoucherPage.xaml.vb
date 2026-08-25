@@ -1,3 +1,4 @@
+Imports System.Windows
 Imports System.Windows.Input
 Imports System.Windows.Controls
 
@@ -22,6 +23,31 @@ Namespace Views
             If parent IsNot Nothing AndAlso parent.CanGoBack Then
                 parent.GoBack()
             End If
+        End Sub
+
+        ' ══════════════════════════════════════════════════
+        '  Sidebar / Edit Panel Collapse & Expand Animation
+        ' ══════════════════════════════════════════════════
+        Private Sub ToggleEditorButton_Click(sender As Object, e As RoutedEventArgs)
+            If EditColumn Is Nothing OrElse EditPanelBorder Is Nothing Then Return
+            Dim vm = TryCast(Me.DataContext, ViewModels.VouchersViewModel)
+            
+            Dim isCollapsing As Boolean = (EditColumn.Width.Value > 50)
+            Dim startVal As Double = If(isCollapsing, 380, 0)
+            Dim endVal As Double = If(isCollapsing, 0, 380)
+
+            Dim anim As New System.Windows.Media.Animation.DoubleAnimation() With {
+                .From = startVal,
+                .To = endVal,
+                .Duration = TimeSpan.FromMilliseconds(220),
+                .EasingFunction = New System.Windows.Media.Animation.CubicEase() With {.EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut}
+            }
+            
+            AddHandler anim.Completed, Sub(s, args)
+                                          EditColumn.Width = New GridLength(endVal)
+                                       End Sub
+            EditPanelBorder.BeginAnimation(FrameworkElement.WidthProperty, anim)
+            EditColumn.Width = New GridLength(endVal)
         End Sub
 
         ' ══════════════════════════════════════════════════
@@ -61,6 +87,7 @@ Namespace Views
                 e.Handled = True
                 Dim tb = TryCast(sender, System.Windows.Controls.TextBox)
                 If tb IsNot Nothing Then
+                    Date_LostFocus(tb, Nothing)
                     Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
                     tb.MoveFocus(request)
                 End If
@@ -75,6 +102,7 @@ Namespace Views
             Await System.Threading.Tasks.Task.Delay(3000)
             SnackbarBorder.Visibility = Visibility.Collapsed
         End Sub
+
         ' ══════════════════════════════════════════════════════
         '  Account SearchableDropdown — سند القبض
         ' ══════════════════════════════════════════════════════

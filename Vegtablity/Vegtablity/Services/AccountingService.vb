@@ -115,11 +115,21 @@ Namespace Services
             End Using
         End Function
 
-        Public Function GetPagedJournalHeaders(pageIndex As Integer, pageSize As Integer, ByRef totalCount As Integer) As List(Of JournalHeader)
+        Public Function GetPagedJournalHeaders(pageIndex As Integer, pageSize As Integer, ByRef totalCount As Integer,
+                                               Optional journalNo As String = Nothing,
+                                               Optional searchText As String = Nothing,
+                                               Optional isPosted As Boolean? = Nothing,
+                                               Optional startDate As DateTime? = Nothing,
+                                               Optional endDate As DateTime? = Nothing) As List(Of JournalHeader)
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Dim p As New DynamicParameters()
                 p.Add("@PageIndex", pageIndex)
                 p.Add("@PageSize", pageSize)
+                p.Add("@JournalNo", If(String.IsNullOrWhiteSpace(journalNo), Nothing, journalNo.Trim()))
+                p.Add("@SearchText", If(String.IsNullOrWhiteSpace(searchText), Nothing, searchText.Trim()))
+                p.Add("@IsPosted", isPosted)
+                p.Add("@StartDate", startDate)
+                p.Add("@EndDate", endDate)
                 p.Add("@TotalCount", dbType:=DbType.Int32, direction:=ParameterDirection.Output)
 
                 Dim list = conn.Query(Of JournalHeader)(
@@ -220,7 +230,130 @@ Namespace Services
                     New With {.StartDate = startDate, .EndDate = endDate, .ReportLevel = reportLevel},
                     commandType:=CommandType.StoredProcedure)
                 report.Items = results.ToList()
+
+                ' Calculate % of Sales (التحليل المالي الرأسي)
+                Dim totalRev = report.Items.Where(Function(i) i.AccountType = "Revenue").Sum(Function(i) i.Balance)
+                Dim baseSales = Math.Abs(totalRev)
+
+                For Each itm In report.Items
+                    If baseSales > 0 Then
+                        itm.PercentageOfSales = Math.Round((Math.Abs(itm.Balance) / baseSales) * 100D, 2)
+                    Else
+                        itm.PercentageOfSales = 0
+                    End If
+                Next
             End Using
+            Return report
+        End Function
+
+        Public Function GetMonthlyComparativeProfitLoss(startDate As Date, endDate As Date, Optional reportLevel As Integer = 0) As MonthlyComparativeReport
+            Dim report As New MonthlyComparativeReport() With {
+                .StartDate = startDate,
+                .EndDate = endDate
+            }
+
+            ' 1. Generate Months List between StartDate and EndDate
+            Dim monthsList As New List(Of MonthlyPeriodHeader)()
+            Dim arabicMonths = {"يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"}
+
+            Dim curDate = New DateTime(startDate.Year, startDate.Month, 1)
+            Dim endMonthDate = New DateTime(endDate.Year, endDate.Month, 1)
+
+            While curDate <= endMonthDate
+                Dim mStart = If(curDate < startDate, startDate, curDate)
+                Dim nextMonth = curDate.AddMonths(1)
+                Dim lastDayOfMonth = nextMonth.AddDays(-1)
+                Dim mEnd = If(lastDayOfMonth > endDate, endDate, lastDayOfMonth)
+
+                Dim mKey = curDate.ToString("yyyy-MM")
+                Dim mName = arabicMonths(curDate.Month - 1) & " " & curDate.Year.ToString()
+
+                monthsList.Add(New MonthlyPeriodHeader() With {
+                    .MonthKey = mKey,
+                    .MonthName = mName,
+                    .Year = curDate.Year,
+                    .MonthNumber = curDate.Month,
+                    .StartDate = mStart,
+                    .EndDate = mEnd
+                })
+
+                curDate = curDate.AddMonths(1)
+            End While
+
+            report.Months = monthsList
+
+            ' 2. Fetch monthly data for each month
+            Dim allRevenueRows As New Dictionary(Of String, MonthlyComparativeRow)()
+            Dim allExpenseRows As New Dictionary(Of String, MonthlyComparativeRow)()
+
+            For Each m In monthsList
+                Dim mReport = GetProfitLoss(m.StartDate, m.EndDate, reportLevel)
+                
+                Dim mRevTotal As Decimal = 0
+                Dim mExpTotal As Decimal = 0
+
+                For Each itm In mReport.Items
+                    If itm.AccountType = "Revenue" Then
+                        If Not allRevenueRows.ContainsKey(itm.AccountCode) Then
+                            allRevenueRows(itm.AccountCode) = New MonthlyComparativeRow() With {
+                                .AccountCode = itm.AccountCode,
+                                .AccountName = itm.AccountName,
+                                .AccountType = "Revenue"
+                            }
+                        End If
+                        allRevenueRows(itm.AccountCode).MonthlyValues(m.MonthKey) = itm.Balance
+                        mRevTotal += itm.Balance
+                    ElseIf itm.AccountType = "Expenses" Then
+                        If Not allExpenseRows.ContainsKey(itm.AccountCode) Then
+                            allExpenseRows(itm.AccountCode) = New MonthlyComparativeRow() With {
+                                .AccountCode = itm.AccountCode,
+                                .AccountName = itm.AccountName,
+                                .AccountType = "Expenses"
+                            }
+                        End If
+                        allExpenseRows(itm.AccountCode).MonthlyValues(m.MonthKey) = itm.Balance
+                        mExpTotal += itm.Balance
+                    End If
+                Next
+
+                report.MonthlyRevenuesTotal(m.MonthKey) = mRevTotal
+                report.MonthlyExpensesTotal(m.MonthKey) = mExpTotal
+                report.MonthlyNetProfit(m.MonthKey) = mRevTotal + mExpTotal
+            Next
+
+            ' 3. Calculate period totals and percentages for each row
+            Dim grandTotalRev As Decimal = 0
+            Dim grandTotalExp As Decimal = 0
+
+            For Each row In allRevenueRows.Values
+                row.TotalBalance = row.MonthlyValues.Values.Sum()
+                grandTotalRev += row.TotalBalance
+            Next
+
+            For Each row In allExpenseRows.Values
+                row.TotalBalance = row.MonthlyValues.Values.Sum()
+                grandTotalExp += row.TotalBalance
+            Next
+
+            report.TotalRevenues = grandTotalRev
+            report.TotalExpenses = grandTotalExp
+            report.TotalNetProfit = grandTotalRev + grandTotalExp
+
+            Dim baseSales = Math.Abs(grandTotalRev)
+
+            For Each row In allRevenueRows.Values
+                row.PercentageOfSales = If(baseSales > 0, Math.Round((Math.Abs(row.TotalBalance) / baseSales) * 100D, 2), 0)
+            Next
+
+            For Each row In allExpenseRows.Values
+                row.PercentageOfSales = If(baseSales > 0, Math.Round((Math.Abs(row.TotalBalance) / baseSales) * 100D, 2), 0)
+            Next
+
+            report.NetProfitPercentageOfSales = If(baseSales > 0, Math.Round((Math.Abs(report.TotalNetProfit) / baseSales) * 100D, 2), 0)
+
+            report.RevenueRows = allRevenueRows.Values.OrderBy(Function(r) r.AccountCode).ToList()
+            report.ExpenseRows = allExpenseRows.Values.OrderBy(Function(r) r.AccountCode).ToList()
+
             Return report
         End Function
 

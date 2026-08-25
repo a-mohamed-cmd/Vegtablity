@@ -39,6 +39,7 @@ Namespace Helpers
             Throw New NotImplementedException()
         End Function
     End Class
+
     Public Class BooleanToVisibilityConverter
         Implements IValueConverter
 
@@ -56,6 +57,7 @@ Namespace Helpers
             Return False
         End Function
     End Class
+
     Public Class AccountingAmountConverter
         Implements IValueConverter
 
@@ -106,6 +108,7 @@ Namespace Helpers
             Throw New NotImplementedException()
         End Function
     End Class
+
     Public Class PeriodToColorConverter
         Implements IValueConverter
 
@@ -128,6 +131,7 @@ Namespace Helpers
             Throw New NotImplementedException()
         End Function
     End Class
+
     Public Class IntToVisConverter
         Implements IValueConverter
 
@@ -151,6 +155,33 @@ Namespace Helpers
         End Function
     End Class
 
+    Public Class IntToBooleanConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            If value Is Nothing OrElse parameter Is Nothing Then Return False
+
+            Dim selectedVal As Integer
+            Dim targetVal As Integer
+
+            If Integer.TryParse(value.ToString(), selectedVal) AndAlso Integer.TryParse(parameter.ToString(), targetVal) Then
+                Return selectedVal = targetVal
+            End If
+
+            Return False
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            If value IsNot Nothing AndAlso TypeOf value Is Boolean AndAlso CBool(value) AndAlso parameter IsNot Nothing Then
+                Dim targetVal As Integer
+                If Integer.TryParse(parameter.ToString(), targetVal) Then
+                    Return targetVal
+                End If
+            End If
+            Return Binding.DoNothing
+        End Function
+    End Class
+
     Public Class BooleanAndConverter
         Implements IMultiValueConverter
 
@@ -168,17 +199,19 @@ Namespace Helpers
             Throw New NotImplementedException()
         End Function
     End Class
+
     Public Class IdToVisibilityConverter
         Implements IValueConverter
+
         Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
             If value IsNot Nothing AndAlso IsNumeric(value) AndAlso System.Convert.ToInt32(value) > 0 Then
                 Return Visibility.Visible
             End If
             Return Visibility.Collapsed
         End Function
+
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
             Throw New NotImplementedException()
         End Function
     End Class
-
 End Namespace

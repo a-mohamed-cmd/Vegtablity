@@ -13,6 +13,9 @@ Namespace ViewModels
         Private _accounts As ObservableCollection(Of Account)
         Private _parentAccounts As ObservableCollection(Of Account)
         Private _selectedAccount As Account
+        Private _selectedNode As AccountNode
+        Private _accountTree As ObservableCollection(Of AccountNode)
+        Private _allTreeNodes As List(Of AccountNode)
         Private _isEditing As Boolean
         Private _searchText As String
         Private _isInternalSync As Boolean = False
@@ -28,6 +31,11 @@ Namespace ViewModels
         Private _panelTitle As String = "إضافة حساب جديد"
         Private _saveActionText As String = "إضافة"
         Private _displayParentAccounts As ObservableCollection(Of Account)
+
+        ' إحصائيات الشجرة
+        Private _totalAccountsCount As Integer
+        Private _rootAccountsCount As Integer
+        Private _transactionalAccountsCount As Integer
 
         ' أخطاء
         Private _accountCodeError As String
@@ -57,6 +65,56 @@ Namespace ViewModels
             End Get
             Set(value As ObservableCollection(Of Account))
                 SetProperty(_accounts, value)
+                BuildAccountTree()
+            End Set
+        End Property
+
+        Public Property AccountTree As ObservableCollection(Of AccountNode)
+            Get
+                Return _accountTree
+            End Get
+            Set(value As ObservableCollection(Of AccountNode))
+                SetProperty(_accountTree, value)
+            End Set
+        End Property
+
+        Public Property SelectedNode As AccountNode
+            Get
+                Return _selectedNode
+            End Get
+            Set(value As AccountNode)
+                If SetProperty(_selectedNode, value) Then
+                    If value IsNot Nothing AndAlso value.Account IsNot Nothing Then
+                        SelectedAccount = value.Account
+                    End If
+                End If
+            End Set
+        End Property
+
+        Public Property TotalAccountsCount As Integer
+            Get
+                Return _totalAccountsCount
+            End Get
+            Set(value As Integer)
+                SetProperty(_totalAccountsCount, value)
+            End Set
+        End Property
+
+        Public Property RootAccountsCount As Integer
+            Get
+                Return _rootAccountsCount
+            End Get
+            Set(value As Integer)
+                SetProperty(_rootAccountsCount, value)
+            End Set
+        End Property
+
+        Public Property TransactionalAccountsCount As Integer
+            Get
+                Return _transactionalAccountsCount
+            End Get
+            Set(value As Integer)
+                SetProperty(_transactionalAccountsCount, value)
             End Set
         End Property
 
@@ -74,7 +132,6 @@ Namespace ViewModels
                 Return _selectedAccount
             End Get
             Set(value As Account)
-                ' Using SetProperty to ensure correct notification and change detection
                 If SetProperty(_selectedAccount, value) Then
                     UpdateFieldsFromSelected()
                 End If
@@ -82,25 +139,19 @@ Namespace ViewModels
         End Property
 
         Private Sub UpdateFieldsFromSelected()
-            ' Deep Sync: Prevent recursive UI feedback during data loading
             _isInternalSync = True
             
             Try
-                ' 1. Clear validation state
                 AccountCodeError = Nothing
                 AccountNameError = Nothing
 
                 If _selectedAccount IsNot Nothing Then
-                    ' 2. Prepare the UI Context FIRST
-                    ' We update the lists before setting the values to ensure ComboBoxes find their items
                     UpdateDisplayParentAccounts()
                     
-                    ' 3. Enter Editing Mode (Set properties directly to trigger individual notifications)
                     IsEditing = True
                     PanelTitle = "✏️ تعديل بيانات الحساب"
                     SaveActionText = "تحديث"
 
-                    ' 4. Map Data Fields
                     EditAccountCode = _selectedAccount.AccountCode
                     EditAccountName = _selectedAccount.AccountName
                     EditParentAccountID = _selectedAccount.ParentAccountID
@@ -108,13 +159,11 @@ Namespace ViewModels
                     EditAccountLevel = _selectedAccount.AccountLevel
                     EditIsTransactional = _selectedAccount.IsTransactional
                     
-                    ' 5. UI State check
                     Dim hasChildren = If(Accounts IsNot Nothing, Accounts.Any(Function(a) a.ParentAccountID.HasValue AndAlso a.ParentAccountID.Value = _selectedAccount.AccountID), False)
                     IsTransactionalEnabled = Not hasChildren
                     
-                    StatusMessage = "✅ وضع التعديل: تحميل بيانات [" & _selectedAccount.AccountName & "]"
+                    StatusMessage = "✅ تم تحديد الحساب: [" & _selectedAccount.AccountCode & " - " & _selectedAccount.AccountName & "]"
                 Else
-                    ' Reset to Add Mode
                     IsEditing = False
                     PanelTitle = "📁 إضافة حساب جديد"
                     SaveActionText = "إضافة"
@@ -128,7 +177,7 @@ Namespace ViewModels
                     IsTransactionalEnabled = True
                     
                     UpdateDisplayParentAccounts()
-                    StatusMessage = "ℹ️ وضع الإضافة: في انتظار اختيار حساب..."
+                    StatusMessage = "ℹ️ في انتظار اختيار أو إضافة حساب..."
                 End If
             Catch ex As Exception
                 StatusMessage = "❌ خطأ في تحميل البيانات: " & ex.Message
@@ -136,8 +185,6 @@ Namespace ViewModels
                 _isInternalSync = False
             End Try
             
-            ' Final broadcast to ensure any complex bindings or triggers refresh
-            ' Note: We use string.Empty to refresh all properties on this instance
             OnPropertyChanged("") 
         End Sub
 
@@ -156,11 +203,7 @@ Namespace ViewModels
             End Get
             Set(value As String)
                 SetProperty(_searchText, value)
-                If String.IsNullOrWhiteSpace(value) Then
-                    LoadAccounts()
-                Else
-                    SearchAccounts()
-                End If
+                FilterAccountTree(value)
             End Set
         End Property
 
@@ -199,17 +242,14 @@ Namespace ViewModels
             End Get
             Set(value As Integer?)
                 If SetProperty(_editParentAccountID, value) Then
-                    ' Only automate if this is a user change (not during selection load)
                     If Not _isInternalSync Then
                         If value.HasValue AndAlso ParentAccounts IsNot Nothing Then
-                            ' Automate Level and Type inheritance
                             Dim parent = ParentAccounts.FirstOrDefault(Function(a) a.AccountID = value.Value)
                             If parent IsNot Nothing Then
                                 EditAccountLevel = parent.AccountLevel + 1
                                 EditAccountType = parent.AccountType
                             End If
                         ElseIf Not value.HasValue Then
-                            ' Reset to default if no parent
                             EditAccountLevel = 1
                         End If
                     End If
@@ -326,16 +366,192 @@ Namespace ViewModels
                 Return New Helpers.RelayCommand(AddressOf ExecuteDelete, Function(o) SelectedAccount IsNot Nothing AndAlso CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete)
             End Get
         End Property
+
+        Public ReadOnly Property ExpandAllTreeCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If _allTreeNodes IsNot Nothing Then
+                        For Each node In _allTreeNodes
+                            node.IsExpanded = True
+                        Next
+                    End If
+                End Sub)
+            End Get
+        End Property
+
+        Public ReadOnly Property CollapseAllTreeCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If _allTreeNodes IsNot Nothing Then
+                        For Each node In _allTreeNodes
+                            node.IsExpanded = False
+                        Next
+                    End If
+                End Sub)
+            End Get
+        End Property
+
+        Public ReadOnly Property AddChildAccountCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteAddChildAccount)
+            End Get
+        End Property
 #End Region
 
-#Region "Methods"
+#Region "Methods & Tree Construction"
         Private Sub LoadAccounts()
             Try
-                Accounts = New ObservableCollection(Of Account)(_accountingService.GetAllAccounts())
+                Dim list = _accountingService.GetAllAccounts()
+                Accounts = New ObservableCollection(Of Account)(list)
             Catch ex As Exception
                 StatusMessage = "خطأ في تحميل الحسابات: " & ex.Message
             End Try
         End Sub
+
+        Private Sub BuildAccountTree()
+            If Accounts Is Nothing OrElse Accounts.Count = 0 Then
+                AccountTree = New ObservableCollection(Of AccountNode)()
+                _allTreeNodes = New List(Of AccountNode)()
+                TotalAccountsCount = 0
+                RootAccountsCount = 0
+                TransactionalAccountsCount = 0
+                Return
+            End If
+
+            TotalAccountsCount = Accounts.Count
+            TransactionalAccountsCount = Accounts.Where(Function(a) a.IsTransactional).Count()
+
+            ' Group by ParentAccountID
+            Dim accountMap = Accounts.ToDictionary(Function(a) a.AccountID)
+            Dim childrenLookup = Accounts.Where(Function(a) a.ParentAccountID.HasValue).ToLookup(Function(a) a.ParentAccountID.Value)
+
+            ' Root Accounts (Level 0): ParentAccountID is Nothing or 0 or Parent ID not found in current dictionary
+            Dim rootAccounts = Accounts.Where(Function(a) Not a.ParentAccountID.HasValue OrElse a.ParentAccountID.Value = 0 OrElse Not accountMap.ContainsKey(a.ParentAccountID.Value)).OrderBy(Function(a) a.AccountCode).ToList()
+
+            RootAccountsCount = rootAccounts.Count
+
+            Dim allNodes As New List(Of AccountNode)()
+            Dim treeRoots As New ObservableCollection(Of AccountNode)()
+
+            For Each rootAcc In rootAccounts
+                Dim rootNode = CreateNodeRecursive(rootAcc, Nothing, 0, childrenLookup, allNodes)
+                treeRoots.Add(rootNode)
+            Next
+
+            _allTreeNodes = allNodes
+            AccountTree = treeRoots
+        End Sub
+
+        Private Function CreateNodeRecursive(acc As Account, parent As AccountNode, currentLevel As Integer, childrenLookup As ILookup(Of Integer, Account), allNodes As List(Of AccountNode)) As AccountNode
+            Dim node As New AccountNode(acc, parent, currentLevel)
+            allNodes.Add(node)
+
+            If childrenLookup.Contains(acc.AccountID) Then
+                For Each childAcc In childrenLookup(acc.AccountID).OrderBy(Function(c) c.AccountCode)
+                    Dim childNode = CreateNodeRecursive(childAcc, node, currentLevel + 1, childrenLookup, allNodes)
+                    node.Children.Add(childNode)
+                Next
+            End If
+
+            Return node
+        End Function
+
+        Private Sub FilterAccountTree(query As String)
+            If _allTreeNodes Is Nothing Then Return
+
+            If String.IsNullOrWhiteSpace(query) Then
+                ' Reset all nodes visibility & highlight
+                For Each node In _allTreeNodes
+                    node.IsVisible = True
+                    node.IsHighlighted = False
+                Next
+                Return
+            End If
+
+            Dim term = query.Trim().ToLowerInvariant()
+
+            ' 1. Reset
+            For Each node In _allTreeNodes
+                node.IsVisible = False
+                node.IsHighlighted = False
+            Next
+
+            ' 2. Mark matching nodes and unhide their entire path
+            For Each node In _allTreeNodes
+                Dim match = (node.AccountCode IsNot Nothing AndAlso node.AccountCode.ToLowerInvariant().Contains(term)) OrElse
+                            (node.AccountName IsNot Nothing AndAlso node.AccountName.ToLowerInvariant().Contains(term))
+
+                If match Then
+                    node.IsVisible = True
+                    node.IsHighlighted = True
+                    node.IsExpanded = True
+
+                    ' Unhide and expand all ancestors
+                    Dim p = node.ParentNode
+                    While p IsNot Nothing
+                        p.IsVisible = True
+                        p.IsExpanded = True
+                        p = p.ParentNode
+                    End While
+
+                    ' Also make all direct children visible so user sees the context
+                    If node.Children IsNot Nothing Then
+                        For Each c In node.Children
+                            c.IsVisible = True
+                        Next
+                    End If
+                End If
+            Next
+        End Sub
+
+        Private Sub ExecuteAddChildAccount(obj As Object)
+            Dim targetNode = TryCast(obj, AccountNode)
+            If targetNode Is Nothing Then targetNode = SelectedNode
+            If targetNode Is Nothing Then
+                ExecuteNew(Nothing)
+                Return
+            End If
+
+            ' Initialize Add mode under this parent
+            SelectedAccount = Nothing
+            IsEditing = False
+            EditAccountCode = SuggestNextChildCode(targetNode.Account.AccountCode)
+            EditAccountName = ""
+            EditParentAccountID = targetNode.Account.AccountID
+            EditAccountType = targetNode.Account.AccountType
+            EditAccountLevel = targetNode.Level + 1
+            EditIsTransactional = True
+            IsTransactionalEnabled = True
+            
+            PanelTitle = "➕ إضافة حساب فرعي تابع لـ: [" & targetNode.Account.AccountName & "]"
+            SaveActionText = "إضافة الحساب الفرعي"
+            AccountCodeError = Nothing
+            AccountNameError = Nothing
+            StatusMessage = "جاهز لإضافة حساب فرعي للمستوى " & (targetNode.Level + 1)
+        End Sub
+
+        Private Function SuggestNextChildCode(parentCode As String) As String
+            If String.IsNullOrEmpty(parentCode) Then Return ""
+            If Accounts Is Nothing Then Return parentCode & "01"
+
+            Dim existingSiblings = Accounts.Where(Function(a) a.AccountCode.StartsWith(parentCode) AndAlso a.AccountCode.Length > parentCode.Length).Select(Function(a) a.AccountCode).ToList()
+            If existingSiblings.Count = 0 Then
+                Return parentCode & "01"
+            End If
+
+            ' Find max numeric suffix if possible
+            Dim maxSuffix As Long = 0
+            For Each code In existingSiblings
+                Dim subPart = code.Substring(parentCode.Length)
+                Dim num As Long
+                If Long.TryParse(subPart, num) AndAlso num > maxSuffix Then
+                    maxSuffix = num
+                End If
+            Next
+
+            Dim nextNum = maxSuffix + 1
+            Return parentCode & nextNum.ToString().PadLeft(2, "0"c)
+        End Function
 
         Private Sub LoadParentAccounts()
             Try
@@ -352,14 +568,9 @@ Namespace ViewModels
                 Return
             End If
             
-            ' Prevent circular reference:
-            ' 1. Hide the account itself
-            ' 2. Hide all its descendants (children, grandchildren, etc.)
             If SelectedAccount IsNot Nothing Then
                 Dim invalidIDs As New HashSet(Of Integer)()
                 invalidIDs.Add(SelectedAccount.AccountID)
-                
-                ' Simple recursive discovery of descendants in the current flat list
                 AddDescendantsToSet(SelectedAccount.AccountID, invalidIDs)
 
                 DisplayParentAccounts = New ObservableCollection(Of Account)(
@@ -372,21 +583,12 @@ Namespace ViewModels
 
         Private Sub AddDescendantsToSet(parentID As Integer, visitedSet As HashSet(Of Integer))
             If Accounts Is Nothing Then Return
-            ' Safely compare Nullable(Of Integer) to Integer
             Dim children = Accounts.Where(Function(a) a.ParentAccountID.HasValue AndAlso a.ParentAccountID.Value = parentID).Select(Function(a) a.AccountID).ToList()
             For Each childID In children
                 If visitedSet.Add(childID) Then
                     AddDescendantsToSet(childID, visitedSet)
                 End If
             Next
-        End Sub
-
-        Private Sub SearchAccounts()
-            Try
-                Accounts = New ObservableCollection(Of Account)(_accountingService.SearchAccounts(SearchText))
-            Catch ex As Exception
-                StatusMessage = "خطأ في البحث: " & ex.Message
-            End Try
         End Sub
 
         Private Function ValidateAccount() As Boolean
@@ -401,19 +603,20 @@ Namespace ViewModels
         End Function
 
         Private Sub ExecuteNew(obj As Object)
+            SelectedNode = Nothing
             SelectedAccount = Nothing
             EditAccountCode = ""
             EditAccountName = ""
             EditParentAccountID = Nothing
             EditAccountType = "Assets"
-            EditAccountLevel = 1
+            EditAccountLevel = 0
             EditIsTransactional = True
             IsEditing = False
-            PanelTitle = "📁 إضافة حساب جديد"
+            PanelTitle = "📁 إضافة حساب رئيسي جديد (مستوى 0)"
             SaveActionText = "إضافة"
             AccountCodeError = Nothing
             AccountNameError = Nothing
-            StatusMessage = "تم البدء بإضافة حساب جديد."
+            StatusMessage = "تم البدء بإضافة حساب رئيسي جديد."
         End Sub
 
         Private Sub ExecuteSave(obj As Object)
@@ -428,7 +631,6 @@ Namespace ViewModels
 
             If Not ValidateAccount() Then Return
 
-            ' Confirmation for updates
             If IsEditing AndAlso SelectedAccount IsNot Nothing Then
                 If MessageBox.Show("هل أنت متأكد من حفظ التعديلات على حساب: " & SelectedAccount.AccountName & "؟",
                                    "تأكيد التعديل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.No Then
@@ -437,8 +639,9 @@ Namespace ViewModels
             End If
 
             Try
+                Dim targetID = If(IsEditing AndAlso SelectedAccount IsNot Nothing, SelectedAccount.AccountID, 0)
                 Dim a As New Account With {
-                    .AccountID = If(IsEditing AndAlso SelectedAccount IsNot Nothing, SelectedAccount.AccountID, 0),
+                    .AccountID = targetID,
                     .AccountCode = EditAccountCode,
                     .AccountName = EditAccountName,
                     .ParentAccountID = EditParentAccountID,
@@ -448,30 +651,45 @@ Namespace ViewModels
                 }
                 _accountingService.SaveAccount(a)
                 StatusMessage = If(a.AccountID = 0, "تم إضافة الحساب بنجاح. ✅", "تم تحديث الحساب بنجاح. ✅")
+                
                 LoadAccounts()
                 LoadParentAccounts()
-                ExecuteNew(Nothing)
+
+                ' Locate and re-select node in tree
+                If _allTreeNodes IsNot Nothing Then
+                    Dim node = _allTreeNodes.FirstOrDefault(Function(n) n.Account.AccountCode = a.AccountCode)
+                    If node IsNot Nothing Then
+                        node.IsSelected = True
+                        SelectedNode = node
+                    End If
+                End If
             Catch ex As Exception
-                StatusMessage = "خطأ: " & ex.Message
+                StatusMessage = "خطأ في حفظ الحساب: " & ex.Message
             End Try
         End Sub
 
         Private Sub ExecuteDelete(obj As Object)
             If SelectedAccount Is Nothing Then Return
-            If MessageBox.Show("هل أنت متأكد من حذف هذا الحساب؟" & vbCrLf & "لن يتم الحذف إذا كان مستخدماً في قيود أو له حسابات فرعية.",
+            
+            Dim hasChildren = If(Accounts IsNot Nothing, Accounts.Any(Function(a) a.ParentAccountID.HasValue AndAlso a.ParentAccountID.Value = SelectedAccount.AccountID), False)
+            If hasChildren Then
+                MessageBox.Show("لا يمكن حذف حساب رئيسي يحتوي على حسابات فرعية تابعة له. يرجى حذف الحسابات الفرعية أولاً.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
+            If MessageBox.Show("هل أنت متأكد من حذف الحساب: " & SelectedAccount.AccountName & "؟" & vbCrLf & "ملاحظة: لا يمكن حذف حساب عليه قيود محاسبية مسجلة.",
                                "تأكيد الحذف", MessageBoxButton.YesNo, MessageBoxImage.Warning) = MessageBoxResult.Yes Then
                 Try
                     _accountingService.DeleteAccount(SelectedAccount.AccountID)
-                    StatusMessage = "تم حذف الحساب. ✅"
+                    StatusMessage = "تم حذف الحساب بنجاح. ✅"
                     LoadAccounts()
                     LoadParentAccounts()
                     ExecuteNew(Nothing)
                 Catch ex As Exception
-                    StatusMessage = "خطأ: " & ex.Message
+                    StatusMessage = "خطأ في حذف الحساب: " & ex.Message
                 End Try
             End If
         End Sub
 #End Region
-
     End Class
 End Namespace

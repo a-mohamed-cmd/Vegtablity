@@ -2,16 +2,47 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
-             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf">
 
     <UserControl.Resources>
         <helpers:AccountingAmountConverter x:Key="AccountConverter"/>
+        <helpers:IntToVisConverter x:Key="IntToVis"/>
+        <helpers:IntToBooleanConverter x:Key="IntToBool"/>
         
         <ControlTemplate x:Key="ReportSectionHeader">
-            <Border Background="#f8f9fa" Padding="10,5" CornerRadius="5" Margin="0,15,0,5">
+            <Border Background="#f1f5f9" Padding="12,6" CornerRadius="6" Margin="0,10,0,5" BorderBrush="#e2e8f0" BorderThickness="1">
                 <ContentPresenter/>
             </Border>
         </ControlTemplate>
+
+        <Style x:Key="TabHeaderBtnStyle" TargetType="{x:Type RadioButton}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#64748b"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type RadioButton}">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3b82f6"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <UserControl.DataContext>
@@ -22,8 +53,8 @@
         <EventTrigger RoutedEvent="UserControl.Loaded">
             <BeginStoryboard>
                 <Storyboard>
-                    <DoubleAnimation Storyboard.TargetName="MainGrid" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.8"/>
-                    <DoubleAnimation Storyboard.TargetName="MainGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="20" To="0" Duration="0:0:0.5"/>
+                    <DoubleAnimation Storyboard.TargetName="MainGrid" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.5"/>
+                    <DoubleAnimation Storyboard.TargetName="MainGrid" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="15" To="0" Duration="0:0:0.4"/>
                 </Storyboard>
             </BeginStoryboard>
         </EventTrigger>
@@ -31,128 +62,278 @@
 
     <Grid x:Name="MainGrid" Margin="15">
         <Grid.RenderTransform>
-            <TranslateTransform Y="20"/>
+            <TranslateTransform Y="15"/>
         </Grid.RenderTransform>
         
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10" Margin="0,0,0,10" BorderBrush="#dcdde1" BorderThickness="1">
+        <!-- Top Header & Actions -->
+        <Border Grid.Row="0" Padding="14,10" Background="White" CornerRadius="10" Margin="0,0,0,10" BorderBrush="#e2e8f0" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="📉 قائمة الأرباح والخسائر" FontSize="20" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
                 
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Button Content="📄 PDF" Command="{Binding ExportPdfCommand}" Style="{StaticResource ModernButtonStyle}" Background="#e74c3c" Width="90" Margin="5,0"/>
-                    <Button Content="csv" Command="{Binding ExportCsvCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27ae60" Width="90" Margin="5,0"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="📉 تقرير الأرباح والخسائر والتحليل المالي" FontSize="18" FontWeight="Bold" Foreground="#1e293b" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                </StackPanel>
+
+                <!-- Tab Toggle Buttons in Header -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <RadioButton Content="📊 قائمة الأرباح والخسائر التراكمية" Style="{StaticResource TabHeaderBtnStyle}"
+                                 IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IntToBool}, ConverterParameter=0}"/>
+                    <RadioButton Content="📅 المقارنة الشهرية الأفقية (شهور الفترة)" Style="{StaticResource TabHeaderBtnStyle}"
+                                 IsChecked="{Binding SelectedTabIndex, Converter={StaticResource IntToBool}, ConverterParameter=1}"/>
+                </StackPanel>
+                
+                <!-- Action Buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Standard Cumulative Export Buttons -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedTabIndex, Converter={StaticResource IntToVis}, ConverterParameter=0}">
+                        <Button Content="📄 تصدير PDF ورسوم بيانية" Command="{Binding ExportPdfCommand}" Style="{StaticResource ModernButtonStyle}" Background="#e11d48" Padding="12,6" Margin="4,0" ToolTip="تصدير تقرير PDF يشمل صفحة الرسوم البيانية"/>
+                        <Button Content="📊 تصدير Excel / CSV" Command="{Binding ExportExcelCommand}" Style="{StaticResource ModernButtonStyle}" Background="#16a34a" Padding="12,6" Margin="4,0" ToolTip="تصدير جدول الأرباح والخسائر إلى Excel / CSV مع عمود النسبة"/>
+                    </StackPanel>
+
+                    <!-- Monthly Comparative Export Buttons -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding SelectedTabIndex, Converter={StaticResource IntToVis}, ConverterParameter=1}">
+                        <Button Content="📄 PDF مقارن شهرياً" Command="{Binding ExportMonthlyPdfCommand}" Style="{StaticResource ModernButtonStyle}" Background="#7c3aed" Padding="12,6" Margin="4,0" ToolTip="تصدير تقرير المقارنة الشهرية PDF بالعرض مع الرسوم البيانية"/>
+                        <Button Content="📊 Excel / CSV مقارن" Command="{Binding ExportMonthlyExcelCommand}" Style="{StaticResource ModernButtonStyle}" Background="#16a34a" Padding="12,6" Margin="4,0" ToolTip="تصدير مصفوفة المقارنة الشهرية إلى Excel / CSV"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Filters -->
-        <Border Grid.Row="1" Padding="15" Background="White" CornerRadius="10" Margin="0,0,0,10" BorderBrush="#eee" BorderThickness="1">
-            <WrapPanel Orientation="Horizontal">
+        <!-- Filters Bar -->
+        <Border Grid.Row="1" Padding="14,10" Background="White" CornerRadius="10" Margin="0,0,0,10" BorderBrush="#e2e8f0" BorderThickness="1">
+            <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" Margin="0,0,20,5">
-                    <TextBlock Text="من:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="من تاريخ:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,6,0"/>
                     <TextBox Text="{Binding StartDateText, UpdateSourceTrigger=PropertyChanged}"
                              LostFocus="StartDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
                              GotFocus="Date_GotFocus"
-                             Width="110"
+                             Width="110" Height="30" VerticalContentAlignment="Center"
                              ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
                 </StackPanel>
                 
                 <StackPanel Orientation="Horizontal" Margin="0,0,20,5">
-                    <TextBlock Text="إلى:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="إلى تاريخ:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,6,0"/>
                     <TextBox Text="{Binding EndDateText, UpdateSourceTrigger=PropertyChanged}"
                              LostFocus="EndDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
                              GotFocus="Date_GotFocus"
-                             Width="110"
+                             Width="110" Height="30" VerticalContentAlignment="Center"
                              ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Margin="0,0,20,5">
-                    <TextBlock Text="المستوى:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <TextBlock Text="مستوى الحسابات:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,6,0"/>
                     <ComboBox ItemsSource="{Binding AvailableLevels}" 
                               SelectedValue="{Binding SelectedLevel}" 
-                              SelectedValuePath="Value" DisplayMemberPath="Key" Width="160"/>
+                              SelectedValuePath="Value" DisplayMemberPath="Key" Width="160" Height="30" VerticalContentAlignment="Center"/>
                 </StackPanel>
                 
-                <Button Content="🔍 عرض التقرير" Command="{Binding SearchCommand}" Style="{StaticResource ModernButtonStyle}" Width="120" Height="32" Margin="0,0,20,5"/>
+                <Button Content="🔍 عرض وتحليل التقرير" Command="{Binding SearchCommand}" Style="{StaticResource ModernButtonStyle}" Background="#2563eb" Width="150" Height="32" Margin="0,0,10,5"/>
             </WrapPanel>
         </Border>
 
-        <!-- Report Content -->
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="5">
-                
-                <!-- Revenues Section -->
-                <ContentControl Template="{StaticResource ReportSectionHeader}">
-                    <TextBlock Text="الإيرادات" FontWeight="Bold" Foreground="#2980b9" FontSize="16"/>
-                </ContentControl>
-                <DataGrid ItemsSource="{Binding RevenueItems}" AutoGenerateColumns="False" IsReadOnly="True" 
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" Background="Transparent">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="الكود" Binding="{Binding AccountCode}" Width="100"/>
-                        <DataGridTextColumn Header="اسم الحساب" Binding="{Binding AccountName}" Width="*"/>
-                        <DataGridTemplateColumn Header="المبلغ" Width="120">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Balance, Converter={StaticResource AccountConverter}}" TextAlignment="Right" Margin="5,0"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-                <Border BorderBrush="#eee" BorderThickness="0,1,0,0" Margin="0,5">
-                    <Grid Margin="10">
-                        <TextBlock Text="إجمالي الإيرادات" FontWeight="Bold" HorizontalAlignment="Left"/>
-                        <TextBlock Text="{Binding TotalRevenues, Converter={StaticResource AccountConverter}}" FontWeight="Bold" HorizontalAlignment="Right" Foreground="#27ae60"/>
-                    </Grid>
-                </Border>
+        <!-- Main Body (Tab Control) -->
+        <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0" Background="Transparent" Padding="0">
+            <TabControl.ItemContainerStyle>
+                <Style TargetType="TabItem">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Style>
+            </TabControl.ItemContainerStyle>
 
-                <!-- Expenses Section -->
-                <ContentControl Template="{StaticResource ReportSectionHeader}">
-                    <TextBlock Text="المصروفات" FontWeight="Bold" Foreground="#c0392b" FontSize="16"/>
-                </ContentControl>
-                <DataGrid ItemsSource="{Binding ExpenseItems}" AutoGenerateColumns="False" IsReadOnly="True" 
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" Background="Transparent">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="الكود" Binding="{Binding AccountCode}" Width="100"/>
-                        <DataGridTextColumn Header="اسم الحساب" Binding="{Binding AccountName}" Width="*"/>
-                        <DataGridTemplateColumn Header="المبلغ" Width="120">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Balance, Converter={StaticResource AccountConverter}}" TextAlignment="Right" Margin="5,0"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-                <Border BorderBrush="#eee" BorderThickness="0,1,0,0" Margin="0,5">
-                    <Grid Margin="10">
-                        <TextBlock Text="إجمالي المصروفات" FontWeight="Bold" HorizontalAlignment="Left"/>
-                        <TextBlock Text="{Binding TotalExpenses, Converter={StaticResource AccountConverter}}" FontWeight="Bold" HorizontalAlignment="Right" Foreground="#e74c3c"/>
-                    </Grid>
-                </Border>
+            <!-- TAB 0: CUMULATIVE STATEMENT (قائمة الأرباح والخسائر التراكمية) -->
+            <TabItem>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-            </StackPanel>
-        </ScrollViewer>
+                    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="2">
+                            <!-- Revenues Section -->
+                            <ContentControl Template="{StaticResource ReportSectionHeader}">
+                                <Grid>
+                                    <TextBlock Text="📈 الإيرادات والمبيعات" FontWeight="Bold" Foreground="#1d4ed8" FontSize="15" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="النسبة من إجمالي المبيعات: 100.0 %" FontWeight="SemiBold" Foreground="#64748b" FontSize="12" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </ContentControl>
 
-        <!-- Net Profit Footer -->
-        <Border Grid.Row="3" Padding="15" Background="#2c3e50" CornerRadius="0,0,10,10">
-            <Grid>
-                <TextBlock Text="{Binding NetProfitLabel}" Foreground="White" FontWeight="Bold" FontSize="18" HorizontalAlignment="Left"/>
-                <TextBlock Text="{Binding NetProfit, Converter={StaticResource AccountConverter}}" Foreground="#55efc4" FontWeight="Bold" FontSize="20" HorizontalAlignment="Right"/>
-            </Grid>
-        </Border>
+                            <DataGrid ItemsSource="{Binding RevenueItems}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" Background="White"
+                                      RowHeight="32" FontSize="13">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="الكود" Binding="{Binding AccountCode}" Width="110"/>
+                                    <DataGridTextColumn Header="اسم الحساب" Binding="{Binding AccountName}" Width="*"/>
+                                    <DataGridTemplateColumn Header="المبلغ" Width="140">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Balance, Converter={StaticResource AccountConverter}}" TextAlignment="Right" Margin="5,0" FontWeight="SemiBold"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="% من المبيعات" Width="130">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#eff6ff" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
+                                                    <TextBlock Text="{Binding PercentageOfSalesText}" FontWeight="Bold" Foreground="#2563eb" TextAlignment="Center"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <Border Background="#f0fdf4" BorderBrush="#bbf7d0" BorderThickness="1" CornerRadius="6" Margin="0,5,0,15" Padding="12,8">
+                                <Grid>
+                                    <TextBlock Text="إجمالي الإيرادات للفترة" FontWeight="Bold" Foreground="#166534" FontSize="14" HorizontalAlignment="Left"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding TotalRevenues, Converter={StaticResource AccountConverter}}" FontWeight="Bold" Foreground="#16a34a" FontSize="15" Margin="0,0,25,0"/>
+                                        <TextBlock Text="{Binding TotalRevenuesPercentage}" FontWeight="Bold" Foreground="#15803d" FontSize="14"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Expenses Section -->
+                            <ContentControl Template="{StaticResource ReportSectionHeader}">
+                                <Grid>
+                                    <TextBlock Text="📉 المصروفات التشغيلية والعمومية" FontWeight="Bold" Foreground="#b91c1c" FontSize="15" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="النسبة من إجمالي المبيعات" FontWeight="SemiBold" Foreground="#64748b" FontSize="12" HorizontalAlignment="Right"/>
+                                </Grid>
+                            </ContentControl>
+
+                            <DataGrid ItemsSource="{Binding ExpenseItems}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                      HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0" Background="White"
+                                      RowHeight="32" FontSize="13">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="الكود" Binding="{Binding AccountCode}" Width="110"/>
+                                    <DataGridTextColumn Header="اسم الحساب" Binding="{Binding AccountName}" Width="*"/>
+                                    <DataGridTemplateColumn Header="المبلغ" Width="140">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Balance, Converter={StaticResource AccountConverter}}" TextAlignment="Right" Margin="5,0" FontWeight="SemiBold"/>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTemplateColumn Header="% من المبيعات" Width="130">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#fef2f2" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
+                                                    <TextBlock Text="{Binding PercentageOfSalesText}" FontWeight="Bold" Foreground="#dc2626" TextAlignment="Center"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+
+                            <Border Background="#fef2f2" BorderBrush="#fecaca" BorderThickness="1" CornerRadius="6" Margin="0,5,0,10" Padding="12,8">
+                                <Grid>
+                                    <TextBlock Text="إجمالي المصروفات للفترة" FontWeight="Bold" Foreground="#991b1b" FontSize="14" HorizontalAlignment="Left"/>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding TotalExpenses, Converter={StaticResource AccountConverter}}" FontWeight="Bold" Foreground="#dc2626" FontSize="15" Margin="0,0,25,0"/>
+                                        <TextBlock Text="{Binding TotalExpensesPercentage}" FontWeight="Bold" Foreground="#b91c1c" FontSize="14"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Net Profit Summary Card -->
+                    <Border Grid.Row="1" Padding="16,12" Background="#1e293b" CornerRadius="10" Margin="0,10,0,0">
+                        <Grid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="💎" FontSize="20" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding NetProfitLabel}" Foreground="White" FontWeight="Bold" FontSize="17" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding NetProfit, Converter={StaticResource AccountConverter}}" Foreground="#34d399" FontWeight="Bold" FontSize="20" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                                <Border Background="#334155" CornerRadius="6" Padding="10,4" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="هامش الربح: " Foreground="#94a3b8" FontSize="13" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding NetProfitPercentage}" Foreground="#38bdf8" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- TAB 1: HORIZONTAL MONTHLY COMPARATIVE MATRIX (المقارنة الشهرية الأفقية) -->
+            <TabItem>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="3*"/>
+                        <RowDefinition Height="2*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Monthly DataGrid Matrix -->
+                    <Border Grid.Row="0" Background="White" CornerRadius="8" BorderBrush="#e2e8f0" BorderThickness="1" Margin="0,0,0,10" Padding="8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="📋 مصفوفة الأداء المالي المقارن مقسمة حسب الأشهر" FontWeight="Bold" Foreground="#334155" FontSize="14" Margin="5,0,0,8"/>
+
+                            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                <StackPanel>
+                                    <!-- Revenues Matrix Grid -->
+                                    <Border Background="#eff6ff" Padding="8,4" CornerRadius="4" Margin="0,0,0,4">
+                                        <TextBlock Text="📈 بنود الإيرادات والمبيعات الشهرية" FontWeight="Bold" Foreground="#1e40af" FontSize="13"/>
+                                    </Border>
+                                    <DataGrid x:Name="MonthlyRevenueGrid" ItemsSource="{Binding MonthlyRevenueRows}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              HeadersVisibility="Column" GridLinesVisibility="All" BorderThickness="0" Background="White" RowHeight="30" FontSize="12">
+                                        <!-- Columns generated dynamically in code-behind -->
+                                    </DataGrid>
+
+                                    <!-- Expenses Matrix Grid -->
+                                    <Border Background="#fef2f2" Padding="8,4" CornerRadius="4" Margin="0,12,0,4">
+                                        <TextBlock Text="📉 بنود المصروفات التشغيلية الشهرية" FontWeight="Bold" Foreground="#991b1b" FontSize="13"/>
+                                    </Border>
+                                    <DataGrid x:Name="MonthlyExpenseGrid" ItemsSource="{Binding MonthlyExpenseRows}" AutoGenerateColumns="False" IsReadOnly="True"
+                                              HeadersVisibility="Column" GridLinesVisibility="All" BorderThickness="0" Background="White" RowHeight="30" FontSize="12">
+                                        <!-- Columns generated dynamically in code-behind -->
+                                    </DataGrid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <!-- Monthly Chart Area -->
+                    <Border Grid.Row="1" Background="White" CornerRadius="8" BorderBrush="#e2e8f0" BorderThickness="1" Padding="12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="📈 الرسم البياني لمسار الإيرادات والمصروفات وصافي الأرباح شهراً بشهر" FontWeight="Bold" Foreground="#334155" FontSize="14" Margin="5,0,0,8"/>
+
+                            <lvc:CartesianChart Grid.Row="1" Series="{Binding MonthlyChartSeries}" LegendLocation="Top">
+                                <lvc:CartesianChart.AxisX>
+                                    <lvc:Axis Title="الأشهر" Labels="{Binding MonthlyChartLabels}"/>
+                                </lvc:CartesianChart.AxisX>
+                                <lvc:CartesianChart.AxisY>
+                                    <lvc:Axis Title="المبلغ" LabelFormatter="{Binding MonthlyChartFormatter}"/>
+                                </lvc:CartesianChart.AxisY>
+                            </lvc:CartesianChart>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>

@@ -908,11 +908,13 @@ BEGIN
     SET NOCOUNT ON;
     SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
            P.PartnerName, V.AccountID, A.AccountName,
-           V.Amount, V.Description, V.PaymentMethod, V.UserID,
-           U.FullName AS UserName, V.IsPosted
+           V.Amount, V.Description, V.PaymentMethod,
+           ISNULL(PM.AccountName, V.PaymentMethod) AS PaymentMethodName,
+           V.UserID, U.FullName AS UserName, V.IsPosted
     FROM [Accounting].[Vouchers] V
     LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
     LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
     LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
     WHERE V.VoucherType = @VoucherType
     ORDER BY V.VoucherID DESC;
@@ -931,11 +933,13 @@ BEGIN
     SET NOCOUNT ON;
     SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
            P.PartnerName, V.AccountID, A.AccountName,
-           V.Amount, V.Description, V.PaymentMethod, V.UserID,
-           U.FullName AS UserName, V.IsPosted
+           V.Amount, V.Description, V.PaymentMethod,
+           ISNULL(PM.AccountName, V.PaymentMethod) AS PaymentMethodName,
+           V.UserID, U.FullName AS UserName, V.IsPosted
     FROM [Accounting].[Vouchers] V
     LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
     LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
     LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
     WHERE V.VoucherID = @VoucherID;
 END
@@ -1014,16 +1018,76 @@ BEGIN
     SET NOCOUNT ON;
     SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
            P.PartnerName, V.AccountID, A.AccountName,
-           V.Amount, V.Description, V.PaymentMethod, V.UserID,
-           U.FullName AS UserName, V.IsPosted
+           V.Amount, V.Description, V.PaymentMethod,
+           ISNULL(PM.AccountName, V.PaymentMethod) AS PaymentMethodName,
+           V.UserID, U.FullName AS UserName, V.IsPosted
     FROM [Accounting].[Vouchers] V
     LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
     LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
     LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
     WHERE V.VoucherType = @VoucherType
-      AND (V.Description LIKE '%' + @SearchText + '%' OR P.PartnerName LIKE '%' + @SearchText + '%'
-           OR CAST(V.VoucherID AS NVARCHAR) = @SearchText)
+      AND (V.Description LIKE '%' + @SearchText + '%' 
+           OR P.PartnerName LIKE '%' + @SearchText + '%'
+           OR PM.AccountName LIKE '%' + @SearchText + '%'
+           OR CAST(V.VoucherID AS NVARCHAR) = @SearchText
+           OR CAST(V.VoucherNo AS NVARCHAR) = @SearchText)
     ORDER BY V.VoucherID DESC;
+END
+GO
+
+-- =============================================
+-- 5.1 جلب السندات مصفحة مع دعم الترقيم والبحث (Pagination & Search)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_GetPaged];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_GetPaged]
+    @VoucherType NVARCHAR(20),
+    @PageIndex   INT = 1,
+    @PageSize    INT = 15,
+    @SearchText  NVARCHAR(150) = NULL,
+    @TotalCount  INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @SearchText = NULLIF(LTRIM(RTRIM(@SearchText)), '');
+
+    -- 1. حساب إجمالي عدد السندات المطابقة
+    SELECT @TotalCount = COUNT(1)
+    FROM [Accounting].[Vouchers] V
+    LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
+    WHERE V.VoucherType = @VoucherType
+      AND (@SearchText IS NULL 
+           OR V.Description LIKE '%' + @SearchText + '%' 
+           OR P.PartnerName LIKE '%' + @SearchText + '%'
+           OR PM.AccountName LIKE '%' + @SearchText + '%'
+           OR CAST(V.VoucherID AS NVARCHAR) = @SearchText
+           OR CAST(V.VoucherNo AS NVARCHAR) = @SearchText);
+
+    -- 2. جلب صفحة السندات المطلوبة مع الترقيم
+    SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
+           P.PartnerName, V.AccountID, A.AccountName,
+           V.Amount, V.Description, V.PaymentMethod,
+           ISNULL(PM.AccountName, V.PaymentMethod) AS PaymentMethodName,
+           V.UserID, U.FullName AS UserName, V.IsPosted
+    FROM [Accounting].[Vouchers] V
+    LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
+    LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
+    LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
+    WHERE V.VoucherType = @VoucherType
+      AND (@SearchText IS NULL 
+           OR V.Description LIKE '%' + @SearchText + '%' 
+           OR P.PartnerName LIKE '%' + @SearchText + '%'
+           OR PM.AccountName LIKE '%' + @SearchText + '%'
+           OR CAST(V.VoucherID AS NVARCHAR) = @SearchText
+           OR CAST(V.VoucherNo AS NVARCHAR) = @SearchText)
+    ORDER BY V.VoucherID DESC
+    OFFSET (@PageIndex - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY
+    OPTION (RECOMPILE);
 END
 GO
 
@@ -1054,6 +1118,31 @@ BEGIN
     END
     -- تحديث IsPosted يُفعّل الـ Trigger تلقائياً
     UPDATE [Accounting].[Vouchers] SET IsPosted = 1 WHERE VoucherID = @VoucherID;
+END
+GO
+
+-- =============================================
+-- 7. إلغاء ترحيل سند (يُفعّل الـ Trigger لحذف القيود)
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Voucher_Unpost]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_Voucher_Unpost];
+GO
+CREATE PROCEDURE [Accounting].[sp_Voucher_Unpost]
+    @VoucherID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID)
+    BEGIN
+        RAISERROR(N'السند غير موجود', 16, 1);
+        RETURN;
+    END
+    IF EXISTS (SELECT 1 FROM [Accounting].[Vouchers] WHERE VoucherID = @VoucherID AND IsPosted = 0)
+    BEGIN
+        RAISERROR(N'السند غير مرحّل بالفعل', 16, 1);
+        RETURN;
+    END
+
+    UPDATE [Accounting].[Vouchers] SET IsPosted = 0 WHERE VoucherID = @VoucherID;
 END
 GO
 
@@ -1323,29 +1412,53 @@ BEGIN
 END
 GO
 
--- 5.1 جلب القيود اليدوية مصفحة (Pagination)
+-- 5.1 جلب القيود اليدوية مصفحة مع دعم البحث المتقدم (Pagination & Search)
 IF OBJECT_ID('[Accounting].[sp_JournalEntry_GetPaged]', 'P') IS NOT NULL DROP PROCEDURE [Accounting].[sp_JournalEntry_GetPaged];
 GO
 CREATE PROCEDURE [Accounting].[sp_JournalEntry_GetPaged]
-    @PageIndex INT = 1,
-    @PageSize INT = 20,
-    @TotalCount INT OUTPUT
+    @PageIndex     INT = 1,
+    @PageSize      INT = 20,
+    @JournalNo     NVARCHAR(50) = NULL,
+    @SearchText    NVARCHAR(255) = NULL,
+    @IsPosted      BIT = NULL,
+    @StartDate     DATETIME = NULL,
+    @EndDate       DATETIME = NULL,
+    @TotalCount    INT OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- الإجمالي الأقصى للقيود اليدوية
+    -- تنظيف المدخلات
+    SET @JournalNo = NULLIF(LTRIM(RTRIM(@JournalNo)), '');
+    SET @SearchText = NULLIF(LTRIM(RTRIM(@SearchText)), '');
+
+    -- ضبط تاريخ النهاية ليشمل اليوم كاملاً حتى 23:59:59
+    IF @EndDate IS NOT NULL AND CAST(@EndDate AS TIME) = '00:00:00'
+        SET @EndDate = DATEADD(SECOND, -1, DATEADD(DAY, 1, CAST(@EndDate AS DATE)));
+
+    -- 1. حساب إجمالي عدد القيود المطابقة لشروط البحث
     SELECT @TotalCount = COUNT(1)
     FROM [Accounting].[JournalHeader]
-    WHERE ReferenceType IN ('Manual', 'YearEndClose');
+    WHERE ReferenceType IN ('Manual', 'YearEndClose')
+      AND (@JournalNo IS NULL OR CAST(JournalNo AS NVARCHAR(50)) LIKE '%' + @JournalNo + '%')
+      AND (@SearchText IS NULL OR Description LIKE '%' + @SearchText + '%')
+      AND (@IsPosted IS NULL OR IsPosted = @IsPosted)
+      AND (@StartDate IS NULL OR CAST(JDate AS DATE) >= CAST(@StartDate AS DATE))
+      AND (@EndDate IS NULL OR CAST(JDate AS DATE) <= CAST(@EndDate AS DATE));
 
-    -- جلب صفحة القيود المطلوبة
+    -- 2. جلب صفحة القيود المطلوبة مع الترقيم
     SELECT JID, JournalNo, JDate, Description, TotalAmount, IsPosted, ReferenceType
     FROM [Accounting].[JournalHeader]
     WHERE ReferenceType IN ('Manual', 'YearEndClose')
+      AND (@JournalNo IS NULL OR CAST(JournalNo AS NVARCHAR(50)) LIKE '%' + @JournalNo + '%')
+      AND (@SearchText IS NULL OR Description LIKE '%' + @SearchText + '%')
+      AND (@IsPosted IS NULL OR IsPosted = @IsPosted)
+      AND (@StartDate IS NULL OR CAST(JDate AS DATE) >= CAST(@StartDate AS DATE))
+      AND (@EndDate IS NULL OR CAST(JDate AS DATE) <= CAST(@EndDate AS DATE))
     ORDER BY JID DESC
     OFFSET (@PageIndex - 1) * @PageSize ROWS
-    FETCH NEXT @PageSize ROWS ONLY;
+    FETCH NEXT @PageSize ROWS ONLY
+    OPTION (RECOMPILE);
 END
 GO
 

@@ -260,9 +260,24 @@ Namespace ViewModels
 
                 ' تحميل حسابات طريقة الدفع (النقدية والبنوك AccountCode = 11)
                 PaymentMethods = New ObservableCollection(Of Account)(allAccounts.Where(Function(a) a.IsTransactional AndAlso a.AccountCode.StartsWith("11")))
+                
+                EnrichPaymentMethodNames(Receipts)
+                EnrichPaymentMethodNames(Payments)
             Catch ex As Exception
                 ReceiptStatusMessage = "خطأ في تحميل البيانات: " & ex.Message
             End Try
+        End Sub
+
+        Private Sub EnrichPaymentMethodNames(vouchers As IEnumerable(Of Voucher))
+            If vouchers Is Nothing OrElse PaymentMethods Is Nothing Then Return
+            For Each v In vouchers
+                If String.IsNullOrEmpty(v.PaymentMethodName) OrElse v.PaymentMethodName = v.PaymentMethod Then
+                    Dim pmAcc = PaymentMethods.FirstOrDefault(Function(a) a.AccountID.ToString() = v.PaymentMethod)
+                    If pmAcc IsNot Nothing Then
+                        v.PaymentMethodName = pmAcc.AccountName
+                    End If
+                End If
+            Next
         End Sub
 #End Region
 
@@ -293,6 +308,7 @@ Namespace ViewModels
                     ReceiptAmountError = Nothing
                     RaiseEvent ReceiptLoaded(value.AccountID, value.AccountName)
                 End If
+                NotifyReceiptButtonStates()
             End Set
         End Property
 
@@ -400,6 +416,143 @@ Namespace ViewModels
                 SetProperty(_receiptStatusMessage, value)
             End Set
         End Property
+
+        ' --- Smart Buttons & Editor Panel - Receipts ---
+        Public ReadOnly Property IsReceiptPosted As Boolean
+            Get
+                Return SelectedReceipt IsNot Nothing AndAlso SelectedReceipt.IsPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsReceiptEditAllowed As Boolean
+            Get
+                Return Not IsReceiptPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsReceiptSaveVisible As Boolean
+            Get
+                Return Not IsReceiptPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsReceiptPostVisible As Boolean
+            Get
+                Return Not IsReceiptPosted AndAlso SelectedReceipt IsNot Nothing AndAlso SelectedReceipt.VoucherID > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsReceiptUnpostVisible As Boolean
+            Get
+                Return IsReceiptPosted AndAlso SelectedReceipt IsNot Nothing AndAlso SelectedReceipt.VoucherID > 0
+            End Get
+        End Property
+
+        Private _isReceiptEditorExpanded As Boolean = True
+        Public Property IsReceiptEditorExpanded As Boolean
+            Get
+                Return _isReceiptEditorExpanded
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isReceiptEditorExpanded, value)
+                OnPropertyChanged(NameOf(ReceiptToggleIconText))
+                OnPropertyChanged(NameOf(ReceiptToggleTooltip))
+            End Set
+        End Property
+
+        Public ReadOnly Property ReceiptToggleIconText As String
+            Get
+                Return If(IsReceiptEditorExpanded, "◀ طي النموذج", "▶ إضافة / تعديل سند")
+            End Get
+        End Property
+
+        Public ReadOnly Property ReceiptToggleTooltip As String
+            Get
+                Return If(IsReceiptEditorExpanded, "طي لوحة إضافة / تعديل السند لتوسيع القائمة", "إظهار لوحة إضافة / تعديل السند")
+            End Get
+        End Property
+
+        Public Sub NotifyReceiptButtonStates()
+            OnPropertyChanged(NameOf(IsReceiptPosted))
+            OnPropertyChanged(NameOf(IsReceiptEditAllowed))
+            OnPropertyChanged(NameOf(IsReceiptSaveVisible))
+            OnPropertyChanged(NameOf(IsReceiptPostVisible))
+            OnPropertyChanged(NameOf(IsReceiptUnpostVisible))
+            CommandManager.InvalidateRequerySuggested()
+        End Sub
+
+        ' === Pagination - Receipts ===
+        Private _receiptCurrentPageIndex As Integer = 1
+        Public Property ReceiptCurrentPageIndex As Integer
+            Get
+                Return _receiptCurrentPageIndex
+            End Get
+            Set(value As Integer)
+                _receiptCurrentPageIndex = Math.Max(1, value)
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(HasPreviousReceiptPage))
+                OnPropertyChanged(NameOf(HasNextReceiptPage))
+                OnPropertyChanged(NameOf(ReceiptPageInfoText))
+                CommandManager.InvalidateRequerySuggested()
+            End Set
+        End Property
+
+        Private _receiptPageSize As Integer = 15
+        Public Property ReceiptPageSize As Integer
+            Get
+                Return _receiptPageSize
+            End Get
+            Set(value As Integer)
+                _receiptPageSize = Math.Max(1, value)
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(ReceiptTotalPages))
+                OnPropertyChanged(NameOf(HasPreviousReceiptPage))
+                OnPropertyChanged(NameOf(HasNextReceiptPage))
+                OnPropertyChanged(NameOf(ReceiptPageInfoText))
+                CommandManager.InvalidateRequerySuggested()
+            End Set
+        End Property
+
+        Private _receiptTotalCount As Integer = 0
+        Public Property ReceiptTotalCount As Integer
+            Get
+                Return _receiptTotalCount
+            End Get
+            Set(value As Integer)
+                _receiptTotalCount = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(ReceiptTotalPages))
+                OnPropertyChanged(NameOf(HasPreviousReceiptPage))
+                OnPropertyChanged(NameOf(HasNextReceiptPage))
+                OnPropertyChanged(NameOf(ReceiptPageInfoText))
+                CommandManager.InvalidateRequerySuggested()
+            End Set
+        End Property
+
+        Public ReadOnly Property ReceiptTotalPages As Integer
+            Get
+                If ReceiptPageSize <= 0 Then Return 1
+                Return Math.Max(1, CInt(Math.Ceiling(ReceiptTotalCount / CDbl(ReceiptPageSize))))
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPreviousReceiptPage As Boolean
+            Get
+                Return ReceiptCurrentPageIndex > 1
+            End Get
+        End Property
+
+        Public ReadOnly Property HasNextReceiptPage As Boolean
+            Get
+                Return ReceiptCurrentPageIndex < ReceiptTotalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property ReceiptPageInfoText As String
+            Get
+                Return "صفحة " & ReceiptCurrentPageIndex & " من " & ReceiptTotalPages & " (إجمالي: " & ReceiptTotalCount & " سند)"
+            End Get
+        End Property
 #End Region
 
 #Region "Properties - Payments"
@@ -429,6 +582,7 @@ Namespace ViewModels
                     PaymentAmountError = Nothing
                     RaiseEvent PaymentLoaded(value.AccountID, value.AccountName)
                 End If
+                NotifyPaymentButtonStates()
             End Set
         End Property
 
@@ -536,17 +690,154 @@ Namespace ViewModels
                 SetProperty(_paymentStatusMessage, value)
             End Set
         End Property
+
+        ' --- Smart Buttons & Editor Panel - Payments ---
+        Public ReadOnly Property IsPaymentPosted As Boolean
+            Get
+                Return SelectedPayment IsNot Nothing AndAlso SelectedPayment.IsPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPaymentEditAllowed As Boolean
+            Get
+                Return Not IsPaymentPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPaymentSaveVisible As Boolean
+            Get
+                Return Not IsPaymentPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPaymentPostVisible As Boolean
+            Get
+                Return Not IsPaymentPosted AndAlso SelectedPayment IsNot Nothing AndAlso SelectedPayment.VoucherID > 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPaymentUnpostVisible As Boolean
+            Get
+                Return IsPaymentPosted AndAlso SelectedPayment IsNot Nothing AndAlso SelectedPayment.VoucherID > 0
+            End Get
+        End Property
+
+        Private _isPaymentEditorExpanded As Boolean = True
+        Public Property IsPaymentEditorExpanded As Boolean
+            Get
+                Return _isPaymentEditorExpanded
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isPaymentEditorExpanded, value)
+                OnPropertyChanged(NameOf(PaymentToggleIconText))
+                OnPropertyChanged(NameOf(PaymentToggleTooltip))
+            End Set
+        End Property
+
+        Public ReadOnly Property PaymentToggleIconText As String
+            Get
+                Return If(IsPaymentEditorExpanded, "◀ طي النموذج", "▶ إضافة / تعديل سند")
+            End Get
+        End Property
+
+        Public ReadOnly Property PaymentToggleTooltip As String
+            Get
+                Return If(IsPaymentEditorExpanded, "طي لوحة إضافة / تعديل السند لتوسيع القائمة", "إظهار لوحة إضافة / تعديل السند")
+            End Get
+        End Property
+
+        Public Sub NotifyPaymentButtonStates()
+            OnPropertyChanged(NameOf(IsPaymentPosted))
+            OnPropertyChanged(NameOf(IsPaymentEditAllowed))
+            OnPropertyChanged(NameOf(IsPaymentSaveVisible))
+            OnPropertyChanged(NameOf(IsPaymentPostVisible))
+            OnPropertyChanged(NameOf(IsPaymentUnpostVisible))
+            CommandManager.InvalidateRequerySuggested()
+        End Sub
+
+        ' === Pagination - Payments ===
+        Private _paymentCurrentPageIndex As Integer = 1
+        Public Property PaymentCurrentPageIndex As Integer
+            Get
+                Return _paymentCurrentPageIndex
+            End Get
+            Set(value As Integer)
+                _paymentCurrentPageIndex = Math.Max(1, value)
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(HasPreviousPaymentPage))
+                OnPropertyChanged(NameOf(HasNextPaymentPage))
+                OnPropertyChanged(NameOf(PaymentPageInfoText))
+                CommandManager.InvalidateRequerySuggested()
+            End Set
+        End Property
+
+        Private _paymentPageSize As Integer = 15
+        Public Property PaymentPageSize As Integer
+            Get
+                Return _paymentPageSize
+            End Get
+            Set(value As Integer)
+                _paymentPageSize = Math.Max(1, value)
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(PaymentTotalPages))
+                OnPropertyChanged(NameOf(HasPreviousPaymentPage))
+                OnPropertyChanged(NameOf(HasNextPaymentPage))
+                OnPropertyChanged(NameOf(PaymentPageInfoText))
+                CommandManager.InvalidateRequerySuggested()
+            End Set
+        End Property
+
+        Private _paymentTotalCount As Integer = 0
+        Public Property PaymentTotalCount As Integer
+            Get
+                Return _paymentTotalCount
+            End Get
+            Set(value As Integer)
+                _paymentTotalCount = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(PaymentTotalPages))
+                OnPropertyChanged(NameOf(HasPreviousPaymentPage))
+                OnPropertyChanged(NameOf(HasNextPaymentPage))
+                OnPropertyChanged(NameOf(PaymentPageInfoText))
+                CommandManager.InvalidateRequerySuggested()
+            End Set
+        End Property
+
+        Public ReadOnly Property PaymentTotalPages As Integer
+            Get
+                If PaymentPageSize <= 0 Then Return 1
+                Return Math.Max(1, CInt(Math.Ceiling(PaymentTotalCount / CDbl(PaymentPageSize))))
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPreviousPaymentPage As Boolean
+            Get
+                Return PaymentCurrentPageIndex > 1
+            End Get
+        End Property
+
+        Public ReadOnly Property HasNextPaymentPage As Boolean
+            Get
+                Return PaymentCurrentPageIndex < PaymentTotalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property PaymentPageInfoText As String
+            Get
+                Return "صفحة " & PaymentCurrentPageIndex & " من " & PaymentTotalPages & " (إجمالي: " & PaymentTotalCount & " سند)"
+            End Get
+        End Property
 #End Region
 
 #Region "Commands - Receipts"
         Public ReadOnly Property SaveReceiptCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteSaveReceipt)
+                Return New Helpers.RelayCommand(AddressOf ExecuteSaveReceipt, Function(o) IsReceiptEditAllowed AndAlso (ReceiptPermissions Is Nothing OrElse If(IsEditingReceipt, ReceiptPermissions.CanEdit, ReceiptPermissions.CanAdd)))
             End Get
         End Property
         Public ReadOnly Property NewReceiptCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteNewReceipt)
+                Return New Helpers.RelayCommand(AddressOf ExecuteNewReceipt, Function(o) ReceiptPermissions Is Nothing OrElse ReceiptPermissions.CanAdd)
             End Get
         End Property
         Public ReadOnly Property DeleteReceiptCommand As ICommand
@@ -556,12 +847,66 @@ Namespace ViewModels
         End Property
         Public ReadOnly Property PostReceiptCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecutePostReceipt, Function(o) SelectedReceipt IsNot Nothing AndAlso Not SelectedReceipt.IsPosted AndAlso ReceiptPermissions IsNot Nothing AndAlso ReceiptPermissions.CanEdit)
+                Return New Helpers.RelayCommand(AddressOf ExecutePostReceipt, Function(o) SelectedReceipt IsNot Nothing AndAlso SelectedReceipt.VoucherID > 0 AndAlso Not SelectedReceipt.IsPosted AndAlso ReceiptPermissions IsNot Nothing AndAlso ReceiptPermissions.CanEdit)
+            End Get
+        End Property
+        Public ReadOnly Property UnpostReceiptCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteUnpostReceipt, Function(o) SelectedReceipt IsNot Nothing AndAlso SelectedReceipt.VoucherID > 0 AndAlso SelectedReceipt.IsPosted AndAlso ReceiptPermissions IsNot Nothing AndAlso ReceiptPermissions.CanDelete)
+            End Get
+        End Property
+        Public ReadOnly Property ToggleReceiptEditorCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) IsReceiptEditorExpanded = Not IsReceiptEditorExpanded)
             End Get
         End Property
         Public ReadOnly Property PrintReceiptCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecutePrintReceipt, Function(o) SelectedReceipt IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecutePrintReceipt, Function(o) (TryCast(o, Voucher) IsNot Nothing AndAlso DirectCast(o, Voucher).VoucherID > 0) OrElse (SelectedReceipt IsNot Nothing AndAlso SelectedReceipt.VoucherID > 0))
+            End Get
+        End Property
+
+        Public ReadOnly Property FirstReceiptPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasPreviousReceiptPage Then
+                        ReceiptCurrentPageIndex = 1
+                        LoadReceipts()
+                    End If
+                End Sub, Function(o) HasPreviousReceiptPage)
+            End Get
+        End Property
+
+        Public ReadOnly Property PreviousReceiptPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasPreviousReceiptPage Then
+                        ReceiptCurrentPageIndex -= 1
+                        LoadReceipts()
+                    End If
+                End Sub, Function(o) HasPreviousReceiptPage)
+            End Get
+        End Property
+
+        Public ReadOnly Property NextReceiptPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasNextReceiptPage Then
+                        ReceiptCurrentPageIndex += 1
+                        LoadReceipts()
+                    End If
+                End Sub, Function(o) HasNextReceiptPage)
+            End Get
+        End Property
+
+        Public ReadOnly Property LastReceiptPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasNextReceiptPage Then
+                        ReceiptCurrentPageIndex = ReceiptTotalPages
+                        LoadReceipts()
+                    End If
+                End Sub, Function(o) HasNextReceiptPage)
             End Get
         End Property
 #End Region
@@ -569,12 +914,12 @@ Namespace ViewModels
 #Region "Commands - Payments"
         Public ReadOnly Property SavePaymentCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteSavePayment)
+                Return New Helpers.RelayCommand(AddressOf ExecuteSavePayment, Function(o) IsPaymentEditAllowed AndAlso (PaymentPermissions Is Nothing OrElse If(IsEditingPayment, PaymentPermissions.CanEdit, PaymentPermissions.CanAdd)))
             End Get
         End Property
         Public ReadOnly Property NewPaymentCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecuteNewPayment)
+                Return New Helpers.RelayCommand(AddressOf ExecuteNewPayment, Function(o) PaymentPermissions Is Nothing OrElse PaymentPermissions.CanAdd)
             End Get
         End Property
         Public ReadOnly Property DeletePaymentCommand As ICommand
@@ -584,12 +929,66 @@ Namespace ViewModels
         End Property
         Public ReadOnly Property PostPaymentCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecutePostPayment, Function(o) SelectedPayment IsNot Nothing AndAlso Not SelectedPayment.IsPosted AndAlso PaymentPermissions IsNot Nothing AndAlso PaymentPermissions.CanEdit)
+                Return New Helpers.RelayCommand(AddressOf ExecutePostPayment, Function(o) SelectedPayment IsNot Nothing AndAlso SelectedPayment.VoucherID > 0 AndAlso Not SelectedPayment.IsPosted AndAlso PaymentPermissions IsNot Nothing AndAlso PaymentPermissions.CanEdit)
+            End Get
+        End Property
+        Public ReadOnly Property UnpostPaymentCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteUnpostPayment, Function(o) SelectedPayment IsNot Nothing AndAlso SelectedPayment.VoucherID > 0 AndAlso SelectedPayment.IsPosted AndAlso PaymentPermissions IsNot Nothing AndAlso PaymentPermissions.CanDelete)
+            End Get
+        End Property
+        Public ReadOnly Property TogglePaymentEditorCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o) IsPaymentEditorExpanded = Not IsPaymentEditorExpanded)
             End Get
         End Property
         Public ReadOnly Property PrintPaymentCommand As ICommand
             Get
-                Return New Helpers.RelayCommand(AddressOf ExecutePrintPayment, Function(o) SelectedPayment IsNot Nothing)
+                Return New Helpers.RelayCommand(AddressOf ExecutePrintPayment, Function(o) (TryCast(o, Voucher) IsNot Nothing AndAlso DirectCast(o, Voucher).VoucherID > 0) OrElse (SelectedPayment IsNot Nothing AndAlso SelectedPayment.VoucherID > 0))
+            End Get
+        End Property
+
+        Public ReadOnly Property FirstPaymentPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasPreviousPaymentPage Then
+                        PaymentCurrentPageIndex = 1
+                        LoadPayments()
+                    End If
+                End Sub, Function(o) HasPreviousPaymentPage)
+            End Get
+        End Property
+
+        Public ReadOnly Property PreviousPaymentPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasPreviousPaymentPage Then
+                        PaymentCurrentPageIndex -= 1
+                        LoadPayments()
+                    End If
+                End Sub, Function(o) HasPreviousPaymentPage)
+            End Get
+        End Property
+
+        Public ReadOnly Property NextPaymentPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasNextPaymentPage Then
+                        PaymentCurrentPageIndex += 1
+                        LoadPayments()
+                    End If
+                End Sub, Function(o) HasNextPaymentPage)
+            End Get
+        End Property
+
+        Public ReadOnly Property LastPaymentPageCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                    If HasNextPaymentPage Then
+                        PaymentCurrentPageIndex = PaymentTotalPages
+                        LoadPayments()
+                    End If
+                End Sub, Function(o) HasNextPaymentPage)
             End Get
         End Property
 #End Region
@@ -597,18 +996,19 @@ Namespace ViewModels
 #Region "Methods - Receipts"
         Private Sub LoadReceipts()
             Try
-                Receipts = New ObservableCollection(Of Voucher)(_voucherService.GetAllVouchers("Receipt"))
+                Dim count As Integer = 0
+                Dim list = _voucherService.GetPagedVouchers("Receipt", ReceiptCurrentPageIndex, ReceiptPageSize, ReceiptSearchText, count)
+                ReceiptTotalCount = count
+                EnrichPaymentMethodNames(list)
+                Receipts = New ObservableCollection(Of Voucher)(list)
             Catch ex As Exception
                 ReceiptStatusMessage = "خطأ: " & ex.Message
             End Try
         End Sub
 
         Private Sub SearchReceipts()
-            Try
-                Receipts = New ObservableCollection(Of Voucher)(_voucherService.SearchVouchers("Receipt", ReceiptSearchText))
-            Catch ex As Exception
-                ReceiptStatusMessage = "خطأ في البحث: " & ex.Message
-            End Try
+            ReceiptCurrentPageIndex = 1
+            LoadReceipts()
         End Sub
 
         Private Sub ExecuteNewReceipt(obj As Object)
@@ -626,14 +1026,15 @@ Namespace ViewModels
             IsEditingReceipt = False
             ReceiptAmountError = Nothing
             RaiseEvent ReceiptLoaded(Nothing, Nothing)
+            NotifyReceiptButtonStates()
         End Sub
 
         Private Sub ExecuteSaveReceipt(obj As Object)
-            If Not IsEditingReceipt AndAlso Not ReceiptPermissions.CanAdd Then
+            If Not IsEditingReceipt AndAlso ReceiptPermissions IsNot Nothing AndAlso Not ReceiptPermissions.CanAdd Then
                 ReceiptStatusMessage = "ليس لديك صلاحية لإضافة سند قبض جديد."
                 Return
             End If
-            If IsEditingReceipt AndAlso Not ReceiptPermissions.CanEdit Then
+            If IsEditingReceipt AndAlso ReceiptPermissions IsNot Nothing AndAlso Not ReceiptPermissions.CanEdit Then
                 ReceiptStatusMessage = "ليس لديك صلاحية لتعديل سند القبض."
                 Return
             End If
@@ -655,10 +1056,12 @@ Namespace ViewModels
                     .PaymentMethod = EditReceiptPaymentMethod,
                     .UserID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
                 }
-                _voucherService.SaveVoucher(v)
+                Dim savedId = _voucherService.SaveVoucher(v)
+                Dim currentID = If(v.VoucherID = 0, savedId, v.VoucherID)
                 ReceiptStatusMessage = If(v.VoucherID = 0, "تم إضافة سند القبض بنجاح. ✅", "تم تحديث سند القبض بنجاح. ✅")
                 LoadReceipts()
-                ExecuteNewReceipt(Nothing)
+                SelectedReceipt = Receipts.FirstOrDefault(Function(r) r.VoucherID = currentID)
+                NotifyReceiptButtonStates()
             Catch ex As Exception
                 ReceiptStatusMessage = "خطأ: " & ex.Message
             End Try
@@ -687,10 +1090,27 @@ Namespace ViewModels
                     _voucherService.PostVoucher(currentID)
                     ReceiptStatusMessage = "تم ترحيل السند وإنشاء القيد بنجاح. ✅"
                     LoadReceipts()
-                    ' Re-select the same voucher so user can print it
+                    ' Re-select the same voucher so user sees unpost button and updated status
                     SelectedReceipt = Receipts.FirstOrDefault(Function(v) v.VoucherID = currentID)
+                    NotifyReceiptButtonStates()
                 Catch ex As Exception
-                    ReceiptStatusMessage = "خطأ: " & ex.Message
+                    ReceiptStatusMessage = "خطأ أثناء الترحيل: " & ex.Message
+                End Try
+            End If
+        End Sub
+
+        Private Sub ExecuteUnpostReceipt(obj As Object)
+            If SelectedReceipt Is Nothing Then Return
+            If MessageBox.Show("هل أنت متأكد من إلغاء ترحيل سند القبض هذا؟ سيتم حذف القيود المحاسبية المرتبطة به من الدفتر العام وإرجاع السند كغير مرحّل.", "تأكيد إلغاء الترحيل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.Yes Then
+                Try
+                    Dim currentID = SelectedReceipt.VoucherID
+                    _voucherService.UnpostVoucher(currentID)
+                    ReceiptStatusMessage = "تم إلغاء ترحيل سند القبض وحذف قيوده بنجاح. ✅"
+                    LoadReceipts()
+                    SelectedReceipt = Receipts.FirstOrDefault(Function(v) v.VoucherID = currentID)
+                    NotifyReceiptButtonStates()
+                Catch ex As Exception
+                    ReceiptStatusMessage = "خطأ أثناء إلغاء الترحيل: " & ex.Message
                 End Try
             End If
         End Sub
@@ -711,18 +1131,19 @@ Namespace ViewModels
 #Region "Methods - Payments"
         Private Sub LoadPayments()
             Try
-                Payments = New ObservableCollection(Of Voucher)(_voucherService.GetAllVouchers("Payment"))
+                Dim count As Integer = 0
+                Dim list = _voucherService.GetPagedVouchers("Payment", PaymentCurrentPageIndex, PaymentPageSize, PaymentSearchText, count)
+                PaymentTotalCount = count
+                EnrichPaymentMethodNames(list)
+                Payments = New ObservableCollection(Of Voucher)(list)
             Catch ex As Exception
                 PaymentStatusMessage = "خطأ: " & ex.Message
             End Try
         End Sub
 
         Private Sub SearchPayments()
-            Try
-                Payments = New ObservableCollection(Of Voucher)(_voucherService.SearchVouchers("Payment", PaymentSearchText))
-            Catch ex As Exception
-                PaymentStatusMessage = "خطأ في البحث: " & ex.Message
-            End Try
+            PaymentCurrentPageIndex = 1
+            LoadPayments()
         End Sub
 
         Private Sub ExecuteNewPayment(obj As Object)
@@ -740,14 +1161,15 @@ Namespace ViewModels
             IsEditingPayment = False
             PaymentAmountError = Nothing
             RaiseEvent PaymentLoaded(Nothing, Nothing)
+            NotifyPaymentButtonStates()
         End Sub
 
         Private Sub ExecuteSavePayment(obj As Object)
-            If Not IsEditingPayment AndAlso Not PaymentPermissions.CanAdd Then
+            If Not IsEditingPayment AndAlso PaymentPermissions IsNot Nothing AndAlso Not PaymentPermissions.CanAdd Then
                 PaymentStatusMessage = "ليس لديك صلاحية لإضافة سند صرف جديد."
                 Return
             End If
-            If IsEditingPayment AndAlso Not PaymentPermissions.CanEdit Then
+            If IsEditingPayment AndAlso PaymentPermissions IsNot Nothing AndAlso Not PaymentPermissions.CanEdit Then
                 PaymentStatusMessage = "ليس لديك صلاحية لتعديل سند الصرف."
                 Return
             End If
@@ -769,10 +1191,12 @@ Namespace ViewModels
                     .PaymentMethod = EditPaymentPaymentMethod,
                     .UserID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
                 }
-                _voucherService.SaveVoucher(v)
+                Dim savedId = _voucherService.SaveVoucher(v)
+                Dim currentID = If(v.VoucherID = 0, savedId, v.VoucherID)
                 PaymentStatusMessage = If(v.VoucherID = 0, "تم إضافة سند الصرف بنجاح. ✅", "تم تحديث سند الصرف بنجاح. ✅")
                 LoadPayments()
-                ExecuteNewPayment(Nothing)
+                SelectedPayment = Payments.FirstOrDefault(Function(p) p.VoucherID = currentID)
+                NotifyPaymentButtonStates()
             Catch ex As Exception
                 PaymentStatusMessage = "خطأ: " & ex.Message
             End Try
@@ -801,10 +1225,27 @@ Namespace ViewModels
                     _voucherService.PostVoucher(currentID)
                     PaymentStatusMessage = "تم ترحيل السند وإنشاء القيد بنجاح. ✅"
                     LoadPayments()
-                    ' Re-select the same voucher so user can print it
+                    ' Re-select the same voucher so user sees unpost button and updated status
                     SelectedPayment = Payments.FirstOrDefault(Function(v) v.VoucherID = currentID)
+                    NotifyPaymentButtonStates()
                 Catch ex As Exception
-                    PaymentStatusMessage = "خطأ: " & ex.Message
+                    PaymentStatusMessage = "خطأ أثناء الترحيل: " & ex.Message
+                End Try
+            End If
+        End Sub
+
+        Private Sub ExecuteUnpostPayment(obj As Object)
+            If SelectedPayment Is Nothing Then Return
+            If MessageBox.Show("هل أنت متأكد من إلغاء ترحيل سند الصرف هذا؟ سيتم حذف القيود المحاسبية المرتبطة به من الدفتر العام وإرجاع السند كغير مرحّل.", "تأكيد إلغاء الترحيل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.Yes Then
+                Try
+                    Dim currentID = SelectedPayment.VoucherID
+                    _voucherService.UnpostVoucher(currentID)
+                    PaymentStatusMessage = "تم إلغاء ترحيل سند الصرف وحذف قيوده بنجاح. ✅"
+                    LoadPayments()
+                    SelectedPayment = Payments.FirstOrDefault(Function(v) v.VoucherID = currentID)
+                    NotifyPaymentButtonStates()
+                Catch ex As Exception
+                    PaymentStatusMessage = "خطأ أثناء إلغاء الترحيل: " & ex.Message
                 End Try
             End If
         End Sub

@@ -189,97 +189,50 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
                             <TextBlock Text="أصناف عرض المشتريات" FontSize="18" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center"/>
-                            <Button Content="➕ إضافة صنف" Command="{Binding AddItemCommand}"
+                            <Button Content="➕ إضافة صنف" Command="{Binding AddItemCommand}" Click="AddItemButton_Click"
                                     Style="{DynamicResource ModernButtonStyle}"
                                     Background="#EFF6FF" Foreground="#2563EB" BorderBrush="#2563EB" 
                                     Margin="20,0,0,0" Padding="15,5"/>
                         </StackPanel>
 
-                        <!-- Barcode Search -->
-                        <Border Grid.Row="1" Background="#F8FAFC" CornerRadius="8" Padding="10" Margin="0,0,0,10" BorderBrush="#E2E8F0" BorderThickness="1">
+                        <!-- Table Column Headers -->
+                        <Border Grid.Row="1" Background="#F1F5F9" CornerRadius="8,8,0,0" Padding="8,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
+                                    <!-- 0: Barcode -->
+                                    <ColumnDefinition Width="160"/>
+                                    <!-- 1: Product Name -->
                                     <ColumnDefinition Width="*"/>
+                                    <!-- 2: Unit -->
+                                    <ColumnDefinition Width="100"/>
+                                    <!-- 3: Quoted Price -->
+                                    <ColumnDefinition Width="140"/>
+                                    <!-- 4: Delete -->
+                                    <ColumnDefinition Width="40"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="🔍 إضافة بالباركود:" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold" Foreground="#475569"/>
-                                <TextBox Grid.Column="1" Text="{Binding BarcodeSearch, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{DynamicResource ModernTextBoxStyle}" BorderThickness="0" Background="Transparent"
-                                         KeyDown="BarcodeSearch_KeyDown"/>
+                                <TextBlock Grid.Column="0" Text="كود الصنف / الباركود" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                                <TextBlock Grid.Column="1" Text="اسم الصنف" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                                <TextBlock Grid.Column="2" Text="الوحدة" FontWeight="Bold" Foreground="#334155" TextAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="سعر الشراء المقترح" FontWeight="Bold" Foreground="#2563EB" TextAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="حذف" FontWeight="Bold" Foreground="#64748B" TextAlignment="Center"/>
                             </Grid>
                         </Border>
 
-                        <!-- DataGrid with FadeIn Animation -->
-                        <DataGrid x:Name="dgDetails" Grid.Row="2" ItemsSource="{Binding CurrentQuote.Details}" AutoGenerateColumns="False" 
-                                  CanUserAddRows="False" SelectionMode="Single" MinHeight="300">
-                            <DataGrid.Triggers>
-                                <EventTrigger RoutedEvent="Loaded">
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.35">
-                                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut"/></DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </EventTrigger>
-                            </DataGrid.Triggers>
-                            <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="كود الصنف" Width="1.5*">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBox Text="{Binding Barcode, UpdateSourceTrigger=PropertyChanged}" 
-                                                     PreviewKeyDown="Barcode_PreviewKeyDown" GotFocus="TextBox_GotFocus"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                
-                                <DataGridTemplateColumn Header="اسم الصنف / الباركود" Width="3*" IsReadOnly="False">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <ComboBox ItemsSource="{Binding DataContext.Products, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                      SelectedValue="{Binding ProductID, UpdateSourceTrigger=Explicit}"
-                                                      SelectedValuePath="ProductID" DisplayMemberPath="SearchText"
-                                                      TextSearch.TextPath="SearchText"
-                                                      IsEditable="True"
-                                                      IsTextSearchEnabled="False"
-                                                      StaysOpenOnEdit="True"
-                                                      KeyUp="ProductComboBox_KeyUp"
-                                                      PreviewKeyDown="ProductComboBox_PreviewKeyDown"
-                                                      DropDownOpened="ProductComboBox_DropDownOpened"
-                                                      DropDownClosed="ProductComboBox_DropDownClosed"
-                                                      LostFocus="ProductComboBox_LostFocus"
-                                                      BorderThickness="0" Background="Transparent"
-                                                      Padding="5,0"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName}" Width="1*" IsReadOnly="True"/>
-                                
-                                <DataGridTemplateColumn Header="سعر الشراء" Width="1.5*">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}" 
-                                                     TextAlignment="Center" FontWeight="Bold" Foreground="#2563EB"
-                                                     PreviewKeyDown="Price_PreviewKeyDown" GotFocus="TextBox_GotFocus"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                
-                                <DataGridTemplateColumn Header="حذف" Width="60">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Button Background="Transparent" BorderThickness="0" 
-                                                    Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                    CommandParameter="{Binding}">
-                                                <TextBlock Text="🗑️" Foreground="#EF4444" FontSize="16"/>
-                                            </Button>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <!-- Quote Details Rows ItemsControl -->
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" MinHeight="300">
+                            <ItemsControl x:Name="DetailsItemsControl" ItemsSource="{Binding CurrentQuote.Details}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:QuoteItemRowControl
+                                            ProductsList="{Binding DataContext.Products, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            RequestAddNewRow="QuoteItemRow_RequestAddNewRow"
+                                            RequestDeleteRow="QuoteItemRow_RequestDeleteRow"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
 
                         <!-- Pagination Bar -->
                         <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0"

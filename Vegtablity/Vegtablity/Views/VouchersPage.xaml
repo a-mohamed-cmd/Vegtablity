@@ -106,7 +106,7 @@
                                 <DataGridTextColumn Header="المستلم منه" Binding="{Binding PartnerName}" Width="130"/>
                                 <DataGridTextColumn Header="الحساب" Binding="{Binding AccountName}" Width="130"/>
                                 <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N2}" Width="100"/>
-                                <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethod}" Width="80"/>
+                                <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethodName}" Width="110"/>
                                 <DataGridCheckBoxColumn Header="مرحّل" Binding="{Binding IsPosted}" Width="55"/>
                                 <DataGridTextColumn Header="الوصف" Binding="{Binding Description}" Width="*"/>
                                 <DataGridTemplateColumn Width="60" Header="طباعة">
@@ -286,7 +286,7 @@
                                 <DataGridTextColumn Header="المستلم" Binding="{Binding PartnerName}" Width="130"/>
                                 <DataGridTextColumn Header="الحساب" Binding="{Binding AccountName}" Width="130"/>
                                 <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N2}" Width="100"/>
-                                <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethod}" Width="80"/>
+                                <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethodName}" Width="110"/>
                                 <DataGridCheckBoxColumn Header="مرحّل" Binding="{Binding IsPosted}" Width="55"/>
                                 <DataGridTextColumn Header="الوصف" Binding="{Binding Description}" Width="*"/>
                                 <DataGridTemplateColumn Width="60" Header="طباعة">

@@ -34,6 +34,32 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Property FilteredWastageHistory As New ObservableCollection(Of WastageHeader)()
+
+        Private _historySearchText As String = ""
+        Public Property HistorySearchText As String
+            Get
+                Return _historySearchText
+            End Get
+            Set(value As String)
+                If SetProperty(_historySearchText, value) Then
+                    FilterHistory()
+                End If
+            End Set
+        End Property
+
+        Private _historyStatusFilter As Integer = 0 ' 0: All, 1: Drafts, 2: Posted
+        Public Property HistoryStatusFilter As Integer
+            Get
+                Return _historyStatusFilter
+            End Get
+            Set(value As Integer)
+                If SetProperty(_historyStatusFilter, value) Then
+                    FilterHistory()
+                End If
+            End Set
+        End Property
+
         Private _selectedWastage As WastageHeader
         Public Property SelectedWastage As WastageHeader
             Get
@@ -100,10 +126,52 @@ Namespace ViewModels
             End Set
         End Property
 
-        ' Pagination
+        ' Pagination (10 records per page)
         Private _currentPage As Integer = 1
-        Private Const PageSize As Integer = 20
-        Private _totalRecords As Integer
+        Public Property CurrentPage As Integer
+            Get
+                Return _currentPage
+            End Get
+            Set(value As Integer)
+                SetProperty(_currentPage, value)
+            End Set
+        End Property
+
+        Public Const PageSize As Integer = 10
+
+        Private _totalRecords As Integer = 0
+        Public Property TotalRecords As Integer
+            Get
+                Return _totalRecords
+            End Get
+            Set(value As Integer)
+                SetProperty(_totalRecords, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property TotalPages As Integer
+            Get
+                Return Math.Max(1, CInt(Math.Ceiling(TotalRecords / CDbl(PageSize))))
+            End Get
+        End Property
+
+        Public ReadOnly Property HasPreviousPage As Boolean
+            Get
+                Return CurrentPage > 1
+            End Get
+        End Property
+
+        Public ReadOnly Property HasNextPage As Boolean
+            Get
+                Return CurrentPage < TotalPages
+            End Get
+        End Property
+
+        Public ReadOnly Property PageInfo As String
+            Get
+                Return $"صفحة {CurrentPage} من {TotalPages} (إجمالي: {TotalRecords})"
+            End Get
+        End Property
 
         ' Commands
         Public Property AddNewCommand As ICommand
@@ -116,6 +184,11 @@ Namespace ViewModels
         Public Property PrintCommand As ICommand
         Public Property ImportFromExcelCommand As ICommand
         Public Property DownloadTemplateCommand As ICommand
+        Public Property ClearHistoryFilterCommand As ICommand
+        Public Property NextPageCommand As ICommand
+        Public Property PreviousPageCommand As ICommand
+        Public Property FirstPageCommand As ICommand
+        Public Property LastPageCommand As ICommand
 
         Public Sub New()
             AddNewCommand = New RelayCommand(AddressOf AddNew)
@@ -128,6 +201,11 @@ Namespace ViewModels
             PrintCommand = New RelayCommand(AddressOf PrintWastage, AddressOf CanPrint)
             ImportFromExcelCommand = New RelayCommand(AddressOf ImportFromExcel, AddressOf CanImport)
             DownloadTemplateCommand = New RelayCommand(AddressOf DownloadTemplate, AddressOf CanImport)
+            ClearHistoryFilterCommand = New RelayCommand(AddressOf ClearHistoryFilter)
+            NextPageCommand = New RelayCommand(AddressOf GoToNextPage, Function() HasNextPage)
+            PreviousPageCommand = New RelayCommand(AddressOf GoToPreviousPage, Function() HasPreviousPage)
+            FirstPageCommand = New RelayCommand(AddressOf GoToFirstPage, Function() HasPreviousPage)
+            LastPageCommand = New RelayCommand(AddressOf GoToLastPage, Function() HasNextPage)
             
             LoadWarehouses()
             LoadProducts()
@@ -171,9 +249,88 @@ Namespace ViewModels
                 Dim result = _wastageService.GetWastageHistory(_currentPage, PageSize)
                 WastageHistory = New ObservableCollection(Of WastageHeader)(result.Data)
                 _totalRecords = result.TotalCount
+                NotifyPaginationChanged()
+                FilterHistory()
             Catch ex As Exception
                 MessageBox.Show("خطأ في تحميل سجل التوالف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
+        End Sub
+
+        Private Sub NotifyPaginationChanged()
+            OnPropertyChanged(NameOf(CurrentPage))
+            OnPropertyChanged(NameOf(TotalRecords))
+            OnPropertyChanged(NameOf(TotalPages))
+            OnPropertyChanged(NameOf(HasPreviousPage))
+            OnPropertyChanged(NameOf(HasNextPage))
+            OnPropertyChanged(NameOf(PageInfo))
+            CommandManager.InvalidateRequerySuggested()
+        End Sub
+
+        Public Sub GoToNextPage()
+            If HasNextPage Then
+                CurrentPage += 1
+                LoadHistory()
+            End If
+        End Sub
+
+        Public Sub GoToPreviousPage()
+            If HasPreviousPage Then
+                CurrentPage -= 1
+                LoadHistory()
+            End If
+        End Sub
+
+        Public Sub GoToFirstPage()
+            If CurrentPage <> 1 Then
+                CurrentPage = 1
+                LoadHistory()
+            End If
+        End Sub
+
+        Public Sub GoToLastPage()
+            If CurrentPage <> TotalPages Then
+                CurrentPage = TotalPages
+                LoadHistory()
+            End If
+        End Sub
+
+        Public Sub FilterHistory()
+            FilteredWastageHistory.Clear()
+            If WastageHistory Is Nothing Then Return
+
+            Dim query = If(HistorySearchText, "").Trim().ToLower()
+
+            For Each item In WastageHistory
+                ' Status match
+                Dim statusMatch As Boolean = True
+                If HistoryStatusFilter = 1 Then
+                    statusMatch = Not item.IsPosted
+                ElseIf HistoryStatusFilter = 2 Then
+                    statusMatch = item.IsPosted
+                End If
+
+                If Not statusMatch Then Continue For
+
+                ' Text match
+                Dim textMatch As Boolean = String.IsNullOrWhiteSpace(query) OrElse
+                                           item.WastageID.ToString().Contains(query) OrElse
+                                           (item.UserName IsNot Nothing AndAlso item.UserName.ToLower().Contains(query)) OrElse
+                                           (item.Notes IsNot Nothing AndAlso item.Notes.ToLower().Contains(query)) OrElse
+                                           item.WastageDate.ToString("dd/MM/yyyy").Contains(query) OrElse
+                                           item.TotalValue.ToString("N3").Contains(query)
+
+                If textMatch Then
+                    FilteredWastageHistory.Add(item)
+                End If
+            Next
+        End Sub
+
+        Public Sub ClearHistoryFilter(parameter As Object)
+            _historySearchText = ""
+            _historyStatusFilter = 0
+            OnPropertyChanged(NameOf(HistorySearchText))
+            OnPropertyChanged(NameOf(HistoryStatusFilter))
+            FilterHistory()
         End Sub
 
         Private Sub LoadWastageDetails(header As WastageHeader)

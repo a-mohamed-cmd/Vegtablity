@@ -86,7 +86,23 @@
 *   **خدمة الطباعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - إضافة دالة `printBarcodeLabel()` لمعالجة وتكرار إرسال الملصق حسب عدد النسخ المطلوبة على كافة وسائط الاتصال.
 *   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة مفتاح التحكم `show_barcode_printing` لإظهار أو إخفاء الشاشة من القائمة الجانبية.
 *   **القائمة الجانبية بالصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - إضافة بند "طباعة ملصقات الباركود" بالـ Drawer الجانبي بربط ديناميكي بشرط تفعيله من الإعدادات العامة.
-*   **ملف الترجمة واللغات (معدل):** [AppLocalizations](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/core/localization/app_localizations.dart) - إضافة نصوص ومفاتيح الترجمة لطباعة الباركود باللغتين العربية والإنجليزية وتأمين التفاعل مع التغيير بين اللغات.
+*   **أداة إدخال سطر الأصناف للفواتير (جديدة):** [InvoiceItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml) & [InvoiceItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml.vb) - عنصر تحكم مخصص لحل محل DataGrid في فواتير المبيعات والمشتريات، يدعم البحث بالباركود وبالقائمة الذكية `SearchableDropdown`، وفحص عروض الأسعار بالـ SP أولاً، والتحقق الصارم من مدخلات الكمية والسعر وحماية الفاصلة العشرية، والتنقل بـ Enter.
+*   **أداة إدخال سطر الأصناف لعروض الأسعار (جديدة):** [QuoteItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml) & [QuoteItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb) - عنصر تحكم مخصص لعروض أسعار المبيعات والمشتريات (كود، اسم الصنف، وحدة، سعر العرض المقترح، حذف)، يدعم التنقل بـ Enter والبحث الذكي والتوافق مع `QuoteDetail` و `PurchaseQuoteDetail`.
+*   **صفحة فواتير المبيعات (معدلة):** [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) & [SalesInvoicePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة السطور `InvoiceItemRowControl` مع ترويسة متطابقة، وإدارة إضافة وحذف وتحديث السطور بسلاسة.
+*   **صفحة فواتير المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) & [PurchaseInvoicePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة السطور `InvoiceItemRowControl` ودعم أسعار الشراء والتنقل الفوري بالـ Enter.
+*   **صفحة عروض أسعار المبيعات (معدلة):** [QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml) & [QuotePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة `QuoteItemRowControl` لسعر البيع المقترح والتنقل السريع.
+*   **صفحة عروض أسعار المشتريات (معدلة):** [PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml) & [PurchaseQuotePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة `QuoteItemRowControl` لسعر الشراء المقترح.
+*   **صفحة القيود اليومية وكارت البحث والتصفية المتحرك (معدلة):** [JournalEntryPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml) & [JournalEntryPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml.vb) - إضافة كارت بحث وتصفية متقدم متحرك (Animation) للبحث برقم القيد والبيان وحالة الترحيل ونطاق التاريخ وشريط شارة الفلتر النشط.
+*   **إجراء جلب وتصفية القيود اليومية (معدل):** [38_sp_JournalEntry_GetPaged_Search.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/38_sp_JournalEntry_GetPaged_Search.sql) & [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) - دعم معايير البحث المتقدم والترقيم مع الحفاظ التام على التوافق الرجعي 100% مع الإصدارات السابقة.
+*   **شجرة الحسابات الهرمية التفاعلية (جديدة):** [AccountTreeControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AccountTreeControl.xaml) & [AccountNode.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/AccountNode.vb) - أداة شجرية متقدمة متعددة المستويات (0، 1، 2+) تدعم الفتح والطي السريع والبحث والتظليل الذكي والشارات اللونية وإضافة الحسابات الفرعية التلقائية.
+*   **صفحة وتطبيق تقرير الأرباح والخسائر والتحليل المالي المقارن (معدلة):** [ProfitLossPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProfitLossPage.xaml) & [ProfitLossViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ProfitLossViewModel.vb) - إضافة عمود النسبة من المبيعات (% of Sales)، تبويبات الاختيار بين التقرير التراكمي والمقارنة الشهرية الأفقية، رسم بياني تفاعلي LiveCharts، وتصدير PDF و Excel احترافي مع صفحة الرسوم البيانية المتجهة.
+*   **أداة إدخال سطر مكونات الوصفات (جديدة):** [RecipeItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml) & [RecipeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml.vb) - عنصر تحكم مخصص لحل محل DataGrid في صفحة إدارة الوصفات، يحتوي على الباركود، القائمة الذكية `SearchableDropdown` للمواد الخام، الوحدة، الكمية، سعر تكلفة الوحدة، الإجمالي، وحذف الصف ❌، مع دعم كامل لدورة التنقل بـ Enter ونقل التركيز للأسطر الجديدة.
+*   **تطوير صفحة الوصفات والفلترة القابلة للطي (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) & [RecipePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml.vb) & [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - إضافة كارت فلترة وتصفية بالاسم والباركود قابل للطي مع Animation انسيابي، وجعل اللوحة الجانبية ككل قابلة للطي والفتح مع حركة انسحاب سلسة.
+*   **أداة إدخال سطر التوالف والهوالك (جديدة):** [WastageItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml) & [WastageItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور التوالف والهوالك يحل محل DataGrid، يضم (كود الصنف، اسم الصنف عبر `SearchableDropdown`، الكمية التالفة، الرصيد المتاح، تكلفة الوحدة، الإجمالي، الرصيد بعد الخصم، وحذف الصف 🗑️) مع دورة التنقل بـ Enter.
+*   **تطوير صفحة التوالف وفلترة السجل القابلة للطي (معدلة):** [WastagePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml) & [WastagePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml.vb) & [WastageViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/WastageViewModel.vb) - إضافة كارت فلترة قابل للطي لسجل التوالف بالبحث برقم السند والملاحظات والمستخدم والحالة، مع حركة انسحاب انسيابية.
+*   **أداة إدخال سطر الجرد الآلي (جديدة):** [StockTakeItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml) & [StockTakeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور الجرد الآلي يحل محل DataGrid، يضم (كود الصنف، اسم الصنف عبر `SearchableDropdown`، الكمية الدفترية، الكمية الفعلية، فرق الكمية، تكلفة الوحدة، قيمة الفرق، زر تحديث الرصيد الدفتري 🔄، وحذف الصف ❌) مع دورة التنقل بـ Enter.
+*   **تطوير صفحة الجرد الآلي وترقيم صفحات سجل الجرد والتوالف (معدلة):** [StockTakePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/StockTakePage.xaml) & [WastagePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml) - إضافة كارت فلترة قابل للطي لسجل الجرد الآلي، وتطبيق نظام ترقيم الصفحات (Pagination) بمعدل 10 سجلات في الصفحة لسجل الجرد وسجل التوالف مع أزرار التنقل (السابق / التالي / عداد الصفحات) وتحديث الـ SPs بتوافق رجعي 100%.
+*   **ترقيم صفحات سجل الوصفات المسجلة (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) & [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - إضافة ترقيم الصفحات (Pagination) بمعدل 10 وصفات في الصفحة مع أزرار التنقل (السابق / التالي) وتحديث `[Inventory].[sp_Recipe_GetAll]` مع الحفاظ التام على التوافق الرجعي 100%.
 
 
 ## 1. الهيكل المعماري (System Architecture)
@@ -2054,6 +2070,296 @@
   - `GET /updates/manifest`: جلب ملف الـ Manifest الكامل.
   - `POST /updates/publish`: نشر تحديث جديد بضغطة زر.
   - استضافة ملفات التثبيت الثابتة عبر مسار `/static/updates/`.
+
+---
+
+## 60. أداة تفاصيل سطور الأصناف الجديدة (InvoiceItemRowControl) وإحلالها في فواتير المبيعات (أغسطس 2026)
+
+تم إنشاء وتطوير عنصر تحكم مخصص حديث `InvoiceItemRowControl` يحل محل جدول الـ `DataGrid` القديم في صفحة فواتير المبيعات [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml)، مدمجاً بكافة آليات البحث الذكي والتحقق الصارم والتنقل السريع.
+
+### أ- البنية المعمارية للأداة ([InvoiceItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml.vb)):
+* **كود الصنف (الباركود):** `TextBox` مخصص للبحث الفوري؛ عند الضغط على Enter يتم البحث في قائمة الأصناف:
+  - إذا تم العثور على الصنف، يتم تعبئة بياناته فوراً ونقل المؤشر إلى خانة **الكمية**.
+  - إذا لم يتم العثور عليه بالباركود، يتم نقل التركيز تلقائياً إلى خانة **اسم الصنف** لإتاحة البحث بالاسم.
+* **اسم الصنف ([SearchableDropdown.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml)):** أداة البحث المنسدلة الذكية للبحث الفوري بالاسم أو الكود، وتعبئة بيانات الصنف والانتقال إلى **الكمية**.
+* **عروض الأسعار المخصصة أولاً عبر Stored Procedure:**
+  - يتم استدعاء الإجراء المخزن المعتمد `sp_Quotation_GetActivePrice` لفحص وتطبيق سعر عرض السعر النشط الخاص بالعميل أولاً، مع إشعار المستخدم عبر Snackbar. وفي حال عدم وجود عرض سعر، يتم اعتماد السعر الافتراضي `SalePrice`.
+* **الوحدة:** حقل قراءة فقط لعرض وحدة قياس الصنف.
+* **الكمية:** 
+  - دعم الكسور العشرية دون فرض أصفار وهمية إجبارية (`StringFormat=\{0:0.###\}`).
+  - تحديد النص بالكامل `SelectAll()` عند الدخول للخلية `GotFocus` لاستبدال القيمة فور بدء الكتابة ومنع تكرار الفاصلة العشرية.
+  - منع كتابة أي حروف غير رقمية مع السماح بفاصلة عشرية واحدة فقط عبر `PreviewTextInput`.
+  - الضغط على Enter ينقل المؤشر إلى **سعر الوحدة**.
+* **سعر الوحدة:** إدخال رقمي مرن، والضغط على Enter ينقل المؤشر إلى **الإجمالي**.
+* **الإجمالي:** حقل قراءة فقط بخط عريض، والضغط على Enter يطلق حدث `RequestAddNewRow` لإنشاء سطر جديد والتركيز على الباركود فيه.
+* **زر الحذف:** زر أحمر `❌` لحذف السطر وإعادة احتساب الإجماليات فورياً.
+
+### ب- الدمج في صفحة فواتير المبيعات ([SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml.vb)):
+* تم استبدال الـ `DataGrid` بـ ترويسة أنيقة ثابتة وقائمة مرنة `ItemsControl` تحتوي على `InvoiceItemRowControl`.
+* معالجة أحداث إضافة السطور والحذف وإعادة الحساب والتحقق من الكميات والأسعار الصفرية قبل الحفظ عبر `ValidateInvoiceItemsBeforeSave`.
+
+---
+
+## 61. تعميم أدوات تفاصيل الأصناف المخصصة على فواتير المشتريات وعروض الأسعار (أغسطس 2026)
+
+تم بنجاح تعميم نمط عناصر التحكم المخصصة `UserControls` بدلاً من جداول الـ `DataGrid` القديمة عبر جميع شاشات الفواتير وعروض الأسعار في نظام سطح المكتب:
+
+### أ- إحلال الأداة في فاتورة المشتريات ([PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml.vb)):
+* تم إحلال الأداة المعتمدة `InvoiceItemRowControl` في صفحة فواتير المشتريات بدلاً من جدول الـ `DataGrid` القديم.
+* ربط ترويسة الأعمدة المتناسقة [كود الصنف / الباركود | اسم الصنف | الوحدة | الكمية | سعر الشراء | الإجمالي | حذف].
+* ربط أحداث `InvoiceItemRow_RequestAddNewRow` و `InvoiceItemRow_RequestDeleteRow` و `InvoiceItemRow_AmountChanged`، وتحديث دالة `FocusLastRowBarcode()` لنقل التركيز لخانة الباركود في السطر الجديد فوراً.
+* الاحتفاظ الكامل بآليات التحقق من الكميات وأسعار الشراء قبل الحفظ وتحديث الإجماليات اللحظية.
+
+### ب- إنشاء أداة عروض الأسعار المخصصة ([QuoteItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb)):
+* تم تصميم عنصر تحكم مخصص خفيف وسريع يلبي متطلبات عروض الأسعار بدون حقول كمية أو إجمالي زائدة:
+  - **الأعمدة:** [كود الصنف (160px) | اسم الصنف عبر `SearchableDropdown` (*) | الوحدة (100px) | سعر العرض المقترح (140px) | زر الحذف ❌ (40px)].
+  - **التوافقية المزدوجة:** دعم التزامن الآلي مع نموذجي `QuoteDetail` (عروض أسعار المبيعات - `SalePrice`) و `PurchaseQuoteDetail` (عروض أسعار المشتريات - `PurchasePrice`).
+  - **دورة التنقل بـ Enter:**
+    - الباركود $\rightarrow$ سعر العرض (إذا وُجد الصنف) أو قائمة البحث عن الصنف (إذا لم يوجد).
+    - اسم الصنف $\rightarrow$ سعر العرض.
+    - سعر العرض $\rightarrow$ إطلاق حدث `RequestAddNewRow` لإنشاء سطر جديد والتركيز التلقائي على الباركود الجديد.
+
+### ج- إحلال الأداة في عروض أسعار المبيعات ([QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml.vb)):
+* استبدال جدول الـ `DataGrid` بـ `ItemsControl` و `QuoteItemRowControl` مع ترويسة واضحة.
+* ربط أزرار الإضافة والتنقل وإدارة السطور بدقة وسلاسة.
+
+### د- إحلال الأداة في عروض أسعار المشتريات ([PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml.vb)):
+* استبدال جدول الـ `DataGrid` بـ `ItemsControl` و `QuoteItemRowControl` مع ترويسة [سعر الشراء المقترح].
+* دعم نموذج `PurchaseQuoteDetail` وتعيين سعر الشراء الافتراضي والتنقل السريع بالـ Enter.
+
+---
+
+## 62. كارت البحث والتصفية المتحرك وتطوير إجراء القيود اليومية (أغسطس 2026)
+
+تم بنجاح تزويد قائمة القيود اليومية في شاشة القيود المحاسبية [JournalEntryPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml) بكارت بحث وتصفية متقدم وتفاعلي يدعم الحركة الانسيابية (`Animation`)، مع تحديث وتطوير الإجراء المخزن المعتمد في SQL Server مع الحفاظ الكامل على التوافق الرجعي 100%:
+
+### أ- تطوير الإجراء المخزن ([38_sp_JournalEntry_GetPaged_Search.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/38_sp_JournalEntry_GetPaged_Search.sql)):
+* تحديث الإجراء `[Accounting].[sp_JournalEntry_GetPaged]` في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) و [setup/SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/setup/SQLVegtablity.sql).
+* إضافة معاملات اختيارية بـ `= NULL` (`@JournalNo`, `@SearchText`, `@IsPosted`, `@StartDate`, `@EndDate`) مع الحفاظ على الترقيم `OFFSET / FETCH NEXT` وحساب `@TotalCount OUTPUT`.
+* دعم البحث الجزئي برقم القيد والبيان العام والفلترة بحالة الترحيل ونطاق التواريخ مع الاحتفاظ بالتوافقية الرجعية الكاملة للنسخ القديمة.
+
+### ب- تطوير الخدمات ونموذج العرض ([JournalEntryViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/JournalEntryViewModel.vb) & [AccountingService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb)):
+* تحديث دالة `AccountingService.GetPagedJournalHeaders` لتمرير المعاملات الاختيارية.
+* تزويد الـ ViewModel بخصائص وأوامر الفلترة: `SearchJournalNo`, `SearchDescription`, `SearchStatusIndex`, `SearchDateFrom`, `SearchDateTo`, `IsDateFilterEnabled`, `IsFilterActive`, `ActiveFilterSummaryText`, `ApplyFilterCommand`, `ClearFilterCommand`, `ToggleFilterCardCommand`.
+
+### ج- واجهة المستخدم والتحريك الانسيابي ([JournalEntryPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml.vb)):
+* زر تصفية أنيق `🔍 تصفية` في ترويسة القائمة مع شارة حمراء `نشط` عند تفعيل أي معيار تصفية.
+* كارت تحكم قابل للطي والفتح مع `DoubleAnimation` انسيابي للارتفاع والشفافية (`CubicEase`).
+* إدخال رقم القيد، البيان، حالة الترحيل، فلترة التاريخ، وزري تطبيق ومسح التصفية، مع دعم البحث بالضغط على `Enter`.
+* شريط تنبيه النتائج النشطة أعلى قائمة القيود مع زر إلغاء سريع.
+
+---
+
+## 63. شجرة الحسابات الهرمية التفاعلية وترقيم السندات بالصفحات (أغسطس 2026)
+
+تم ابتكار وبناء عنصر تحكم تفاعلي هرمي متكامل لشجرة دليل الحسابات `AccountTreeControl` ليحل محل الجداول المسطحة التقليدية، لتمثيل الشجرة المحاسبية بأسلوب هرمي بديهي متعدد المستويات (المستوى 0: الرئيسي، المستوى 1: الفرعي، المستوى 2: المجموعات، والمستويات التفصيلية اللاحقة):
+
+### أ- البنية الهيكلية والبرمجية لشجرة الحسابات ([AccountTreeControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AccountTreeControl.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AccountTreeControl.xaml.vb)):
+* **كائن العقدة الهرمية ([AccountNode.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/AccountNode.vb)):**
+  - بناء كائن `AccountNode` المرن الذي يحمل بيانات الحساب، ومستوى الحساب `AccountLevel`، وقائمة الأبناء `Children As ObservableCollection(Of AccountNode)`، وحالة الطي/الفتح `IsExpanded`، وحالة الرؤية والتظليل `IsVisible` و `IsHighlighted`، وعقدة الأب `ParentNode`.
+  - خوارزمية ذكية لاحتساب الإجماليات التراكمية للحسابات الرئيسية `TotalBalance` تلقائياً من مجموع أرصدة الحسابات الفرعية التابعة لها.
+* **التحكم بالطي والتوسيع (Expand & Collapse):**
+  - زر طي وتوسيع فردي بجانب كل عقدة حساب رئيسي أو فرعي يحتوي على حسابات تابعة.
+  - زران علويان في شريط أدوات الشجرة: `🔽 توسيع الكل` لفتح كامل فروع الشجرة، و `🔼 طي الكل` لطي كافة المستويات وإبقاء الحسابات الرئيسية فقط لسهولة التصفح.
+* **البحث والتصفية والتظليل الذكي (Smart Search & Highlighting):**
+  - حقل بحث فوري بالكود أو الاسم؛ عند كتابة أي كلمة يتم تظليل العقد المطابقة تلقائياً باللون الأصفر الفاتح وتوسيع مسار الآباء التابعين لها فورياً لتسهيل الوصول للحساب المطلوب.
+* **الشارات والأيقونات المحاسبية:**
+  - تمييز نوع الحساب بألوان قياسية (الأصول: أزرق، الالتزامات: أحمر، الملكية: بنفسجي، الإيرادات: أخضر، المصروفات: برتقالي).
+  - زر مخصص لإضافة حساب فرعي `+ فرعي` يقوم بتوليد الكود التالي واختيار الحساب الأب تلقائياً، وزر تعديل الحساب `✏️`.
+* **إحلال الأداة في صفحة دليل الحسابات ([AccountsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/AccountsPage.xaml)):**
+  - استبدال جدول الـ DataGrid القديم بأداة `AccountTreeControl` مع المحافظة على لوحة تفاصيل وإدخال الحساب في النصف الأيسر والتزامن اللحظي عند التحديد `SelectedItemChanged`.
+
+### ب- ترقيم وتصفح السندات بالصفحات ([PaymentVoucherPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PaymentVoucherPage.xaml) & [ReceiptVoucherPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReceiptVoucherPage.xaml)):
+* إضافة شريط تحكم بالصفحات (Pagination) أسفل قائمة السندات في سندات الصرف وسندات القبض:
+  - أزرار التنقل السريع: `⏮ الأولى`، `◀ السابق`، `التالي ▶`، `الأخيرة ⏭`.
+  - تقسيم السجلات إلى 15 سندا لكل صفحة لتسريع استجابة الواجهة ومنع ثقل التمرير.
+  - مؤشر واضح لرقم الصفحة الحالية وإجمالي عدد الصفحات وإجمالي عدد السندات المسجلة.
+
+---
+
+## 64. تطوير تقرير الأرباح والخسائر والمقارنة الشهرية الأفقية والرسوم البيانية المتقدمة (أغسطس 2026)
+
+تم إنجاز ترقية شاملة لمنظومة تقارير الأرباح والخسائر والتحليل المالي لتقديم تحليلات مالية متقدمة تفيد الإدارة في اتخاذ القرارات:
+
+### أ- عمود النسبة المئوية من المبيعات (% of Sales - التحليل المالي الرأسي):
+* **منهجية الاحتساب المحاسبي:**
+  - **الإيرادات:** نسبة كل بند إيراد = `(قيمة البند / إجمالي المبيعات) * 100%` (حيث إجمالي المبيعات = 100.0%).
+  - **المصروفات:** نسبة كل بند مصروف = `(قيمة المصروف / إجمالي المبيعات) * 100%` لتوضيح نسبة استهلاك كل بند مصروف من إجمالي الإيرادات المحققة.
+  - **صافي الربح:** نسبة صافي الربح = `(صافي الربح / إجمالي المبيعات) * 100%` (هامش صافي الربح Net Margin).
+  - حماية كاملة ضد القسمة على صفر بعرض `0.0%` بأمان في حال كانت المبيعات صفراً.
+* **العرض والتنسيق:** إدراج عمود `% من المبيعات` في جدولي الإيرادات والمصروفات وشريط الإجماليات وبطاقة صافي الربح في [ProfitLossPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProfitLossPage.xaml).
+
+### ب- التصدير المالي المتقدم للـ PDF مع ورقة الرسوم البيانية المتجهة:
+* تم تطوير دالة `ExportProfitLossToPdf` في [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) لإنشاء ملف PDF من صفحتين احترافيتين:
+  - **الصفحة 1 (الجدول المالي الرسمي):** ترويسة الشركة، عنوان التقرير والفترة، جدول الإيرادات مع عمود النسبة، جدول المصروفات مع عمود النسبة، وبطاقة صافي الربح/الخسارة الملونة.
+  - **الصفحة 2 (ورقة التحليل والرسوم البيانية المتجهة عالية الدقة Vector Graphics):**
+    1. **بطاقات المؤشرات المالية الرئيسية (KPI Cards):** بطاقة إجمالي المبيعات، بطاقة إجمالي المصروفات ونسبتها، وبطاقة صافي الربح وهامش الربح.
+    2. **مخطط بياني شريطي (Revenues vs Expenses vs Net Profit Bar Chart):** رسم بياني يقارن بين الإيرادات والمصروفات وصافي الربح مع الأرقام التوضيحية.
+    3. **مخطط دائري (Donut/Pie Chart) لتوزيع المصروفات التشغيلية:** تجزئة أهم بنود المصروفات كقطاعات دائرية ملونة مع وسيلة إيضاح (Legend) ونسب مئوية.
+
+### ج- التصدير الاحترافي لـ Excel / CSV:
+* إضافة دالة `ExportProfitLossToExcel` لإنشاء ملفات `.csv` معيارية مدمجة بترميز `UTF-8 BOM` لتفتح مباشرة في Microsoft Excel باللغة العربية مع الحفاظ التام على الأعمدة والنسب المئوية والإجماليات ودون أي اعتماد على مكتبات خارجية.
+* حماية البيانات وتهريب الفواصل والنصوص `EscapeCsv` وتنسيق الأرقام والنسب المئوية.
+
+### د- تقرير المقارنة الشهرية الأفقي (Horizontal Monthly Comparative P&L Report):
+* **البنية البرمجية والموديلات ([ReportModels.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb) & [AccountingService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb)):**
+  - موديلات `MonthlyPeriodHeader`، `MonthlyComparativeRow`، و `MonthlyComparativeReport`.
+  - دالة `GetMonthlyComparativeProfitLoss`: تقسم الفترة المحددة تلقائياً إلى شهور تقويمية متتابعة، وتجمع قيم كل حساب شهراً بشهر، وتحسب الإجماليات الشهرية للإيرادات والمصروفات وصافي الربح لكل شهر.
+* **التبويبات واختيار طريقة العرض ([ProfitLossPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProfitLossPage.xaml)):**
+  - إتاحة التقرير التراكمي والمقارنة الشهرية عبر تبويبات علوية أنيقة:
+    1. **📊 قائمة الأرباح والخسائر التراكمية**.
+    2. **📅 المقارنة الشهرية الأفقية (شهور الفترة)**.
+  - توليد ديناميكي لأعمدة الشهور في الـ DataGrid في كود الواجهة [ProfitLossPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProfitLossPage.xaml.vb).
+* **الرسم البياني التفاعلي الحي (LiveCharts):**
+  - مخطط بياني تفاعلي يدمج أعمدة الإيرادات (الأخضر)، أعمدة المصروفات (الأحمر)، ومنحنى صافي الربح (البنفسجي) عبر شهور الفترة.
+* **تصدير المقارنة الشهرية (PDF بالعرض Landscape & Excel / CSV):**
+  - `ExportMonthlyComparativeToPdf`: صفحة جدول أفقي عريض (Landscape) لجميع الشهور + صفحة ثانية مخصصة للرسم البياني لمسار الأداء الشهري ومقارنة نمو الأرباح.
+  - `ExportMonthlyComparativeToExcel`: ملف CSV / Excel كامل بالأعمدة الشهرية وإجمالي الفترة ونسب المبيعات بترميز UTF-8.
+
+---
+
+## 65. تطوير صفحة إدارة الوصفات ومكونات المنتجات وأداة السطور المخصصة والفلترة التفاعلية (أغسطس 2026)
+
+تم تنفيذ تطوير شامل لصفحة إدارة وتحديد وصفات المنتجات المصنعة والوسيطة ([RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml)) يشمل الآتي:
+
+### أ- أداة إدخال سطر مكونات الوصفة المخصصة ([RecipeItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml) & [.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml.vb)):
+* **الأعمدة والمكونات:**
+  1. **الباركود (`BarcodeBox`):** حقل نصي؛ عند إدخال الباركود والضغط على Enter يقوم بمطابقة الصنف من المواد الخام المتاحة تلقائياً، وتعبئة كافة الحقول، ونقل التركيز مباشرة لحقل الكمية (أو إلى قائمة البحث الذكية في حال عدم وجود الباركود).
+  2. **اسم الصنف عبر القائمة الذكية (`SearchableDropdown`):** أداة بحث منسدلة ذكية تتيح البحث الفوري بالاسم أو الباركود، وعند الاختيار والضغط على Enter تنتقل مباشرة لحقل الكمية.
+  3. **الوحدة (`UnitBox`):** حقل للقراءة فقط يعرض وحدة المادة الخام.
+  4. **الكمية (`QuantityBox`):** حقل نصي يدعم التحقق الصارم من الأرقام والفاصلة العشرية، وعند الضغط على Enter ينتقل لسعر تكلفة الوحدة.
+  5. **سعر تكلفة الوحدة (`UnitCostBox`):** حقل نصي يعرض سعر شراء وتكلفة الوحدة مع إمكانية التعديل، وعند الضغط على Enter ينتقل للإجمالي.
+  6. **إجمالي تكلفة المكون (`TotalPriceBox`):** حقل للقراءة فقط يعرض ناتج (الكمية × التكلفة)؛ وعند الضغط على Enter يطلق حدث `RequestAddNewRow`.
+  7. **حذف الصف ❌ (`DeleteButton`):** زر حذف السطر يطلق حدث `RequestDeleteRow`.
+* **دورة التنقل التلقائي وتوليد السطور الجديدة:**
+  - الانتقال التلقائي بين الخلايا بمفتاح `Enter`.
+  - عند الضغط على Enter في نهاية السطر يتم توليد سطر جديد فوراً ونقل التركيز التلقائي لباركود السطر الجديد عبر `FocusLastRowBarcode()`.
+  - تحديد النص بالكامل عند التركيز `SelectAll` لمنع تداخل الأرقام.
+
+### ب- كارت الفلترة والتصفية القابل للطي للوحة الوصفات المسجلة:
+* **التصفية المزدوجة بالاسم والباركود:**
+  - حقل بحث فوري باسم المنتج وحقل بحث فوري بالباركود.
+  - زر تفريغ التصفية السريع لإعادة عرض كامل الوصفات.
+  - عداد ذكي يعرض عدد الوصفات المفلترة لحظياً في شارة ملونة.
+* **الطي والفتح مع التحريك الانسيابي (DoubleAnimation & CubicEase):**
+  - إمكانية طي وفتح صندوق الفلترة مع حركة شفافة انسيابية عبر زر `🔍 تصفية ▼`.
+  - إمكانية طي وفتح اللوحة الجانبية ككل (Sidebar) مع حركة انسحاب كاملة للعرض والشفافية عبر زر الهمبرجر `☰`.
+
+### ج- إحلال الـ DataGrid في واجهة التحرير:
+* استبدال جدول الـ `DataGrid` القديم بـ `ItemsControl` مع ترويسة متناسقة تماماً مع أعمدة `RecipeItemRowControl` وتمرير سلس `ScrollViewer` وتصميم عصري متناسق مع هوية النظام.
+
+---
+
+## 66. تطوير صفحة إدارة التوالف والهوالك وأداة السطور WastageItemRowControl والفلترة القابلة للطي
+
+تم تحديث وتطوير صفحة إدارة التوالف والهوالك ([WastagePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml) & [WastagePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml.vb)) ونموذج العرض ([WastageViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/WastageViewModel.vb))، وإنشاء عنصر التحكم المخصص لسطور التوالف ([WastageItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml) & [WastageItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml.vb)) وفقاً للنمط المعماري الموحد المعمول به في النظام:
+
+### أ- أداة السطور المخصصة لسطور التوالف (WastageItemRowControl):
+* **الأعمدة المدعومة:**
+  1. `ProductCodeBox` (110px): كود الصنف / الباركود مع البحث الفوري ومطابقة الصنف في المخزون.
+  2. `ProductDropdown` (*): أداة `SearchableDropdown` المنسدلة للبحث الذكي عن الأصناف والمواد التالفة بالاسم أو الباركود.
+  3. `QuantityBox` (85px): الكمية التالفة مع التحقق الصارم من الأرقام، وتنبيه تجاوز الرصيد المتاح.
+  4. `AvailableQtyBox` (85px): الرصيد المتاح للصنف في المستودع المختار للقراءة فقط (لون أزرق مميز `#2563EB`).
+  5. `CostPriceBox` (95px): تكلفة الوحدة (تُجلب تلقائياً بناءً على متوسط التكلفة أو سعر الشراء مع إمكانية التعديل).
+  6. `TotalCostBox` (105px): إجمالي التكلفة للقراءة فقط (تنسيق `N3` ولون وردي عريض `#E11D48`).
+  7. `BalanceAfterBox` (95px): الرصيد بعد الخصم (الرصيد المتاح - الكمية التالفة) للقراءة فقط بلون أحمر `#DC2626`.
+  8. `DeleteButton` (40px): زر الحذف ❌ لحذف السطر وإعادة احتساب الإجمالي تلقائياً.
+* **دورة التنقل التلقائي بمفتاح `Enter`:**
+  - `الباركود` ⬅️ `Enter` ⬅️ مطابقة الصنف وجلب التكلفة والرصيد المتاح ونقل التركيز لـ `الكمية التالفة`.
+  - `SearchableDropdown` ⬅️ `Enter` / ConfirmedAndMoveNext ⬅️ نقل التركيز لـ `الكمية التالفة`.
+  - `الكمية التالفة` ⬅️ `Enter` ⬅️ تحديث الإجمالي ونقل التركيز لـ `تكلفة الوحدة`.
+  - `تكلفة الوحدة` ⬅️ `Enter` ⬅️ نقل التركيز لـ `الإجمالي`.
+  - `الإجمالي` ⬅️ `Enter` ⬅️ إطلاق حدث `RequestAddNewRow`، إضافة سطر جديد ونقل التركيز تلقائياً لباركود السطر الجديد عبر `FocusLastRowBarcode()`.
+* **خاصية القفل التلقائي `IsLocked`:**
+  - قفل كافة حقول السطر تلقائياً عند اعتماد وترحيل السند (`IsPosted = True`) لمنع التعديل غير المصرح به.
+
+### ب- كارت الفلترة والتصفية القابل للطي لسجل التوالف:
+* **البحث المزدوج والمتعدد في سجل التوالف:**
+  - `HistorySearchText`: بحث تفاعلي فوري برقم السند، اسم المستخدم، الملاحظات، التاريخ، أو القيمة الإجمالية.
+  - `HistoryStatusFilter`: تصفية حسب حالة السند (الكل / مسودة فقط / مرحل ومعتمد فقط).
+  - زر تفريغ التصفية السريع `ClearHistoryFilterCommand` 🔄.
+  - شارة ذكية لعرض عدد السجلات المفلترة لحظياً.
+* **الطي والفتح مع التحريك الانسيابي (Animations):**
+  - طي وفتح كارت التصفية مع حركة انسيابية شفافة عبر زر `🔍 تصفية ▼`.
+  - طي وفتح اللوحة الجانبية ككل (Sidebar) مع حركة انسحاب كاملة للعرض والشفافية (`DoubleAnimation` و `CubicEase`) عبر زر `☰`.
+
+### ج- إحلال الـ DataGrid في واجهة التحرير:
+* استبدال جدول الـ `DataGrid` القديم بـ `ItemsControl` و `ScrollViewer` وأداة `WastageItemRowControl` مع ترويسة متطابقة، وتصميم عصري متناسق مع هوية النظام.
+
+---
+
+## 67. تطوير إدارة الجرد الآلي وترقيم صفحات سجل الجرد وسجل التوالف (10 سجلات / صفحة)
+
+تم تطوير وتحديث صفحة إدارة الجرد الآلي ([StockTakePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/StockTakePage.xaml) & [StockTakePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/StockTakePage.xaml.vb)) ونموذج العرض ([StockTakeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/StockTakeViewModel.vb))، وإنشاء عنصر التحكم المخصص لسطور الجرد ([StockTakeItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml) & [StockTakeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml.vb))، وتطبيق نظام ترقيم الصفحات في سجل الجرد وسجل التوالف:
+
+### أ- أداة السطور المخصصة لسطور الجرد (StockTakeItemRowControl):
+* **الأعمدة المدعومة:**
+  1. `ProductCodeBox` (100px): كود الصنف / الباركود مع البحث الفوري ومطابقة الصنف في المخزون.
+  2. `ProductDropdown` (*): أداة `SearchableDropdown` للبحث الذكي عن الأصناف بالاسم أو الباركود.
+  3. `RefreshStockBtn` (32px): زر تحديث الرصيد الدفتري الحالي والتكلفة من المخزون 🔄.
+  4. `SystemQtyBox` (85px): الكمية الدفترية الحالية في المستودع المختار للقراءة فقط (`#2563EB`).
+  5. `ActualQtyBox` (85px): الكمية الفعلية مع التحقق الصارم من الأرقام، وتحديث الفروقات المالية والكمية فوراً.
+  6. `DiffQtyBox` (80px): فرق الكمية (الكمية الفعلية - الكمية الدفترية) ملون (أخضر إذا 0، رمادي/أحمر إذا غير ذلك).
+  7. `CostPriceBox` (85px): تكلفة الوحدة مع إمكانية التعديل.
+  8. `DiffValueBox` (95px): قيمة الفرق المالي (فرق الكمية × التكلفة) للقراءة فقط (`#E11D48`).
+  9. `DeleteButton` (36px): زر الحذف ❌ لحذف السطر وإعادة احتساب إجمالي الفروقات المالية.
+* **دورة التنقل التلقائي بمفتاح `Enter`:**
+  - `الباركود` ⬅️ `Enter` ⬅️ مطابقة الصنف وجلب الرصيد الدفتري والتكلفة ونقل التركيز لـ `الكمية الفعلية`.
+  - `SearchableDropdown` ⬅️ `Enter` ⬅️ نقل التركيز لـ `الكمية الفعلية`.
+  - `الكمية الفعلية` ⬅️ `Enter` ⬅️ تحديث الفروقات ونقل التركيز لـ `تكلفة الوحدة`.
+  - `تكلفة الوحدة` ⬅️ `Enter` ⬅️ نقل التركيز لـ `قيمة الفرق`.
+  - `قيمة الفرق` ⬅️ `Enter` ⬅️ إطلاق حدث `RequestAddNewRow`، إضافة سطر جديد ونقل التركيز لباركود السطر الجديد تلقائياً.
+* **خاصية القفل التلقائي `IsLocked`:**
+  - قفل كافة حقول السطر تلقائياً عند اعتماد تسوية الجرد النهائية لمنع التعديل.
+
+### ب- الفلترة القابلة للطي وترقيم الصفحات (Pagination) في سجل الجرد وسجل التوالف:
+* **الفلترة القابلة للطي لسجل الجرد:**
+  - كارت تصفية قابل للطي والفتح بالبحث برقم المستند، المستودع، اسم المستخدم، الملاحظات، أو التاريخ.
+  - تصفية الحالة: الكل / مسودة فقط (قيد المراجعة) / معتمد فقط.
+  - زر تفريغ التصفية السريع وشارة ذكية لعدد السجلات المفلترة.
+  - طي وفتح اللوحة الجانبية ككل بحركة انسحاب ناعمة عبر زر `☰`.
+* **نظام ترقيم الصفحات (Pagination) بمعدل 10 سجلات في الصفحة:**
+  - تم تقليص حجم الصفحة من 20 إلى **10 سجلات في الصفحة الواحدة** في سجل الجرد وفي سجل التوالف.
+  - إضافة شريط تنقل متقدم في أسفل القائمة الجانبية يضم:
+    - زر `◀ السابق` (PreviousPageCommand).
+    - عداد الصفحات الذكي `صفحة X من Y (إجمالي: N)`.
+    - زر `التالي ▶` (NextPageCommand).
+  - تحديث الإجراءات المخزنة `[Inventory].[sp_StockTake_GetAll]` و `[Inventory].[sp_Wastage_GetAll]` في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) بتوافق رجعي تام 100%.
+
+### ج- إحلال الـ DataGrid في واجهة تحرير الجرد:
+* استبدال جدول الـ `DataGrid` في مسودة الجرد بـ `ItemsControl` و `ScrollViewer` وأداة `StockTakeItemRowControl` مع ترويسة متطابقة، وتصميم عصري متناسق مع هوية النظام.
+
+---
+
+## 68. تطبيق ترقيم الصفحات (Pagination) في سجل الوصفات المسجلة (10 وصفات / صفحة)
+
+تم تطوير وتحديث صفحة إدارة الوصفات ([RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml)) ونموذج العرض ([RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb)) وخدمة الوصفات ([RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb)) والإجراء المخزن `[Inventory].[sp_Recipe_GetAll]` في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql):
+
+### أ- ترقيم الصفحات في واجهة المستخدم (RecipePage.xaml):
+* إضافة شريط ترقيم الصفحات أسفل القائمة الجانبية لسجل الوصفات المسجلة يضم:
+  - زر `◀ السابق` (PreviousPageCommand).
+  - عداد الصفحات التفاعلي `صفحة X من Y (إجمالي: N)`.
+  - زر `التالي ▶` (NextPageCommand).
+* دعم كامل للفلترة المزدوجة بالاسم والباركود والربط مع الترقيم.
+
+### ب- نموذج العرض والخدمات (RecipeViewModel & RecipeService):
+* إضافة خصائص الترقيم: `CurrentPage` (افتراضي 1)، `PageSize = 10`، `TotalRecords`، `TotalPages`، `HasPreviousPage`، `HasNextPage`، و `PageInfo`.
+* إضافة دالة `GetRecipesPaged(pageNumber, pageSize)` في `RecipeService.vb` لجلب البيانات مع العدد الإجمالي عبر `Dapper.QueryMultiple`.
+
+### ج- ترقية الإجراء المخزن مع التوافق الرجعي 100% (sp_Recipe_GetAll):
+* الإجراء المخزن `[Inventory].[sp_Recipe_GetAll]` يدعم الآن معاملات اختيارية:
+  ```sql
+  CREATE PROCEDURE [Inventory].[sp_Recipe_GetAll]
+      @PageNumber INT = NULL,
+      @PageSize   INT = NULL
+  ```
+  - عند تمرير `@PageNumber` و `@PageSize`، يقوم بإرجاع نتيجتين (إجمالي العدد `TotalCount` والسجلات المفلترة مع `OFFSET .. FETCH NEXT`).
+  - عند استدعائه بدون معاملات (كما في الاستخدامات السابقة للنسخ القديمة)، يقوم بإرجاع كامل السجلات في جدول واحد دون أي تغيير، مما يضمن توافقاً رجعياً تاماً 100%.
+
+
+
+
+
 
 
 

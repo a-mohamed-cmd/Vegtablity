@@ -16,11 +16,13 @@ BEGIN
     SET NOCOUNT ON;
     SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
            P.PartnerName, V.AccountID, A.AccountName,
-           V.Amount, V.Description, V.PaymentMethod, V.UserID,
-           U.FullName AS UserName, V.IsPosted
+           V.Amount, V.Description, V.PaymentMethod,
+           ISNULL(PM.AccountName, V.PaymentMethod) AS PaymentMethodName,
+           V.UserID, U.FullName AS UserName, V.IsPosted
     FROM [Accounting].[Vouchers] V
     LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
     LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
     LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
     WHERE V.VoucherType = @VoucherType
     ORDER BY V.VoucherID DESC;
@@ -39,11 +41,13 @@ BEGIN
     SET NOCOUNT ON;
     SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
            P.PartnerName, V.AccountID, A.AccountName,
-           V.Amount, V.Description, V.PaymentMethod, V.UserID,
-           U.FullName AS UserName, V.IsPosted
+           V.Amount, V.Description, V.PaymentMethod,
+           ISNULL(PM.AccountName, V.PaymentMethod) AS PaymentMethodName,
+           V.UserID, U.FullName AS UserName, V.IsPosted
     FROM [Accounting].[Vouchers] V
     LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
     LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
     LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
     WHERE V.VoucherID = @VoucherID;
 END
@@ -60,7 +64,7 @@ CREATE PROCEDURE [Accounting].[sp_Voucher_Save]
     @VoucherDate DATETIME,
     @PartnerID INT = NULL,
     @AccountID INT = NULL,
-    @Amount DECIMAL(18,2),
+    @Amount DECIMAL(18,3),
     @Description NVARCHAR(255) = NULL,
     @PaymentMethod NVARCHAR(20) = 'Cash',
     @UserID INT = NULL
@@ -122,15 +126,20 @@ BEGIN
     SET NOCOUNT ON;
     SELECT V.VoucherID, V.VoucherNo, V.VoucherType, V.VoucherDate, V.PartnerID,
            P.PartnerName, V.AccountID, A.AccountName,
-           V.Amount, V.Description, V.PaymentMethod, V.UserID,
-           U.FullName AS UserName, V.IsPosted
+           V.Amount, V.Description, V.PaymentMethod,
+           ISNULL(PM.AccountName, V.PaymentMethod) AS PaymentMethodName,
+           V.UserID, U.FullName AS UserName, V.IsPosted
     FROM [Accounting].[Vouchers] V
     LEFT JOIN [Sales].[Partners] P ON V.PartnerID = P.PartnerID
     LEFT JOIN [Accounting].[ChartOfAccounts] A ON V.AccountID = A.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] PM ON TRY_CAST(V.PaymentMethod AS INT) = PM.AccountID
     LEFT JOIN [Security].[Users] U ON V.UserID = U.UserID
     WHERE V.VoucherType = @VoucherType
-      AND (V.Description LIKE '%' + @SearchText + '%' OR P.PartnerName LIKE '%' + @SearchText + '%'
-           OR CAST(V.VoucherID AS NVARCHAR) = @SearchText)
+      AND (V.Description LIKE '%' + @SearchText + '%' 
+           OR P.PartnerName LIKE '%' + @SearchText + '%'
+           OR PM.AccountName LIKE '%' + @SearchText + '%'
+           OR CAST(V.VoucherID AS NVARCHAR) = @SearchText
+           OR CAST(V.VoucherNo AS NVARCHAR) = @SearchText)
     ORDER BY V.VoucherID DESC;
 END
 GO

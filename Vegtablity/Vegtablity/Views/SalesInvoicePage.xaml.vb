@@ -48,37 +48,17 @@ Namespace Views
 
         Private Sub FocusLastRowBarcode()
             Dispatcher.BeginInvoke(New Action(Sub()
-                If dgInvoiceDetails IsNot Nothing AndAlso dgInvoiceDetails.Items.Count > 0 Then
-                    dgInvoiceDetails.SelectedIndex = dgInvoiceDetails.Items.Count - 1
-                    Dim newItem = dgInvoiceDetails.Items(dgInvoiceDetails.Items.Count - 1)
-                    
-                    ' 1. Focus the cell (index 0 for Barcode column)
-                    dgInvoiceDetails.CurrentCell = New DataGridCellInfo(newItem, dgInvoiceDetails.Columns(0))
-                    
-                    ' 2. Scroll into view and update layout
-                    dgInvoiceDetails.ScrollIntoView(newItem, dgInvoiceDetails.Columns(0))
-                    dgInvoiceDetails.UpdateLayout()
-                    
-                    ' 3. Extract the physical row container
-                    Dim rowContainer As DataGridRow = TryCast(dgInvoiceDetails.ItemContainerGenerator.ContainerFromItem(newItem), DataGridRow)
-                    If rowContainer IsNot Nothing Then
-                        Dim presenter As System.Windows.Controls.Primitives.DataGridCellsPresenter = FindVisualChild(Of System.Windows.Controls.Primitives.DataGridCellsPresenter)(rowContainer)
-                        If presenter IsNot Nothing Then
-                            ' 4. Extract the physical cell container at column 0
-                            Dim cell As DataGridCell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(0), DataGridCell)
-                            If cell IsNot Nothing Then
-                                ' 5. Finally, grab the TextBox inside and forcefully focus it
-                                Dim tb As TextBox = FindVisualChild(Of TextBox)(cell)
-                                If tb IsNot Nothing Then
-                                    Keyboard.Focus(tb)
-                                Else
-                                    cell.Focus()
-                                End If
-                            End If
+                If DetailsItemsControl IsNot Nothing AndAlso DetailsItemsControl.Items.Count > 0 Then
+                    Dim lastIndex = DetailsItemsControl.Items.Count - 1
+                    Dim container = DetailsItemsControl.ItemContainerGenerator.ContainerFromIndex(lastIndex)
+                    If container IsNot Nothing Then
+                        Dim rowCtrl = FindVisualChild(Of Controls.InvoiceItemRowControl)(container)
+                        If rowCtrl IsNot Nothing Then
+                            rowCtrl.FocusBarcode()
                         End If
                     End If
                 End If
-            End Sub), System.Windows.Threading.DispatcherPriority.Input)
+            End Sub), System.Windows.Threading.DispatcherPriority.Background)
         End Sub
 
         Private Sub NewInvoiceButton_Click(sender As Object, e As RoutedEventArgs)
@@ -89,260 +69,39 @@ Namespace Views
             FocusLastRowBarcode()
         End Sub
 
-        Private Sub ProductComboBox_KeyUp(sender As Object, e As KeyEventArgs)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb Is Nothing OrElse Not cmb.IsEditable Then Return
-
-            ' Ignore navigation and selection keys
-            If e.Key = Key.Up OrElse e.Key = Key.Down OrElse e.Key = Key.Enter OrElse e.Key = Key.Escape OrElse e.Key = Key.Tab Then
-                Return
-            End If
-
-            Dim tb As TextBox = TryCast(cmb.Template.FindName("PART_EditableTextBox", cmb), TextBox)
-            If tb Is Nothing Then Return
-
-            Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
-            If vm Is Nothing OrElse vm.Products Is Nothing Then Return
-
-            Dim view As System.ComponentModel.ICollectionView = cmb.Items
-            If view Is Nothing Then Return
-
-            Dim SearchText As String = tb.Text.Trim().ToLower()
-
-            If String.IsNullOrWhiteSpace(SearchText) Then
-                view.Filter = Nothing
-                cmb.IsDropDownOpen = False
-            Else
-                view.Filter = Function(item)
-                                  Dim p As Models.Product = TryCast(item, Models.Product)
-                                  If p Is Nothing Then Return False
-                                  ' Find by name LIKE or barcode exactly
-                                  Return (p.ProductName IsNot Nothing AndAlso p.ProductName.ToLower().Contains(SearchText)) OrElse
-                                         (p.Barcode IsNot Nothing AndAlso p.Barcode.ToLower().Contains(SearchText))
-                              End Function
-                
-                cmb.IsDropDownOpen = True
-                
-                ' Keep the cursor at the end of the text
-                tb.SelectionStart = tb.Text.Length
-            End If
-        End Sub
-
-        Private Sub ProductComboBox_DropDownOpened(sender As Object, e As EventArgs)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb IsNot Nothing Then
-                Dim tb As TextBox = TryCast(cmb.Template.FindName("PART_EditableTextBox", cmb), TextBox)
-                If tb IsNot Nothing Then
-                     ' Keep focus in textbox when dropdown opens
-                     tb.Focus()
-                End If
-            End If
-        End Sub
-
-        Private Sub ProductComboBox_DropDownClosed(sender As Object, e As EventArgs)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb IsNot Nothing Then
-                ' Clear the filter immediately
-                Dim view As System.ComponentModel.ICollectionView = cmb.Items
-                If view IsNot Nothing Then view.Filter = Nothing
-            End If
-        End Sub
-
-        Private Sub ProductComboBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Enter Then
-                Dim cmb = TryCast(sender, ComboBox)
-                If cmb IsNot Nothing AndAlso cmb.IsEditable Then
-                    Dim tb As TextBox = TryCast(cmb.Template.FindName("PART_EditableTextBox", cmb), TextBox)
-                    If tb IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tb.Text) Then
-                        Dim searchText = tb.Text.Trim().ToLower()
-                        Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
-                        If vm IsNot Nothing Then
-                            Dim matchedProduct = vm.Products.FirstOrDefault(Function(p) (p.Barcode IsNot Nothing AndAlso p.Barcode.ToLower() = searchText) OrElse (p.ProductName IsNot Nothing AndAlso p.ProductName.ToLower().Contains(searchText)))
-                            If matchedProduct IsNot Nothing Then
-                                cmb.SelectedValue = matchedProduct.ProductID
-                                ' Clear filter after selection on this specific combobox
-                                Dim view As System.ComponentModel.ICollectionView = cmb.Items
-                                If view IsNot Nothing Then view.Filter = Nothing
-                                e.Handled = True
-                                cmb.IsDropDownOpen = False
-                                
-                                ' Move Focus to Quantity
-                                MoveFocusToNextColumn(cmb, 1)
-                            End If
-                        End If
-                    End If
-                End If
-            End If
-        End Sub
-
-        Private Sub Quantity_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Enter Then
-                e.Handled = True
-                MoveFocusToNextColumn(TryCast(sender, TextBox), 1) ' Move to UnitPrice (next template column)
-            End If
-        End Sub
-
         Private Sub TextBox_GotFocus(sender As Object, e As RoutedEventArgs)
-            Dim tb As TextBox = TryCast(sender, TextBox)
+            Dim tb = TryCast(sender, TextBox)
             If tb IsNot Nothing Then
                 tb.SelectAll()
             End If
         End Sub
 
-        Private Sub Price_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Enter Then
-                ' تحديث قيمة الـ Binding أولاً
-                Dim tb = TryCast(sender, TextBox)
-                If tb IsNot Nothing Then
-                    Dim binding = tb.GetBindingExpression(TextBox.TextProperty)
-                    If binding IsNot Nothing Then binding.UpdateSource()
-                End If
+        ' ══════════════════════════════════════════════════
+        '  InvoiceItemRowControl Event Handlers
+        ' ══════════════════════════════════════════════════
 
-                e.Handled = True
-
-                ' الانتقال لعمود الإجمالي (العمود التالي رقم 4)
-                MoveFocusToNextColumn(TryCast(sender, TextBox), 1)
-            End If
-        End Sub
-
-        Private Sub Total_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Enter Then
-                e.Handled = True
-
-                ' إضافة صف جديد
-                Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
-                If vm IsNot Nothing AndAlso vm.AddItemCommand.CanExecute(Nothing) Then
-                    vm.AddItemCommand.Execute(Nothing)
-                End If
-
-                ' الانتقال لخانة كود الصنف (Barcode) في الصف الجديد
+        Private Sub InvoiceItemRow_RequestAddNewRow(sender As Object, e As EventArgs)
+            Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
+            If vm IsNot Nothing AndAlso vm.AddItemCommand.CanExecute(Nothing) Then
+                vm.AddItemCommand.Execute(Nothing)
                 FocusLastRowBarcode()
             End If
         End Sub
 
-        Private Sub Barcode_PreviewKeyDown(sender As Object, e As KeyEventArgs)
-            If e.Key = Key.Enter Then
-                Dim tb = TryCast(sender, TextBox)
-                If tb IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tb.Text) Then
-                    Dim searchText = tb.Text.Trim().ToLower()
-                    Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
-                    If vm IsNot Nothing Then
-                        Dim matchedProduct = vm.Products.FirstOrDefault(Function(p) p.Barcode IsNot Nothing AndAlso p.Barcode.ToLower() = searchText)
-                        If matchedProduct IsNot Nothing Then
-                            Dim cell As DataGridCell = FindVisualParent(Of DataGridCell)(tb)
-                            If cell IsNot Nothing Then
-                                Dim row As DataGridRow = FindVisualParent(Of DataGridRow)(cell)
-                                If row IsNot Nothing Then
-                                    Dim detail = TryCast(row.Item, Models.InvoiceDetail)
-                                    If detail IsNot Nothing Then
-                                        detail.ProductID = matchedProduct.ProductID
-                                        detail.Barcode = matchedProduct.Barcode
-                                    End If
-                                End If
-                            End If
-                            e.Handled = True
-                            
-                            ' Move Focus to Quantity column (Skip Product Name ComboBox)
-                            MoveFocusToNextColumn(tb, 2)
-                        Else
-                            tb.SelectAll()
-                            e.Handled = True
-                        End If
-                    End If
-                End If
+        Private Sub InvoiceItemRow_RequestDeleteRow(sender As Object, e As EventArgs)
+            Dim rowCtrl = TryCast(sender, Controls.InvoiceItemRowControl)
+            If rowCtrl Is Nothing Then Return
+            Dim detail = TryCast(rowCtrl.DataContext, Models.InvoiceDetail)
+            Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
+            If vm IsNot Nothing AndAlso detail IsNot Nothing Then
+                vm.RemoveItemCommand.Execute(detail)
             End If
         End Sub
 
-        Private Sub ProductComboBox_LostFocus(sender As Object, e As RoutedEventArgs)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb IsNot Nothing AndAlso cmb.IsEditable Then
-                Dim tb As TextBox = TryCast(cmb.Template.FindName("PART_EditableTextBox", cmb), TextBox)
-                If tb IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(tb.Text) Then
-                    Dim searchText = tb.Text.Trim().ToLower()
-                    Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
-                    If vm IsNot Nothing Then
-                        Dim matchedProduct = vm.Products.FirstOrDefault(Function(p) (p.Barcode IsNot Nothing AndAlso p.Barcode.ToLower() = searchText) OrElse (p.ProductName IsNot Nothing AndAlso p.ProductName.ToLower() = searchText))
-                        If matchedProduct IsNot Nothing Then
-                            cmb.SelectedValue = matchedProduct.ProductID
-                            ' Explicitly restore the display text so it stays visible after focus leaves
-                            cmb.Text = matchedProduct.SearchText
-                        Else
-                            cmb.Text = ""
-                        End If
-                    End If
-                ElseIf tb IsNot Nothing AndAlso String.IsNullOrWhiteSpace(tb.Text) Then
-                    ' If text was cleared but a product was already selected, reshow its name
-                    If cmb.SelectedItem IsNot Nothing Then
-                        Dim selected = TryCast(cmb.SelectedItem, Models.Product)
-                        If selected IsNot Nothing Then
-                            cmb.Text = selected.SearchText
-                        End If
-                    End If
-                End If
-                
-                ' Force the binding update since we set UpdateSourceTrigger=Explicit to prevent WPF from coercing the Barcode String to the Integer Property
-                Dim binding = cmb.GetBindingExpression(ComboBox.SelectedValueProperty)
-                If binding IsNot Nothing Then binding.UpdateSource()
-            End If
-        End Sub
-
-        Private Sub ProductComboBox_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
-            Dim cmb = TryCast(sender, ComboBox)
-            If cmb IsNot Nothing AndAlso cmb.IsLoaded AndAlso cmb.SelectedValue IsNot Nothing Then
-                If cmb.IsDropDownOpen OrElse cmb.IsFocused Then
-                    Dim view As System.ComponentModel.ICollectionView = cmb.Items
-                    If view IsNot Nothing Then view.Filter = Nothing
-                    
-                    Dispatcher.BeginInvoke(New Action(Sub()
-                        MoveFocusToNextColumn(cmb, 1)
-                    End Sub), System.Windows.Threading.DispatcherPriority.Input)
-                End If
-            End If
-        End Sub
-
-        Private Sub MoveFocusToNextColumn(currentControl As UIElement, columnOffset As Integer)
-            Dim cell As DataGridCell = FindVisualParent(Of DataGridCell)(currentControl)
-            If cell IsNot Nothing Then
-                Dim row As DataGridRow = FindVisualParent(Of DataGridRow)(cell)
-                Dim dg As DataGrid = FindVisualParent(Of DataGrid)(row)
-
-                If row IsNot Nothing AndAlso dg IsNot Nothing Then
-                    Dim currentColumnIndex = dg.Columns.IndexOf(cell.Column)
-                    Dim nextColumnIndex = currentColumnIndex + columnOffset
-
-                    If nextColumnIndex < dg.Columns.Count Then
-                        dg.CurrentCell = New DataGridCellInfo(row.Item, dg.Columns(nextColumnIndex))
-
-                        Dispatcher.BeginInvoke(New Action(Sub()
-                            dg.UpdateLayout()
-                            dg.ScrollIntoView(row.Item, dg.Columns(nextColumnIndex))
-                            Dim rowContainer As DataGridRow = TryCast(dg.ItemContainerGenerator.ContainerFromItem(row.Item), DataGridRow)
-                            If rowContainer IsNot Nothing Then
-                                Dim presenter As System.Windows.Controls.Primitives.DataGridCellsPresenter = FindVisualChild(Of System.Windows.Controls.Primitives.DataGridCellsPresenter)(rowContainer)
-                                If presenter IsNot Nothing Then
-                                    Dim nextCell As DataGridCell = TryCast(presenter.ItemContainerGenerator.ContainerFromIndex(nextColumnIndex), DataGridCell)
-                                    If nextCell IsNot Nothing Then
-                                        nextCell.Focus()
-                                        Dim tb As TextBox = FindVisualChild(Of TextBox)(nextCell)
-                                        If tb IsNot Nothing Then
-                                            Keyboard.Focus(tb)
-                                            Dispatcher.BeginInvoke(New Action(Sub()
-                                                tb.SelectAll()
-                                            End Sub), System.Windows.Threading.DispatcherPriority.Input)
-                                        Else
-                                            Dim cmb As ComboBox = FindVisualChild(Of ComboBox)(nextCell)
-                                            If cmb IsNot Nothing Then
-                                                Keyboard.Focus(cmb)
-                                            Else
-                                                nextCell.Focus()
-                                            End If
-                                        End If
-                                    End If
-                                End If
-                            End If
-                        End Sub), System.Windows.Threading.DispatcherPriority.Input)
-                    End If
-                End If
+        Private Sub InvoiceItemRow_AmountChanged(sender As Object, e As EventArgs)
+            Dim vm = TryCast(Me.DataContext, SalesInvoiceViewModel)
+            If vm IsNot Nothing Then
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested()
             End If
         End Sub
 

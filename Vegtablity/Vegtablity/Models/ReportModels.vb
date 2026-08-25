@@ -195,6 +195,63 @@ Namespace Models
         Public Property AccountName As String
         Public Property Balance As Decimal
         Public Property AccountType As String
+        Public Property PercentageOfSales As Decimal = 0
+        
+        Public ReadOnly Property PercentageOfSalesText As String
+            Get
+                Return PercentageOfSales.ToString("F1") & " %"
+            End Get
+        End Property
+    End Class
+
+    ' ==========================================================
+    ' Report 13.1: Horizontal Monthly Comparative Profit & Loss
+    ' ==========================================================
+    Public Class MonthlyPeriodHeader
+        Public Property MonthKey As String            ' e.g. "2026-01"
+        Public Property MonthName As String           ' e.g. "يناير 2026"
+        Public Property Year As Integer
+        Public Property MonthNumber As Integer
+        Public Property StartDate As DateTime
+        Public Property EndDate As DateTime
+    End Class
+
+    Public Class MonthlyComparativeRow
+        Public Property AccountCode As String
+        Public Property AccountName As String
+        Public Property AccountType As String
+        Public Property MonthlyValues As New Dictionary(Of String, Decimal)()
+        Public Property TotalBalance As Decimal
+        Public Property PercentageOfSales As Decimal
+
+        Public ReadOnly Property PercentageOfSalesText As String
+            Get
+                Return PercentageOfSales.ToString("F1") & " %"
+            End Get
+        End Property
+
+        Public Function GetMonthValue(monthKey As String) As Decimal
+            If MonthlyValues IsNot Nothing AndAlso MonthlyValues.ContainsKey(monthKey) Then
+                Return MonthlyValues(monthKey)
+            End If
+            Return 0
+        End Function
+    End Class
+
+    Public Class MonthlyComparativeReport
+        Public Property Title As String = "قائمة الأرباح والخسائر المقارنة شهرياً"
+        Public Property StartDate As DateTime
+        Public Property EndDate As DateTime
+        Public Property Months As New List(Of MonthlyPeriodHeader)()
+        Public Property RevenueRows As New List(Of MonthlyComparativeRow)()
+        Public Property ExpenseRows As New List(Of MonthlyComparativeRow)()
+        Public Property MonthlyRevenuesTotal As New Dictionary(Of String, Decimal)()
+        Public Property MonthlyExpensesTotal As New Dictionary(Of String, Decimal)()
+        Public Property MonthlyNetProfit As New Dictionary(Of String, Decimal)()
+        Public Property TotalRevenues As Decimal
+        Public Property TotalExpenses As Decimal
+        Public Property TotalNetProfit As Decimal
+        Public Property NetProfitPercentageOfSales As Decimal
     End Class
 
     ' ==========================================================

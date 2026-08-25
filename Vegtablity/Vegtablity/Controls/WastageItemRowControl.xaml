@@ -1,0 +1,161 @@
+<UserControl x:Class="Controls.WastageItemRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
+
+    <UserControl.Resources>
+        <helpers:BooleanInverterConverter x:Key="BoolToInvertedConverter"/>
+    </UserControl.Resources>
+
+    <Border Background="White" BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="4,4" MinHeight="46">
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <!-- 0: Product Code / Barcode -->
+                <ColumnDefinition Width="110"/>
+                <!-- 1: Product SearchableDropdown (Expanding) -->
+                <ColumnDefinition Width="*"/>
+                <!-- 2: Damaged Quantity -->
+                <ColumnDefinition Width="85"/>
+                <!-- 3: Available Quantity (Read-Only) -->
+                <ColumnDefinition Width="85"/>
+                <!-- 4: Unit Cost Price -->
+                <ColumnDefinition Width="95"/>
+                <!-- 5: Total Cost (Read-Only) -->
+                <ColumnDefinition Width="105"/>
+                <!-- 6: Balance After (Read-Only) -->
+                <ColumnDefinition Width="95"/>
+                <!-- 7: Delete Action -->
+                <ColumnDefinition Width="40"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: Barcode TextBox -->
+            <TextBox x:Name="ProductCodeBox"
+                     Grid.Column="0"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="6,0"
+                     Text="{Binding ProductCode, UpdateSourceTrigger=PropertyChanged}"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     PreviewKeyDown="ProductCodeBox_PreviewKeyDown"/>
+
+            <!-- 1: Product SearchableDropdown -->
+            <controls:SearchableDropdown x:Name="ProductDropdown"
+                                         Grid.Column="1"
+                                         Height="38"
+                                         Margin="2,2"
+                                         DisplayMemberPath="SearchText"
+                                         Watermark="اختر أو ابحث عن الصنف..."
+                                         IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                                         SearchChanged="ProductDropdown_SearchChanged"
+                                         ItemSelected="ProductDropdown_ItemSelected"
+                                         ConfirmedAndMoveNext="ProductDropdown_ConfirmedAndMoveNext"/>
+
+            <!-- 2: Quantity TextBox -->
+            <TextBox x:Name="QuantityBox"
+                     Grid.Column="2"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding Quantity, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="SemiBold"
+                     Foreground="#0F172A"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     LostFocus="QuantityBox_LostFocus"
+                     PreviewTextInput="AmountBox_PreviewTextInput"
+                     PreviewKeyDown="QuantityBox_PreviewKeyDown"/>
+
+            <!-- 3: Available Quantity TextBox (Read-Only) -->
+            <TextBox x:Name="AvailableQtyBox"
+                     Grid.Column="3"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding AvailableQuantity, Mode=OneWay, StringFormat=\{0:0.###\}}"
+                     IsReadOnly="True"
+                     Background="#F8FAFC"
+                     Foreground="#2563EB"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"/>
+
+            <!-- 4: Unit Cost Price TextBox -->
+            <TextBox x:Name="CostPriceBox"
+                     Grid.Column="4"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding CostPrice, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="SemiBold"
+                     Foreground="#0F172A"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     LostFocus="CostPriceBox_LostFocus"
+                     PreviewTextInput="AmountBox_PreviewTextInput"
+                     PreviewKeyDown="CostPriceBox_PreviewKeyDown"/>
+
+            <!-- 5: Total Cost TextBox (Read-Only) -->
+            <TextBox x:Name="TotalCostBox"
+                     Grid.Column="5"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding TotalCost, Mode=OneWay, StringFormat=\{0:N3\}}"
+                     FontWeight="Bold"
+                     Foreground="#E11D48"
+                     Background="#F8FAFC"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     PreviewKeyDown="TotalCostBox_PreviewKeyDown"/>
+
+            <!-- 6: Balance After TextBox (Read-Only) -->
+            <TextBox x:Name="BalanceAfterBox"
+                     Grid.Column="6"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding BalanceAfter, Mode=OneWay, StringFormat=\{0:0.###\}}"
+                     FontWeight="Bold"
+                     Foreground="#DC2626"
+                     Background="#F8FAFC"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"/>
+
+            <!-- 7: Delete Button -->
+            <Button x:Name="DeleteButton"
+                    Grid.Column="7"
+                    Content="❌"
+                    Width="32"
+                    Height="32"
+                    Margin="2,2"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Foreground="#EF4444"
+                    FontSize="12"
+                    Cursor="Hand"
+                    ToolTip="حذف هذا السطر"
+                    IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                    Click="DeleteButton_Click"/>
+        </Grid>
+    </Border>
+</UserControl>

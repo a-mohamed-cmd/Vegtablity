@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
              xmlns:helpers="clr-namespace:Vegtablity.Helpers"
-             xmlns:controls="clr-namespace:Vegtablity.Controls">
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
 
     <UserControl.DataContext>
         <vm:VouchersViewModel/>
@@ -12,6 +13,7 @@
     <UserControl.Resources>
         <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+        <helpers:BooleanInverterConverter x:Key="BoolToInvertedConverter"/>
     </UserControl.Resources>
 
     <!-- Page Fade-in -->
@@ -19,7 +21,7 @@
         <EventTrigger RoutedEvent="FrameworkElement.Loaded">
             <BeginStoryboard>
                 <Storyboard>
-                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.5">
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.4">
                         <DoubleAnimation.EasingFunction>
                             <CubicEase EasingMode="EaseOut"/>
                         </DoubleAnimation.EasingFunction>
@@ -37,12 +39,12 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,5">
+        <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,5" BorderBrush="#dcdde1" BorderThickness="1">
             <Border.Triggers>
                 <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                     <BeginStoryboard>
                         <Storyboard>
-                            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,-30,0,5" To="0,0,0,5" Duration="0:0:0.4">
+                            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,-20,0,5" To="0,0,0,5" Duration="0:0:0.3">
                                 <ThicknessAnimation.EasingFunction>
                                     <CubicEase EasingMode="EaseOut"/>
                                 </ThicknessAnimation.EasingFunction>
@@ -56,10 +58,15 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <Button x:Name="BtnGoBack" Content="← رجوع" Click="BtnGoBack_Click" Background="Transparent" BorderThickness="0" Foreground="#e74c3c" FontSize="16" FontWeight="Bold" Margin="0,0,15,0" Cursor="Hand" ToolTip="الرجوع للصفحة السابقة"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BtnGoBack" Content="← رجوع" Click="BtnGoBack_Click" Background="Transparent" BorderThickness="0" Foreground="#e74c3c" FontSize="15" FontWeight="Bold" Margin="0,0,12,0" Cursor="Hand" ToolTip="الرجوع للصفحة السابقة"/>
+                    <Button Content="{Binding PaymentToggleIconText}" Command="{Binding TogglePaymentEditorCommand}" Click="ToggleEditorButton_Click"
+                            Style="{StaticResource ModernButtonStyle}" Height="32" FontSize="12.5" FontWeight="Bold"
+                            Background="#fef2f2" Foreground="#e74c3c" BorderBrush="#fecaca" BorderThickness="1" Margin="0,0,12,0"
+                            ToolTip="{Binding PaymentToggleTooltip}"/>
                     <TextBlock Text="📤 سندات الصرف" FontSize="18" FontWeight="Bold" Foreground="#e74c3c" VerticalAlignment="Center"/>
                 </StackPanel>
+
                 <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -77,74 +84,156 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="360"/>
+                <ColumnDefinition x:Name="EditColumn" Width="380"/>
             </Grid.ColumnDefinitions>
 
-            <!-- DataGrid -->
-            <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White">
-                <Border.Triggers>
-                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.2">
-                                    <DoubleAnimation.EasingFunction>
-                                        <CubicEase EasingMode="EaseOut"/>
-                                    </DoubleAnimation.EasingFunction>
-                                </DoubleAnimation>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </EventTrigger>
-                </Border.Triggers>
-                <DataGrid ItemsSource="{Binding Payments}" SelectedItem="{Binding SelectedPayment}"
-                          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                          BorderThickness="0" Margin="5" RowHeight="36" ColumnHeaderHeight="40">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="رقم السند" Binding="{Binding VoucherNo}" Width="80"/>
-                        <DataGridTextColumn Header="التاريخ" Binding="{Binding VoucherDate, StringFormat=\{0:yyyy/MM/dd\}}" Width="100"/>
-                        <DataGridTextColumn Header="المستلم" Binding="{Binding PartnerName}" Width="130"/>
-                        <DataGridTextColumn Header="الحساب" Binding="{Binding AccountName}" Width="130"/>
-                        <DataGridTextColumn Header="المبلغ" Binding="{Binding Amount, StringFormat=N3}" Width="100"/>
-                        <DataGridTextColumn Header="طريقة الدفع" Binding="{Binding PaymentMethod}" Width="80"/>
-                        <DataGridCheckBoxColumn Header="مرحّل" Binding="{Binding IsPosted}" Width="55"/>
-                        <DataGridTextColumn Header="الوصف" Binding="{Binding Description}" Width="*"/>
-                        <DataGridTemplateColumn Width="60" Header="طباعة">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <Button Content="🖨️" Command="{Binding DataContext.PrintPaymentCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" 
-                                            CommandParameter="{Binding}"
-                                            Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}" FontSize="14" Cursor="Hand" Padding="5,0"/>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
+            <!-- Vouchers List Column -->
+            <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White" ClipToBounds="True">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="*"/>    <!-- List -->
+                        <RowDefinition Height="Auto"/> <!-- Pagination Bar -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Table Header Bar -->
+                    <Border Grid.Row="0" Background="#F1F5F9" CornerRadius="8,8,0,0" Padding="12,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="70"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="1.1*" MinWidth="100"/>
+                                <ColumnDefinition Width="1.1*" MinWidth="100"/>
+                                <ColumnDefinition Width="95"/>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="95"/>
+                                <ColumnDefinition Width="*" MinWidth="90"/>
+                                <ColumnDefinition Width="36"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="رقم السند" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                            <TextBlock Grid.Column="1" Text="التاريخ" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                            <TextBlock Grid.Column="2" Text="المستلم" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                            <TextBlock Grid.Column="3" Text="الحساب" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                            <TextBlock Grid.Column="4" Text="المبلغ" FontWeight="Bold" Foreground="#e74c3c" TextAlignment="Center" Margin="5,0"/>
+                            <TextBlock Grid.Column="5" Text="طريقة الدفع" FontWeight="Bold" Foreground="#334155" TextAlignment="Center"/>
+                            <TextBlock Grid.Column="6" Text="حالة الترحيل" FontWeight="Bold" Foreground="#334155" TextAlignment="Center"/>
+                            <TextBlock Grid.Column="7" Text="البيان / الوصف" FontWeight="Bold" Foreground="#334155" Margin="6,0"/>
+                            <TextBlock Grid.Column="8" Text="طباعة" FontWeight="Bold" Foreground="#64748B" TextAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Custom ListBox using VoucherRowControl -->
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Payments}" SelectedItem="{Binding SelectedPayment}"
+                             BorderThickness="0" HorizontalContentAlignment="Stretch" Padding="6,6"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <controls:VoucherRowControl/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,2"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="8" Padding="0" Margin="0">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="#FEE2E2"/>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Opacity" Value="0.95"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+
+                    <!-- Pagination Control Bar (شريط الترقيم والتنقل) -->
+                    <Border Grid.Row="2" Background="#F8FAFC" Padding="10,8" CornerRadius="0,0,8,8" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- الأولى والسابق -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <Button Content="⏮ الأولى" Command="{Binding FirstPaymentPageCommand}" 
+                                        Style="{StaticResource ModernButtonStyle}" Width="72" Height="30" FontSize="11" FontWeight="SemiBold"
+                                        Background="#64748B" Margin="0,0,4,0" ToolTip="الانتقال إلى الصفحة الأولى"/>
+                                <Button Content="◀ السابق" Command="{Binding PreviousPaymentPageCommand}" 
+                                        Style="{StaticResource ModernButtonStyle}" Width="72" Height="30" FontSize="11" FontWeight="SemiBold"
+                                        Background="#64748B" ToolTip="الانتقال إلى الصفحة السابقة"/>
+                            </StackPanel>
+
+                            <!-- معلومات الصفحة والإجمالي -->
+                            <TextBlock Grid.Column="1" Text="{Binding PaymentPageInfoText}" 
+                                       FontWeight="Bold" FontSize="12.5" Foreground="#334155" 
+                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                            <!-- التالي والأخيرة -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                <Button Content="التالي ▶" Command="{Binding NextPaymentPageCommand}" 
+                                        Style="{StaticResource ModernButtonStyle}" Width="72" Height="30" FontSize="11" FontWeight="SemiBold"
+                                        Background="#64748B" Margin="0,0,4,0" ToolTip="الانتقال إلى الصفحة التالية"/>
+                                <Button Content="الأخيرة ⏭" Command="{Binding LastPaymentPageCommand}" 
+                                        Style="{StaticResource ModernButtonStyle}" Width="72" Height="30" FontSize="11" FontWeight="SemiBold"
+                                        Background="#64748B" ToolTip="الانتقال إلى الصفحة الأخيرة"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
             </Border>
 
-            <!-- Edit Panel -->
-            <Border Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="15" BorderBrush="#eee" BorderThickness="1">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <!-- Collapsible Edit / Add Voucher Panel -->
+            <Border x:Name="EditPanelBorder" Grid.Column="1" CornerRadius="10" Background="#fafafa" Padding="15" BorderBrush="#eee" BorderThickness="1" ClipToBounds="True">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
-                        <TextBlock Text="بيانات سند الصرف" FontSize="16" FontWeight="Bold" Foreground="#e74c3c" Margin="0,0,0,15"/>
+                        <Grid Margin="0,0,0,15">
+                            <TextBlock Text="📝 بيانات سند الصرف" FontSize="16" FontWeight="Bold" Foreground="#e74c3c" VerticalAlignment="Center"/>
+                            <Border HorizontalAlignment="Right" Padding="8,3" CornerRadius="12" 
+                                    Background="{Binding IsPaymentPosted, Converter={StaticResource BoolToVisConverter}}"
+                                    Visibility="{Binding IsPaymentPosted, Converter={StaticResource BoolToVisConverter}}">
+                                <TextBlock Text="🔒 سند مرحّل (مقفل)" Foreground="#B91C1C" FontSize="11" FontWeight="Bold"/>
+                            </Border>
+                        </Grid>
 
-                        <TextBlock Text="التاريخ" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <!-- التاريخ -->
+                        <TextBlock Text="التاريخ:" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <TextBox Text="{Binding EditPaymentDateText, UpdateSourceTrigger=PropertyChanged}" 
                                  Margin="0,0,0,10"
                                  LostFocus="PaymentDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
                                  GotFocus="Date_GotFocus"
                                  Style="{DynamicResource ModernTextBoxStyle}"
-                                 helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
+                                 Height="38" Padding="10,2,10,4" VerticalContentAlignment="Center"
+                                 helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"
+                                 Tag="Payment"
+                                 IsEnabled="{Binding IsPaymentEditAllowed}"
+                                 ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
 
-                        <TextBlock Text="المستلم" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <!-- المستلم -->
+                        <TextBlock Text="المستلم:" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <ComboBox Grid.Column="0" ItemsSource="{Binding Partners}" SelectedValue="{Binding EditPaymentPartnerID}"
-                                      SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"/>
+                                      SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName"
+                                      IsEnabled="{Binding IsPaymentEditAllowed}"/>
                             <Button Grid.Column="1" Content="➕" Command="{Binding OpenNewPartnerCommand}" CommandParameter="Payment"
                                     Width="30" Padding="0" Margin="5,0,0,0" ToolTip="إضافة مستلم جديد"
+                                    IsEnabled="{Binding IsPaymentEditAllowed}"
                                     Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"/>
                         </Grid>
 
@@ -165,38 +254,69 @@
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Text="الحساب" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <!-- الحساب -->
+                        <TextBlock Text="الحساب:" FontWeight="SemiBold" Margin="0,0,0,4"/>
                         <controls:SearchableDropdown
                             x:Name="AccountDropdown"
                             ItemsSource="{Binding FilteredAccounts}"
                             DisplayMemberPath="DisplayText"
                             Watermark="ابحث برقم أو اسم الحساب..."
                             Height="40" Margin="0,0,0,10"
+                            IsEnabled="{Binding IsPaymentEditAllowed}"
                             SearchChanged="AccountDropdown_SearchChanged"
                             ItemSelected="AccountDropdown_ItemSelected"
                             ConfirmedAndMoveNext="AccountDropdown_MoveNext"/>
 
-                        <TextBlock Text="المبلغ *" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}" PreviewTextInput="Amount_PreviewTextInput" InputMethod.IsInputMethodEnabled="False" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
+                        <!-- المبلغ -->
+                        <TextBlock Text="المبلغ *:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding EditPaymentAmount, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}" 
+                                 PreviewTextInput="Amount_PreviewTextInput" InputMethod.IsInputMethodEnabled="False" 
+                                 Style="{StaticResource ModernTextBoxStyle}" Height="38" Padding="10,2,10,4" VerticalContentAlignment="Center" Margin="0,0,0,2"
+                                 IsEnabled="{Binding IsPaymentEditAllowed}"/>
                         <TextBlock Text="{Binding PaymentAmountError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
                                    Visibility="{Binding PaymentAmountError, Converter={StaticResource StringToVisConverter}}"/>
 
-                        <TextBlock Text="طريقة الدفع" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedValue="{Binding EditPaymentPaymentMethod}" SelectedValuePath="AccountID" DisplayMemberPath="AccountName" Margin="0,0,0,10"/>
+                        <!-- طريقة الدفع -->
+                        <TextBlock Text="طريقة الدفع:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedValue="{Binding EditPaymentPaymentMethod}" SelectedValuePath="AccountID" DisplayMemberPath="AccountName" Margin="0,0,0,10"
+                                  IsEnabled="{Binding IsPaymentEditAllowed}"/>
 
-                        <TextBlock Text="الوصف" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding EditPaymentDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15" TextWrapping="Wrap" MinHeight="40"/>
+                        <!-- البيان / الوصف -->
+                        <TextBlock Text="الوصف / البيان:" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <TextBox Text="{Binding EditPaymentDescription, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15" TextWrapping="Wrap" MinHeight="40"
+                                 IsReadOnly="{Binding IsPaymentPosted}"/>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
-                            <Button Content="💾 حفظ" Command="{Binding SavePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                            <Button Content="🆕 جديد" Command="{Binding NewPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
-                            <Button Content="🗑️ حذف" Command="{Binding DeletePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
+                        <!-- شريط الأزرار الذكية -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                            <Button Content="💾 حفظ" Command="{Binding SavePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="4"
+                                    Visibility="{Binding IsPaymentSaveVisible, Converter={StaticResource BoolToVisConverter}}"
+                                    ToolTip="حفظ بيانات السند"/>
+                            <Button Content="🆕 جديد" Command="{Binding NewPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="4" Background="#3498db"
+                                    ToolTip="إنشاء سند جديد فارغ"/>
+                            <Button Content="🗑️ حذف" Command="{Binding DeletePaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="4" Background="#e74c3c"
+                                    IsEnabled="{Binding PaymentPermissions.CanDelete}" ToolTip="حذف السند الحالي"/>
                         </StackPanel>
 
-                        <Border BorderBrush="#eee" BorderThickness="0,1,0,0" Margin="0,10" Padding="0,10,0,0">
+                        <!-- أزرار الترحيل / إلغاء الترحيل والطباعة -->
+                        <Border BorderBrush="#eee" BorderThickness="0,1,0,0" Margin="0,12,0,0" Padding="0,12,0,0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Content="📌 ترحيل" Command="{Binding PostPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="130" Height="40" Background="#e74c3c" FontSize="14" FontWeight="Bold" Margin="5"/>
-                                <Button Content="🖨️ طباعة" Command="{Binding PrintPaymentCommand}" Style="{StaticResource ModernButtonStyle}" Width="130" Height="40" Background="#34495e" FontSize="14" FontWeight="Bold" Margin="5"/>
+                                <!-- زر الترحيل: يظهر عند حفظ السند وغير مرحل -->
+                                <Button Content="📌 ترحيل السند" Command="{Binding PostPaymentCommand}" Style="{StaticResource ModernButtonStyle}" 
+                                        Width="130" Height="38" Background="#e74c3c" FontSize="13.5" FontWeight="Bold" Margin="4"
+                                        Visibility="{Binding IsPaymentPostVisible, Converter={StaticResource BoolToVisConverter}}"
+                                        ToolTip="ترحيل سند الصرف وإنشاء القيد المحاسبي بالدفتر العام"/>
+                                
+                                <!-- زر إلغاء الترحيل: يظهر عند ترحيل السند -->
+                                <Button Content="↩️ إلغاء الترحيل" Command="{Binding UnpostPaymentCommand}" Style="{StaticResource ModernButtonStyle}" 
+                                        Width="130" Height="38" Background="#e67e22" FontSize="13.5" FontWeight="Bold" Margin="4"
+                                        Visibility="{Binding IsPaymentUnpostVisible, Converter={StaticResource BoolToVisConverter}}"
+                                        IsEnabled="{Binding PaymentPermissions.CanDelete}"
+                                        ToolTip="إلغاء ترحيل سند الصرف وحذف القيود المحاسبية المرتبطة به"/>
+
+                                <!-- زر الطباعة -->
+                                <Button Content="🖨️ طباعة" Command="{Binding PrintPaymentCommand}" Style="{StaticResource ModernButtonStyle}" 
+                                        Width="110" Height="38" Background="#34495e" FontSize="13.5" FontWeight="Bold" Margin="4"
+                                        ToolTip="طباعة سند الصرف (PDF)"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

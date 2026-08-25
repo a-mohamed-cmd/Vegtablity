@@ -395,6 +395,14 @@ Namespace Controls
             _busy = False
         End Sub
 
+        ''' <summary>التركيز على مربع النص الخاص بالبحث وتحديد النص</summary>
+        Public Sub FocusSearchBox()
+            If _isInitialized AndAlso SearchBox IsNot Nothing Then
+                SearchBox.Focus()
+                SearchBox.SelectAll()
+            End If
+        End Sub
+
     End Class
 
 End Namespace

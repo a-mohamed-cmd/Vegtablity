@@ -84,6 +84,19 @@ Namespace Models
             End Get
             Set(value As Decimal)
                 SetProperty(_unitPrice, value)
+                OnPropertyChanged(NameOf(QuotedPrice))
+            End Set
+        End Property
+
+        ''' <summary>
+        ''' Alias for UnitPrice to support unified QuoteItemRowControl binding
+        ''' </summary>
+        Public Property QuotedPrice As Decimal
+            Get
+                Return _unitPrice
+            End Get
+            Set(value As Decimal)
+                UnitPrice = value
             End Set
         End Property
 

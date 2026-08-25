@@ -37,8 +37,49 @@ Namespace ViewModels
                     _jDateText = value.JDate.ToString("dd/MM/yyyy")
                     OnPropertyChanged(NameOf(JDateText))
                 End If
+                NotifyButtonStates()
             End Set
         End Property
+
+        ' === Smart Button Visibility Properties ===
+        Public ReadOnly Property IsJournalPosted As Boolean
+            Get
+                Return CurrentJournal IsNot Nothing AndAlso CurrentJournal.IsPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsEditAllowed As Boolean
+            Get
+                Return CurrentJournal IsNot Nothing AndAlso Not CurrentJournal.IsPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsSaveVisible As Boolean
+            Get
+                Return CurrentJournal IsNot Nothing AndAlso Not CurrentJournal.IsPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPostVisible As Boolean
+            Get
+                Return CurrentJournal IsNot Nothing AndAlso CurrentJournal.JID > 0 AndAlso Not CurrentJournal.IsPosted
+            End Get
+        End Property
+
+        Public ReadOnly Property IsUnpostVisible As Boolean
+            Get
+                Return CurrentJournal IsNot Nothing AndAlso CurrentJournal.JID > 0 AndAlso CurrentJournal.IsPosted
+            End Get
+        End Property
+
+        Public Sub NotifyButtonStates()
+            OnPropertyChanged(NameOf(IsJournalPosted))
+            OnPropertyChanged(NameOf(IsEditAllowed))
+            OnPropertyChanged(NameOf(IsSaveVisible))
+            OnPropertyChanged(NameOf(IsPostVisible))
+            OnPropertyChanged(NameOf(IsUnpostVisible))
+            CommandManager.InvalidateRequerySuggested()
+        End Sub
 
         ''' <summary>نص تاريخ القيد للإدخال اليدوي — يُزامن مع CurrentJournal.JDate</summary>
         Private _jDateText As String = DateTime.Now.ToString("dd/MM/yyyy")
@@ -252,6 +293,166 @@ Namespace ViewModels
             End Get
         End Property
 
+        ' === Search & Filter Properties ===
+        Private _searchJournalNo As String = ""
+        Public Property SearchJournalNo As String
+            Get
+                Return _searchJournalNo
+            End Get
+            Set(value As String)
+                _searchJournalNo = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _searchDescription As String = ""
+        Public Property SearchDescription As String
+            Get
+                Return _searchDescription
+            End Get
+            Set(value As String)
+                _searchDescription = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _searchStatusIndex As Integer = 0 ' 0: الكل, 1: مرحل, 2: غير مرحل
+        Public Property SearchStatusIndex As Integer
+            Get
+                Return _searchStatusIndex
+            End Get
+            Set(value As Integer)
+                _searchStatusIndex = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _isDateFilterEnabled As Boolean = False
+        Public Property IsDateFilterEnabled As Boolean
+            Get
+                Return _isDateFilterEnabled
+            End Get
+            Set(value As Boolean)
+                _isDateFilterEnabled = value
+                OnPropertyChanged()
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _searchDateFrom As DateTime? = Nothing
+        Public Property SearchDateFrom As DateTime?
+            Get
+                Return _searchDateFrom
+            End Get
+            Set(value As DateTime?)
+                _searchDateFrom = value
+                OnPropertyChanged()
+                If value.HasValue Then
+                    _searchDateFromText = value.Value.ToString("dd/MM/yyyy")
+                    OnPropertyChanged(NameOf(SearchDateFromText))
+                End If
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _searchDateFromText As String = ""
+        Public Property SearchDateFromText As String
+            Get
+                Return _searchDateFromText
+            End Get
+            Set(value As String)
+                _searchDateFromText = If(value, "")
+                OnPropertyChanged()
+                
+                Dim raw = _searchDateFromText.Trim().Replace("-", "/").Replace(".", "/")
+                If raw.Length = 8 AndAlso Not raw.Contains("/") Then
+                    raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
+                End If
+                Dim parsed As DateTime
+                If DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
+                                          System.Globalization.CultureInfo.InvariantCulture,
+                                          System.Globalization.DateTimeStyles.None, parsed) Then
+                    _searchDateFrom = parsed
+                ElseIf String.IsNullOrWhiteSpace(raw) Then
+                    _searchDateFrom = Nothing
+                End If
+                OnPropertyChanged(NameOf(SearchDateFrom))
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _searchDateTo As DateTime? = Nothing
+        Public Property SearchDateTo As DateTime?
+            Get
+                Return _searchDateTo
+            End Get
+            Set(value As DateTime?)
+                _searchDateTo = value
+                OnPropertyChanged()
+                If value.HasValue Then
+                    _searchDateToText = value.Value.ToString("dd/MM/yyyy")
+                    OnPropertyChanged(NameOf(SearchDateToText))
+                End If
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _searchDateToText As String = ""
+        Public Property SearchDateToText As String
+            Get
+                Return _searchDateToText
+            End Get
+            Set(value As String)
+                _searchDateToText = If(value, "")
+                OnPropertyChanged()
+                
+                Dim raw = _searchDateToText.Trim().Replace("-", "/").Replace(".", "/")
+                If raw.Length = 8 AndAlso Not raw.Contains("/") Then
+                    raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
+                End If
+                Dim parsed As DateTime
+                If DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
+                                          System.Globalization.CultureInfo.InvariantCulture,
+                                          System.Globalization.DateTimeStyles.None, parsed) Then
+                    _searchDateTo = parsed
+                ElseIf String.IsNullOrWhiteSpace(raw) Then
+                    _searchDateTo = Nothing
+                End If
+                OnPropertyChanged(NameOf(SearchDateTo))
+                OnPropertyChanged(NameOf(IsFilterActive))
+            End Set
+        End Property
+
+        Private _isFilterCardExpanded As Boolean = False
+        Public Property IsFilterCardExpanded As Boolean
+            Get
+                Return _isFilterCardExpanded
+            End Get
+            Set(value As Boolean)
+                _isFilterCardExpanded = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
+        Public ReadOnly Property IsFilterActive As Boolean
+            Get
+                Return (Not String.IsNullOrWhiteSpace(SearchJournalNo)) OrElse
+                       (Not String.IsNullOrWhiteSpace(SearchDescription)) OrElse
+                       (SearchStatusIndex <> 0) OrElse
+                       (IsDateFilterEnabled AndAlso (SearchDateFrom.HasValue OrElse SearchDateTo.HasValue))
+            End Get
+        End Property
+
+        Public ReadOnly Property ActiveFilterSummaryText As String
+            Get
+                If Not IsFilterActive Then Return ""
+                Return $"نتائج التصفية: {TotalCount} قيد"
+            End Get
+        End Property
+
         ' === Commands ===
         Public Property NewCommand As RelayCommand
         Public Property SaveCommand As RelayCommand
@@ -266,6 +467,9 @@ Namespace ViewModels
         Public Property ToggleListCommand As RelayCommand
         Public Property AutoBalanceCommand As RelayCommand
         Public Property RefreshCommand As RelayCommand
+        Public Property ApplyFilterCommand As RelayCommand
+        Public Property ClearFilterCommand As RelayCommand
+        Public Property ToggleFilterCardCommand As RelayCommand
 
         Public Sub New()
             LoadPermissions("JournalEntries")
@@ -286,6 +490,66 @@ Namespace ViewModels
             ToggleListCommand = New RelayCommand(AddressOf ToggleList)
             AutoBalanceCommand = New RelayCommand(AddressOf ExecuteAutoBalance)
             RefreshCommand = New RelayCommand(AddressOf ExecuteRefresh)
+            ApplyFilterCommand = New RelayCommand(AddressOf ExecuteApplyFilter)
+            ClearFilterCommand = New RelayCommand(AddressOf ExecuteClearFilter)
+            ToggleFilterCardCommand = New RelayCommand(AddressOf ToggleFilterCard)
+        End Sub
+
+        Public Sub ToggleFilterCard(Optional obj As Object = Nothing)
+            IsFilterCardExpanded = Not IsFilterCardExpanded
+        End Sub
+
+        Public Sub ExecuteApplyFilter(Optional obj As Object = Nothing)
+            ParseDateText(SearchDateFromText, _searchDateFrom)
+            ParseDateText(SearchDateToText, _searchDateTo)
+            OnPropertyChanged(NameOf(SearchDateFrom))
+            OnPropertyChanged(NameOf(SearchDateTo))
+            CurrentPageIndex = 1
+            LoadList()
+            OnPropertyChanged(NameOf(IsFilterActive))
+            OnPropertyChanged(NameOf(ActiveFilterSummaryText))
+        End Sub
+
+        Private Sub ParseDateText(text As String, ByRef target As DateTime?)
+            If String.IsNullOrWhiteSpace(text) Then
+                target = Nothing
+                Return
+            End If
+            Dim raw = text.Trim().Replace("-", "/").Replace(".", "/")
+            If raw.Length = 8 AndAlso Not raw.Contains("/") Then
+                raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
+            End If
+            Dim parsed As DateTime
+            If DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
+                                      System.Globalization.CultureInfo.InvariantCulture,
+                                      System.Globalization.DateTimeStyles.None, parsed) Then
+                target = parsed
+            Else
+                target = Nothing
+            End If
+        End Sub
+
+        Public Sub ExecuteClearFilter(Optional obj As Object = Nothing)
+            _searchJournalNo = ""
+            _searchDescription = ""
+            _searchStatusIndex = 0
+            _isDateFilterEnabled = False
+            _searchDateFrom = Nothing
+            _searchDateTo = Nothing
+            _searchDateFromText = ""
+            _searchDateToText = ""
+            OnPropertyChanged(NameOf(SearchJournalNo))
+            OnPropertyChanged(NameOf(SearchDescription))
+            OnPropertyChanged(NameOf(SearchStatusIndex))
+            OnPropertyChanged(NameOf(IsDateFilterEnabled))
+            OnPropertyChanged(NameOf(SearchDateFrom))
+            OnPropertyChanged(NameOf(SearchDateTo))
+            OnPropertyChanged(NameOf(SearchDateFromText))
+            OnPropertyChanged(NameOf(SearchDateToText))
+            OnPropertyChanged(NameOf(IsFilterActive))
+            OnPropertyChanged(NameOf(ActiveFilterSummaryText))
+            CurrentPageIndex = 1
+            LoadList()
         End Sub
 
         ' === Methods ===
@@ -303,16 +567,53 @@ Namespace ViewModels
         End Sub
 
         Public Sub LoadList()
+            Dim isPosted As Boolean? = Nothing
+            If SearchStatusIndex = 1 Then
+                isPosted = True
+            ElseIf SearchStatusIndex = 2 Then
+                isPosted = False
+            End If
+
+            Dim startDate As DateTime? = SearchDateFrom
+            Dim endDate As DateTime? = SearchDateTo
+
             Try
                 Dim count As Integer = 0
-                Dim headers = _accountingService.GetPagedJournalHeaders(CurrentPageIndex, PageSize, count)
+                Dim headers = _accountingService.GetPagedJournalHeaders(
+                    CurrentPageIndex,
+                    PageSize,
+                    count,
+                    SearchJournalNo,
+                    SearchDescription,
+                    isPosted,
+                    startDate,
+                    endDate
+                )
                 TotalCount = count
                 JournalList = New ObservableCollection(Of JournalHeader)(headers)
             Catch ex As Exception
-                ' Fallback to old GetAll if GetPaged SP fails
-                Dim all = _accountingService.GetAllJournalHeaders()
-                TotalCount = all.Count
-                Dim paged = all.Skip((CurrentPageIndex - 1) * PageSize).Take(PageSize)
+                ' Fallback with full in-memory filtering if GetPaged SP fails or lacks new parameters
+                Dim all = _accountingService.GetAllJournalHeaders().AsEnumerable()
+
+                If Not String.IsNullOrWhiteSpace(SearchJournalNo) Then
+                    all = all.Where(Function(j) j.JournalNo.ToString().Contains(SearchJournalNo.Trim()))
+                End If
+                If Not String.IsNullOrWhiteSpace(SearchDescription) Then
+                    all = all.Where(Function(j) j.Description IsNot Nothing AndAlso j.Description.IndexOf(SearchDescription.Trim(), StringComparison.OrdinalIgnoreCase) >= 0)
+                End If
+                If isPosted.HasValue Then
+                    all = all.Where(Function(j) j.IsPosted = isPosted.Value)
+                End If
+                If startDate.HasValue Then
+                    all = all.Where(Function(j) j.JDate.Date >= startDate.Value.Date)
+                End If
+                If endDate.HasValue Then
+                    all = all.Where(Function(j) j.JDate.Date <= endDate.Value.Date)
+                End If
+
+                Dim filteredList = all.ToList()
+                TotalCount = filteredList.Count
+                Dim paged = filteredList.Skip((CurrentPageIndex - 1) * PageSize).Take(PageSize)
                 JournalList = New ObservableCollection(Of JournalHeader)(paged)
             End Try
         End Sub
@@ -364,6 +665,7 @@ Namespace ViewModels
             ' Add one default line
             AddLine()
             UpdateTotals()
+            NotifyButtonStates()
         End Sub
 
         Public Sub AddLine()
@@ -480,9 +782,12 @@ Namespace ViewModels
             Try
                 Dim jid = _accountingService.SaveJournalEntry(CurrentJournal)
                 CurrentJournal.JID = jid
+                CurrentJournal.IsPosted = False
+                NotifyButtonStates()
                 LoadList()
                 ' Find and select the saved one
                 SelectedJournal = JournalList.FirstOrDefault(Function(j) j.JID = jid)
+                NotifyButtonStates()
                 MessageBox.Show("تم حفظ القيد بنجاح", "حفظ", MessageBoxButton.OK, MessageBoxImage.Information)
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
@@ -501,8 +806,11 @@ Namespace ViewModels
             Try
                 If MessageBox.Show("هل أنت متأكد من ترحيل القيد؟ لا يمكن التعديل بعد الترحيل", "تأكيد", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.Yes Then
                     _accountingService.PostJournalEntry(CurrentJournal.JID)
+                    CurrentJournal.IsPosted = True
+                    NotifyButtonStates()
                     LoadList()
                     SelectedJournal = JournalList.FirstOrDefault(Function(j) j.JID = CurrentJournal.JID)
+                    NotifyButtonStates()
                     MessageBox.Show("تم ترحيل القيد بنجاح", "ترحيل", MessageBoxButton.OK, MessageBoxImage.Information)
                 End If
             Catch ex As Exception
@@ -522,8 +830,11 @@ Namespace ViewModels
             Try
                 If MessageBox.Show("هل أنت متأكد من إلغاء ترحيل هذا القيد؟ سيتم حذف القيود المرتبطة من الدفتر العام وإرجاع القيد كغير مرحّل.", "تأكيد إلغاء الترحيل", MessageBoxButton.YesNo, MessageBoxImage.Question) = MessageBoxResult.Yes Then
                     _accountingService.UnpostJournalEntry(CurrentJournal.JID)
+                    CurrentJournal.IsPosted = False
+                    NotifyButtonStates()
                     LoadList()
                     SelectedJournal = JournalList.FirstOrDefault(Function(j) j.JID = CurrentJournal.JID)
+                    NotifyButtonStates()
                     MessageBox.Show("تم إلغاء ترحيل القيد وحذف مفرداته من الدفتر العام بنجاح", "إلغاء الترحيل", MessageBoxButton.OK, MessageBoxImage.Information)
                 End If
             Catch ex As Exception

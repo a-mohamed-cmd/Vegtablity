@@ -1012,45 +1012,717 @@ Namespace Helpers
                 If dlg.ShowDialog() <> True Then Return
 
                 Dim doc As New PdfDocument()
-                Dim page = doc.AddPage()
-                page.Size = PdfSharp.PageSize.A4
-                Dim gfx = XGraphics.FromPdfPage(page)
-                Dim margin As Double = 40
-                Dim width = page.Width.Point - (2 * margin)
+                
+                ' ============================================================
+                ' PAGE 1: Financial Statement Table (قائمة الأرباح والخسائر)
+                ' ============================================================
+                Dim page1 = doc.AddPage()
+                page1.Size = PdfSharp.PageSize.A4
+                Dim gfx1 = XGraphics.FromPdfPage(page1)
+                Dim margin As Double = 35
+                Dim width = page1.Width.Point - (2 * margin)
                 Dim currentY As Double = 20
 
                 Dim service As New Services.SettingsService()
                 Dim company = service.GetCompanyInfo()
 
-                DrawReportHeader(gfx, company, page, currentY, margin, width, 1)
+                DrawReportHeader(gfx1, company, page1, currentY, margin, width, 1)
 
-                ' Title
-                gfx.DrawString(ArabicTextHelper.Fix(report.Title), _fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 30), XStringFormats.TopCenter)
-                currentY += 35
-                gfx.DrawString(ArabicTextHelper.Fix("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 20), XStringFormats.TopCenter)
-                currentY += 35
+                ' Title & Period
+                gfx1.DrawString(ArabicTextHelper.Fix(report.Title), _fontTitle, XBrushes.DarkRed, New XRect(margin, currentY, width, 26), XStringFormats.TopCenter)
+                currentY += 28
+                gfx1.DrawString(ArabicTextHelper.Fix("الفترة من: " & startDate.ToString("yyyy/MM/dd") & "  إلى: " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 18), XStringFormats.TopCenter)
+                currentY += 26
 
                 ' Revenues
-                DrawFinancialSection(gfx, "الإيرادات", report.Items.Where(Function(i) i.AccountType = "Revenue").ToList(), currentY, margin, width)
+                Dim revItems = report.Items.Where(Function(i) i.AccountType = "Revenue").ToList()
+                Dim totalRev As Decimal = revItems.Sum(Function(i) i.Balance)
+                DrawFinancialSectionWithPercentage(gfx1, "الإيرادات", revItems, totalRev, currentY, margin, width)
 
                 ' Expenses
+                currentY += 15
+                Dim expItems = report.Items.Where(Function(i) i.AccountType = "Expenses").ToList()
+                DrawFinancialSectionWithPercentage(gfx1, "المصروفات", expItems, totalRev, currentY, margin, width)
+
+                ' Net Result Block
                 currentY += 20
-                DrawFinancialSection(gfx, "المصروفات", report.Items.Where(Function(i) i.AccountType = "Expenses").ToList(), currentY, margin, width)
+                Dim netBgBrush As XBrush = If(report.TotalBalance < 0, New XSolidBrush(XColor.FromArgb(240, 253, 244)), New XSolidBrush(XColor.FromArgb(254, 242, 242)))
+                Dim netBorderPen As XPen = If(report.TotalBalance < 0, New XPen(XColor.FromArgb(34, 197, 94), 1.5), New XPen(XColor.FromArgb(239, 68, 68), 1.5))
+                
+                gfx1.DrawRoundedRectangle(netBgBrush, margin, currentY, width, 38, 5, 5)
+                gfx1.DrawRoundedRectangle(netBorderPen, margin, currentY, width, 38, 5, 5)
 
-                ' Net Result
-                currentY += 30
-                gfx.DrawRectangle(XBrushes.WhiteSmoke, margin, currentY, width, 35)
-                gfx.DrawRectangle(XPens.DarkSlateGray, margin, currentY, width, 35)
+                Dim netLabel As String = If(report.TotalBalance < 0, "صافي الربح للفترة:", "صافي الخسارة للفترة:")
+                Dim netPercent As Decimal = If(Math.Abs(totalRev) > 0, Math.Round((Math.Abs(report.TotalBalance) / Math.Abs(totalRev)) * 100D, 1), 0)
+                
+                gfx1.DrawString(ArabicTextHelper.Fix(netLabel), fontLarge, XBrushes.Black, New XRect(margin + 12, currentY + 9, width, 25), XStringFormats.TopLeft)
+                
+                Dim netText = FormatAmount(Math.Abs(report.TotalBalance)) & "  (" & netPercent.ToString("F1") & " %)"
+                Dim amountBrush As XBrush = If(report.TotalBalance < 0, New XSolidBrush(XColor.FromArgb(21, 128, 61)), New XSolidBrush(XColor.FromArgb(185, 28, 28)))
+                gfx1.DrawString(ArabicTextHelper.Fix(netText), fontLarge, amountBrush, New XRect(margin, currentY + 9, width - 12, 25), XStringFormats.TopRight)
 
-                Dim netLabel As String = If(report.TotalBalance < 0, "صافي الأرباح:", "صافي الخسارة:")
-                gfx.DrawString(ArabicTextHelper.Fix(netLabel), fontLarge, XBrushes.Black, New XRect(margin + 10, currentY + 7, width, 25), XStringFormats.TopLeft)
-                Dim amountBrush As XBrush = If(report.TotalBalance < 0, XBrushes.DarkGreen, XBrushes.DarkRed)
-                gfx.DrawString(FormatAmount(Math.Abs(report.TotalBalance)), fontLarge, amountBrush, New XRect(margin, currentY + 7, width - 10, 25), XStringFormats.TopRight)
+                ' ============================================================
+                ' PAGE 2: Financial Analysis & Visual Charts (ورقة الرسوم البيانية)
+                ' ============================================================
+                Dim page2 = doc.AddPage()
+                page2.Size = PdfSharp.PageSize.A4
+                Dim gfx2 = XGraphics.FromPdfPage(page2)
+                DrawProfitLossChartsPage(gfx2, company, page2, revItems, expItems, report.TotalBalance, startDate, endDate)
 
                 doc.Save(dlg.FileName)
                 Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء تصدير PDF: " & ex.Message)
+            End Try
+        End Sub
+
+        Private Shared Sub DrawFinancialSectionWithPercentage(gfx As XGraphics, title As String, items As List(Of FinancialReportItem), baseSalesTotal As Decimal, ByRef currentY As Double, margin As Double, width As Double)
+            Dim colCodeW As Double = 75
+            Dim colPercentW As Double = 75
+            Dim colAmountW As Double = 110
+            Dim colNameW As Double = width - (colCodeW + colPercentW + colAmountW)
+
+            ' Section Header
+            Dim sectionBrush As XBrush = If(title.Contains("الإيرادات"), New XSolidBrush(XColor.FromArgb(239, 246, 255)), New XSolidBrush(XColor.FromArgb(254, 242, 242)))
+            Dim sectionTextBrush As XBrush = If(title.Contains("الإيرادات"), New XSolidBrush(XColor.FromArgb(30, 64, 175)), New XSolidBrush(XColor.FromArgb(153, 27, 27)))
+
+            gfx.DrawRoundedRectangle(sectionBrush, margin, currentY, width, 24, 4, 4)
+            gfx.DrawString(ArabicTextHelper.Fix(title), headerFont, sectionTextBrush, New XRect(margin + 8, currentY + 4, width, 18), XStringFormats.TopLeft)
+            currentY += 26
+
+            ' Table Headers
+            Dim thBg = New XSolidBrush(XColor.FromArgb(241, 245, 249))
+            gfx.DrawRectangle(thBg, margin, currentY, width, 20)
+            gfx.DrawRectangle(XPens.LightGray, margin, currentY, width, 20)
+
+            gfx.DrawString(ArabicTextHelper.Fix("الكود"), fontBold, XBrushes.DarkSlateGray, New XRect(margin, currentY + 3, colCodeW, 18), XStringFormats.TopCenter)
+            gfx.DrawString(ArabicTextHelper.Fix("اسم الحساب"), fontBold, XBrushes.DarkSlateGray, New XRect(margin + colCodeW + 5, currentY + 3, colNameW - 10, 18), XStringFormats.TopLeft)
+            gfx.DrawString(ArabicTextHelper.Fix("المبلغ"), fontBold, XBrushes.DarkSlateGray, New XRect(margin + colCodeW + colNameW, currentY + 3, colAmountW - 5, 18), XStringFormats.TopRight)
+            gfx.DrawString(ArabicTextHelper.Fix("% من المبيعات"), fontBold, XBrushes.DarkSlateGray, New XRect(margin + width - colPercentW, currentY + 3, colPercentW, 18), XStringFormats.TopCenter)
+            currentY += 20
+
+            ' Items Rows
+            Dim total As Decimal = 0
+            For Each itm In items
+                Dim percent = If(Math.Abs(baseSalesTotal) > 0, (Math.Abs(itm.Balance) / Math.Abs(baseSalesTotal)) * 100D, 0)
+                
+                gfx.DrawString(itm.AccountCode, fontReg, XBrushes.Black, New XRect(margin, currentY + 3, colCodeW, 18), XStringFormats.TopCenter)
+                gfx.DrawString(ArabicTextHelper.Fix(itm.AccountName), fontReg, XBrushes.Black, New XRect(margin + colCodeW + 5, currentY + 3, colNameW - 10, 18), XStringFormats.TopLeft)
+                gfx.DrawString(FormatAmount(Math.Abs(itm.Balance)), fontReg, XBrushes.Black, New XRect(margin + colCodeW + colNameW, currentY + 3, colAmountW - 5, 18), XStringFormats.TopRight)
+                gfx.DrawString(percent.ToString("F1") & " %", fontReg, XBrushes.DarkBlue, New XRect(margin + width - colPercentW, currentY + 3, colPercentW, 18), XStringFormats.TopCenter)
+
+                gfx.DrawLine(XPens.LightGray, margin, currentY + 20, margin + width, currentY + 20)
+                currentY += 20
+                total += itm.Balance
+            Next
+
+            ' Section Total Row
+            Dim secPercent = If(Math.Abs(baseSalesTotal) > 0, (Math.Abs(total) / Math.Abs(baseSalesTotal)) * 100D, 0)
+            Dim totBg = New XSolidBrush(XColor.FromArgb(248, 250, 252))
+            gfx.DrawRectangle(totBg, margin, currentY, width, 22)
+            gfx.DrawRectangle(XPens.LightGray, margin, currentY, width, 22)
+
+            gfx.DrawString(ArabicTextHelper.Fix("إجمالي " & title), fontBold, XBrushes.Black, New XRect(margin + colCodeW + 5, currentY + 4, colNameW - 10, 18), XStringFormats.TopLeft)
+            gfx.DrawString(FormatAmount(Math.Abs(total)), fontBold, XBrushes.Black, New XRect(margin + colCodeW + colNameW, currentY + 4, colAmountW - 5, 18), XStringFormats.TopRight)
+            gfx.DrawString(secPercent.ToString("F1") & " %", fontBold, XBrushes.Black, New XRect(margin + width - colPercentW, currentY + 4, colPercentW, 18), XStringFormats.TopCenter)
+            currentY += 25
+        End Sub
+
+        Private Shared Sub DrawProfitLossChartsPage(gfx As XGraphics, company As CompanyInfo, page As PdfPage, revItems As List(Of FinancialReportItem), expItems As List(Of FinancialReportItem), netProfit As Decimal, startDate As Date, endDate As Date)
+            Dim margin As Double = 35
+            Dim width = page.Width.Point - (2 * margin)
+            Dim currentY As Double = 20
+
+            DrawReportHeader(gfx, company, page, currentY, margin, width, 2)
+
+            ' Page Title
+            gfx.DrawString(ArabicTextHelper.Fix("📊 التحليل المالي والرسوم البيانية لقائمة الأرباح والخسائر"), _fontTitle, XBrushes.DarkSlateBlue, New XRect(margin, currentY, width, 26), XStringFormats.TopCenter)
+            currentY += 28
+            gfx.DrawString(ArabicTextHelper.Fix("الفترة من: " & startDate.ToString("yyyy/MM/dd") & "  إلى: " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 18), XStringFormats.TopCenter)
+            currentY += 30
+
+            Dim totalRev = Math.Abs(revItems.Sum(Function(i) i.Balance))
+            Dim totalExp = Math.Abs(expItems.Sum(Function(i) i.Balance))
+            Dim netAbs = Math.Abs(netProfit)
+            Dim netMargin = If(totalRev > 0, Math.Round((netAbs / totalRev) * 100D, 1), 0)
+            Dim expRatio = If(totalRev > 0, Math.Round((totalExp / totalRev) * 100D, 1), 0)
+
+            ' 1. Financial KPI Cards (3 Cards)
+            Dim cardW As Double = (width - 20) / 3
+            Dim cardH As Double = 65
+
+            ' Card 1: Total Revenues
+            DrawKpiCard(gfx, margin, currentY, cardW, cardH, "إجمالي المبيعات / الإيرادات", FormatAmount(totalRev), "100.0 % من الإيراد", XColor.FromArgb(240, 253, 244), XColor.FromArgb(34, 197, 94), XColor.FromArgb(21, 128, 61))
+            
+            ' Card 2: Total Expenses
+            DrawKpiCard(gfx, margin + cardW + 10, currentY, cardW, cardH, "إجمالي المصروفات", FormatAmount(totalExp), expRatio.ToString("F1") & " % من المبيعات", XColor.FromArgb(254, 242, 242), XColor.FromArgb(239, 68, 68), XColor.FromArgb(185, 28, 28))
+
+            ' Card 3: Net Profit / Margin
+            Dim netTitle = If(netProfit < 0, "صافي الربح", "صافي الخسارة")
+            Dim netCardBg = If(netProfit < 0, XColor.FromArgb(238, 242, 255), XColor.FromArgb(255, 241, 242))
+            Dim netCardBorder = If(netProfit < 0, XColor.FromArgb(99, 102, 241), XColor.FromArgb(244, 63, 94))
+            Dim netCardText = If(netProfit < 0, XColor.FromArgb(67, 56, 202), XColor.FromArgb(190, 18, 60))
+            DrawKpiCard(gfx, margin + (cardW + 10) * 2, currentY, cardW, cardH, netTitle, FormatAmount(netAbs), "الهامش: " & netMargin.ToString("F1") & " %", netCardBg, netCardBorder, netCardText)
+
+            currentY += cardH + 25
+
+            ' 2. Bar Chart: Revenues vs Expenses vs Net Profit
+            Dim chartBoxW As Double = (width - 15) / 2
+            Dim chartBoxH As Double = 230
+
+            ' Draw Left Box: Bar Chart
+            gfx.DrawRoundedRectangle(New XSolidBrush(XColor.FromArgb(248, 250, 252)), margin, currentY, chartBoxW, chartBoxH, 6, 6)
+            gfx.DrawRoundedRectangle(New XPen(XColor.FromArgb(226, 232, 240)), margin, currentY, chartBoxW, chartBoxH, 6, 6)
+            gfx.DrawString(ArabicTextHelper.Fix("مقارنة الإيرادات بالمصروفات وصافي الربح"), fontBold, XBrushes.DarkSlateBlue, New XRect(margin + 10, currentY + 10, chartBoxW - 20, 20), XStringFormats.TopLeft)
+
+            Dim maxVal = Math.Max(totalRev, Math.Max(totalExp, netAbs))
+            If maxVal <= 0 Then maxVal = 1
+
+            Dim barAreaX = margin + 15
+            Dim barAreaY = currentY + 40
+            Dim barMaxH = 140.0
+            Dim barColW = (chartBoxW - 50) / 3
+
+            ' Bar 1: Revenues
+            Dim revH = (totalRev / maxVal) * barMaxH
+            Dim revX = barAreaX + 10
+            Dim revY = barAreaY + (barMaxH - revH)
+            gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(34, 197, 94)), revX, revY, barColW - 10, revH)
+            gfx.DrawString(FormatAmount(totalRev), fontSmall, XBrushes.Black, New XRect(revX - 5, revY - 14, barColW, 14), XStringFormats.TopCenter)
+            gfx.DrawString(ArabicTextHelper.Fix("الإيرادات"), fontSmall, XBrushes.DarkSlateGray, New XRect(revX - 5, barAreaY + barMaxH + 5, barColW, 14), XStringFormats.TopCenter)
+
+            ' Bar 2: Expenses
+            Dim expH = (totalExp / maxVal) * barMaxH
+            Dim expX = revX + barColW + 5
+            Dim expY = barAreaY + (barMaxH - expH)
+            gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(239, 68, 68)), expX, expY, barColW - 10, expH)
+            gfx.DrawString(FormatAmount(totalExp), fontSmall, XBrushes.Black, New XRect(expX - 5, expY - 14, barColW, 14), XStringFormats.TopCenter)
+            gfx.DrawString(ArabicTextHelper.Fix("المصروفات"), fontSmall, XBrushes.DarkSlateGray, New XRect(expX - 5, barAreaY + barMaxH + 5, barColW, 14), XStringFormats.TopCenter)
+
+            ' Bar 3: Net Profit
+            Dim netH = (netAbs / maxVal) * barMaxH
+            Dim netX = expX + barColW + 5
+            Dim netY = barAreaY + (barMaxH - netH)
+            Dim netBarColor = If(netProfit < 0, XColor.FromArgb(79, 70, 229), XColor.FromArgb(249, 115, 22))
+            gfx.DrawRectangle(New XSolidBrush(netBarColor), netX, netY, barColW - 10, netH)
+            gfx.DrawString(FormatAmount(netAbs), fontSmall, XBrushes.Black, New XRect(netX - 5, netY - 14, barColW, 14), XStringFormats.TopCenter)
+            gfx.DrawString(ArabicTextHelper.Fix("صافي الربح"), fontSmall, XBrushes.DarkSlateGray, New XRect(netX - 5, barAreaY + barMaxH + 5, barColW, 14), XStringFormats.TopCenter)
+
+            ' Base line
+            gfx.DrawLine(XPens.DarkGray, barAreaX, barAreaY + barMaxH, barAreaX + chartBoxW - 30, barAreaY + barMaxH)
+
+            ' 3. Right Box: Donut / Pie Chart for Expense Distribution
+            Dim pieBoxX = margin + chartBoxW + 15
+            gfx.DrawRoundedRectangle(New XSolidBrush(XColor.FromArgb(248, 250, 252)), pieBoxX, currentY, chartBoxW, chartBoxH, 6, 6)
+            gfx.DrawRoundedRectangle(New XPen(XColor.FromArgb(226, 232, 240)), pieBoxX, currentY, chartBoxW, chartBoxH, 6, 6)
+            gfx.DrawString(ArabicTextHelper.Fix("توزيع المصروفات التشغيلية حسب البنود"), fontBold, XBrushes.DarkSlateBlue, New XRect(pieBoxX + 10, currentY + 10, chartBoxW - 20, 20), XStringFormats.TopLeft)
+
+            ' Draw Pie Chart
+            Dim pieColors = {
+                XColor.FromArgb(239, 68, 68),
+                XColor.FromArgb(249, 115, 22),
+                XColor.FromArgb(234, 179, 8),
+                XColor.FromArgb(59, 130, 246),
+                XColor.FromArgb(168, 85, 247),
+                XColor.FromArgb(20, 184, 166),
+                XColor.FromArgb(100, 116, 139)
+            }
+
+            Dim pieSize = 110.0
+            Dim pieX = pieBoxX + 12
+            Dim pieY = currentY + 45
+
+            Dim sortedExpenses = expItems.OrderByDescending(Function(e) Math.Abs(e.Balance)).ToList()
+            Dim startAngle As Double = 0
+
+            If totalExp > 0 AndAlso sortedExpenses.Count > 0 Then
+                For i As Integer = 0 To Math.Min(sortedExpenses.Count - 1, pieColors.Length - 1)
+                    Dim itm = sortedExpenses(i)
+                    Dim sweep = (CDbl(Math.Abs(itm.Balance)) / CDbl(totalExp)) * 360.0
+                    If sweep > 0 Then
+                        gfx.DrawPie(New XSolidBrush(pieColors(i)), pieX, pieY, pieSize, pieSize, startAngle, sweep)
+                        startAngle += sweep
+                    End If
+                Next
+            Else
+                gfx.DrawEllipse(New XSolidBrush(XColor.FromArgb(226, 232, 240)), pieX, pieY, pieSize, pieSize)
+            End If
+
+            ' Legend on the right side of pie
+            Dim legendX = pieX + pieSize + 12
+            Dim legendY = pieY - 2
+            For i As Integer = 0 To Math.Min(sortedExpenses.Count - 1, 5)
+                Dim itm = sortedExpenses(i)
+                Dim pVal = If(totalExp > 0, (Math.Abs(itm.Balance) / totalExp) * 100D, 0)
+                Dim c = pieColors(Math.Min(i, pieColors.Length - 1))
+                gfx.DrawRectangle(New XSolidBrush(c), legendX, legendY + 2, 8, 8)
+                Dim legText = itm.AccountName
+                If legText.Length > 12 Then legText = legText.Substring(0, 12) & ".."
+                gfx.DrawString(ArabicTextHelper.Fix(legText & " (" & pVal.ToString("F0") & "%)"), fontSmall, XBrushes.DarkSlateGray, New XRect(legendX + 12, legendY, chartBoxW - pieSize - 35, 14), XStringFormats.TopLeft)
+                legendY += 18
+            Next
+
+            ' Footer note on charts page
+            currentY += chartBoxH + 20
+            gfx.DrawString(ArabicTextHelper.Fix("تم استخراج هذا التقرير المالي آلياً بواسطة نظام Vegtablity المحاسبي"), fontSmall, XBrushes.Gray, New XRect(margin, currentY, width, 18), XStringFormats.TopCenter)
+        End Sub
+
+        Private Shared Sub DrawKpiCard(gfx As XGraphics, x As Double, y As Double, w As Double, h As Double, title As String, mainVal As String, subText As String, bgCol As XColor, borderCol As XColor, textCol As XColor)
+            gfx.DrawRoundedRectangle(New XSolidBrush(bgCol), x, y, w, h, 6, 6)
+            gfx.DrawRoundedRectangle(New XPen(borderCol, 1), x, y, w, h, 6, 6)
+
+            gfx.DrawString(ArabicTextHelper.Fix(title), fontSmall, New XSolidBrush(textCol), New XRect(x + 8, y + 6, w - 16, 14), XStringFormats.TopLeft)
+            gfx.DrawString(mainVal, headerFont, New XSolidBrush(textCol), New XRect(x + 8, y + 22, w - 16, 20), XStringFormats.TopLeft)
+            gfx.DrawString(ArabicTextHelper.Fix(subText), fontSmall, XBrushes.Gray, New XRect(x + 8, y + 44, w - 16, 14), XStringFormats.TopLeft)
+        End Sub
+
+        Private Shared Function EscapeCsv(val As Object) As String
+            If val Is Nothing Then Return ""
+            Dim s = val.ToString()
+            If s.Contains(",") OrElse s.Contains("""") OrElse s.Contains(vbCr) OrElse s.Contains(vbLf) Then
+                Return """" & s.Replace("""", """""") & """"
+            End If
+            Return s
+        End Function
+
+        Public Shared Sub ExportProfitLossToExcel(report As FinancialReport, startDate As Date, endDate As Date)
+            Try
+                Dim dlg As New SaveFileDialog() With {
+                    .Title = "تصدير قائمة الأرباح والخسائر إلى Excel / CSV",
+                    .Filter = "ملفات Excel / CSV (*.csv)|*.csv",
+                    .FileName = "Profit_Loss_" & DateTime.Now.ToString("yyyyMMdd_HHmm") & ".csv"
+                }
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                    ' Title & Info
+                    sw.WriteLine(EscapeCsv("قائمة الأرباح والخسائر"))
+                    sw.WriteLine(EscapeCsv("الفترة: من " & startDate.ToString("yyyy/MM/dd") & " إلى " & endDate.ToString("yyyy/MM/dd")))
+                    sw.WriteLine()
+
+                    ' 1. Revenues Section
+                    sw.WriteLine(EscapeCsv("=== الإيرادات والمبيعات ==="))
+                    sw.WriteLine(String.Join(",", {EscapeCsv("رمز الحساب"), EscapeCsv("اسم الحساب"), EscapeCsv("المبلغ"), EscapeCsv("النسبة من المبيعات")}))
+
+                    Dim revItems = report.Items.Where(Function(i) i.AccountType = "Revenue").ToList()
+                    Dim totalRev As Decimal = revItems.Sum(Function(i) i.Balance)
+                    Dim baseSales = Math.Abs(totalRev)
+
+                    For Each itm In revItems
+                        Dim p = If(baseSales > 0, ((Math.Abs(itm.Balance) / baseSales) * 100D).ToString("F1") & " %", "0.0 %")
+                        sw.WriteLine(String.Join(",", {
+                            EscapeCsv(itm.AccountCode),
+                            EscapeCsv(itm.AccountName),
+                            Math.Abs(itm.Balance).ToString("F3"),
+                            EscapeCsv(p)
+                        }))
+                    Next
+
+                    ' Total Revenues
+                    sw.WriteLine(String.Join(",", {
+                        "",
+                        EscapeCsv("إجمالي الإيرادات"),
+                        baseSales.ToString("F3"),
+                        EscapeCsv("100.0 %")
+                    }))
+                    sw.WriteLine()
+
+                    ' 2. Expenses Section
+                    sw.WriteLine(EscapeCsv("=== المصروفات التشغيلية والعمومية ==="))
+                    sw.WriteLine(String.Join(",", {EscapeCsv("رمز الحساب"), EscapeCsv("اسم الحساب"), EscapeCsv("المبلغ"), EscapeCsv("النسبة من المبيعات")}))
+
+                    Dim expItems = report.Items.Where(Function(i) i.AccountType = "Expenses").ToList()
+                    Dim totalExp As Decimal = expItems.Sum(Function(i) i.Balance)
+                    Dim expAbs = Math.Abs(totalExp)
+
+                    For Each itm In expItems
+                        Dim p = If(baseSales > 0, ((Math.Abs(itm.Balance) / baseSales) * 100D).ToString("F1") & " %", "0.0 %")
+                        sw.WriteLine(String.Join(",", {
+                            EscapeCsv(itm.AccountCode),
+                            EscapeCsv(itm.AccountName),
+                            Math.Abs(itm.Balance).ToString("F3"),
+                            EscapeCsv(p)
+                        }))
+                    Next
+
+                    ' Total Expenses
+                    Dim expRatio = If(baseSales > 0, ((expAbs / baseSales) * 100D).ToString("F1") & " %", "0.0 %")
+                    sw.WriteLine(String.Join(",", {
+                        "",
+                        EscapeCsv("إجمالي المصروفات"),
+                        expAbs.ToString("F3"),
+                        EscapeCsv(expRatio)
+                    }))
+                    sw.WriteLine()
+
+                    ' 3. Net Profit / Loss
+                    Dim netLabel = If(report.TotalBalance < 0, "صافي الربح للفترة", "صافي الخسارة للفترة")
+                    Dim netRatio = If(baseSales > 0, ((Math.Abs(report.TotalBalance) / baseSales) * 100D).ToString("F1") & " %", "0.0 %")
+                    sw.WriteLine(String.Join(",", {
+                        "",
+                        EscapeCsv(netLabel),
+                        Math.Abs(report.TotalBalance).ToString("F3"),
+                        EscapeCsv(netRatio)
+                    }))
+                End Using
+
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير Excel / CSV: " & ex.Message)
+            End Try
+        End Sub
+
+        ' ============================================================
+        ' Monthly Comparative Profit & Loss Reports (PDF & Excel / CSV)
+        ' ============================================================
+        Public Shared Sub ExportMonthlyComparativeToPdf(report As MonthlyComparativeReport, startDate As Date, endDate As Date)
+            Try
+                Dim dlg As New SaveFileDialog() With {
+                    .Filter = "PDF Files (*.pdf)|*.pdf",
+                    .FileName = "Monthly_Comparative_P&L_" & DateTime.Now.ToString("yyyyMMdd_HHmm") & ".pdf"
+                }
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Dim doc As New PdfDocument()
+                
+                ' Landscape Page 1: Matrix Table
+                Dim page1 = doc.AddPage()
+                page1.Size = PdfSharp.PageSize.A4
+                page1.Orientation = PdfSharp.PageOrientation.Landscape
+                Dim gfx1 = XGraphics.FromPdfPage(page1)
+
+                Dim margin As Double = 30
+                Dim width = page1.Width.Point - (2 * margin)
+                Dim currentY As Double = 20
+
+                Dim service As New Services.SettingsService()
+                Dim company = service.GetCompanyInfo()
+
+                DrawReportHeader(gfx1, company, page1, currentY, margin, width, 1)
+
+                gfx1.DrawString(ArabicTextHelper.Fix(report.Title), _fontTitle, XBrushes.DarkSlateBlue, New XRect(margin, currentY, width, 26), XStringFormats.TopCenter)
+                currentY += 28
+                gfx1.DrawString(ArabicTextHelper.Fix("الفترة من: " & startDate.ToString("yyyy/MM/dd") & "  إلى: " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 18), XStringFormats.TopCenter)
+                currentY += 25
+
+                ' Calculate Dynamic Columns Width
+                Dim colCodeW As Double = 60
+                Dim colTotalW As Double = 85
+                Dim colPercentW As Double = 65
+                Dim numMonths = Math.Max(1, report.Months.Count)
+                Dim colMonthW = Math.Min(75.0, (width - colCodeW - colTotalW - colPercentW - 140) / numMonths)
+                Dim colNameW = width - (colCodeW + colTotalW + colPercentW + (colMonthW * numMonths))
+
+                ' Matrix Table Header
+                Dim thBg = New XSolidBrush(XColor.FromArgb(241, 245, 249))
+                gfx1.DrawRectangle(thBg, margin, currentY, width, 22)
+                gfx1.DrawRectangle(XPens.LightGray, margin, currentY, width, 22)
+
+                Dim curX = margin
+                gfx1.DrawString(ArabicTextHelper.Fix("الكود"), fontBold, XBrushes.DarkSlateGray, New XRect(curX, currentY + 4, colCodeW, 16), XStringFormats.TopCenter)
+                curX += colCodeW
+                gfx1.DrawString(ArabicTextHelper.Fix("اسم الحساب"), fontBold, XBrushes.DarkSlateGray, New XRect(curX + 5, currentY + 4, colNameW - 10, 16), XStringFormats.TopLeft)
+                curX += colNameW
+
+                For Each m In report.Months
+                    gfx1.DrawString(ArabicTextHelper.Fix(m.MonthName), fontBold, XBrushes.DarkSlateGray, New XRect(curX, currentY + 4, colMonthW, 16), XStringFormats.TopCenter)
+                    curX += colMonthW
+                Next
+
+                gfx1.DrawString(ArabicTextHelper.Fix("إجمالي الفترة"), fontBold, XBrushes.DarkSlateGray, New XRect(curX, currentY + 4, colTotalW, 16), XStringFormats.TopCenter)
+                curX += colTotalW
+                gfx1.DrawString(ArabicTextHelper.Fix("% المبيعات"), fontBold, XBrushes.DarkSlateGray, New XRect(curX, currentY + 4, colPercentW, 16), XStringFormats.TopCenter)
+                currentY += 22
+
+                ' Section 1: Revenues
+                gfx1.DrawRoundedRectangle(New XSolidBrush(XColor.FromArgb(239, 246, 255)), margin, currentY, width, 18, 2, 2)
+                gfx1.DrawString(ArabicTextHelper.Fix("الإيرادات والمبيعات"), fontBold, New XSolidBrush(XColor.FromArgb(30, 64, 175)), New XRect(margin + 5, currentY + 2, width, 16), XStringFormats.TopLeft)
+                currentY += 18
+
+                For Each r In report.RevenueRows
+                    DrawMonthlyRow(gfx1, r, report.Months, currentY, margin, width, colCodeW, colNameW, colMonthW, colTotalW, colPercentW)
+                    currentY += 18
+                Next
+
+                ' Total Revenues Row
+                DrawMonthlySummaryRow(gfx1, "إجمالي الإيرادات", report.MonthlyRevenuesTotal, report.TotalRevenues, 100D, report.Months, currentY, margin, width, colCodeW, colNameW, colMonthW, colTotalW, colPercentW, XColor.FromArgb(240, 253, 244), XColor.FromArgb(21, 128, 61))
+                currentY += 22
+
+                ' Section 2: Expenses
+                gfx1.DrawRoundedRectangle(New XSolidBrush(XColor.FromArgb(254, 242, 242)), margin, currentY, width, 18, 2, 2)
+                gfx1.DrawString(ArabicTextHelper.Fix("المصروفات التشغيلية والعمومية"), fontBold, New XSolidBrush(XColor.FromArgb(153, 27, 27)), New XRect(margin + 5, currentY + 2, width, 16), XStringFormats.TopLeft)
+                currentY += 18
+
+                For Each r In report.ExpenseRows
+                    DrawMonthlyRow(gfx1, r, report.Months, currentY, margin, width, colCodeW, colNameW, colMonthW, colTotalW, colPercentW)
+                    currentY += 18
+                Next
+
+                ' Total Expenses Row
+                Dim expRatio = If(Math.Abs(report.TotalRevenues) > 0, (Math.Abs(report.TotalExpenses) / Math.Abs(report.TotalRevenues)) * 100D, 0)
+                DrawMonthlySummaryRow(gfx1, "إجمالي المصروفات", report.MonthlyExpensesTotal, report.TotalExpenses, expRatio, report.Months, currentY, margin, width, colCodeW, colNameW, colMonthW, colTotalW, colPercentW, XColor.FromArgb(254, 242, 242), XColor.FromArgb(185, 28, 28))
+                currentY += 22
+
+                ' Net Profit Monthly Row
+                DrawMonthlySummaryRow(gfx1, "صافي الربح / (الخسارة)", report.MonthlyNetProfit, report.TotalNetProfit, report.NetProfitPercentageOfSales, report.Months, currentY, margin, width, colCodeW, colNameW, colMonthW, colTotalW, colPercentW, XColor.FromArgb(238, 242, 255), XColor.FromArgb(67, 56, 202))
+
+                ' Landscape Page 2: Monthly Trends & Performance Charts
+                Dim page2 = doc.AddPage()
+                page2.Size = PdfSharp.PageSize.A4
+                page2.Orientation = PdfSharp.PageOrientation.Landscape
+                Dim gfx2 = XGraphics.FromPdfPage(page2)
+                DrawMonthlyChartsPage(gfx2, company, page2, report, startDate, endDate)
+
+                doc.Save(dlg.FileName)
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير تقرير المقارنة الشهرية PDF: " & ex.Message)
+            End Try
+        End Sub
+
+        Private Shared Sub DrawMonthlyRow(gfx As XGraphics, row As MonthlyComparativeRow, months As List(Of MonthlyPeriodHeader), y As Double, margin As Double, width As Double, colCodeW As Double, colNameW As Double, colMonthW As Double, colTotalW As Double, colPercentW As Double)
+            Dim curX = margin
+            gfx.DrawString(row.AccountCode, fontReg, XBrushes.Black, New XRect(curX, y + 2, colCodeW, 16), XStringFormats.TopCenter)
+            curX += colCodeW
+            gfx.DrawString(ArabicTextHelper.Fix(row.AccountName), fontReg, XBrushes.Black, New XRect(curX + 5, y + 2, colNameW - 10, 16), XStringFormats.TopLeft)
+            curX += colNameW
+
+            For Each m In months
+                Dim val = row.GetMonthValue(m.MonthKey)
+                Dim valText = If(val = 0, "-", FormatAmount(Math.Abs(val)))
+                gfx.DrawString(valText, fontReg, XBrushes.Black, New XRect(curX, y + 2, colMonthW - 3, 16), XStringFormats.TopRight)
+                curX += colMonthW
+            Next
+
+            gfx.DrawString(FormatAmount(Math.Abs(row.TotalBalance)), fontBold, XBrushes.Black, New XRect(curX, y + 2, colTotalW - 3, 16), XStringFormats.TopRight)
+            curX += colTotalW
+            gfx.DrawString(row.PercentageOfSalesText, fontReg, XBrushes.DarkSlateBlue, New XRect(curX, y + 2, colPercentW, 16), XStringFormats.TopCenter)
+
+            gfx.DrawLine(XPens.LightGray, margin, y + 17, margin + width, y + 17)
+        End Sub
+
+        Private Shared Sub DrawMonthlySummaryRow(gfx As XGraphics, title As String, monthlyDict As Dictionary(Of String, Decimal), totalVal As Decimal, percentVal As Decimal, months As List(Of MonthlyPeriodHeader), y As Double, margin As Double, width As Double, colCodeW As Double, colNameW As Double, colMonthW As Double, colTotalW As Double, colPercentW As Double, bgCol As XColor, textCol As XColor)
+            gfx.DrawRectangle(New XSolidBrush(bgCol), margin, y, width, 20)
+            gfx.DrawRectangle(XPens.LightGray, margin, y, width, 20)
+
+            Dim curX = margin
+            curX += colCodeW
+            gfx.DrawString(ArabicTextHelper.Fix(title), fontBold, New XSolidBrush(textCol), New XRect(curX + 5, y + 3, colNameW - 10, 16), XStringFormats.TopLeft)
+            curX += colNameW
+
+            For Each m In months
+                Dim val As Decimal = 0
+                If monthlyDict.ContainsKey(m.MonthKey) Then val = monthlyDict(m.MonthKey)
+                Dim valText = FormatAmount(Math.Abs(val))
+                gfx.DrawString(valText, fontBold, New XSolidBrush(textCol), New XRect(curX, y + 3, colMonthW - 3, 16), XStringFormats.TopRight)
+                curX += colMonthW
+            Next
+
+            gfx.DrawString(FormatAmount(Math.Abs(totalVal)), fontBold, New XSolidBrush(textCol), New XRect(curX, y + 3, colTotalW - 3, 16), XStringFormats.TopRight)
+            curX += colTotalW
+            gfx.DrawString(percentVal.ToString("F1") & " %", fontBold, New XSolidBrush(textCol), New XRect(curX, y + 3, colPercentW, 16), XStringFormats.TopCenter)
+        End Sub
+
+        Private Shared Sub DrawMonthlyChartsPage(gfx As XGraphics, company As CompanyInfo, page As PdfPage, report As MonthlyComparativeReport, startDate As Date, endDate As Date)
+            Dim margin As Double = 30
+            Dim width = page.Width.Point - (2 * margin)
+            Dim currentY As Double = 20
+
+            DrawReportHeader(gfx, company, page, currentY, margin, width, 2)
+
+            gfx.DrawString(ArabicTextHelper.Fix("📈 الرسوم البيانية ومسار الأداء المالي المقارن شهرياً"), _fontTitle, XBrushes.DarkSlateBlue, New XRect(margin, currentY, width, 26), XStringFormats.TopCenter)
+            currentY += 28
+            gfx.DrawString(ArabicTextHelper.Fix("الفترة من: " & startDate.ToString("yyyy/MM/dd") & "  إلى: " & endDate.ToString("yyyy/MM/dd")), fontReg, XBrushes.Gray, New XRect(margin, currentY, width, 18), XStringFormats.TopCenter)
+            currentY += 30
+
+            ' Monthly Bar / Trend Chart across months
+            Dim chartH As Double = 280.0
+            gfx.DrawRoundedRectangle(New XSolidBrush(XColor.FromArgb(248, 250, 252)), margin, currentY, width, chartH, 6, 6)
+            gfx.DrawRoundedRectangle(New XPen(XColor.FromArgb(226, 232, 240)), margin, currentY, width, chartH, 6, 6)
+
+            gfx.DrawString(ArabicTextHelper.Fix("مقارنة الإيرادات والمصروفات وصافي الأرباح شهراً بشهر"), fontBold, XBrushes.DarkSlateBlue, New XRect(margin + 15, currentY + 12, width - 30, 20), XStringFormats.TopLeft)
+
+            ' Legend on top right
+            Dim legX = margin + width - 280
+            Dim legY = currentY + 12
+            gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(34, 197, 94)), legX, legY + 2, 10, 10)
+            gfx.DrawString(ArabicTextHelper.Fix("الإيرادات"), fontSmall, XBrushes.DarkSlateGray, New XRect(legX + 14, legY, 50, 14), XStringFormats.TopLeft)
+            
+            gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(239, 68, 68)), legX + 70, legY + 2, 10, 10)
+            gfx.DrawString(ArabicTextHelper.Fix("المصروفات"), fontSmall, XBrushes.DarkSlateGray, New XRect(legX + 84, legY, 55, 14), XStringFormats.TopLeft)
+
+            gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(79, 70, 229)), legX + 150, legY + 2, 10, 10)
+            gfx.DrawString(ArabicTextHelper.Fix("صافي الربح"), fontSmall, XBrushes.DarkSlateGray, New XRect(legX + 164, legY, 60, 14), XStringFormats.TopLeft)
+
+            ' Calculate Max Val across all months
+            Dim maxMonthVal As Decimal = 1
+            For Each m In report.Months
+                Dim rVal = If(report.MonthlyRevenuesTotal.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyRevenuesTotal(m.MonthKey)), 0)
+                Dim eVal = If(report.MonthlyExpensesTotal.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyExpensesTotal(m.MonthKey)), 0)
+                Dim nVal = If(report.MonthlyNetProfit.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyNetProfit(m.MonthKey)), 0)
+                maxMonthVal = Math.Max(maxMonthVal, Math.Max(rVal, Math.Max(eVal, nVal)))
+            Next
+
+            Dim chartAreaX = margin + 30
+            Dim chartAreaY = currentY + 45
+            Dim chartMaxH = 180.0
+            Dim chartAreaW = width - 60
+            Dim monthSlotW = chartAreaW / Math.Max(1, report.Months.Count)
+
+            ' Draw Axis
+            gfx.DrawLine(XPens.DarkGray, chartAreaX, chartAreaY + chartMaxH, chartAreaX + chartAreaW, chartAreaY + chartMaxH)
+
+            For i As Integer = 0 To report.Months.Count - 1
+                Dim m = report.Months(i)
+                Dim slotX = chartAreaX + (i * monthSlotW)
+                Dim slotCenterX = slotX + (monthSlotW / 2)
+                
+                Dim rVal = If(report.MonthlyRevenuesTotal.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyRevenuesTotal(m.MonthKey)), 0)
+                Dim eVal = If(report.MonthlyExpensesTotal.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyExpensesTotal(m.MonthKey)), 0)
+                Dim nVal = If(report.MonthlyNetProfit.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyNetProfit(m.MonthKey)), 0)
+
+                Dim barW = Math.Min(22.0, (monthSlotW - 20) / 3)
+
+                ' Revenue Bar
+                Dim rH = (rVal / maxMonthVal) * chartMaxH
+                Dim rX = slotCenterX - (barW * 1.5)
+                Dim rY = chartAreaY + (chartMaxH - rH)
+                gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(34, 197, 94)), rX, rY, barW, rH)
+
+                ' Expense Bar
+                Dim eH = (eVal / maxMonthVal) * chartMaxH
+                Dim eX = rX + barW + 2
+                Dim eY = chartAreaY + (chartMaxH - eH)
+                gfx.DrawRectangle(New XSolidBrush(XColor.FromArgb(239, 68, 68)), eX, eY, barW, eH)
+
+                ' Net Profit Bar
+                Dim nAbs = Math.Abs(nVal)
+                Dim nH = (nAbs / maxMonthVal) * chartMaxH
+                Dim nX = eX + barW + 2
+                Dim nY = chartAreaY + (chartMaxH - nH)
+                Dim nColor = If(nVal < 0, XColor.FromArgb(79, 70, 229), XColor.FromArgb(249, 115, 22))
+                gfx.DrawRectangle(New XSolidBrush(nColor), nX, nY, barW, nH)
+
+                ' Month Label below axis
+                gfx.DrawString(ArabicTextHelper.Fix(m.MonthName), fontSmall, XBrushes.Black, New XRect(slotX, chartAreaY + chartMaxH + 6, monthSlotW, 16), XStringFormats.TopCenter)
+            Next
+
+            currentY += chartH + 20
+            gfx.DrawString(ArabicTextHelper.Fix("تم استخراج هذا التقرير المالي والمقارنة الشهرية آلياً بواسطة نظام Vegtablity"), fontSmall, XBrushes.Gray, New XRect(margin, currentY, width, 16), XStringFormats.TopCenter)
+        End Sub
+
+        Public Shared Sub ExportMonthlyComparativeToExcel(report As MonthlyComparativeReport, startDate As Date, endDate As Date)
+            Try
+                Dim dlg As New SaveFileDialog() With {
+                    .Title = "تصدير قائمة الأرباح والخسائر المقارنة شهرياً إلى Excel / CSV",
+                    .Filter = "ملفات Excel / CSV (*.csv)|*.csv",
+                    .FileName = "Monthly_Comparative_P&L_" & DateTime.Now.ToString("yyyyMMdd_HHmm") & ".csv"
+                }
+
+                If dlg.ShowDialog() <> True Then Return
+
+                Using sw As New StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                    ' Title
+                    sw.WriteLine(EscapeCsv("قائمة الأرباح والخسائر المقارنة شهرياً"))
+                    sw.WriteLine(EscapeCsv("الفترة: من " & startDate.ToString("yyyy/MM/dd") & " إلى " & endDate.ToString("yyyy/MM/dd")))
+                    sw.WriteLine()
+
+                    ' Header Row
+                    Dim headers As New List(Of String) From {
+                        EscapeCsv("رمز الحساب"),
+                        EscapeCsv("اسم الحساب")
+                    }
+                    For Each m In report.Months
+                        headers.Add(EscapeCsv(m.MonthName))
+                    Next
+                    headers.Add(EscapeCsv("إجمالي الفترة"))
+                    headers.Add(EscapeCsv("النسبة من المبيعات"))
+                    sw.WriteLine(String.Join(",", headers))
+
+                    Dim baseSales = Math.Abs(report.TotalRevenues)
+
+                    ' 1. Revenues Section
+                    sw.WriteLine(EscapeCsv("--- الإيرادات والمبيعات ---"))
+                    For Each r In report.RevenueRows
+                        Dim rowCells As New List(Of String) From {
+                            EscapeCsv(r.AccountCode),
+                            EscapeCsv(r.AccountName)
+                        }
+                        For Each m In report.Months
+                            Dim val = r.GetMonthValue(m.MonthKey)
+                            rowCells.Add(Math.Abs(val).ToString("F3"))
+                        Next
+                        rowCells.Add(Math.Abs(r.TotalBalance).ToString("F3"))
+                        rowCells.Add(EscapeCsv(r.PercentageOfSalesText))
+                        sw.WriteLine(String.Join(",", rowCells))
+                    Next
+
+                    ' Total Revenues Row
+                    Dim totalRevCells As New List(Of String) From {
+                        "",
+                        EscapeCsv("إجمالي الإيرادات")
+                    }
+                    For Each m In report.Months
+                        Dim v = If(report.MonthlyRevenuesTotal.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyRevenuesTotal(m.MonthKey)), 0)
+                        totalRevCells.Add(v.ToString("F3"))
+                    Next
+                    totalRevCells.Add(baseSales.ToString("F3"))
+                    totalRevCells.Add(EscapeCsv("100.0 %"))
+                    sw.WriteLine(String.Join(",", totalRevCells))
+                    sw.WriteLine()
+
+                    ' 2. Expenses Section
+                    sw.WriteLine(EscapeCsv("--- المصروفات التشغيلية والعمومية ---"))
+                    For Each r In report.ExpenseRows
+                        Dim rowCells As New List(Of String) From {
+                            EscapeCsv(r.AccountCode),
+                            EscapeCsv(r.AccountName)
+                        }
+                        For Each m In report.Months
+                            Dim val = r.GetMonthValue(m.MonthKey)
+                            rowCells.Add(Math.Abs(val).ToString("F3"))
+                        Next
+                        rowCells.Add(Math.Abs(r.TotalBalance).ToString("F3"))
+                        rowCells.Add(EscapeCsv(r.PercentageOfSalesText))
+                        sw.WriteLine(String.Join(",", rowCells))
+                    Next
+
+                    ' Total Expenses Row
+                    Dim totalExpCells As New List(Of String) From {
+                        "",
+                        EscapeCsv("إجمالي المصروفات")
+                    }
+                    For Each m In report.Months
+                        Dim v = If(report.MonthlyExpensesTotal.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyExpensesTotal(m.MonthKey)), 0)
+                        totalExpCells.Add(v.ToString("F3"))
+                    Next
+                    totalExpCells.Add(Math.Abs(report.TotalExpenses).ToString("F3"))
+                    Dim expRatio = If(baseSales > 0, ((Math.Abs(report.TotalExpenses) / baseSales) * 100D).ToString("F1") & " %", "0.0 %")
+                    totalExpCells.Add(EscapeCsv(expRatio))
+                    sw.WriteLine(String.Join(",", totalExpCells))
+                    sw.WriteLine()
+
+                    ' 3. Net Profit Row
+                    Dim netLabel = If(report.TotalNetProfit < 0, "صافي الأرباح", "صافي الخسائر")
+                    Dim netCells As New List(Of String) From {
+                        "",
+                        EscapeCsv(netLabel)
+                    }
+                    For Each m In report.Months
+                        Dim v = If(report.MonthlyNetProfit.ContainsKey(m.MonthKey), Math.Abs(report.MonthlyNetProfit(m.MonthKey)), 0)
+                        netCells.Add(v.ToString("F3"))
+                    Next
+                    netCells.Add(Math.Abs(report.TotalNetProfit).ToString("F3"))
+                    Dim netRatio = If(baseSales > 0, ((Math.Abs(report.TotalNetProfit) / baseSales) * 100D).ToString("F1") & " %", "0.0 %")
+                    netCells.Add(EscapeCsv(netRatio))
+                    sw.WriteLine(String.Join(",", netCells))
+                End Using
+
+                Process.Start(New Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء تصدير Excel / CSV المقارن: " & ex.Message)
             End Try
         End Sub
 

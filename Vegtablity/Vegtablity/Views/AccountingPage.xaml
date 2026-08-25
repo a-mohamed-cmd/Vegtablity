@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
-             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             xmlns:controls="clr-namespace:Vegtablity.Controls">
 
     <UserControl.DataContext>
         <vm:AccountingViewModel/>
@@ -56,14 +57,15 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="📊 شجرة الحسابات" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
-                <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
+                <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="8,4" HorizontalAlignment="Right" Width="300" BorderBrush="#dcdde1" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="5,0"/>
-                        <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"/>
+                        <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" BorderThickness="0" FontSize="13" VerticalAlignment="Center" Padding="5" Background="Transparent"
+                                 helpers:WatermarkHelper.Watermark="بحث برمز أو اسم الحساب..."/>
                     </Grid>
                 </Border>
             </Grid>
@@ -76,8 +78,8 @@
                 <ColumnDefinition Width="360"/>
             </Grid.ColumnDefinitions>
 
-            <!-- DataGrid -->
-            <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White">
+            <!-- Hierarchical Account Tree Control -->
+            <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White" ClipToBounds="True">
                 <Border.Triggers>
                     <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                         <BeginStoryboard>
@@ -91,20 +93,7 @@
                         </BeginStoryboard>
                     </EventTrigger>
                 </Border.Triggers>
-                <DataGrid ItemsSource="{Binding Accounts}" SelectedItem="{Binding SelectedAccount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                          AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                          SelectionMode="Single" SelectionUnit="FullRow"
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                          BorderThickness="0" Margin="5" RowHeight="36" ColumnHeaderHeight="40">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="الرمز" Binding="{Binding AccountCode}" Width="80"/>
-                        <DataGridTextColumn Header="اسم الحساب" Binding="{Binding AccountName}" Width="*"/>
-                        <DataGridTextColumn Header="الحساب الأب" Binding="{Binding ParentAccountName}" Width="140"/>
-                        <DataGridTextColumn Header="النوع" Binding="{Binding AccountType}" Width="100"/>
-                        <DataGridTextColumn Header="المستوى" Binding="{Binding AccountLevel}" Width="60"/>
-                        <DataGridCheckBoxColumn Header="فرعي" Binding="{Binding IsTransactional}" Width="55"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                <controls:AccountTreeControl/>
             </Border>
 
             <!-- Edit Panel -->

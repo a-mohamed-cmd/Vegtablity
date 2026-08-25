@@ -1,21 +1,24 @@
 <UserControl x:Class="Views.StockTakePage" x:Name="root"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:Vegtablity.Views"
-      xmlns:vm="clr-namespace:Vegtablity.ViewModels"
-      mc:Ignorable="d" 
-      d:DesignHeight="700" d:DesignWidth="1000"
-      FlowDirection="RightToLeft" Background="{DynamicResource BackgroundBrush}"
-      FontFamily="Cairo">
+       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+       xmlns:local="clr-namespace:Vegtablity.Views"
+       xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+       xmlns:controls="clr-namespace:Vegtablity.Controls"
+       xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+       mc:Ignorable="d" 
+       d:DesignHeight="700" d:DesignWidth="1100"
+       FlowDirection="RightToLeft" Background="{DynamicResource BackgroundBrush}"
+       FontFamily="Cairo">
 
     <UserControl.DataContext>
         <vm:StockTakeViewModel/>
     </UserControl.DataContext>
 
     <UserControl.Resources>
-        <CollectionViewSource x:Key="ProductsList" Source="{Binding AvailableProducts}"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <helpers:StringToVisibilityConverter x:Key="StringToVis"/>
         <Style x:Key="CenterDataGridCellStyle" TargetType="TextBlock">
             <Setter Property="HorizontalAlignment" Value="Center"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -29,24 +32,37 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="10" Margin="0,0,0,20">
+        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="12" Margin="0,0,0,15">
             <Border.Effect>
                 <DropShadowEffect Color="#E2E8F0" BlurRadius="10" ShadowDepth="2" Opacity="0.5"/>
             </Border.Effect>
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <StackPanel Orientation="Vertical">
-                    <TextBlock Text="إدارة الجرد الآلي" FontSize="16" FontWeight="Bold" Foreground="#1E293B"/>
-                    <TextBlock Text="إنشاء ومراجعة واعتماد تسويات الجرد للمخزون" Foreground="#64748B" FontSize="14" Margin="0,0,0,0"/>
+                <!-- ☰ Hamburger Toggle Button for History Sidebar -->
+                <Button x:Name="btnToggleHistory" Grid.Column="0"
+                        Content="☰" FontSize="20" Width="40" Height="40"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="#334155" Cursor="Hand"
+                        VerticalAlignment="Center" Margin="0,0,10,0"
+                        ToolTip="إظهار / إخفاء سجل الجرد"
+                        Click="btnToggleHistory_Click"/>
+
+                <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="📋 " FontSize="20" VerticalAlignment="Center"/>
+                        <TextBlock Text="إدارة الجرد الآلي" FontSize="18" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="إنشاء ومراجعة واعتماد تسويات الجرد للمخزون وحساب الفروقات آلياً" Foreground="#64748B" FontSize="13" Margin="28,2,0,0"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="تحديث" Command="{Binding RefreshCommand}" Style="{StaticResource ModernButtonStyle}" Background="#95a5a6" Margin="0,0,5,0" Width="100" Height="35"/>
-                    <Button Content="إضافة مسودة جرد" Command="{Binding AddNewCommand}" Click="BtnAddNew_Click" Style="{StaticResource ModernButtonStyle}" Background="#3498db" Width="150" Height="35"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="تحديث 🔄" Command="{Binding RefreshCommand}" Style="{StaticResource ModernButtonStyle}" Background="#64748B" Foreground="White" FontWeight="Bold" Margin="0,0,8,0" Height="36" Padding="15,0" Cursor="Hand"/>
+                    <Button Content="➕ إضافة مسودة جرد" Command="{Binding AddNewCommand}" Click="BtnAddNew_Click" Style="{StaticResource ModernButtonStyle}" Background="#2563EB" Foreground="White" FontWeight="Bold" Height="36" Padding="15,0" Cursor="Hand"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -58,90 +74,172 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- History List -->
-            <Grid Grid.Column="0" Margin="0,0,20,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                
-                <!-- Toggle Button -->
-                <Button x:Name="btnToggleHistory" Grid.Row="0" Content="≡" FontSize="24" FontWeight="Bold" Background="Transparent" BorderThickness="0" Click="btnToggleHistory_Click" HorizontalAlignment="Right" Margin="0,0,0,5" Cursor="Hand" Foreground="#334155" ToolTip="تصغير / تكبير"/>
-                
-                <Border x:Name="HistoryCard" Grid.Row="1" Width="350" Background="White" CornerRadius="8" Padding="15">
-                    <Border.Effect>
-                        <DropShadowEffect Color="#E2E8F0" BlurRadius="10" ShadowDepth="2" Opacity="0.5"/>
-                    </Border.Effect>
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        
-                        <TextBlock Text="سجل الجرد" FontWeight="Bold" FontSize="16" Foreground="#334155" Margin="0,0,0,15"/>
-                        
-                        <ListView x:Name="HistoryListView" Grid.Row="1" ItemsSource="{Binding StockTakeHistory}" SelectedItem="{Binding SelectedStockTake}" BorderThickness="0" Background="Transparent">
-                            <ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="10">
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
+            <!-- History Sidebar with Collapsible Filter & Pagination -->
+            <Border x:Name="HistoryCardBorder" Grid.Column="0" Width="350" MaxWidth="350" MinWidth="0" Background="White" CornerRadius="8" Padding="12" Margin="0,0,15,0" ClipToBounds="True">
+                <Border.Effect>
+                    <DropShadowEffect Color="#E2E8F0" BlurRadius="10" ShadowDepth="2" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Sidebar Header (Title, Count & Filter Toggle) -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="📜 سجل الجرد" FontSize="15" FontWeight="Bold" Foreground="#1E293B"/>
+                            <Border Background="#E0E7FF" CornerRadius="10" Padding="8,2" Margin="8,0,0,0">
+                                <TextBlock Text="{Binding FilteredStockTakeHistory.Count}" FontSize="12" FontWeight="Bold" Foreground="#3730A3"/>
+                            </Border>
+                        </StackPanel>
 
-                                            <TextBlock Text="{Binding StockTakeDate, StringFormat='dd/MM/yyyy HH:mm'}" FontWeight="SemiBold" Foreground="#0F172A"/>
-                                            
-                                            <!-- Status Badge -->
-                                            <Border Grid.Column="1" CornerRadius="4" Padding="6,2">
-                                                <Border.Style>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="Background" Value="#F1F5F9"/>
+                        <!-- Filter Toggle Button -->
+                        <Button x:Name="btnToggleFilter" Grid.Column="1"
+                                Content="🔍 تصفية ▼"
+                                Style="{StaticResource ModernButtonStyle}"
+                                FontSize="12" FontWeight="SemiBold"
+                                Background="#F1F5F9" Foreground="#475569"
+                                BorderThickness="0"
+                                Padding="8,4" Cursor="Hand"
+                                Click="btnToggleFilter_Click"
+                                ToolTip="إظهار / إخفاء أدوات تصفية السجل"/>
+                    </Grid>
+
+                    <!-- Collapsible Filter Card -->
+                    <Border x:Name="FilterCardBorder" Grid.Row="1"
+                            Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1"
+                            CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                        <StackPanel>
+                            <!-- Search by Text (ID, Warehouse, User, Notes, Date) -->
+                            <TextBlock Text="بحث في السجل:" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,3"/>
+                            <TextBox Text="{Binding HistorySearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     Height="34" Padding="8,0" FontSize="12"
+                                     VerticalContentAlignment="Center"
+                                     Style="{DynamicResource ModernTextBoxStyle}"
+                                     helpers:WatermarkHelper.Watermark="رقم المستند، المستودع، المستخدم..."
+                                     Margin="0,0,0,6"/>
+
+                            <!-- Status Filter ComboBox -->
+                            <TextBlock Text="حالة المستند:" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,3"/>
+                            <ComboBox SelectedIndex="{Binding HistoryStatusFilter, UpdateSourceTrigger=PropertyChanged}"
+                                      Height="32" FontSize="12" Margin="0,0,0,8" VerticalContentAlignment="Center">
+                                <ComboBoxItem Content="الكل (جميع الحالات)"/>
+                                <ComboBoxItem Content="📝 مسودة فقط (قيد المراجعة)"/>
+                                <ComboBoxItem Content="✔ معتمد فقط"/>
+                            </ComboBox>
+
+                            <!-- Clear Filter Button -->
+                            <Button Content="تفريغ التصفية 🔄"
+                                    Command="{Binding ClearHistoryFilterCommand}"
+                                    Style="{StaticResource ModernButtonStyle}"
+                                    Height="28" FontSize="11" FontWeight="SemiBold"
+                                    Background="#E2E8F0" Foreground="#334155"
+                                    BorderThickness="0"
+                                    HorizontalAlignment="Stretch" Cursor="Hand"/>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- History ListView -->
+                    <ListView x:Name="HistoryListView" Grid.Row="2" ItemsSource="{Binding FilteredStockTakeHistory}" SelectedItem="{Binding SelectedStockTake}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="8,8" Margin="0,2" Background="#F8FAFC" CornerRadius="6">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding StockTakeID, StringFormat='#{0}'}" FontWeight="Bold" Foreground="#0284C7" Margin="0,0,6,0"/>
+                                                <TextBlock Text="{Binding StockTakeDate, StringFormat='dd/MM/yyyy HH:mm'}" FontWeight="SemiBold" Foreground="#0F172A"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding WarehouseName}" FontSize="11" Foreground="#475569" FontWeight="SemiBold" Margin="0,2,0,0"/>
+                                            <TextBlock Text="{Binding Notes}" FontSize="11" Foreground="#64748B" TextTrimming="CharacterEllipsis" Margin="0,1,0,0"
+                                                       Visibility="{Binding Notes, Converter={StaticResource StringToVis}}"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Status Badge -->
+                                        <Border Grid.Column="1" CornerRadius="4" Padding="6,2" VerticalAlignment="Top">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#FEF9C3"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Approved">
+                                                            <Setter Property="Background" Value="#DCFCE7"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock FontSize="11" FontWeight="Bold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#854D0E"/>
+                                                        <Setter Property="Text" Value="مسودة"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding Status}" Value="Approved">
-                                                                <Setter Property="Background" Value="#DCFCE7"/>
-                                                            </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Status}" Value="Pending">
-                                                                <Setter Property="Background" Value="#FEF9C3"/>
+                                                                <Setter Property="Foreground" Value="#166534"/>
+                                                                <Setter Property="Text" Value="✔ معتمد"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Border.Style>
-                                                <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="Bold">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Foreground" Value="#64748B"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Status}" Value="Approved">
-                                                                    <Setter Property="Foreground" Value="#166534"/>
-                                                                    <Setter Property="Text" Value="معتمد"/>
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Status}" Value="Pending">
-                                                                    <Setter Property="Foreground" Value="#854D0E"/>
-                                                                    <Setter Property="Text" Value="مسودة"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </Border>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
 
-                                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0">
-                                                <TextBlock Text="{Binding WarehouseName}" Foreground="#64748B" FontSize="12" Margin="0,0,10,0"/>
-                                                <TextBlock Text="{Binding UserName}" Foreground="#94A3B8" FontSize="12"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </Grid>
-                </Border>
-            </Grid>
+                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBlock Text="{Binding UserName}" Foreground="#94A3B8" FontSize="11"/>
+                                            <TextBlock Text=" • فرق مالي: " Foreground="#94A3B8" FontSize="11"/>
+                                            <TextBlock Text="{Binding TotalDifferenceValue, StringFormat='{}{0:N3}'}" FontWeight="Bold" Foreground="#E11D48" FontSize="11"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <!-- Pagination Footer (10 records per page) -->
+                    <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="4,8" Margin="0,6,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Previous Button -->
+                            <Button Grid.Column="0" Content="◀ السابق"
+                                    Command="{Binding PreviousPageCommand}"
+                                    Style="{StaticResource ModernButtonStyle}"
+                                    Background="#E2E8F0" Foreground="#334155"
+                                    FontSize="11" FontWeight="SemiBold"
+                                    Height="28" Padding="8,0" Cursor="Hand"/>
+                            <!-- Page Info -->
+                            <TextBlock Grid.Column="1" Text="{Binding PageInfo}"
+                                       FontSize="11" FontWeight="Bold" Foreground="#64748B"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- Next Button -->
+                            <Button Grid.Column="2" Content="التالي ▶"
+                                    Command="{Binding NextPageCommand}"
+                                    Style="{StaticResource ModernButtonStyle}"
+                                    Background="#E2E8F0" Foreground="#334155"
+                                    FontSize="11" FontWeight="SemiBold"
+                                    Height="28" Padding="8,0" Cursor="Hand"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
 
             <!-- Details / Edit Form -->
             <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="20">
@@ -150,7 +248,7 @@
                 </Border.Effect>
 
                 <Grid>
-                    <!-- Form for Adding New Stock Take -->
+                    <!-- Form for Adding / Editing Stock Take -->
                     <Grid>
                         <Grid.Style>
                             <Style TargetType="Grid">
@@ -169,13 +267,14 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Text="إنشاء مسودة جرد جديدة" FontSize="18" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,20"/>
+                        <TextBlock Text="إنشاء مسودة جرد جديدة" FontSize="18" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,15"/>
 
-                        <Grid Grid.Row="1" Margin="0,0,0,10">
+                        <!-- Warehouse & Notes -->
+                        <Grid Grid.Row="1" Margin="0,0,0,15">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="1*"/>
                                 <ColumnDefinition Width="15"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="1.5*"/>
                             </Grid.ColumnDefinitions>
                             
                             <StackPanel Grid.Column="0">
@@ -186,129 +285,104 @@
                                           SelectedValuePath="WarehouseID"
                                           DisplayMemberPath="WarehouseName"
                                           IsEnabled="{Binding IsWarehouseEnabled}"
-                                          Height="40" Margin="0,0,0,10"
+                                          Height="40" VerticalContentAlignment="Center" FontSize="14"
                                           SelectionChanged="WarehouseComboBox_SelectionChanged"/>
                             </StackPanel>
                             
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="ملاحظات الجرد:" Foreground="#64748B" Margin="0,0,0,5"/>
-                                <TextBox Text="{Binding CurrentStockTake.Notes, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" Height="40" Style="{DynamicResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
+                                <TextBlock Text="ملاحظات الجرد:" Foreground="#64748B" Margin="0,0,0,5" FontWeight="Bold"/>
+                                <TextBox Text="{Binding CurrentStockTake.Notes, UpdateSourceTrigger=PropertyChanged}" Height="40" VerticalContentAlignment="Center" Style="{DynamicResource ModernTextBoxStyle}"/>
                             </StackPanel>
                         </Grid>
 
-                        <StackPanel Grid.Row="2">
-                            <Grid Margin="0,0,0,10">
+                        <!-- Add Rows & ItemsControl -->
+                        <Grid Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Toolbar -->
+                            <Grid Grid.Row="0" Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="قائمة الأصناف المجردة:" FontWeight="Bold" Foreground="#334155" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="0" Text="قائمة الأصناف المجردة:" FontWeight="Bold" FontSize="15" Foreground="#334155" VerticalAlignment="Center"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Content="📥 قالب الجرد" Command="{Binding DownloadTemplateCommand}" Style="{StaticResource ModernButtonStyle}" Background="#10B981" Width="100" Height="30" Margin="0,0,5,0" Padding="5,0"/>
-                                    <Button Content="📂 استيراد الإكسيل" Command="{Binding ImportExcelCommand}" Style="{StaticResource ModernButtonStyle}" Background="#8B5CF6" Width="130" Height="30" Margin="0,0,5,0" Padding="5,0"/>
-                                    <Button Content="+ إضافة صنف" Click="BtnAddItem_Click" Style="{StaticResource ModernButtonStyle}" Background="#3b82f6" Width="100" Height="30"/>
+                                    <Button Content="📥 قالب الجرد" Command="{Binding DownloadTemplateCommand}" Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White" FontWeight="Bold" Height="34" Margin="0,0,6,0" Padding="12,0" Cursor="Hand"/>
+                                    <Button Content="📂 استيراد الإكسيل" Command="{Binding ImportExcelCommand}" Style="{StaticResource ModernButtonStyle}" Background="#8B5CF6" Foreground="White" FontWeight="Bold" Height="34" Margin="0,0,6,0" Padding="12,0" Cursor="Hand"/>
+                                    <Button Content="➕ إضافة صنف" Click="BtnAddItem_Click" Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Foreground="White" FontWeight="Bold" Height="34" Padding="15,0" Cursor="Hand"/>
                                 </StackPanel>
                             </Grid>
                             
-                            <DataGrid x:Name="dgDetails" ItemsSource="{Binding CurrentStockTake.Details}" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False" Height="300" RowHeight="30" FontWeight="Bold" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                                <DataGrid.Columns>
-                                    <DataGridTemplateColumn Header="كود الصنف" Width="100">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding ProductCode}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                        <DataGridTemplateColumn.CellEditingTemplate>
-                                            <DataTemplate>
-                                                <TextBox Text="{Binding ProductCode, UpdateSourceTrigger=Explicit}" PreviewKeyDown="Barcode_PreviewKeyDown" Loaded="TextBox_Loaded" TextAlignment="Center"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellEditingTemplate>
-                                    </DataGridTemplateColumn>
-                                    
-                                    <DataGridTemplateColumn Header="المنتج" Width="*">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding ProductName}" VerticalAlignment="Center" Margin="5,0"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                        <DataGridTemplateColumn.CellEditingTemplate>
-                                            <DataTemplate>
-                                                <ComboBox ItemsSource="{Binding Source={StaticResource ProductsList}}"
-                                                          SelectedValue="{Binding ProductID, UpdateSourceTrigger=PropertyChanged}"
-                                                          SelectedValuePath="ProductID"
-                                                          DisplayMemberPath="ProductName"
-                                                          PreviewKeyDown="ProductComboBox_PreviewKeyDown"
-                                                          DropDownClosed="ProductComboBox_DropDownClosed"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellEditingTemplate>
-                                    </DataGridTemplateColumn>
+                            <!-- Table Column Headers -->
+                            <Border Grid.Row="1" Background="#F1F5F9" CornerRadius="8,8,0,0" Padding="8,10" BorderBrush="#E2E8F0" BorderThickness="1,1,1,1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <!-- 0: Product Code / Barcode -->
+                                        <ColumnDefinition Width="100"/>
+                                        <!-- 1: Product SearchableDropdown (Expanding) -->
+                                        <ColumnDefinition Width="*"/>
+                                        <!-- 2: Refresh System Stock Button -->
+                                        <ColumnDefinition Width="32"/>
+                                        <!-- 3: System Quantity -->
+                                        <ColumnDefinition Width="85"/>
+                                        <!-- 4: Actual Quantity -->
+                                        <ColumnDefinition Width="85"/>
+                                        <!-- 5: Difference Quantity -->
+                                        <ColumnDefinition Width="80"/>
+                                        <!-- 6: Cost Price -->
+                                        <ColumnDefinition Width="85"/>
+                                        <!-- 7: Difference Value -->
+                                        <ColumnDefinition Width="95"/>
+                                        <!-- 8: Delete Action -->
+                                        <ColumnDefinition Width="36"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="كود الصنف" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                                    <TextBlock Grid.Column="1" Text="اسم الصنف / المنتج" FontWeight="Bold" Foreground="#334155" Margin="5,0"/>
+                                    <TextBlock Grid.Column="2" Text="🔄" FontWeight="Bold" Foreground="#64748B" TextAlignment="Center"/>
+                                    <TextBlock Grid.Column="3" Text="الكمية الدفترية" FontWeight="Bold" Foreground="#2563EB" TextAlignment="Center"/>
+                                    <TextBlock Grid.Column="4" Text="الكمية الفعلية" FontWeight="Bold" Foreground="#334155" TextAlignment="Center"/>
+                                    <TextBlock Grid.Column="5" Text="فرق الكمية" FontWeight="Bold" Foreground="#334155" TextAlignment="Center"/>
+                                    <TextBlock Grid.Column="6" Text="تكلفة الوحدة" FontWeight="Bold" Foreground="#334155" TextAlignment="Center"/>
+                                    <TextBlock Grid.Column="7" Text="قيمة الفرق" FontWeight="Bold" Foreground="#E11D48" TextAlignment="Center"/>
+                                    <TextBlock Grid.Column="8" Text="حذف" FontWeight="Bold" Foreground="#EF4444" TextAlignment="Center"/>
+                                </Grid>
+                            </Border>
 
-                                    <!-- Button to fetch system qty manually if needed -->
-                                    <DataGridTemplateColumn Width="120">
-                                        <DataGridTemplateColumn.CellTemplate>
+                            <!-- ItemsControl with StockTakeItemRowControl -->
+                            <Border Grid.Row="2" BorderBrush="#E2E8F0" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" MinHeight="230">
+                                    <ItemsControl x:Name="DetailsItemsControl" ItemsSource="{Binding CurrentStockTake.Details}">
+                                        <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Button Content="تحديث كمية النظام" Command="{Binding DataContext.FetchSystemQuantityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Style="{StaticResource ModernButtonStyle}" Background="#94A3B8" Width="100"/>
+                                                <controls:StockTakeItemRowControl
+                                                    ProductsList="{Binding DataContext.AvailableProducts, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    WarehouseID="{Binding DataContext.CurrentStockTake.WarehouseID, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    RequestAddNewRow="StockTakeItemRow_RequestAddNewRow"
+                                                    RequestDeleteRow="StockTakeItemRow_RequestDeleteRow"
+                                                    AmountChanged="StockTakeItemRow_AmountChanged"/>
                                             </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
 
-                                    <DataGridTextColumn Header="الكمية الدفترية" Binding="{Binding SystemQuantity, StringFormat='N2'}" IsReadOnly="True" Width="110"/>
-                                    
-                                    <DataGridTemplateColumn Header="الكمية الفعلية" Width="110">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding ActualQuantity}" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="5,0"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                        <DataGridTemplateColumn.CellEditingTemplate>
-                                            <DataTemplate>
-                                                <TextBox Text="{Binding ActualQuantity, UpdateSourceTrigger=Explicit}" PreviewKeyDown="Quantity_PreviewKeyDown" Loaded="TextBox_Loaded" TextAlignment="Center"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellEditingTemplate>
-                                    </DataGridTemplateColumn>
-                                    
-                                    <DataGridTextColumn Header="الفرق" Binding="{Binding DifferenceQuantity, StringFormat='N2'}" IsReadOnly="True" Width="80">
-                                        <DataGridTextColumn.ElementStyle>
-                                            <Style TargetType="TextBlock" BasedOn="{StaticResource CenterDataGridCellStyle}">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding DifferenceQuantity}" Value="0">
-                                                        <Setter Property="Foreground" Value="#10B981"/> <!-- Green if zero -->
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </DataGridTextColumn.ElementStyle>
-                                    </DataGridTextColumn>
-                                    
-                                    <DataGridTextColumn Header="قيمة الفرق" Binding="{Binding DifferenceValue, StringFormat='N3'}" IsReadOnly="True" Width="100" ElementStyle="{StaticResource CenterDataGridCellStyle}"/>
-                                    
-                                    <DataGridTemplateColumn Header="حذف" Width="60">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Button Background="Transparent" BorderThickness="0" 
-                                                        Click="BtnDeleteRow_Click"
-                                                        Focusable="False"
-                                                        Tag="{Binding}"
-                                                        ToolTip="حذف السطر" Cursor="Hand">
-                                                    <TextBlock Text="🗑️" Foreground="#EF4444" FontSize="16"/>
-                                                </Button>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <!-- Footer Actions -->
+                        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
                                 <TextBlock Text="إجمالي الفروقات المالية:" Foreground="#64748B" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding CurrentStockTake.TotalDifferenceValue, StringFormat='N3'}" FontSize="18" FontWeight="Bold" Foreground="#E11D48" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding CurrentStockTake.TotalDifferenceValue, StringFormat='{}{0:N3}'}" FontSize="18" FontWeight="Bold" Foreground="#E11D48" VerticalAlignment="Center"/>
                             </StackPanel>
-                            <Button Content="إلغاء" Command="{Binding RefreshCommand}" Style="{StaticResource ModernButtonStyle}" Background="#95a5a6" Width="100" Margin="0,0,10,0"/>
-                            <Button Content="حفظ كمسودة" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Background="#3498db" Width="150"/>
+                            <Button Content="إلغاء" Command="{Binding RefreshCommand}" Style="{StaticResource ModernButtonStyle}" Background="#95A5A6" Width="100" Margin="0,0,10,0"/>
+                            <Button Content="حفظ كمسودة" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Background="#2563EB" Width="150"/>
                         </StackPanel>
                     </Grid>
 
-                    <!-- View Selected Stock Take -->
+                    <!-- View Selected Stock Take (Read-Only Detail Card) -->
                     <Grid>
                         <Grid.Style>
                             <Style TargetType="Grid">
@@ -335,7 +409,7 @@
                             </TextBlock.Style>
                         </TextBlock>
                         
-                        <!-- Content -->
+                        <!-- Selected Document Content -->
                         <Grid>
                             <Grid.Style>
                                 <Style TargetType="Grid">
@@ -353,15 +427,14 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <Grid Margin="0,0,0,20">
+                            <Grid Margin="0,0,0,15">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 
                                 <StackPanel>
-                                    <TextBlock Text="{Binding SelectedStockTake.StockTakeDate, StringFormat='مستند جرد بتاريخ: dd/MM/yyyy'}" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
-                                    <!-- اسم المستودع -->
+                                    <TextBlock Text="{Binding SelectedStockTake.StockTakeDate, StringFormat='مستند جرد بتاريخ: dd/MM/yyyy HH:mm'}" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
                                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                         <Border Background="#EFF6FF" CornerRadius="4" Padding="8,3">
                                             <StackPanel Orientation="Horizontal">
@@ -378,42 +451,71 @@
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
-                                    <TextBlock Text="{Binding SelectedStockTake.Notes}" Foreground="#64748B" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding SelectedStockTake.Notes}" Foreground="#64748B" Margin="0,5,0,0" TextWrapping="Wrap"
+                                               Visibility="{Binding SelectedStockTake.Notes, Converter={StaticResource StringToVis}}"/>
                                 </StackPanel>
 
+                                <!-- Status Tag -->
+                                <Border Grid.Column="1" CornerRadius="6" Padding="12,4" VerticalAlignment="Top">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#FEF9C3"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SelectedStockTake.Status}" Value="Approved">
+                                                    <Setter Property="Background" Value="#DCFCE7"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock FontWeight="Bold" FontSize="13">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#854D0E"/>
+                                                <Setter Property="Text" Value="مسودة (قيد المراجعة)"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedStockTake.Status}" Value="Approved">
+                                                        <Setter Property="Foreground" Value="#166534"/>
+                                                        <Setter Property="Text" Value="✔ معتمد نهائياً"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
                             </Grid>
 
-                            <DataGrid Grid.Row="1" ItemsSource="{Binding SelectedStockTake.Details}" AutoGenerateColumns="False" IsReadOnly="True" RowHeight="30" FontWeight="Bold">
+                            <!-- Read-only Details DataGrid -->
+                            <DataGrid Grid.Row="1" ItemsSource="{Binding SelectedStockTake.Details}" AutoGenerateColumns="False" IsReadOnly="True" RowHeight="32" FontWeight="Bold">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="كود الصنف" Binding="{Binding ProductCode}" Width="100"/>
                                     <DataGridTextColumn Header="المنتج" Binding="{Binding ProductName}" Width="*"/>
-                                    <DataGridTextColumn Header="الكمية الدفترية" Binding="{Binding SystemQuantity, StringFormat='N2'}" Width="110"/>
-                                    <DataGridTextColumn Header="الكمية الفعلية" Binding="{Binding ActualQuantity, StringFormat='N2'}" Width="110"/>
-                                    <DataGridTextColumn Header="الفرق" Binding="{Binding DifferenceQuantity, StringFormat='N2'}" Width="80"/>
-                                    <DataGridTextColumn Header="قيمة العجز/الفائض" Binding="{Binding DifferenceValue, StringFormat='N3'}" Width="120"/>
+                                    <DataGridTextColumn Header="الكمية الدفترية" Binding="{Binding SystemQuantity, StringFormat='N2'}" Width="110" ElementStyle="{StaticResource CenterDataGridCellStyle}"/>
+                                    <DataGridTextColumn Header="الكمية الفعلية" Binding="{Binding ActualQuantity, StringFormat='N2'}" Width="110" ElementStyle="{StaticResource CenterDataGridCellStyle}"/>
+                                    <DataGridTextColumn Header="الفرق" Binding="{Binding DifferenceQuantity, StringFormat='N2'}" Width="90" ElementStyle="{StaticResource CenterDataGridCellStyle}"/>
+                                    <DataGridTextColumn Header="تكلفة الوحدة" Binding="{Binding CostPrice, StringFormat='N3'}" Width="100" ElementStyle="{StaticResource CenterDataGridCellStyle}"/>
+                                    <DataGridTextColumn Header="قيمة الفرق" Binding="{Binding DifferenceValue, StringFormat='N3'}" Width="120" ElementStyle="{StaticResource CenterDataGridCellStyle}"/>
                                 </DataGrid.Columns>
                             </DataGrid>
 
-                            <Border Grid.Row="2" Background="#F8FAFC" CornerRadius="6" Padding="15" Margin="0,20,0,0">
+                            <!-- Footer for Selected Document -->
+                            <Border Grid.Row="2" Background="#F8FAFC" CornerRadius="6" Padding="15" Margin="0,15,0,0">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- إجمالي الفروقات — على اليمين (Column 0 في RTL) -->
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
-                                        <TextBlock Text="إجمالي الفروقات المالية:" FontSize="16" Foreground="#64748B" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding SelectedStockTake.TotalDifferenceValue, StringFormat='N3'}" FontSize="24" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center"/>
+                                        <TextBlock Text="إجمالي الفروقات المالية:" FontSize="15" Foreground="#64748B" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedStockTake.TotalDifferenceValue, StringFormat='{}{0:N3}'}" FontSize="20" FontWeight="Bold" Foreground="#E11D48" VerticalAlignment="Center"/>
                                     </StackPanel>
 
-                                    <!-- الأزرار — على اليسار (Column 1 في RTL) -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <Button Content="طباعة" Command="{Binding PrintCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27ae60" Width="100" Margin="0,0,10,0"/>
-                                        <Button Content="اعتماد تسوية الجرد النهائية" Command="{Binding ApproveCommand}" Width="220" Margin="0,0,10,0">
+                                        <Button Content="🖨️ طباعة المستند" Command="{Binding PrintCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27AE60" Height="36" Padding="15,0" Margin="0,0,10,0"/>
+                                        <Button Content="✔ اعتماد تسوية الجرد النهائية" Command="{Binding ApproveCommand}" Height="36" Padding="15,0" Margin="0,0,10,0">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                                    <Setter Property="Background" Value="#e74c3c"/>
+                                                    <Setter Property="Background" Value="#E74C3C"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding SelectedStockTake.Status}" Value="Approved">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -422,10 +524,10 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Content="تعديل المسودة" Command="{Binding EditCommand}" Width="150">
+                                        <Button Content="✏️ تعديل المسودة" Command="{Binding EditCommand}" Height="36" Padding="15,0">
                                             <Button.Style>
                                                 <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
-                                                    <Setter Property="Background" Value="#3498db"/>
+                                                    <Setter Property="Background" Value="#3498DB"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding SelectedStockTake.Status}" Value="Approved">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -443,7 +545,7 @@
             </Border>
         </Grid>
 
-        <!-- Snackbar for notifications — يظهر في أسفل الصفحة فوق كل المحتوى -->
+        <!-- Snackbar for notifications -->
         <Border x:Name="Snackbar" Grid.RowSpan="2"
                 Background="#1E293B" CornerRadius="8" Padding="20,12"
                 HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,20"

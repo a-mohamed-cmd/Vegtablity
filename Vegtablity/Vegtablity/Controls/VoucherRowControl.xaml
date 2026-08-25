@@ -1,0 +1,136 @@
+<UserControl x:Class="Controls.VoucherRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo"
+             HorizontalAlignment="Stretch">
+
+    <UserControl.Resources>
+        <helpers:BooleanToBrushConverter x:Key="PostedRowBgConverter">
+            <helpers:BooleanToBrushConverter.TrueBrush>
+                <SolidColorBrush Color="#F0FDF4"/> <!-- أخضر هادئ وناعم للمرحل -->
+            </helpers:BooleanToBrushConverter.TrueBrush>
+            <helpers:BooleanToBrushConverter.FalseBrush>
+                <SolidColorBrush Color="#FFFFFF"/> <!-- أبيض ناصع للغير مرحل -->
+            </helpers:BooleanToBrushConverter.FalseBrush>
+        </helpers:BooleanToBrushConverter>
+
+        <helpers:BooleanToBrushConverter x:Key="PostedRowBorderConverter">
+            <helpers:BooleanToBrushConverter.TrueBrush>
+                <SolidColorBrush Color="#BBF7D0"/>
+            </helpers:BooleanToBrushConverter.TrueBrush>
+            <helpers:BooleanToBrushConverter.FalseBrush>
+                <SolidColorBrush Color="#E2E8F0"/>
+            </helpers:BooleanToBrushConverter.FalseBrush>
+        </helpers:BooleanToBrushConverter>
+
+        <helpers:BooleanToBrushConverter x:Key="PostedBadgeBgConverter">
+            <helpers:BooleanToBrushConverter.TrueBrush>
+                <SolidColorBrush Color="#DCFCE7"/>
+            </helpers:BooleanToBrushConverter.TrueBrush>
+            <helpers:BooleanToBrushConverter.FalseBrush>
+                <SolidColorBrush Color="#FEF3C7"/>
+            </helpers:BooleanToBrushConverter.FalseBrush>
+        </helpers:BooleanToBrushConverter>
+
+        <helpers:BooleanToBrushConverter x:Key="PostedBadgeFgConverter">
+            <helpers:BooleanToBrushConverter.TrueBrush>
+                <SolidColorBrush Color="#15803D"/>
+            </helpers:BooleanToBrushConverter.TrueBrush>
+            <helpers:BooleanToBrushConverter.FalseBrush>
+                <SolidColorBrush Color="#B45309"/>
+            </helpers:BooleanToBrushConverter.FalseBrush>
+        </helpers:BooleanToBrushConverter>
+
+        <helpers:BooleanToTextConverter x:Key="PostedBadgeTextConverter" TrueText="✓ مرحّل" FalseText="⏳ قيد الانتظار"/>
+    </UserControl.Resources>
+
+    <Border Background="{Binding IsPosted, Converter={StaticResource PostedRowBgConverter}}"
+            BorderBrush="{Binding IsPosted, Converter={StaticResource PostedRowBorderConverter}}"
+            BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,4"
+            SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.02" BlurRadius="4" ShadowDepth="1"/>
+        </Border.Effect>
+
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <!-- 0: رقم السند -->
+                <ColumnDefinition Width="70"/>
+                <!-- 1: التاريخ -->
+                <ColumnDefinition Width="90"/>
+                <!-- 2: المستلم / المستلم منه -->
+                <ColumnDefinition Width="1.1*" MinWidth="100"/>
+                <!-- 3: الحساب -->
+                <ColumnDefinition Width="1.1*" MinWidth="100"/>
+                <!-- 4: المبلغ -->
+                <ColumnDefinition Width="95"/>
+                <!-- 5: طريقة الدفع (اسم الحساب) -->
+                <ColumnDefinition Width="110"/>
+                <!-- 6: حالة الترحيل (Badge) -->
+                <ColumnDefinition Width="95"/>
+                <!-- 7: البيان / الوصف -->
+                <ColumnDefinition Width="*" MinWidth="90"/>
+                <!-- 8: زر الطباعة -->
+                <ColumnDefinition Width="36"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: رقم السند -->
+            <Border Grid.Column="0" Background="#F1F5F9" CornerRadius="6" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBlock FontWeight="Bold" FontSize="12" Foreground="#334155">
+                    <Run Text="#"/>
+                    <Run Text="{Binding VoucherNo}"/>
+                </TextBlock>
+            </Border>
+
+            <!-- 1: التاريخ -->
+            <TextBlock Grid.Column="1" Text="{Binding VoucherDate, StringFormat=\{0:yyyy/MM/dd\}}" 
+                       FontSize="12" Foreground="#64748B" FontWeight="SemiBold" VerticalAlignment="Center" Margin="5,0"/>
+
+            <!-- 2: المستلم / المستلم منه -->
+            <TextBlock Grid.Column="2" Text="{Binding PartnerName}" 
+                       FontWeight="Bold" FontSize="12.5" Foreground="#0F172A" 
+                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="5,0"
+                       ToolTip="{Binding PartnerName}"/>
+
+            <!-- 3: الحساب -->
+            <TextBlock Grid.Column="3" Text="{Binding AccountName}" 
+                       FontSize="12" Foreground="#475569" FontWeight="Medium"
+                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="5,0"
+                       ToolTip="{Binding AccountName}"/>
+
+            <!-- 4: المبلغ -->
+            <TextBlock Grid.Column="4" Text="{Binding Amount, StringFormat=\{0:N3\}}" 
+                       FontWeight="Bold" FontSize="13" Foreground="#059669" 
+                       VerticalAlignment="Center" TextAlignment="Center" Margin="5,0"/>
+
+            <!-- 5: طريقة الدفع (اسم الحساب) -->
+            <Border Grid.Column="5" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="6,2" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0">
+                <TextBlock Text="{Binding PaymentMethodName}" FontSize="11" Foreground="#475569" FontWeight="SemiBold"
+                           TextTrimming="CharacterEllipsis" ToolTip="{Binding PaymentMethodName}"/>
+            </Border>
+
+            <!-- 6: حالة الترحيل (Badge) -->
+            <Border Grid.Column="6" 
+                    Background="{Binding IsPosted, Converter={StaticResource PostedBadgeBgConverter}}" 
+                    CornerRadius="12" Padding="8,3" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="{Binding IsPosted, Converter={StaticResource PostedBadgeTextConverter}}" 
+                           Foreground="{Binding IsPosted, Converter={StaticResource PostedBadgeFgConverter}}" 
+                           FontSize="11" FontWeight="Bold"/>
+            </Border>
+
+            <!-- 7: البيان / الوصف -->
+            <TextBlock Grid.Column="7" Text="{Binding Description}" 
+                       FontSize="11.5" Foreground="#64748B" 
+                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="6,0"
+                       ToolTip="{Binding Description}"/>
+
+            <!-- 8: زر الطباعة السريع -->
+            <Button Grid.Column="8" Content="🖨️" Click="PrintButton_Click"
+                    Width="32" Height="30" FontSize="13" Cursor="Hand"
+                    Background="Transparent" BorderThickness="0" Foreground="#475569"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    ToolTip="طباعة هذا السند"/>
+        </Grid>
+    </Border>
+</UserControl>

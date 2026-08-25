@@ -9,7 +9,7 @@
         <TextBox x:Name="SearchBox"
                  Height="38"
                  VerticalContentAlignment="Center"
-                 Padding="10,4"
+                 Padding="10,0"
                  Style="{DynamicResource ModernTextBoxStyle}"
                  TextChanged="SearchBox_TextChanged"
                  PreviewKeyDown="SearchBox_PreviewKeyDown"

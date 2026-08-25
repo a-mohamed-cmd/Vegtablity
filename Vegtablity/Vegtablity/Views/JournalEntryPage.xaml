@@ -60,11 +60,19 @@
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="🔄 تحديث" Command="{Binding RefreshCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Height="32" Background="#607d8b" Margin="4,0" ToolTip="تحديث قائمة القيود (F5)"/>
-                    <Button Content="⚖️ موازنة" Command="{Binding AutoBalanceCommand}" Style="{StaticResource ModernButtonStyle}" Width="90" Height="32" Background="#16a085" Margin="4,0" ToolTip="موازنة القيد تلقائياً بإضافة المبلغ المتبقي على أحدث سطر"/>
+                    <Button Content="⚖️ موازنة" Command="{Binding AutoBalanceCommand}" Style="{StaticResource ModernButtonStyle}" Width="90" Height="32" Background="#16a085" Margin="4,0" 
+                            Visibility="{Binding IsEditAllowed, Converter={StaticResource BoolToVisConverter}}"
+                            ToolTip="موازنة القيد تلقائياً بإضافة المبلغ المتبقي على أحدث سطر"/>
                     <Button Content="🆕 قيد جديد" Command="{Binding NewCommand}" Style="{StaticResource ModernButtonStyle}" Width="95" Height="32" Background="#3498db" Margin="4,0" IsEnabled="{Binding CurrentPermissions.CanAdd}" ToolTip="إنشاء قيد جديد فارغ (F2)"/>
-                    <Button Content="💾 حفظ" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Height="32" Background="#27ae60" Margin="4,0" ToolTip="حفظ القيد المحاسبي (Ctrl + S)"/>
-                    <Button Content="📌 ترحيل" Command="{Binding PostCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Height="32" Background="#8e44ad" Margin="4,0" ToolTip="ترحيل القيد إلى الدفتر العام (Ctrl + D)"/>
-                    <Button Content="↩️ إلغاء ترحيل" Command="{Binding UnpostCommand}" Style="{StaticResource ModernButtonStyle}" Width="105" Height="32" Background="#e67e22" Margin="4,0" IsEnabled="{Binding CurrentPermissions.CanDelete}" ToolTip="إلغاء ترحيل القيد الحالي"/>
+                    <Button Content="💾 حفظ" Command="{Binding SaveCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Height="32" Background="#27ae60" Margin="4,0" 
+                            Visibility="{Binding IsSaveVisible, Converter={StaticResource BoolToVisConverter}}"
+                            ToolTip="حفظ القيد المحاسبي (Ctrl + S)"/>
+                    <Button Content="📌 ترحيل" Command="{Binding PostCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Height="32" Background="#8e44ad" Margin="4,0" 
+                            Visibility="{Binding IsPostVisible, Converter={StaticResource BoolToVisConverter}}"
+                            ToolTip="ترحيل القيد إلى الدفتر العام (Ctrl + D)"/>
+                    <Button Content="↩️ إلغاء ترحيل" Command="{Binding UnpostCommand}" Style="{StaticResource ModernButtonStyle}" Width="105" Height="32" Background="#e67e22" Margin="4,0" 
+                            Visibility="{Binding IsUnpostVisible, Converter={StaticResource BoolToVisConverter}}"
+                            IsEnabled="{Binding CurrentPermissions.CanDelete}" ToolTip="إلغاء ترحيل القيد الحالي"/>
                     <Button Content="🖨️ طباعة" Command="{Binding PrintCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Height="32" Background="#2c3e50" Margin="4,0" ToolTip="طباعة القيد مباشرة مع خيارات واختيار الطابعة (Ctrl + P)"/>
                     <Button Content="📤" Command="{Binding ExportPdfCommand}" Style="{StaticResource ModernButtonStyle}" Width="38" Height="32" FontSize="14" Background="#7f8c8d" Margin="4,0" ToolTip="تصدير PDF"/>
                 </StackPanel>
@@ -74,7 +82,7 @@
         <!-- Content Grid -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="ListColumn" Width="310"/>
+                <ColumnDefinition x:Name="ListColumn" Width="330"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -82,16 +90,126 @@
             <Border x:Name="JournalListBorder" Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White" ClipToBounds="True">
                 <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/> <!-- Header -->
+                        <RowDefinition Height="Auto"/> <!-- Search & Filter Card -->
+                        <RowDefinition Height="Auto"/> <!-- Active Filter Banner -->
+                        <RowDefinition Height="*"/>    <!-- ListBox -->
+                        <RowDefinition Height="Auto"/> <!-- Pagination -->
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Background="#ecf0f1" Padding="8" CornerRadius="8,8,0,0">
-                        <TextBlock Text="📋 قائمة القيود المسجلة" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#2c3e50"/>
+                    <!-- Header Bar with Filter Toggle Button -->
+                    <Border Grid.Row="0" Background="#ecf0f1" Padding="8,6" CornerRadius="8,8,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="📋 قائمة القيود المسجلة" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Foreground="#2c3e50"/>
+                            
+                            <Button Grid.Column="1" x:Name="BtnToggleFilter" Click="ToggleFilterCard_Click" Style="{StaticResource ModernButtonStyle}"
+                                    Height="28" Padding="8,2" FontSize="11" FontWeight="Bold"
+                                    Background="#EDE9FE" Foreground="#6D28D9" BorderBrush="#DDD6FE" BorderThickness="1"
+                                    ToolTip="إظهار / إخفاء كارت البحث والتصفية">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="🔍 تصفية" VerticalAlignment="Center"/>
+                                    <Border Visibility="{Binding IsFilterActive, Converter={StaticResource BoolToVisConverter}}"
+                                            Background="#E11D48" CornerRadius="4" Padding="4,1" Margin="4,0,0,0">
+                                        <TextBlock Text="نشط" Foreground="White" FontSize="9" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
                     </Border>
 
-                    <ListBox Grid.Row="1" ItemsSource="{Binding JournalList}" SelectedItem="{Binding SelectedJournal}" BorderThickness="0" HorizontalContentAlignment="Stretch">
+                    <!-- Collapsible Animated Search & Filter Card -->
+                    <Border Grid.Row="1" x:Name="SearchFilterCard" Height="0" Opacity="0" ClipToBounds="True" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="10,8">
+                        <StackPanel>
+                            <!-- Search by Journal No & Description -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="95"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox Grid.Column="0" Text="{Binding SearchJournalNo, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBoxStyle}" Height="30" FontSize="11"
+                                         VerticalContentAlignment="Center" Padding="8,0,8,2"
+                                         helpers:WatermarkHelper.Watermark="رقم القيد..." PreviewKeyDown="SearchBox_PreviewKeyDown" Margin="0,0,5,0"/>
+                                <TextBox Grid.Column="1" Text="{Binding SearchDescription, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{StaticResource ModernTextBoxStyle}" Height="30" FontSize="11"
+                                         VerticalContentAlignment="Center" Padding="8,0,8,2"
+                                         helpers:WatermarkHelper.Watermark="بحث بالبيان / الوصف..." PreviewKeyDown="SearchBox_PreviewKeyDown"/>
+                            </Grid>
+
+                            <!-- Status Filter (Posted / Unposted / All) -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="الحالة:" FontSize="11" FontWeight="SemiBold" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <ComboBox Grid.Column="1" SelectedIndex="{Binding SearchStatusIndex, Mode=TwoWay}" Height="30" FontSize="11" VerticalContentAlignment="Center">
+                                    <ComboBoxItem Content="📑 كافة القيود (الكل)"/>
+                                    <ComboBoxItem Content="🟢 قيود مرحلة فقط"/>
+                                    <ComboBoxItem Content="🟡 قيود قيد الانتظار فقط"/>
+                                </ComboBox>
+                            </Grid>
+
+                            <!-- Date Range Filter -->
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="تصفية بنطاق التاريخ:" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" x:Name="TxtSearchDateFrom"
+                                             Text="{Binding SearchDateFromText, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBoxStyle}" Height="30" FontSize="11"
+                                             VerticalContentAlignment="Center" Padding="8,0,8,2"
+                                             helpers:WatermarkHelper.Watermark="من: dd/MM/yyyy"
+                                             LostFocus="Date_LostFocus" GotFocus="Date_GotFocus" PreviewKeyDown="SearchDateFrom_PreviewKeyDown"
+                                             ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
+                                    <TextBlock Grid.Column="1" Text="إلى" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" Margin="4,0"/>
+                                    <TextBox Grid.Column="2" x:Name="TxtSearchDateTo"
+                                             Text="{Binding SearchDateToText, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource ModernTextBoxStyle}" Height="30" FontSize="11"
+                                             VerticalContentAlignment="Center" Padding="8,0,8,2"
+                                             helpers:WatermarkHelper.Watermark="إلى: dd/MM/yyyy"
+                                             LostFocus="Date_LostFocus" GotFocus="Date_GotFocus" PreviewKeyDown="SearchDateTo_PreviewKeyDown"
+                                             ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Filter Action Buttons -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="🔍 تطبيق البحث" Command="{Binding ApplyFilterCommand}"
+                                        Style="{StaticResource ModernButtonStyle}" Height="30" FontSize="11" Background="#8E44AD" Margin="0,0,4,0"/>
+                                <Button Grid.Column="1" Content="🔄 مسح التصفية" Command="{Binding ClearFilterCommand}"
+                                        Style="{StaticResource ModernButtonStyle}" Height="30" FontSize="11" Background="#64748B" Margin="4,0,0,0"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Active Filter Banner Indicator -->
+                    <Border Grid.Row="2" Visibility="{Binding IsFilterActive, Converter={StaticResource BoolToVisConverter}}"
+                            Background="#EDE9FE" BorderBrush="#DDD6FE" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="8,6,8,2">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding ActiveFilterSummaryText}" FontSize="11" FontWeight="Bold" Foreground="#6D28D9" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Content="✖ إلغاء" Command="{Binding ClearFilterCommand}"
+                                    Background="Transparent" BorderThickness="0" Foreground="#DC2626" FontSize="11" FontWeight="Bold" Cursor="Hand" ToolTip="إلغاء التصفية الحالية"/>
+                        </Grid>
+                    </Border>
+
+                    <ListBox Grid.Row="3" ItemsSource="{Binding JournalList}" SelectedItem="{Binding SelectedJournal}" BorderThickness="0" HorizontalContentAlignment="Stretch">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Padding="10,8" BorderBrush="#f1f2f6" BorderThickness="0,0,0,1" 
@@ -122,7 +240,7 @@
                     </ListBox>
 
                     <!-- Pagination Control Bar -->
-                    <Border Grid.Row="2" Background="#f8f9fa" Padding="6" CornerRadius="0,0,8,8" BorderBrush="#dcdde1" BorderThickness="0,1,0,0">
+                    <Border Grid.Row="4" Background="#f8f9fa" Padding="6" CornerRadius="0,0,8,8" BorderBrush="#dcdde1" BorderThickness="0,1,0,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -155,19 +273,21 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="التاريخ:" VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="1" 
+                        <TextBox Grid.Column="1" x:Name="TxtJDate"
                                  Text="{Binding JDateText, UpdateSourceTrigger=PropertyChanged}"
                                  LostFocus="Date_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
                                  GotFocus="Date_GotFocus"
-                                 Width="120" Height="42" HorizontalAlignment="Left"
-                                 VerticalContentAlignment="Center" Padding="8,1,8,4"
-                                 IsEnabled="{Binding CurrentJournal.IsPosted, Converter={StaticResource BoolToInvertedConverter}}"
+                                 Style="{StaticResource ModernTextBoxStyle}"
+                                 Width="130" Height="40" HorizontalAlignment="Left"
+                                 VerticalContentAlignment="Center" Padding="10,1,10,4"
+                                 IsEnabled="{Binding IsEditAllowed}"
                                  ToolTip="أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"/>
                         
                         <TextBlock Grid.Column="2" Text="البيان العام للقيد:" VerticalAlignment="Center" FontWeight="Bold" Margin="20,0,8,0"/>
-                        <TextBox Grid.Column="3" Text="{Binding CurrentJournal.Description}" Style="{StaticResource ModernTextBoxStyle}"
-                                 Height="42" VerticalContentAlignment="Center" Padding="10,1,10,5"
-                                 IsReadOnly="{Binding CurrentJournal.IsPosted}"/>
+                        <TextBox Grid.Column="3" Text="{Binding CurrentJournal.Description, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{StaticResource ModernTextBoxStyle}"
+                                 Height="40" VerticalContentAlignment="Center" Padding="10,1,10,5"
+                                 IsReadOnly="{Binding IsJournalPosted}"/>
                     </Grid>
 
                     <!-- Details Header & Custom ItemsControl Container -->
@@ -203,7 +323,7 @@
                                         <DataTemplate>
                                             <controls:JournalRowControl
                                                 AccountsList="{Binding DataContext.Accounts, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                IsLocked="{Binding DataContext.CurrentJournal.IsPosted, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                IsLocked="{Binding DataContext.IsJournalPosted, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 RequestAddNewRow="JournalRow_RequestAddNewRow"
                                                 RequestDeleteRow="JournalRow_RequestDeleteRow"
                                                 AmountChanged="JournalRow_AmountChanged"/>
@@ -226,7 +346,8 @@
                             <ColumnDefinition Width="40"/>
                         </Grid.ColumnDefinitions>
                         
-                        <Button Grid.Column="0" Content="➕ إضافة سطر جديد" Command="{Binding AddLineCommand}" Width="140" Height="36" HorizontalAlignment="Left" Style="{StaticResource ModernButtonStyle}" Background="#95a5a6"/>
+                        <Button Grid.Column="0" Content="➕ إضافة سطر جديد" Command="{Binding AddLineCommand}" Width="140" Height="36" HorizontalAlignment="Left" Style="{StaticResource ModernButtonStyle}" Background="#95a5a6"
+                                Visibility="{Binding IsEditAllowed, Converter={StaticResource BoolToVisConverter}}"/>
                         
                         <!-- نص حالة الاتزان / الفرق بجوار الإجماليات مباشرة -->
                         <Border Grid.Column="2" Margin="0,0,15,0" Padding="12,6" CornerRadius="8" Background="#f8f9fa" BorderBrush="#e9ecef" BorderThickness="1" VerticalAlignment="Center">

@@ -112,8 +112,8 @@ Namespace Views
             Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
             
             Dim isCollapsing As Boolean = (ListColumn.Width.Value > 50)
-            Dim startVal As Double = If(isCollapsing, 310, 0)
-            Dim endVal As Double = If(isCollapsing, 0, 310)
+            Dim startVal As Double = If(isCollapsing, 330, 0)
+            Dim endVal As Double = If(isCollapsing, 0, 330)
 
             Dim anim As New System.Windows.Media.Animation.DoubleAnimation() With {
                 .From = startVal,
@@ -130,11 +130,108 @@ Namespace Views
         End Sub
 
         ' ══════════════════════════════════════════════════
+        '  Search & Filter Card Animation & Handlers
+        ' ══════════════════════════════════════════════════
+        Private _isFilterCardOpen As Boolean = False
+
+        Private Sub ToggleFilterCard_Click(sender As Object, e As RoutedEventArgs)
+            If SearchFilterCard Is Nothing Then Return
+            _isFilterCardOpen = Not _isFilterCardOpen
+
+            Dim targetHeight As Double = If(_isFilterCardOpen, 215, 0)
+            Dim startHeight As Double = SearchFilterCard.ActualHeight
+
+            Dim heightAnim As New System.Windows.Media.Animation.DoubleAnimation() With {
+                .From = startHeight,
+                .To = targetHeight,
+                .Duration = TimeSpan.FromMilliseconds(240),
+                .EasingFunction = New System.Windows.Media.Animation.CubicEase() With {.EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut}
+            }
+
+            Dim opacityAnim As New System.Windows.Media.Animation.DoubleAnimation() With {
+                .From = If(_isFilterCardOpen, 0.0, 1.0),
+                .To = If(_isFilterCardOpen, 1.0, 0.0),
+                .Duration = TimeSpan.FromMilliseconds(240),
+                .EasingFunction = New System.Windows.Media.Animation.CubicEase() With {.EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut}
+            }
+
+            If Not _isFilterCardOpen Then
+                SearchFilterCard.BeginAnimation(FrameworkElement.HeightProperty, heightAnim)
+                SearchFilterCard.BeginAnimation(UIElement.OpacityProperty, opacityAnim)
+            Else
+                AddHandler heightAnim.Completed, Sub(s, args)
+                    If _isFilterCardOpen Then
+                        SearchFilterCard.BeginAnimation(FrameworkElement.HeightProperty, Nothing)
+                        SearchFilterCard.Height = Double.NaN ' Auto height to fit any DPI/scaling
+                    End If
+                End Sub
+                SearchFilterCard.BeginAnimation(FrameworkElement.HeightProperty, heightAnim)
+                SearchFilterCard.BeginAnimation(UIElement.OpacityProperty, opacityAnim)
+            End If
+        End Sub
+
+        Private Sub SearchBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key = Key.Enter Then
+                e.Handled = True
+                Dim tb = TryCast(sender, TextBox)
+                If tb IsNot Nothing Then
+                    FormatAndValidateDateBox(tb)
+                End If
+                Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+                If vm IsNot Nothing Then
+                    vm.ExecuteApplyFilter()
+                End If
+            End If
+        End Sub
+
+        Private Sub SearchDateFrom_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key = Key.Enter Then
+                e.Handled = True
+                Dim tb = TryCast(sender, TextBox)
+                If tb IsNot Nothing Then
+                    FormatAndValidateDateBox(tb)
+                End If
+                If TxtSearchDateTo IsNot Nothing Then
+                    TxtSearchDateTo.Focus()
+                Else
+                    Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+                    If vm IsNot Nothing Then vm.ExecuteApplyFilter()
+                End If
+            End If
+        End Sub
+
+        Private Sub SearchDateTo_PreviewKeyDown(sender As Object, e As KeyEventArgs)
+            If e.Key = Key.Enter Then
+                e.Handled = True
+                Dim tb = TryCast(sender, TextBox)
+                If tb IsNot Nothing Then
+                    FormatAndValidateDateBox(tb)
+                End If
+                Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+                If vm IsNot Nothing Then
+                    vm.ExecuteApplyFilter()
+                End If
+            End If
+        End Sub
+
+        ' ══════════════════════════════════════════════════
         '  Date TextBox Handlers
         ' ══════════════════════════════════════════════════
-        Private Sub Date_LostFocus(sender As Object, e As System.Windows.RoutedEventArgs)
-            Dim tb = TryCast(sender, TextBox)
-            If tb Is Nothing Then Return
+        Private Function FormatAndValidateDateBox(tb As TextBox) As Boolean
+            If tb Is Nothing Then Return False
+            If String.IsNullOrWhiteSpace(tb.Text) Then
+                tb.Foreground = System.Windows.Media.Brushes.Black
+                Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
+                If vm IsNot Nothing Then
+                    If tb.Name = "TxtSearchDateFrom" Then
+                        vm.SearchDateFrom = Nothing
+                    ElseIf tb.Name = "TxtSearchDateTo" Then
+                        vm.SearchDateTo = Nothing
+                    End If
+                End If
+                Return True
+            End If
+
             Dim raw = tb.Text.Trim().Replace("-", "/").Replace(".", "/")
             If raw.Length = 8 AndAlso Not raw.Contains("/") Then
                 raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
@@ -143,17 +240,34 @@ Namespace Views
             If DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
                                       System.Globalization.CultureInfo.InvariantCulture,
                                       System.Globalization.DateTimeStyles.None, parsed) Then
+                tb.Text = parsed.ToString("dd/MM/yyyy")
+                tb.Foreground = System.Windows.Media.Brushes.Black
+                tb.ToolTip = "أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"
+
+                Dim be = tb.GetBindingExpression(TextBox.TextProperty)
+                If be IsNot Nothing Then be.UpdateSource()
+
                 Dim vm = TryCast(Me.DataContext, ViewModels.JournalEntryViewModel)
-                If vm IsNot Nothing AndAlso vm.CurrentJournal IsNot Nothing Then
-                    vm.CurrentJournal.JDate = parsed
-                    tb.Text = parsed.ToString("dd/MM/yyyy")
-                    tb.Foreground = System.Windows.Media.Brushes.Black
-                    tb.ToolTip = "أدخل التاريخ: dd/MM/yyyy أو ddMMyyyy"
+                If vm IsNot Nothing Then
+                    If tb.Name = "TxtJDate" AndAlso vm.CurrentJournal IsNot Nothing Then
+                        vm.CurrentJournal.JDate = parsed
+                    ElseIf tb.Name = "TxtSearchDateFrom" Then
+                        vm.SearchDateFrom = parsed
+                    ElseIf tb.Name = "TxtSearchDateTo" Then
+                        vm.SearchDateTo = parsed
+                    End If
                 End If
+                Return True
             Else
                 tb.Foreground = System.Windows.Media.Brushes.Red
                 tb.ToolTip = "صيغة تاريخ غير صحيحة — استخدم: dd/MM/yyyy"
+                Return False
             End If
+        End Function
+
+        Private Sub Date_LostFocus(sender As Object, e As System.Windows.RoutedEventArgs)
+            Dim tb = TryCast(sender, TextBox)
+            FormatAndValidateDateBox(tb)
         End Sub
 
         Private Sub Date_GotFocus(sender As Object, e As System.Windows.RoutedEventArgs)

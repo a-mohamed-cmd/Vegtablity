@@ -19,6 +19,38 @@ Namespace Services
             End Using
         End Function
 
+        Public Function GetPagedVouchers(voucherType As String, pageIndex As Integer, pageSize As Integer, searchText As String, ByRef totalCount As Integer) As List(Of Voucher)
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    Dim p As New DynamicParameters()
+                    p.Add("@VoucherType", voucherType)
+                    p.Add("@PageIndex", pageIndex)
+                    p.Add("@PageSize", pageSize)
+                    p.Add("@SearchText", If(String.IsNullOrWhiteSpace(searchText), Nothing, searchText.Trim()))
+                    p.Add("@TotalCount", dbType:=DbType.Int32, direction:=ParameterDirection.Output)
+
+                    Dim result = conn.Query(Of Voucher)(
+                        Helpers.StoredProcedures.SP_VOUCHER_GETPAGED,
+                        p,
+                        commandType:=CommandType.StoredProcedure).AsList()
+
+                    totalCount = p.Get(Of Integer)("@TotalCount")
+                    Return result
+                End Using
+            Catch ex As Exception
+                ' Fallback in-memory paging for older DB instances without migration 41
+                Dim fullList As List(Of Voucher)
+                If Not String.IsNullOrWhiteSpace(searchText) Then
+                    fullList = SearchVouchers(voucherType, searchText)
+                Else
+                    fullList = GetAllVouchers(voucherType)
+                End If
+                totalCount = If(fullList IsNot Nothing, fullList.Count, 0)
+                If fullList Is Nothing Then Return New List(Of Voucher)()
+                Return fullList.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList()
+            End Try
+        End Function
+
         Public Function GetVoucherByID(voucherID As Integer) As Voucher
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Return conn.QueryFirstOrDefault(Of Voucher)(
@@ -60,6 +92,15 @@ Namespace Services
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 conn.Execute(
                     Helpers.StoredProcedures.SP_VOUCHER_POST,
+                    New With {.VoucherID = voucherID},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
+
+        Public Sub UnpostVoucher(voucherID As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_VOUCHER_UNPOST,
                     New With {.VoucherID = voucherID},
                     commandType:=CommandType.StoredProcedure)
             End Using

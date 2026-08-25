@@ -1,0 +1,190 @@
+<UserControl x:Class="Controls.StockTakeItemRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
+
+    <UserControl.Resources>
+        <helpers:BooleanInverterConverter x:Key="BoolToInvertedConverter"/>
+    </UserControl.Resources>
+
+    <Border Background="White" BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="4,4" MinHeight="46">
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <!-- 0: Product Code / Barcode -->
+                <ColumnDefinition Width="100"/>
+                <!-- 1: Product SearchableDropdown (Expanding) -->
+                <ColumnDefinition Width="*"/>
+                <!-- 2: Refresh System Stock Button -->
+                <ColumnDefinition Width="32"/>
+                <!-- 3: System Quantity (Read-Only) -->
+                <ColumnDefinition Width="85"/>
+                <!-- 4: Actual Quantity (Input) -->
+                <ColumnDefinition Width="85"/>
+                <!-- 5: Difference Quantity (Read-Only) -->
+                <ColumnDefinition Width="80"/>
+                <!-- 6: Cost Price -->
+                <ColumnDefinition Width="85"/>
+                <!-- 7: Difference Value (Read-Only) -->
+                <ColumnDefinition Width="95"/>
+                <!-- 8: Delete Action -->
+                <ColumnDefinition Width="36"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: Barcode TextBox -->
+            <TextBox x:Name="ProductCodeBox"
+                     Grid.Column="0"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="6,0"
+                     Text="{Binding ProductCode, UpdateSourceTrigger=PropertyChanged}"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     PreviewKeyDown="ProductCodeBox_PreviewKeyDown"/>
+
+            <!-- 1: Product SearchableDropdown -->
+            <controls:SearchableDropdown x:Name="ProductDropdown"
+                                         Grid.Column="1"
+                                         Height="38"
+                                         Margin="2,2"
+                                         DisplayMemberPath="SearchText"
+                                         Watermark="اختر أو ابحث عن الصنف..."
+                                         IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                                         SearchChanged="ProductDropdown_SearchChanged"
+                                         ItemSelected="ProductDropdown_ItemSelected"
+                                         ConfirmedAndMoveNext="ProductDropdown_ConfirmedAndMoveNext"/>
+
+            <!-- 2: Refresh System Quantity Button -->
+            <Button x:Name="RefreshStockBtn"
+                    Grid.Column="2"
+                    Content="🔄"
+                    Width="28"
+                    Height="32"
+                    Margin="2,2"
+                    VerticalAlignment="Center"
+                    Background="#F1F5F9"
+                    BorderBrush="#E2E8F0"
+                    BorderThickness="1"
+                    FontSize="11"
+                    Cursor="Hand"
+                    ToolTip="تحديث الكمية والتكلفة الدفترية الحالية من المخزون"
+                    IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                    Click="RefreshStockBtn_Click"/>
+
+            <!-- 3: System Quantity TextBox (Read-Only) -->
+            <TextBox x:Name="SystemQtyBox"
+                     Grid.Column="3"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding SystemQuantity, Mode=OneWay, StringFormat=\{0:0.##\}}"
+                     IsReadOnly="True"
+                     Background="#F8FAFC"
+                     Foreground="#2563EB"
+                     FontWeight="SemiBold"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"/>
+
+            <!-- 4: Actual Quantity TextBox -->
+            <TextBox x:Name="ActualQtyBox"
+                     Grid.Column="4"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding ActualQuantity, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.##\}}"
+                     FontWeight="Bold"
+                     Foreground="#0F172A"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     LostFocus="ActualQtyBox_LostFocus"
+                     PreviewTextInput="AmountBox_PreviewTextInput"
+                     PreviewKeyDown="ActualQtyBox_PreviewKeyDown"/>
+
+            <!-- 5: Difference Quantity TextBox (Read-Only) -->
+            <TextBox x:Name="DiffQtyBox"
+                     Grid.Column="5"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding DifferenceQuantity, Mode=OneWay, StringFormat=\{0:0.##\}}"
+                     FontWeight="Bold"
+                     IsReadOnly="True"
+                     Background="#F8FAFC"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center">
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource ModernTextBoxStyle}">
+                        <Setter Property="Foreground" Value="#64748B"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding DifferenceQuantity}" Value="0">
+                                <Setter Property="Foreground" Value="#10B981"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
+
+            <!-- 6: Unit Cost Price TextBox -->
+            <TextBox x:Name="CostPriceBox"
+                     Grid.Column="6"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding CostPrice, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="SemiBold"
+                     Foreground="#0F172A"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                     GotFocus="AmountBox_GotFocus"
+                     LostFocus="CostPriceBox_LostFocus"
+                     PreviewTextInput="AmountBox_PreviewTextInput"
+                     PreviewKeyDown="CostPriceBox_PreviewKeyDown"/>
+
+            <!-- 7: Difference Value TextBox (Read-Only) -->
+            <TextBox x:Name="DiffValueBox"
+                     Grid.Column="7"
+                     Height="38"
+                     Margin="2,2"
+                     Padding="4,0"
+                     Text="{Binding DifferenceValue, Mode=OneWay, StringFormat=\{0:N3\}}"
+                     FontWeight="Bold"
+                     Foreground="#E11D48"
+                     Background="#F8FAFC"
+                     TextAlignment="Center"
+                     HorizontalContentAlignment="Center"
+                     VerticalContentAlignment="Center"
+                     Style="{DynamicResource ModernTextBoxStyle}"
+                     PreviewKeyDown="DiffValueBox_PreviewKeyDown"/>
+
+            <!-- 8: Delete Button -->
+            <Button x:Name="DeleteButton"
+                    Grid.Column="8"
+                    Content="❌"
+                    Width="30"
+                    Height="32"
+                    Margin="2,2"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Foreground="#EF4444"
+                    FontSize="12"
+                    Cursor="Hand"
+                    ToolTip="حذف هذا السطر"
+                    IsEnabled="{Binding IsLocked, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToInvertedConverter}}"
+                    Click="DeleteButton_Click"/>
+        </Grid>
+    </Border>
+</UserControl>

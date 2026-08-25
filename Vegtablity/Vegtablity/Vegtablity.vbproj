@@ -117,6 +117,54 @@
       <DependentUpon>JournalRowControl.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Controls\InvoiceItemRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\InvoiceItemRowControl.xaml.vb">
+      <DependentUpon>InvoiceItemRowControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="Controls\QuoteItemRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\QuoteItemRowControl.xaml.vb">
+      <DependentUpon>QuoteItemRowControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="Controls\AccountTreeControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\AccountTreeControl.xaml.vb">
+      <DependentUpon>AccountTreeControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="Controls\RecipeItemRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\RecipeItemRowControl.xaml.vb">
+      <DependentUpon>RecipeItemRowControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="Controls\WastageItemRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\WastageItemRowControl.xaml.vb">
+      <DependentUpon>WastageItemRowControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Page Include="Controls\StockTakeItemRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\StockTakeItemRowControl.xaml.vb">
+      <DependentUpon>StockTakeItemRowControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -193,6 +241,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\AccountNode.vb" />
     <Compile Include="Models\DeviceLicense.vb" />
     <Compile Include="Models\User.vb" />
     <Compile Include="Models\Role.vb" />
@@ -402,6 +451,9 @@
     <Compile Include="Views\UpdateAvailableDialog.xaml.vb">
       <DependentUpon>UpdateAvailableDialog.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Controls\VoucherRowControl.xaml.vb">
+      <DependentUpon>VoucherRowControl.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\UpdateAvailableDialog.xaml">
@@ -545,6 +597,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\UserManagementWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\VoucherRowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
