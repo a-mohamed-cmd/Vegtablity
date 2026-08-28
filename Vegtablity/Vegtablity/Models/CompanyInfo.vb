@@ -13,5 +13,6 @@ Namespace Models
         Public Property EnableDailyOrders As Boolean = False
         Public Property DeliverySystemMode As String = Nothing
         Public Property EnableSalesDiscounts As Boolean = False
+        Public Property EnableHR As Boolean = False
     End Class
 End Namespace

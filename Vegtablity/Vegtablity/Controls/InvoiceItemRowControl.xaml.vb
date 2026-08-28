@@ -175,17 +175,25 @@ Namespace Controls
             Dim txt = tb.Text.Trim().Replace(",", ".")
             If Decimal.TryParse(txt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, val) Then
                 Dim detail = TryCast(Me.DataContext, InvoiceDetail)
-                If detail IsNot Nothing Then
+                If detail IsNot Nothing AndAlso detail.Quantity <> val Then
                     detail.Quantity = val
+                    RaiseEvent AmountChanged(Me, EventArgs.Empty)
                 End If
             End If
-            RaiseEvent AmountChanged(Me, EventArgs.Empty)
         End Sub
 
         Private Sub QuantityBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
                 e.Handled = True
-                QuantityBox_LostFocus(QuantityBox, New RoutedEventArgs())
+                Dim val As Decimal = 0
+                Dim txt = QuantityBox.Text.Trim().Replace(",", ".")
+                If Decimal.TryParse(txt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, val) Then
+                    Dim detail = TryCast(Me.DataContext, InvoiceDetail)
+                    If detail IsNot Nothing AndAlso detail.Quantity <> val Then
+                        detail.Quantity = val
+                        RaiseEvent AmountChanged(Me, EventArgs.Empty)
+                    End If
+                End If
                 FocusUnitPrice()
             End If
         End Sub
@@ -197,17 +205,25 @@ Namespace Controls
             Dim txt = tb.Text.Trim().Replace(",", ".")
             If Decimal.TryParse(txt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, val) Then
                 Dim detail = TryCast(Me.DataContext, InvoiceDetail)
-                If detail IsNot Nothing Then
+                If detail IsNot Nothing AndAlso detail.UnitPrice <> val Then
                     detail.UnitPrice = val
+                    RaiseEvent AmountChanged(Me, EventArgs.Empty)
                 End If
             End If
-            RaiseEvent AmountChanged(Me, EventArgs.Empty)
         End Sub
 
         Private Sub UnitPriceBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
                 e.Handled = True
-                UnitPriceBox_LostFocus(UnitPriceBox, New RoutedEventArgs())
+                Dim val As Decimal = 0
+                Dim txt = UnitPriceBox.Text.Trim().Replace(",", ".")
+                If Decimal.TryParse(txt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, val) Then
+                    Dim detail = TryCast(Me.DataContext, InvoiceDetail)
+                    If detail IsNot Nothing AndAlso detail.UnitPrice <> val Then
+                        detail.UnitPrice = val
+                        RaiseEvent AmountChanged(Me, EventArgs.Empty)
+                    End If
+                End If
                 TotalPriceBox.Focus()
             End If
         End Sub

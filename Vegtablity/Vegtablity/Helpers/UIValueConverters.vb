@@ -44,15 +44,20 @@ Namespace Helpers
         Implements IValueConverter
 
         Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            Dim isInverse As Boolean = (parameter IsNot Nothing AndAlso parameter.ToString().Equals("Inverse", StringComparison.OrdinalIgnoreCase))
             If TypeOf value Is Boolean Then
-                Return If(DirectCast(value, Boolean), Visibility.Visible, Visibility.Collapsed)
+                Dim bVal As Boolean = DirectCast(value, Boolean)
+                If isInverse Then bVal = Not bVal
+                Return If(bVal, Visibility.Visible, Visibility.Collapsed)
             End If
-            Return Visibility.Collapsed
+            Return If(isInverse, Visibility.Visible, Visibility.Collapsed)
         End Function
 
         Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
             If TypeOf value Is Visibility Then
-                Return DirectCast(value, Visibility) = Visibility.Visible
+                Dim isVis As Boolean = (DirectCast(value, Visibility) = Visibility.Visible)
+                Dim isInverse As Boolean = (parameter IsNot Nothing AndAlso parameter.ToString().Equals("Inverse", StringComparison.OrdinalIgnoreCase))
+                Return If(isInverse, Not isVis, isVis)
             End If
             Return False
         End Function
@@ -206,6 +211,23 @@ Namespace Helpers
         Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
             If value IsNot Nothing AndAlso IsNumeric(value) AndAlso System.Convert.ToInt32(value) > 0 Then
                 Return Visibility.Visible
+            End If
+            Return Visibility.Collapsed
+        End Function
+
+        Public Function ConvertBack(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.ConvertBack
+            Throw New NotImplementedException()
+        End Function
+    End Class
+
+    Public Class StringEqualsToVisibilityConverter
+        Implements IValueConverter
+
+        Public Function Convert(value As Object, targetType As Type, parameter As Object, culture As CultureInfo) As Object Implements IValueConverter.Convert
+            If value IsNot Nothing AndAlso parameter IsNot Nothing Then
+                If String.Equals(value.ToString().Trim(), parameter.ToString().Trim(), StringComparison.OrdinalIgnoreCase) Then
+                    Return Visibility.Visible
+                End If
             End If
             Return Visibility.Collapsed
         End Function

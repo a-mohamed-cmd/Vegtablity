@@ -23,7 +23,9 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
   bool _unifiedPartnerSearch = false;
   bool _enableDailyOrders = false;
   bool _enableSalesDiscounts = false;
+  bool _enableHR = false;
   String? _lastSyncedDb;
+
 
   @override
   void initState() {
@@ -67,7 +69,9 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       _unifiedPartnerSearch = settings['UnifiedPartnerSearch'] == true || settings['UnifiedPartnerSearch'] == 1 || settings['UnifiedPartnerSearch'] == '1';
       _enableDailyOrders = settings['EnableDailyOrders'] == true || settings['EnableDailyOrders'] == 1 || settings['EnableDailyOrders'] == '1';
       _enableSalesDiscounts = settings['EnableSalesDiscounts'] == true || settings['EnableSalesDiscounts'] == 1 || settings['EnableSalesDiscounts'] == '1';
+      _enableHR = settings['EnableHR'] == true || settings['EnableHR'] == 1 || settings['EnableHR'] == '1';
       _deliverySystemModeController.text = settings['DeliverySystemMode']?.toString() ?? '';
+
       _lastSyncedDb = currentDb;
     }
   }
@@ -266,6 +270,20 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                                 value: _enableSalesDiscounts,
                                 onChanged: (val) => setState(() => _enableSalesDiscounts = val),
                               ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.cyanAccent,
+                                title: const Text(
+                                  "تفعيل نظام الموارد البشرية والرواتب (EnableHR)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إظهار والتحكم بقوائم وصلاحيات وشاشات الموارد البشرية، الموظفين، الإجازات، والرواتب",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableHR,
+                                onChanged: (val) => setState(() => _enableHR = val),
+                              ),
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
                                 value: ['direct', 'temp_order'].contains(_deliverySystemModeController.text.trim())
@@ -372,8 +390,10 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                             'Phone': _phoneController.text.trim(),
                             'EnableDailyOrders': _enableDailyOrders,
                             'EnableSalesDiscounts': _enableSalesDiscounts,
+                            'EnableHR': _enableHR,
                             'DeliverySystemMode': _deliverySystemModeController.text.trim(),
                           };
+
                           final res = await licenseProvider.saveCompanySettings(payload);
                           if (res && mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(

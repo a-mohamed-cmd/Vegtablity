@@ -13,10 +13,12 @@ class UpdateService:
             return {}
         try:
             with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+                content = f.read()
+                return json.loads(content, strict=False)
         except Exception as e:
             print(f"Error loading updates manifest: {e}")
             return {}
+
 
     def _save_manifest(self, data: Dict[str, Any]) -> bool:
         try:
@@ -63,8 +65,11 @@ class UpdateService:
             f_key = "zatter"
         elif "oman" in f_key:
             f_key = "oman"
+        elif "license" in f_key or "manager" in f_key or "admin" in f_key:
+            f_key = "license_manager"
         elif "vegtablity" in f_key or "veg" in f_key:
             f_key = "vegtablity"
+
 
         platform_manifest = manifest.get(p_key, {})
         flavor_info = platform_manifest.get(f_key)

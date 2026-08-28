@@ -32,7 +32,9 @@ Namespace Services
                         .UseCustomInvoiceDesign = info.UseCustomInvoiceDesign,
                         .ProductionMode = info.ProductionMode,
                         .EnableDailyOrders = info.EnableDailyOrders,
-                        .DeliverySystemMode = info.DeliverySystemMode
+                        .DeliverySystemMode = info.DeliverySystemMode,
+                        .EnableSalesDiscounts = info.EnableSalesDiscounts,
+                        .EnableHR = info.EnableHR
                     },
                     commandType:=CommandType.StoredProcedure
                 )

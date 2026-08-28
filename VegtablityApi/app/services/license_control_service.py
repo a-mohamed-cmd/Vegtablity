@@ -189,14 +189,17 @@ class LicenseControlService:
             enable_daily_orders = _parse_bool(payload.get("EnableDailyOrders"))
             delivery_system_mode = payload.get("DeliverySystemMode")
             enable_sales_discounts = _parse_bool(payload.get("EnableSalesDiscounts"))
+            enable_hr = _parse_bool(payload.get("EnableHR"))
 
             cursor.execute(SP.CTRL_COMPANY_SETTINGS_SAVE, (
                 production_mode, use_custom, use_detailed, unified_search,
                 company_name, currency_symbol, address, phone, email,
-                enable_daily_orders, delivery_system_mode, enable_sales_discounts
+                enable_daily_orders, delivery_system_mode, enable_sales_discounts,
+                enable_hr
             ))
             conn.commit()
             return True
+
         except Exception:
             conn.rollback()
             raise

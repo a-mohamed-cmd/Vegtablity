@@ -1,0 +1,141 @@
+<UserControl x:Class="Controls.AttendanceRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo"
+             HorizontalAlignment="Stretch">
+
+    <UserControl.Resources>
+        <Style x:Key="RowInputBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ModernTextBoxStyle}">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="Margin" Value="2,0"/>
+        </Style>
+
+        <Style x:Key="QuickActionBtnStyle" TargetType="Button">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="6,1"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border x:Name="MainRowBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,4" SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.02" BlurRadius="4" ShadowDepth="1"/>
+        </Border.Effect>
+
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <!-- 0: Code -->
+                <ColumnDefinition Width="75"/>
+                <!-- 1: Name & Dept -->
+                <ColumnDefinition Width="1.2*" MinWidth="130"/>
+                <!-- 2: Status ComboBox -->
+                <ColumnDefinition Width="115"/>
+                <!-- 3: Work Hours -->
+                <ColumnDefinition Width="75"/>
+                <!-- 4: Overtime Hours -->
+                <ColumnDefinition Width="75"/>
+                <!-- 5: Overtime Days -->
+                <ColumnDefinition Width="75"/>
+                <!-- 6: Delay Minutes -->
+                <ColumnDefinition Width="75"/>
+                <!-- 7: Absence Deduction -->
+                <ColumnDefinition Width="80"/>
+                <!-- 8: Notes -->
+                <ColumnDefinition Width="1.1*" MinWidth="110"/>
+                <!-- 9: Quick Actions -->
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: Employee Code Badge -->
+            <Border Grid.Column="0" Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="6,3" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBlock Text="{Binding EmployeeCode}" FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
+            </Border>
+
+            <!-- 1: Employee Name & Dept -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0">
+                <TextBlock Text="{Binding EmployeeName}" FontWeight="Bold" FontSize="12.5" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                <TextBlock FontSize="11" Foreground="#64748B" Margin="0,1,0,0" TextTrimming="CharacterEllipsis">
+                    <Run Text="{Binding Department}"/>
+                    <Run Text="•"/>
+                    <Run Text="{Binding JobTitle}"/>
+                </TextBlock>
+            </StackPanel>
+
+            <!-- 2: Status ComboBox -->
+            <ComboBox x:Name="CmbStatus" Grid.Column="2" SelectedValue="{Binding Status, UpdateSourceTrigger=PropertyChanged}" 
+                      SelectedValuePath="Tag" Height="32" FontSize="11.5" FontWeight="Bold" Margin="3,0"
+                      SelectionChanged="CmbStatus_SelectionChanged">
+                <ComboBoxItem Content="✓ حاضر" Tag="Present" Foreground="#15803D"/>
+                <ComboBoxItem Content="✗ غائب" Tag="Absent" Foreground="#DC2626"/>
+                <ComboBoxItem Content="🏖️ إجازة" Tag="Leave" Foreground="#1D4ED8"/>
+                <ComboBoxItem Content="⏳ متأخر" Tag="Late" Foreground="#D97706"/>
+                <ComboBoxItem Content="🌴 عطلة" Tag="Holiday" Foreground="#7C3AED"/>
+            </ComboBox>
+
+            <!-- 3: Work Hours -->
+            <TextBox Grid.Column="3" Text="{Binding WorkHours, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.#\}}"
+                     FontWeight="SemiBold" Foreground="#1E293B" Style="{StaticResource RowInputBoxStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"/>
+
+            <!-- 4: Overtime Hours -->
+            <TextBox Grid.Column="4" Text="{Binding OvertimeHours, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.#\}}"
+                     FontWeight="Bold" Foreground="#0284C7" Style="{StaticResource RowInputBoxStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"/>
+
+            <!-- 5: Overtime Days -->
+            <TextBox Grid.Column="5" Text="{Binding OvertimeDays, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.#\}}"
+                     FontWeight="Bold" Foreground="#4F46E5" Style="{StaticResource RowInputBoxStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"/>
+
+            <!-- 6: Delay Minutes -->
+            <TextBox Grid.Column="6" Text="{Binding DelayMinutes, UpdateSourceTrigger=LostFocus}"
+                     FontWeight="Bold" Foreground="#D97706" Style="{StaticResource RowInputBoxStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="IntegerBox_PreviewTextInput"/>
+
+            <!-- 7: Absence Deduction -->
+            <TextBox Grid.Column="7" Text="{Binding AbsenceDeductionDays, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.#\}}"
+                     FontWeight="Bold" Foreground="#DC2626" Style="{StaticResource RowInputBoxStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"/>
+
+            <!-- 8: Notes -->
+            <TextBox Grid.Column="8" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                     FontSize="11.5" Height="32" Padding="6,0" VerticalContentAlignment="Center" Margin="3,0"
+                     Style="{DynamicResource ModernTextBoxStyle}" helpers:WatermarkHelper.Watermark="ملاحظات الحضور..."/>
+
+            <!-- 9: Quick Actions -->
+            <StackPanel Grid.Column="9" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+                <Button Content="✓" ToolTip="تعيين حاضر (8 ساعات)"
+                        Style="{StaticResource QuickActionBtnStyle}"
+                        Background="#F0FDF4" BorderBrush="#BBF7D0" Foreground="#15803D"
+                        Width="28" Margin="0,0,3,0" Click="SetPresent_Click"/>
+
+                <Button Content="✗" ToolTip="تعيين غائب (خصم يوم)"
+                        Style="{StaticResource QuickActionBtnStyle}"
+                        Background="#FEF2F2" BorderBrush="#FECACA" Foreground="#DC2626"
+                        Width="28" Click="SetAbsent_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

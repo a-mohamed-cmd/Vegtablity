@@ -2,7 +2,9 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:Vegtablity.ViewModels"
-             xmlns:helpers="clr-namespace:Vegtablity.Helpers">
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
 
     <UserControl.DataContext>
         <vm:PartnersViewModel/>
@@ -18,7 +20,7 @@
         <EventTrigger RoutedEvent="FrameworkElement.Loaded">
             <BeginStoryboard>
                 <Storyboard>
-                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.5">
+                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.4">
                         <DoubleAnimation.EasingFunction>
                             <CubicEase EasingMode="EaseOut"/>
                         </DoubleAnimation.EasingFunction>
@@ -33,7 +35,7 @@
             <EventTrigger RoutedEvent="FrameworkElement.Loaded">
                 <BeginStoryboard>
                     <Storyboard>
-                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.6" BeginTime="0:0:0.15">
+                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.4" BeginTime="0:0:0.1">
                             <DoubleAnimation.EasingFunction>
                                 <CubicEase EasingMode="EaseOut"/>
                             </DoubleAnimation.EasingFunction>
@@ -52,17 +54,23 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Header with Search -->
-                <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,5">
+                <!-- Header with Search and Actions -->
+                <Border Grid.Row="0" Padding="14,12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,8" BorderBrush="#E2E8F0" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="👤 إدارة العملاء" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="👤 إدارة العملاء" FontSize="18" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                            <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Customers.Count, StringFormat='{}{0} عميل'}" FontSize="12" FontWeight="Bold" Foreground="#1D4ED8"/>
+                            </Border>
+                        </StackPanel>
+
                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="➕ إضافة عميل" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27ae60" Foreground="White" Width="110" Height="34" Margin="0,0,10,0" ToolTip="إضافة عميل جديد للوحة التحكم"/>
-                            <Border Background="White" CornerRadius="8" Padding="8,4" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
+                            <Button Content="➕ إضافة عميل" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White" Width="120" Height="36" Margin="0,0,10,0" ToolTip="إضافة عميل جديد للوحة التحكم"/>
+                            <Border Background="White" CornerRadius="8" Padding="8,4" Width="280" BorderBrush="#CBD5E1" BorderThickness="1">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -76,114 +84,37 @@
                     </Grid>
                 </Border>
 
-                <!-- Main Content: DataGrid + Quotes + Edit Panel side by side -->
+                <!-- Main Content: Cards Grid + Edit Panel side by side -->
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- DataGrid (Column 0) -->
-                    <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White">
-                        <DataGrid ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}"
-                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                                  BorderThickness="0" Margin="5" RowHeight="38" ColumnHeaderHeight="40">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding PartnerID}" Width="50"/>
-                                <DataGridTextColumn Header="اسم العميل" Binding="{Binding PartnerName}" Width="*"/>
-                                <DataGridTextColumn Header="الهاتف" Binding="{Binding Phone}" Width="120"/>
-                                <DataGridTextColumn Header="العنوان" Binding="{Binding Address}" Width="150"/>
-                                <DataGridTextColumn Header="الرصيد" Binding="{Binding CurrentBalance, StringFormat=N2}" Width="100"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                    <!-- Cards Grid (Column 0) -->
+                    <Border Grid.Column="0" Margin="0,0,8,0" CornerRadius="10" BorderBrush="#E2E8F0" BorderThickness="1" Background="#F8FAFC" Padding="6">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" SnapsToDevicePixels="True">
+                            <ItemsControl ItemsSource="{Binding Customers}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:PartnerCardControl Margin="6"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                     </Border>
 
-                    <!-- Quotes Panel (Column 1) - Side by Side -->
-                    <Border Grid.Column="1" Width="360" CornerRadius="10" Background="White" Margin="0,0,10,0"
-                            BorderBrush="#E0E7FF" BorderThickness="1"
-                            Visibility="{Binding IsQuotesPanelOpen, Converter={StaticResource BoolToVis}}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <TranslateTransform X="360"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsQuotesPanelOpen}" Value="True">
-                                        <DataTrigger.EnterActions>
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X"
-                                                                     From="360" To="0" Duration="0:0:0.32">
-                                                        <DoubleAnimation.EasingFunction>
-                                                            <CubicEase EasingMode="EaseOut"/>
-                                                        </DoubleAnimation.EasingFunction>
-                                                    </DoubleAnimation>
-                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                                     From="0" To="1" Duration="0:0:0.28"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </DataTrigger.EnterActions>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Grid.Row="0" Background="#4F46E5" CornerRadius="10,10,0,0" Padding="16,14">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="📋 عروض الأسعار" Foreground="White" FontWeight="Bold" FontSize="15"/>
-                                        <TextBlock Text="{Binding QuotePanelCustomerName}" Foreground="#C7D2FE" FontSize="12" Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Content="✕" Command="{Binding CloseQuotesPanelCommand}"
-                                            Background="Transparent" BorderThickness="0" Foreground="White"
-                                            FontSize="16" FontWeight="Bold" Cursor="Hand" Width="32" Height="32"/>
-                                </Grid>
-                            </Border>
-
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12">
-                                <ItemsControl ItemsSource="{Binding CustomerQuotes}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Margin="0,0,0,8" CornerRadius="10" Background="#F8FAFF" BorderBrush="#E0E7FF" BorderThickness="1" Padding="12,10">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="{Binding QuoteID, StringFormat='عرض رقم: {0}'}" FontWeight="SemiBold" Foreground="#1E293B"/>
-                                                    <StackPanel Grid.Row="1" Margin="0,5,0,0">
-                                                        <TextBlock Text="{Binding QuoteDate, StringFormat='📅 التاريخ: {0:yyyy/MM/dd}'}" FontSize="11" Foreground="#64748B"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Row="2" Content="فتح تفاصيل العرض ←" 
-                                                            Command="{Binding DataContext.ViewQuoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                            CommandParameter="{Binding}"
-                                                            HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Foreground="#4F46E5" FontSize="11"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
-                    </Border>
-
-                    <!-- Edit Panel (Column 2) -->
-                    <Border Grid.Column="2" Width="340" CornerRadius="10" Background="#fafafa" Padding="18" BorderBrush="#eee" BorderThickness="1"
+                    <!-- Edit Customer Panel (Column 1) -->
+                    <Border Grid.Column="1" Width="340" CornerRadius="12" Background="White" Padding="20" BorderBrush="#E2E8F0" BorderThickness="1.5"
                             Visibility="{Binding IsCustomerPanelVisible, Converter={StaticResource BoolToVis}}">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" Opacity="0.08" BlurRadius="15" ShadowDepth="4"/>
+                        </Border.Effect>
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="RenderTransform">
@@ -196,7 +127,7 @@
                                         <DataTrigger.EnterActions>
                                             <BeginStoryboard>
                                                 <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="340" To="0" Duration="0:0:0.35">
+                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="340" To="0" Duration="0:0:0.3">
                                                         <DoubleAnimation.EasingFunction>
                                                             <CubicEase EasingMode="EaseOut"/>
                                                         </DoubleAnimation.EasingFunction>
@@ -209,31 +140,37 @@
                             </Style>
                         </Border.Style>
                         <StackPanel>
-                            <Grid Margin="0,0,0,15">
-                                <TextBlock Text="بيانات العميل" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                            <Grid Margin="0,0,0,18">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="👤" FontSize="18" Margin="0,0,6,0"/>
+                                    <TextBlock Text="بيانات العميل" FontSize="16.5" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                </StackPanel>
                                 <Button Content="✕" HorizontalAlignment="Right" Command="{Binding CloseCustomerPanelCommand}"
-                                        Style="{StaticResource ModernButtonStyle}" Background="Transparent" Foreground="#64748B" Width="30" BorderThickness="0"/>
+                                        Style="{StaticResource ModernButtonStyle}" Background="Transparent" Foreground="#64748B" Width="32" Height="32" BorderThickness="0" Cursor="Hand" ToolTip="إغلاق اللوحة"/>
                             </Grid>
-                            <TextBlock Text="اسم العميل *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            
+                            <TextBlock Text="اسم العميل *" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditCustomerName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding CustomerNameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" Visibility="{Binding CustomerNameError, Converter={StaticResource StringToVisConverter}}"/>
-                            <TextBlock Text="الهاتف" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CustomerNameError}" Foreground="#EF4444" FontSize="11" Margin="2,0,0,8" Visibility="{Binding CustomerNameError, Converter={StaticResource StringToVisConverter}}"/>
+                            
+                            <TextBlock Text="الهاتف" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditCustomerPhone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
-                            <TextBlock Text="العنوان" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding EditCustomerAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Content="💾 حفظ" Command="{Binding SaveCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                                <Button Content="🆕 جديد" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
-                                <Button Content="🚫 تعطيل" Command="{Binding DeleteCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
+                            
+                            <TextBlock Text="العنوان" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditCustomerAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,18"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                                <Button Content="💾 حفظ" Command="{Binding SaveCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White" Width="90" Height="36" Margin="4"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Foreground="White" Width="90" Height="36" Margin="4"/>
+                                <Button Content="🚫 تعطيل" Command="{Binding DeleteCustomerCommand}" Style="{StaticResource ModernButtonStyle}" Background="#EF4444" Foreground="White" Width="90" Height="36" Margin="4"/>
                             </StackPanel>
-                            <Button Content="📋 عروض أسعاره" Command="{Binding ShowQuotesPanelCommand}" Style="{StaticResource ModernButtonStyle}" Background="#6366F1" Margin="5,15,5,0" Visibility="{Binding IsEditingCustomer, Converter={StaticResource BoolToVis}}"/>
                         </StackPanel>
                     </Border>
                 </Grid>
 
                 <!-- Status Bar -->
-                <Border Grid.Row="2" CornerRadius="0,0,12,12" Background="#ecf0f1" Padding="12,6" Margin="0,5,0,0">
-                    <TextBlock Text="{Binding CustomerStatusMessage}" Foreground="#2c3e50" FontSize="13"/>
+                <Border Grid.Row="2" CornerRadius="0,0,10,10" Background="#F1F5F9" Padding="14,8" Margin="0,6,0,0" BorderBrush="#E2E8F0" BorderThickness="1">
+                    <TextBlock Text="{Binding CustomerStatusMessage}" Foreground="#334155" FontSize="13" FontWeight="SemiBold"/>
                 </Border>
             </Grid>
         </TabItem>
@@ -247,17 +184,23 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- Header with Search -->
-                <Border Grid.Row="0" Padding="12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,5">
+                <!-- Header with Search and Actions -->
+                <Border Grid.Row="0" Padding="14,12" Background="#f8f9fa" CornerRadius="10,10,0,0" Margin="0,0,0,8" BorderBrush="#E2E8F0" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="🏭 إدارة الموردين" FontSize="18" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🏭 إدارة الموردين" FontSize="18" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                            <Border Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="10" Padding="8,2" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Suppliers.Count, StringFormat='{}{0} مورد'}" FontSize="12" FontWeight="Bold" Foreground="#B45309"/>
+                            </Border>
+                        </StackPanel>
+
                         <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="➕ إضافة مورد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Background="#27ae60" Foreground="White" Width="110" Height="34" Margin="0,0,10,0" ToolTip="إضافة مورد جديد للوحة التحكم"/>
-                            <Border Background="White" CornerRadius="8" Padding="8,4" Width="280" BorderBrush="#dcdde1" BorderThickness="1">
+                            <Button Content="➕ إضافة مورد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White" Width="120" Height="36" Margin="0,0,10,0" ToolTip="إضافة مورد جديد للوحة التحكم"/>
+                            <Border Background="White" CornerRadius="8" Padding="8,4" Width="280" BorderBrush="#CBD5E1" BorderThickness="1">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
@@ -271,112 +214,37 @@
                     </Grid>
                 </Border>
 
-                <!-- Main Content: DataGrid + Quotes + Edit Panel side by side -->
+                <!-- Main Content: Cards Grid + Edit Panel side by side -->
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- DataGrid (Column 0) -->
-                    <Border Grid.Column="0" Margin="0,0,10,0" CornerRadius="8" BorderBrush="#eee" BorderThickness="1" Background="White">
-                        <DataGrid ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}"
-                                  AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
-                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                                  BorderThickness="0" Margin="5" RowHeight="38" ColumnHeaderHeight="40">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="ID" Binding="{Binding PartnerID}" Width="50"/>
-                                <DataGridTextColumn Header="اسم المورد" Binding="{Binding PartnerName}" Width="*"/>
-                                <DataGridTextColumn Header="الهاتف" Binding="{Binding Phone}" Width="120"/>
-                                <DataGridTextColumn Header="العنوان" Binding="{Binding Address}" Width="150"/>
-                                <DataGridTextColumn Header="الرصيد" Binding="{Binding CurrentBalance, StringFormat=N2}" Width="100"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                    <!-- Cards Grid (Column 0) -->
+                    <Border Grid.Column="0" Margin="0,0,8,0" CornerRadius="10" BorderBrush="#E2E8F0" BorderThickness="1" Background="#F8FAFC" Padding="6">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" SnapsToDevicePixels="True">
+                            <ItemsControl ItemsSource="{Binding Suppliers}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:PartnerCardControl Margin="6"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                     </Border>
 
-                    <!-- Supplier Quotes Panel (Column 1) - Side by Side -->
-                    <Border Grid.Column="1" Width="360" CornerRadius="10" Background="White" Margin="0,0,10,0"
-                            BorderBrush="#E0E7FF" BorderThickness="1"
-                            Visibility="{Binding IsSupplierQuotesPanelOpen, Converter={StaticResource BoolToVis}}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <TranslateTransform X="360"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsSupplierQuotesPanelOpen}" Value="True">
-                                        <DataTrigger.EnterActions>
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="360" To="0" Duration="0:0:0.32">
-                                                        <DoubleAnimation.EasingFunction>
-                                                            <CubicEase EasingMode="EaseOut"/>
-                                                        </DoubleAnimation.EasingFunction>
-                                                    </DoubleAnimation>
-                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </DataTrigger.EnterActions>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Grid.Row="0" Background="#4F46E5" CornerRadius="10,10,0,0" Padding="16,14">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="📋 عروض المشتريات" Foreground="White" FontWeight="Bold" FontSize="15"/>
-                                        <TextBlock Text="{Binding QuotePanelSupplierName}" Foreground="#C7D2FE" FontSize="12" Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Content="✕" Command="{Binding CloseSupplierQuotesPanelCommand}"
-                                            Background="Transparent" BorderThickness="0" Foreground="White"
-                                            FontSize="16" FontWeight="Bold" Cursor="Hand" Width="32" Height="32"/>
-                                </Grid>
-                            </Border>
-
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12">
-                                <ItemsControl ItemsSource="{Binding SupplierQuotes}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Margin="0,0,0,8" CornerRadius="10" Background="#F8FAFF" BorderBrush="#E0E7FF" BorderThickness="1" Padding="12,10">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="{Binding PurchaseQuoteID, StringFormat='عرض رقم: {0}'}" FontWeight="SemiBold" Foreground="#1E293B"/>
-                                                    <StackPanel Grid.Row="1" Margin="0,5,0,0">
-                                                        <TextBlock Text="{Binding QuoteDate, StringFormat='📅 التاريخ: {0:yyyy/MM/dd}'}" FontSize="11" Foreground="#64748B"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Row="2" Content="فتح تفاصيل العرض ←" 
-                                                            Command="{Binding DataContext.ViewPurchaseQuoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                            CommandParameter="{Binding}"
-                                                            HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Foreground="#4F46E5" FontSize="11"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
-                    </Border>
-
-                    <!-- Edit Panel (Column 2) -->
-                    <Border Grid.Column="2" Width="340" CornerRadius="10" Background="#fafafa" Padding="18" BorderBrush="#eee" BorderThickness="1"
+                    <!-- Edit Supplier Panel (Column 1) -->
+                    <Border Grid.Column="1" Width="340" CornerRadius="12" Background="White" Padding="20" BorderBrush="#E2E8F0" BorderThickness="1.5"
                             Visibility="{Binding IsSupplierPanelVisible, Converter={StaticResource BoolToVis}}">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" Opacity="0.08" BlurRadius="15" ShadowDepth="4"/>
+                        </Border.Effect>
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="RenderTransform">
@@ -389,7 +257,7 @@
                                         <DataTrigger.EnterActions>
                                             <BeginStoryboard>
                                                 <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="340" To="0" Duration="0:0:0.35">
+                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="340" To="0" Duration="0:0:0.3">
                                                         <DoubleAnimation.EasingFunction>
                                                             <CubicEase EasingMode="EaseOut"/>
                                                         </DoubleAnimation.EasingFunction>
@@ -402,108 +270,37 @@
                             </Style>
                         </Border.Style>
                         <StackPanel>
-                            <Grid Margin="0,0,0,15">
-                                <TextBlock Text="بيانات المورد" FontSize="16" FontWeight="Bold" Foreground="#2c3e50" VerticalAlignment="Center"/>
+                            <Grid Margin="0,0,0,18">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🏭" FontSize="18" Margin="0,0,6,0"/>
+                                    <TextBlock Text="بيانات المورد" FontSize="16.5" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                </StackPanel>
                                 <Button Content="✕" HorizontalAlignment="Right" Command="{Binding CloseSupplierPanelCommand}"
-                                        Style="{StaticResource ModernButtonStyle}" Background="Transparent" Foreground="#64748B" Width="30" BorderThickness="0"/>
+                                        Style="{StaticResource ModernButtonStyle}" Background="Transparent" Foreground="#64748B" Width="32" Height="32" BorderThickness="0" Cursor="Hand" ToolTip="إغلاق اللوحة"/>
                             </Grid>
-                            <TextBlock Text="اسم المورد *" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            
+                            <TextBlock Text="اسم المورد *" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditSupplierName, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding SupplierNameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" Visibility="{Binding SupplierNameError, Converter={StaticResource StringToVisConverter}}"/>
-                            <TextBlock Text="الهاتف" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding SupplierNameError}" Foreground="#EF4444" FontSize="11" Margin="2,0,0,8" Visibility="{Binding SupplierNameError, Converter={StaticResource StringToVisConverter}}"/>
+                            
+                            <TextBlock Text="الهاتف" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding EditSupplierPhone, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,10"/>
-                            <TextBlock Text="العنوان" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBox Text="{Binding EditSupplierAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,15"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Content="💾 حفظ" Command="{Binding SaveSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5"/>
-                                <Button Content="🆕 جديد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#3498db"/>
-                                <Button Content="🚫 تعطيل" Command="{Binding DeleteSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Width="85" Margin="5" Background="#e74c3c"/>
+                            
+                            <TextBlock Text="العنوان" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding EditSupplierAddress, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Margin="0,0,0,18"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                                <Button Content="💾 حفظ" Command="{Binding SaveSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White" Width="90" Height="36" Margin="4"/>
+                                <Button Content="🆕 جديد" Command="{Binding NewSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Foreground="White" Width="90" Height="36" Margin="4"/>
+                                <Button Content="🚫 تعطيل" Command="{Binding DeleteSupplierCommand}" Style="{StaticResource ModernButtonStyle}" Background="#EF4444" Foreground="White" Width="90" Height="36" Margin="4"/>
                             </StackPanel>
-                            <Button Content="📋 عروض أسعاره" Command="{Binding ShowSupplierQuotesPanelCommand}" Style="{StaticResource ModernButtonStyle}" Background="#6366F1" Margin="5,15,5,0" Visibility="{Binding IsEditingSupplier, Converter={StaticResource BoolToVis}}"/>
                         </StackPanel>
-                    </Border>
-
-                    <!-- Supplier Quotes Panel (Column 1) - Re-added -->
-                    <Border Grid.Column="1" Width="360" CornerRadius="10" Background="White" Margin="0,0,10,0"
-                            BorderBrush="#E0E7FF" BorderThickness="1"
-                            Visibility="{Binding IsSupplierQuotesPanelOpen, Converter={StaticResource BoolToVis}}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <TranslateTransform X="360"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsSupplierQuotesPanelOpen}" Value="True">
-                                        <DataTrigger.EnterActions>
-                                            <BeginStoryboard>
-                                                <Storyboard>
-                                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.X" From="360" To="0" Duration="0:0:0.32">
-                                                        <DoubleAnimation.EasingFunction>
-                                                            <CubicEase EasingMode="EaseOut"/>
-                                                        </DoubleAnimation.EasingFunction>
-                                                    </DoubleAnimation>
-                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.28"/>
-                                                </Storyboard>
-                                            </BeginStoryboard>
-                                        </DataTrigger.EnterActions>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <Border Grid.Row="0" Background="#4F46E5" CornerRadius="10,10,0,0" Padding="16,14">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Text="📋 عروض المشتريات" Foreground="White" FontWeight="Bold" FontSize="15"/>
-                                        <TextBlock Text="{Binding QuotePanelSupplierName}" Foreground="#C7D2FE" FontSize="12" Margin="0,3,0,0"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="1" Content="✕" Command="{Binding CloseSupplierQuotesPanelCommand}"
-                                            Background="Transparent" BorderThickness="0" Foreground="White"
-                                            FontSize="16" FontWeight="Bold" Cursor="Hand" Width="32" Height="32"/>
-                                </Grid>
-                            </Border>
-                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="12">
-                                <ItemsControl ItemsSource="{Binding SupplierQuotes}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Margin="0,0,0,8" CornerRadius="10" Background="#F8FAFF" BorderBrush="#E0E7FF" BorderThickness="1" Padding="12,10">
-                                                <Grid>
-                                                    <Grid.RowDefinitions>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                        <RowDefinition Height="Auto"/>
-                                                    </Grid.RowDefinitions>
-                                                    <TextBlock Grid.Row="0" Text="{Binding PurchaseQuoteID, StringFormat='عرض رقم: {0}'}" FontWeight="SemiBold" Foreground="#1E293B"/>
-                                                    <StackPanel Grid.Row="1" Margin="0,5,0,0">
-                                                        <TextBlock Text="{Binding QuoteDate, StringFormat='📅 التاريخ: {0:yyyy/MM/dd}'}" FontSize="11" Foreground="#64748B"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Row="2" Content="فتح تفاصيل العرض ←" 
-                                                            Command="{Binding DataContext.ViewPurchaseQuoteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                            CommandParameter="{Binding}"
-                                                            HorizontalAlignment="Right" Background="Transparent" BorderThickness="0" Foreground="#4F46E5" FontSize="11"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
                     </Border>
                 </Grid>
 
                 <!-- Status Bar -->
-                <Border Grid.Row="2" CornerRadius="0,0,12,12" Background="#ecf0f1" Padding="12,6" Margin="0,5,0,0">
-                    <TextBlock Text="{Binding SupplierStatusMessage}" Foreground="#2c3e50" FontSize="13"/>
+                <Border Grid.Row="2" CornerRadius="0,0,10,10" Background="#F1F5F9" Padding="14,8" Margin="0,6,0,0" BorderBrush="#E2E8F0" BorderThickness="1">
+                    <TextBlock Text="{Binding SupplierStatusMessage}" Foreground="#334155" FontSize="13" FontWeight="SemiBold"/>
                 </Border>
             </Grid>
         </TabItem>

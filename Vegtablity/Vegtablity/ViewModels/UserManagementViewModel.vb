@@ -43,11 +43,17 @@ Namespace ViewModels
         Private _availableForms As Dictionary(Of String, String)
 
         Public Sub New()
+            RefreshAvailableForms()
+            LoadData()
+        End Sub
+
+        Public Sub RefreshAvailableForms()
             Dim settingsService As New Services.SettingsService()
             Dim compInfo = settingsService.GetCompanyInfo()
             Dim isProductionMode As Boolean = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
             Dim enableDailyOrders As Boolean = (compInfo IsNot Nothing AndAlso compInfo.EnableDailyOrders)
             Dim enableSalesDiscounts As Boolean = (compInfo IsNot Nothing AndAlso compInfo.EnableSalesDiscounts)
+            Dim enableHR As Boolean = (compInfo IsNot Nothing AndAlso compInfo.EnableHR)
 
             Dim formsMap As New Dictionary(Of String, String) From {
                 {"Dashboard", "لوحة المعلومات الرئيسية"},
@@ -90,8 +96,18 @@ Namespace ViewModels
                 formsMap.Add("SalesDiscounts", "خصومات المبيعات")
             End If
 
+            If enableHR Then
+                formsMap.Add("HRParent", "الموارد البشرية (الرئيسية)")
+                formsMap.Add("HREmployees", "شؤون الموظفين والملفات")
+                formsMap.Add("HRLeaves", "الإجازات ومباشرة العمل")
+                formsMap.Add("HRAttendance", "تسجيل الحضور والانصراف")
+                formsMap.Add("HRPayroll", "مسير الرواتب والاعتماد")
+                formsMap.Add("HREndOfService", "مكافأة نهاية الخدمة وتصفية المستحقات")
+                formsMap.Add("HRAlerts", "تنبيهات انتهاء الوثائق")
+                formsMap.Add("HRSettings", "إعدادات الموارد والحقول المخصصة")
+            End If
+
             AvailableForms = formsMap
-            LoadData()
         End Sub
 
 #Region "Properties - Users"
@@ -476,6 +492,7 @@ Namespace ViewModels
 
         Private Sub LoadPermissionsForRole(roleID As Integer)
             Try
+                RefreshAvailableForms()
                 Dim existingPerms = _roleService.GetPermissionsForRole(roleID)
                 Dim allPerms As New List(Of RolePermission)
 

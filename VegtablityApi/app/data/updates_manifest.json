@@ -7,7 +7,7 @@
       "is_mandatory": false,
       "download_url": "/static/updates/android/washa_v1.0.5.apk",
       "file_size_mb": 42.5,
-      "release_notes": "1. تفعيل تعديل الفواتير غير المرحلة.\n2. تحسين طباعة إيصالات الكاشير وتفاصيل العميل.\n3. معالجة تسوية الوردية المحاسبية."
+      "release_notes": "1. تفعيل تعديل الفواتير غير المرحلة. 2. تحسين طباعة إيصالات الكاشير وتفاصيل العميل. 3. معالجة تسوية الوردية المحاسبية."
     },
     "jawhara": {
       "latest_version": "1.0.3",
@@ -44,6 +44,15 @@
       "download_url": "/static/updates/android/oman_v1.0.0.apk",
       "file_size_mb": 42.0,
       "release_notes": "النسخة المعتمدة لعملاء سلطنة عمان."
+    },
+    "license_manager": {
+      "latest_version": "1.0.1",
+      "version_code": 2,
+      "min_supported_version": "1.0.0",
+      "is_mandatory": false,
+      "download_url": "/static/updates/android/license_manager_v1.0.1.apk",
+      "file_size_mb": 35.5,
+      "release_notes": "1. إضافة خيار تفعيل نظام الموارد البشرية والرواتب (EnableHR) لقواعد البيانات. 2. تحسينات الأداء واستقرار الاتصال بالسيرفر."
     }
   },
   "windows_flutter": {
@@ -71,6 +80,11 @@
       "latest_version": "1.0.0",
       "download_url": "/static/updates/windows_flutter/oman_flutter_v1.0.0.zip",
       "release_notes": "تحديثات نقاط البيع لسلطنة عمان."
+    },
+    "license_manager": {
+      "latest_version": "1.0.1",
+      "download_url": "/static/updates/windows_flutter/license_manager_flutter_v1.0.1.zip",
+      "release_notes": "1. إضافة خيار تفعيل نظام الموارد البشرية والرواتب (EnableHR) لقواعد البيانات. 2. تحسينات الأداء واستقرار الاتصال بالسيرفر."
     }
   },
   "wpf": {

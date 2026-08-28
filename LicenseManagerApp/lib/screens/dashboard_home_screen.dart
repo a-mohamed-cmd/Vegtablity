@@ -1,12 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/update_service.dart';
 import 'license_manager_screen.dart';
 import 'company_settings_screen.dart';
 import 'login_screen.dart';
 
-class DashboardHomeScreen extends StatelessWidget {
+class DashboardHomeScreen extends StatefulWidget {
   const DashboardHomeScreen({super.key});
+
+  @override
+  State<DashboardHomeScreen> createState() => _DashboardHomeScreenState();
+}
+
+class _DashboardHomeScreenState extends State<DashboardHomeScreen> {
+  final UpdateService _updateService = UpdateService();
+  bool _isCheckingUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkUpdateSilently();
+    });
+  }
+
+  Future<void> _checkUpdateSilently() async {
+    final updateInfo = await _updateService.checkForUpdate();
+    if (updateInfo.hasUpdate && mounted) {
+      UpdateService.showUpdateDialog(context, updateInfo);
+    }
+  }
+
+  Future<void> _manualCheckUpdate() async {
+    setState(() => _isCheckingUpdate = true);
+    final updateInfo = await _updateService.checkForUpdate();
+    if (!mounted) return;
+    setState(() => _isCheckingUpdate = false);
+
+    if (updateInfo.hasUpdate) {
+      UpdateService.showUpdateDialog(context, updateInfo);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.teal,
+          content: Text("أنت تستخدم أحدث إصدار من تطبيق إدارة التراخيص! ✅"),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,6 +62,22 @@ class DashboardHomeScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF252538),
         elevation: 0,
         actions: [
+          _isCheckingUpdate
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+                    ),
+                  ),
+                )
+              : IconButton(
+                  tooltip: "فحص التحديثات",
+                  icon: const Icon(Icons.system_update_alt_rounded, color: Colors.amber),
+                  onPressed: _manualCheckUpdate,
+                ),
           IconButton(
             tooltip: "تسجيل الخروج",
             icon: const Icon(Icons.logout, color: Colors.redAccent),
@@ -30,6 +88,7 @@ class DashboardHomeScreen extends StatelessWidget {
           ),
         ],
       ),
+
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Center(

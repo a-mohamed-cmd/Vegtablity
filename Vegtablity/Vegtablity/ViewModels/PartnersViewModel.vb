@@ -74,9 +74,6 @@ Namespace ViewModels
                     EditCustomerAddress = value.Address
                     IsEditingCustomer = True
                     CustomerNameError = Nothing
-
-                    ' Auto-load quotes and open side panel
-                    LoadCustomerQuotes(value.PartnerID, value.PartnerName)
                     IsCustomerPanelVisible = True
                 End If
             End Set
@@ -210,9 +207,6 @@ Namespace ViewModels
                     EditSupplierAddress = value.Address
                     IsEditingSupplier = True
                     SupplierNameError = Nothing
-
-                    ' Auto-load purchase quotes for supplier
-                    LoadSupplierQuotes(value.PartnerID, value.PartnerName)
                     IsSupplierPanelVisible = True
                 End If
             End Set
@@ -376,6 +370,16 @@ Namespace ViewModels
                 Return New Helpers.RelayCommand(
                     Sub(o)
                         Dim q = TryCast(o, QuoteHeader)
+                        If q Is Nothing Then
+                            Dim summary = TryCast(o, PartnerQuoteSummaryItem)
+                            If summary IsNot Nothing Then q = TryCast(summary.RawQuote, QuoteHeader)
+                        End If
+                        If q Is Nothing Then
+                            Dim p = TryCast(o, Partner)
+                            If p IsNot Nothing AndAlso p.LatestQuote IsNot Nothing Then
+                                q = TryCast(p.LatestQuote, QuoteHeader)
+                            End If
+                        End If
                         If q IsNot Nothing Then RaiseEvent RequestNavigateToQuote(q)
                     End Sub,
                     Function(o) o IsNot Nothing)
@@ -432,6 +436,16 @@ Namespace ViewModels
                 Return New Helpers.RelayCommand(
                     Sub(o)
                         Dim q = TryCast(o, PurchaseQuoteHeader)
+                        If q Is Nothing Then
+                            Dim summary = TryCast(o, PartnerQuoteSummaryItem)
+                            If summary IsNot Nothing Then q = TryCast(summary.RawQuote, PurchaseQuoteHeader)
+                        End If
+                        If q Is Nothing Then
+                            Dim p = TryCast(o, Partner)
+                            If p IsNot Nothing AndAlso p.LatestQuote IsNot Nothing Then
+                                q = TryCast(p.LatestQuote, PurchaseQuoteHeader)
+                            End If
+                        End If
                         If q IsNot Nothing Then RaiseEvent RequestNavigateToPurchaseQuote(q)
                     End Sub,
                     Function(o) o IsNot Nothing)
@@ -440,9 +454,51 @@ Namespace ViewModels
 #End Region
 
 #Region "Methods - Customers"
+        Private Sub PopulateCustomerQuotes(partnerList As List(Of Partner))
+            If partnerList Is Nothing OrElse partnerList.Count = 0 Then Return
+            Try
+                Dim allQuotes = _quoteService.GetAllQuotes()
+                If allQuotes IsNot Nothing Then
+                    Dim dict = allQuotes.GroupBy(Function(q) q.PartnerID).ToDictionary(Function(g) g.Key, Function(g) g.ToList())
+                    For Each p In partnerList
+                        If dict.ContainsKey(p.PartnerID) Then
+                            Dim qList = dict(p.PartnerID)
+                            p.QuotesCount = qList.Count
+                            Dim summaryList As New List(Of PartnerQuoteSummaryItem)()
+                            For Each q In qList.OrderByDescending(Function(x) x.QuoteDate)
+                                q.PartnerName = p.PartnerName
+                                q.PartnerID = p.PartnerID
+                                summaryList.Add(New PartnerQuoteSummaryItem With {
+                                    .QuoteID = q.QuoteID,
+                                    .QuoteTitle = $"عرض سعر #{q.QuoteID}",
+                                    .QuoteDate = q.QuoteDate,
+                                    .QuoteDateFormatted = q.QuoteDate.ToString("yyyy/MM/dd"),
+                                    .IsActive = q.IsActive,
+                                    .RawQuote = q,
+                                    .PartnerType = "Customer"
+                                })
+                            Next
+                            p.DisplayQuotes = summaryList
+                            p.LatestQuote = qList.OrderByDescending(Function(q) q.QuoteDate).FirstOrDefault()
+                            p.QuotesList = qList.Cast(Of Object)().ToList()
+                        Else
+                            p.QuotesCount = 0
+                            p.DisplayQuotes = New List(Of PartnerQuoteSummaryItem)()
+                            p.LatestQuote = Nothing
+                            p.QuotesList = New List(Of Object)()
+                        End If
+                    Next
+                End If
+            Catch ex As Exception
+                ' Non-critical
+            End Try
+        End Sub
+
         Private Sub LoadCustomers()
             Try
-                Customers = New ObservableCollection(Of Partner)(_partnerService.GetAllPartners("Customer"))
+                Dim list = _partnerService.GetAllPartners("Customer")
+                PopulateCustomerQuotes(list)
+                Customers = New ObservableCollection(Of Partner)(list)
             Catch ex As Exception
                 CustomerStatusMessage = "خطأ في تحميل العملاء: " & ex.Message
             End Try
@@ -470,7 +526,9 @@ Namespace ViewModels
 
         Private Sub SearchCustomers()
             Try
-                Customers = New ObservableCollection(Of Partner)(_partnerService.SearchPartners("Customer", CustomerSearchText))
+                Dim list = _partnerService.SearchPartners("Customer", CustomerSearchText)
+                PopulateCustomerQuotes(list)
+                Customers = New ObservableCollection(Of Partner)(list)
             Catch ex As Exception
                 CustomerStatusMessage = "خطأ في البحث: " & ex.Message
             End Try
@@ -532,9 +590,51 @@ Namespace ViewModels
 #End Region
 
 #Region "Methods - Suppliers"
+        Private Sub PopulateSupplierQuotes(partnerList As List(Of Partner))
+            If partnerList Is Nothing OrElse partnerList.Count = 0 Then Return
+            Try
+                Dim allQuotes = _purchaseQuoteService.GetAllQuotes()
+                If allQuotes IsNot Nothing Then
+                    Dim dict = allQuotes.GroupBy(Function(q) q.PartnerID).ToDictionary(Function(g) g.Key, Function(g) g.ToList())
+                    For Each p In partnerList
+                        If dict.ContainsKey(p.PartnerID) Then
+                            Dim qList = dict(p.PartnerID)
+                            p.QuotesCount = qList.Count
+                            Dim summaryList As New List(Of PartnerQuoteSummaryItem)()
+                            For Each q In qList.OrderByDescending(Function(x) x.QuoteDate)
+                                q.PartnerName = p.PartnerName
+                                q.PartnerID = p.PartnerID
+                                summaryList.Add(New PartnerQuoteSummaryItem With {
+                                    .QuoteID = q.PurchaseQuoteID,
+                                    .QuoteTitle = $"عرض مشتريات #{q.PurchaseQuoteID}",
+                                    .QuoteDate = q.QuoteDate,
+                                    .QuoteDateFormatted = q.QuoteDate.ToString("yyyy/MM/dd"),
+                                    .IsActive = True,
+                                    .RawQuote = q,
+                                    .PartnerType = "Supplier"
+                                })
+                            Next
+                            p.DisplayQuotes = summaryList
+                            p.LatestQuote = qList.OrderByDescending(Function(q) q.QuoteDate).FirstOrDefault()
+                            p.QuotesList = qList.Cast(Of Object)().ToList()
+                        Else
+                            p.QuotesCount = 0
+                            p.DisplayQuotes = New List(Of PartnerQuoteSummaryItem)()
+                            p.LatestQuote = Nothing
+                            p.QuotesList = New List(Of Object)()
+                        End If
+                    Next
+                End If
+            Catch ex As Exception
+                ' Non-critical
+            End Try
+        End Sub
+
         Private Sub LoadSuppliers()
             Try
-                Suppliers = New ObservableCollection(Of Partner)(_partnerService.GetAllPartners("Supplier"))
+                Dim list = _partnerService.GetAllPartners("Supplier")
+                PopulateSupplierQuotes(list)
+                Suppliers = New ObservableCollection(Of Partner)(list)
             Catch ex As Exception
                 SupplierStatusMessage = "خطأ في تحميل الموردين: " & ex.Message
             End Try
@@ -542,7 +642,9 @@ Namespace ViewModels
 
         Private Sub SearchSuppliers()
             Try
-                Suppliers = New ObservableCollection(Of Partner)(_partnerService.SearchPartners("Supplier", SupplierSearchText))
+                Dim list = _partnerService.SearchPartners("Supplier", SupplierSearchText)
+                PopulateSupplierQuotes(list)
+                Suppliers = New ObservableCollection(Of Partner)(list)
             Catch ex As Exception
                 SupplierStatusMessage = "خطأ في البحث: " & ex.Message
             End Try

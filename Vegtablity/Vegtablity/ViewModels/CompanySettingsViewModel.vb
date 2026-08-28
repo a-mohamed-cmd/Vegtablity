@@ -78,6 +78,17 @@ Namespace ViewModels
             End Set
         End Property
 
+        Private _enableHR As Boolean
+        Public Property EnableHR As Boolean
+            Get
+                Return _enableHR
+            End Get
+            Set(value As Boolean)
+                _enableHR = value
+                OnPropertyChanged()
+            End Set
+        End Property
+
         Private _currentCompanyInfo As CompanyInfo
 
         ' === Commands ===
@@ -100,6 +111,7 @@ Namespace ViewModels
                     Email = _currentCompanyInfo.Email
                     Logo = _currentCompanyInfo.Logo
                     CurrencySymbol = _currentCompanyInfo.CurrencySymbol
+                    EnableHR = _currentCompanyInfo.EnableHR
                 End If
             Catch ex As Exception
                 ' Error handling
@@ -128,9 +140,12 @@ Namespace ViewModels
                     .UseCustomInvoiceDesign = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.UseCustomInvoiceDesign, False),
                     .ProductionMode = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.ProductionMode, False),
                     .EnableDailyOrders = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableDailyOrders, False),
-                    .DeliverySystemMode = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.DeliverySystemMode, Nothing)
+                    .DeliverySystemMode = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.DeliverySystemMode, Nothing),
+                    .EnableSalesDiscounts = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableSalesDiscounts, False),
+                    .EnableHR = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableHR, False)
                 }
                 _settingsService.SaveCompanyInfo(info)
+
                 MessageBox.Show("تم حفظ الإعدادات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)

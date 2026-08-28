@@ -768,7 +768,15 @@ Namespace ViewModels
             If DetailsPage <> newPage Then
                 DetailsPage = newPage
             Else
-                UpdateDetailsPagination()
+                If CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.Details IsNot Nothing AndAlso CurrentInvoice.Details.Count < PAGE_SIZE Then
+                    CurrentInvoice.Details.Add(newItem)
+                    OnPropertyChanged(NameOf(DetailsTotalPages))
+                    OnPropertyChanged(NameOf(DetailsPageLabel))
+                    OnPropertyChanged(NameOf(CanGoNextDetails))
+                    OnPropertyChanged(NameOf(CanGoPrevDetails))
+                Else
+                    UpdateDetailsPagination()
+                End If
             End If
             RecalculateTotals()
         End Sub
@@ -843,10 +851,24 @@ Namespace ViewModels
 
             If e.PropertyName = NameOf(InvoiceDetail.Quantity) OrElse e.PropertyName = NameOf(InvoiceDetail.ProductID) Then
                 If CurrentInvoice.WarehouseID.HasValue AndAlso detail.ProductID > 0 Then
-                    Dim available = _inventoryService.GetStockByProduct(detail.ProductID, CurrentInvoice.WarehouseID.Value)
-                    If detail.Quantity > available Then
-                        ' Warning logic here (Could add a property to InvoiceDetail like "IsStockWarning")
-                    End If
+                    Dim whId = CurrentInvoice.WarehouseID.Value
+                    Dim pId = detail.ProductID
+                    Dim requestedQty = detail.Quantity
+                    Dim pName = If(Not String.IsNullOrEmpty(detail.ProductName), detail.ProductName, "الصنف")
+
+                    ' فحص رصيد المخزون في الخلفية بدون تجميد الـ UI Thread
+                    System.Threading.Tasks.Task.Run(Sub()
+                        Try
+                            Dim available = _inventoryService.GetStockByProduct(pId, whId)
+                            If requestedQty > available Then
+                                System.Windows.Application.Current?.Dispatcher?.BeginInvoke(New Action(Sub()
+                                    RaiseEvent RequestSnackbar($"⚠️ تنبيه: الكمية المطلوبة للصنف [{pName}] ({requestedQty:0.###}) تتجاوز الرصيد المتاح بالمخزن ({available:0.###}).")
+                                End Sub))
+                            End If
+                        Catch
+                            ' Non-blocking
+                        End Try
+                    End Sub)
                 End If
             End If
 

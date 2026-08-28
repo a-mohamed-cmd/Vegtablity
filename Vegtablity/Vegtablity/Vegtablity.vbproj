@@ -51,6 +51,9 @@
   <PropertyGroup>
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -454,6 +457,75 @@
     <Compile Include="Controls\VoucherRowControl.xaml.vb">
       <DependentUpon>VoucherRowControl.xaml</DependentUpon>
     </Compile>
+    <!-- HR & Payroll Module -->
+    <Compile Include="Models\HR\Employee.vb" />
+    <Compile Include="Models\HR\CustomFieldDefinition.vb" />
+    <Compile Include="Models\HR\EmployeeCustomValue.vb" />
+    <Compile Include="Models\HR\LeaveType.vb" />
+    <Compile Include="Models\HR\EmployeeLeave.vb" />
+    <Compile Include="Models\HR\AttendanceRecord.vb" />
+    <Compile Include="Models\HR\PayrollBatch.vb" />
+    <Compile Include="Models\HR\PayrollDetail.vb" />
+    <Compile Include="Models\HR\EndOfServiceSettlement.vb" />
+    <Compile Include="Models\HR\HRAlertItem.vb" />
+    <Compile Include="Services\HRService.vb" />
+    <Compile Include="Helpers\HRDocumentPrinter.vb" />
+    <Compile Include="ViewModels\HREmployeesViewModel.vb" />
+    <Compile Include="ViewModels\HRLeavesViewModel.vb" />
+    <Compile Include="ViewModels\HRAttendanceViewModel.vb" />
+    <Compile Include="ViewModels\HRPayrollViewModel.vb" />
+    <Compile Include="ViewModels\HREndOfServiceViewModel.vb" />
+    <Compile Include="ViewModels\HRAlertsViewModel.vb" />
+    <Compile Include="ViewModels\HRSettingsViewModel.vb" />
+    <Compile Include="Controls\DynamicFieldEditorControl.xaml.vb">
+      <DependentUpon>DynamicFieldEditorControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\DateBoxControl.xaml.vb">
+      <DependentUpon>DateBoxControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\LeaveRowControl.xaml.vb">
+      <DependentUpon>LeaveRowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\AttendanceRowControl.xaml.vb">
+      <DependentUpon>AttendanceRowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\PayrollRowControl.xaml.vb">
+      <DependentUpon>PayrollRowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\EndOfServiceRowControl.xaml.vb">
+      <DependentUpon>EndOfServiceRowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\CustomFieldCardControl.xaml.vb">
+      <DependentUpon>CustomFieldCardControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\PartnerCardControl.xaml.vb">
+      <DependentUpon>PartnerCardControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\DocumentAlertRowControl.xaml.vb">
+      <DependentUpon>DocumentAlertRowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\HREmployeesPage.xaml.vb">
+
+      <DependentUpon>HREmployeesPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\HRLeavesPage.xaml.vb">
+      <DependentUpon>HRLeavesPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\HRAttendancePage.xaml.vb">
+      <DependentUpon>HRAttendancePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\HRPayrollPage.xaml.vb">
+      <DependentUpon>HRPayrollPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\HREndOfServicePage.xaml.vb">
+      <DependentUpon>HREndOfServicePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\HRAlertsPage.xaml.vb">
+      <DependentUpon>HRAlertsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\HRSettingsPage.xaml.vb">
+      <DependentUpon>HRSettingsPage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Page Include="Views\UpdateAvailableDialog.xaml">
@@ -601,6 +673,71 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Controls\VoucherRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\DynamicFieldEditorControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\DateBoxControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\LeaveRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\AttendanceRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PayrollRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\EndOfServiceRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\CustomFieldCardControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PartnerCardControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\DocumentAlertRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\HREmployeesPage.xaml">
+
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\HRLeavesPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\HRAttendancePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\HRPayrollPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\HREndOfServicePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\HRAlertsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\HRSettingsPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

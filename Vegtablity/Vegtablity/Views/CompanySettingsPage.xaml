@@ -66,6 +66,8 @@
                                 <TextBox Text="{Binding CurrencySymbol, UpdateSourceTrigger=PropertyChanged}" Height="45" Padding="12,10" FontSize="16" Margin="0,0,0,25" VerticalContentAlignment="Center" MaxLength="30"/>
                             </StackPanel>
 
+
+
                             <!-- Logo Section -->
                             <StackPanel Grid.Column="1" HorizontalAlignment="Center">
                                 <TextBlock Text="شعار المؤسسة" FontSize="16" FontWeight="SemiBold" Foreground="#34495e" Margin="0,0,0,15" HorizontalAlignment="Center"/>

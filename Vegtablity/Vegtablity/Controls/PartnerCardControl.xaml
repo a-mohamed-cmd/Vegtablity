@@ -1,0 +1,164 @@
+<UserControl x:Class="Controls.PartnerCardControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo"
+             Width="320" Margin="8">
+
+    <UserControl.Resources>
+        <helpers:BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Mini Quote Card Button Style -->
+        <Style x:Key="MiniQuoteBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F8FAFF"/>
+            <Setter Property="BorderBrush" Value="#E0E7FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="ToolTip" Value="انقر لفتح هذا العرض بالتحديد"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#EEF2FF"/>
+                                <Setter TargetName="btnBorder" Property="BorderBrush" Value="#4F46E5"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#E0E7FF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border x:Name="MainCardBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1.5" CornerRadius="14" Padding="16" SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.05" BlurRadius="10" ShadowDepth="2"/>
+        </Border.Effect>
+
+        <StackPanel>
+            <!-- 1. Partner Main Details Area (Click to Edit) -->
+            <Border x:Name="PartnerDetailsArea" Background="Transparent" Cursor="Hand" ToolTip="انقر لتعديل بيانات الشريك" MouseLeftButtonUp="PartnerDetailsArea_MouseLeftButtonUp">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Row 0: Top Header (Type Badge + ID / Account Code) -->
+                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Type Badge (Customer / Supplier) -->
+                        <Border x:Name="TypeBadge" Grid.Column="0" CornerRadius="8" Padding="10,4" BorderThickness="1">
+                            <TextBlock x:Name="TypeText" Text="{Binding TypeBadgeText}" FontSize="11.5" FontWeight="Bold"/>
+                        </Border>
+
+                        <!-- ID & Account Code Badge -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Background="#F1F5F9" CornerRadius="6" Padding="6,2" Margin="0,0,4,0">
+                                <TextBlock Text="{Binding PartnerID, StringFormat='#\{0\}'}" FontFamily="Consolas, Cairo" FontSize="11" FontWeight="Bold" Foreground="#475569"/>
+                            </Border>
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="6" Padding="6,2" Visibility="{Binding AccountCode, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding AccountCode}" FontFamily="Consolas, Cairo" FontSize="10.5" Foreground="#64748B"/>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Row 1: Partner Name -->
+                    <TextBlock Grid.Row="1" Text="{Binding PartnerName}" FontSize="15.5" FontWeight="Bold" Foreground="#0F172A" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                    <!-- Row 2: Contact Info (Phone & Address) -->
+                    <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                        <!-- Phone -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="📞" FontSize="12" Foreground="#64748B" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding PhoneDisplay}" FontSize="12" Foreground="#334155" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Address -->
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📍" FontSize="12" Foreground="#64748B" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding AddressDisplay}" FontSize="12" Foreground="#64748B" TextTrimming="CharacterEllipsis" MaxWidth="250" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Row 3: Balance Box -->
+                    <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="الرصيد الحالي:" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtBalance" Grid.Column="2" Text="{Binding CurrentBalance, StringFormat='{}{0:N2}'}" FontSize="14.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- 2. Quotes Offers Section -->
+            <Grid Margin="0,2,0,0">
+                <!-- If has quotes: Show list of mini quote card buttons -->
+                <StackPanel Visibility="{Binding HasQuotes, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="📋 عروض الأسعار:" FontSize="11.5" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,6"/>
+                    <ItemsControl ItemsSource="{Binding DisplayQuotes}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource MiniQuoteBtnStyle}" Click="QuoteButton_Click">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="🏷️ " FontSize="11" Margin="0,0,4,0"/>
+                                            <TextBlock Text="{Binding QuoteTitle}" FontSize="12" FontWeight="Bold" Foreground="#312E81"/>
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding QuoteDateFormatted, StringFormat='📅 \{0\}'}" FontSize="11" FontWeight="SemiBold" Foreground="#4F46E5" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- If NO quotes: Passive Status Pill -->
+                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,6"
+                        Visibility="{Binding HasNoQuotes, Converter={StaticResource BoolToVis}}"
+                        HorizontalAlignment="Stretch">
+                    <TextBlock Text="⚪ لا توجد عروض أسعار" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </Border>
+</UserControl>

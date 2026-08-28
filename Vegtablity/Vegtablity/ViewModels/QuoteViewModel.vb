@@ -503,6 +503,17 @@ Namespace ViewModels
             Dim q = TryCast(parameter, QuoteHeader)
             If q IsNot Nothing Then
                 Try
+                    ' Ensure PartnerName is populated if missing
+                    If String.IsNullOrEmpty(q.PartnerName) AndAlso q.PartnerID > 0 Then
+                        Dim partner = AllPartners.FirstOrDefault(Function(p) p.PartnerID = q.PartnerID)
+                        If partner IsNot Nothing Then
+                            q.PartnerName = partner.PartnerName
+                        Else
+                            Dim pDb = _partnerService.GetPartnerByID(q.PartnerID)
+                            If pDb IsNot Nothing Then q.PartnerName = pDb.PartnerName
+                        End If
+                    End If
+
                     ' Initial load of ALL items to ensure no data is lost during pagination/saving
                     _detailsPage = 0
                     Dim paged = _quoteService.GetQuoteDetails(q.QuoteID, 1, 10000) ' Fetch all
@@ -661,7 +672,15 @@ Namespace ViewModels
             If DetailsPage <> newPage Then
                 DetailsPage = newPage
             Else
-                UpdateDetailsPagination()
+                If CurrentQuote IsNot Nothing AndAlso CurrentQuote.Details IsNot Nothing AndAlso CurrentQuote.Details.Count < PAGE_SIZE Then
+                    CurrentQuote.Details.Add(newItem)
+                    OnPropertyChanged(NameOf(DetailsTotalPages))
+                    OnPropertyChanged(NameOf(DetailsPageLabel))
+                    OnPropertyChanged(NameOf(CanGoNextDetails))
+                    OnPropertyChanged(NameOf(CanGoPrevDetails))
+                Else
+                    UpdateDetailsPagination()
+                End If
             End If
         End Sub
 

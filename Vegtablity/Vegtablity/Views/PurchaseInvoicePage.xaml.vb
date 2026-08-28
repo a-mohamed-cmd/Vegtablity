@@ -56,10 +56,18 @@ Namespace Views
                         Dim rowCtrl = FindVisualChild(Of Controls.InvoiceItemRowControl)(container)
                         If rowCtrl IsNot Nothing Then
                             rowCtrl.FocusBarcode()
+                            Return
                         End If
                     End If
+                    DetailsItemsControl.Dispatcher.BeginInvoke(New Action(Sub()
+                        Dim retryContainer = DetailsItemsControl.ItemContainerGenerator.ContainerFromIndex(lastIndex)
+                        If retryContainer IsNot Nothing Then
+                            Dim retryCtrl = FindVisualChild(Of Controls.InvoiceItemRowControl)(retryContainer)
+                            If retryCtrl IsNot Nothing Then retryCtrl.FocusBarcode()
+                        End If
+                    End Sub), System.Windows.Threading.DispatcherPriority.Loaded)
                 End If
-            End Sub), System.Windows.Threading.DispatcherPriority.Background)
+            End Sub), System.Windows.Threading.DispatcherPriority.Input)
         End Sub
 
         Private Sub NewInvoiceButton_Click(sender As Object, e As RoutedEventArgs)

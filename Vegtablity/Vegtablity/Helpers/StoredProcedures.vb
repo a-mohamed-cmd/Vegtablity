@@ -274,5 +274,38 @@ Namespace Helpers
         Public Const SP_PRODUCTDISCOUNTS_GETPRODUCTIDS As String = "[Sales].[sp_ProductDiscounts_GetProductIDs]"
         Public Const SP_PRODUCTDISCOUNTS_SAVE_XML As String = "[Sales].[sp_ProductDiscounts_Save_XML]"
         Public Const SP_PRODUCTDISCOUNTS_DELETE As String = "[Sales].[sp_ProductDiscounts_Delete]"
+
+        ' =============================================
+        ' HR Schema - Human Resources & Payroll
+        ' =============================================
+        Public Const SP_HR_EMPLOYEE_GETALL As String = "[HR].[sp_Employee_GetAll]"
+        Public Const SP_HR_EMPLOYEE_GETBYID As String = "[HR].[sp_Employee_GetById]"
+        Public Const SP_HR_EMPLOYEE_SAVE As String = "[HR].[sp_Employee_Save]"
+        Public Const SP_HR_EMPLOYEE_SAVECUSTOMVALUE As String = "[HR].[sp_Employee_SaveCustomValue]"
+        Public Const SP_HR_EMPLOYEE_DELETE As String = "[HR].[sp_Employee_Delete]"
+        
+        Public Const SP_HR_CUSTOMFIELD_GETALL As String = "[HR].[sp_CustomField_GetAll]"
+        Public Const SP_HR_CUSTOMFIELD_SAVE As String = "[HR].[sp_CustomField_Save]"
+        Public Const SP_HR_CUSTOMFIELD_DELETE As String = "[HR].[sp_CustomField_Delete]"
+        Public Const SP_HR_ALERTS_GETACTIVE As String = "[HR].[sp_Alerts_GetActive]"
+
+        Public Const SP_HR_LEAVETYPE_GETALL As String = "[HR].[sp_LeaveType_GetAll]"
+        Public Const SP_HR_LEAVE_GETALL As String = "[HR].[sp_Leave_GetAll]"
+        Public Const SP_HR_LEAVE_SAVE As String = "[HR].[sp_Leave_Save]"
+        Public Const SP_HR_LEAVE_RECORDRESUMPTION As String = "[HR].[sp_Leave_RecordResumption]"
+        Public Const SP_HR_LEAVE_GETBALANCE As String = "[HR].[sp_Leave_GetBalance]"
+
+        Public Const SP_HR_ATTENDANCE_GETBYDATE As String = "[HR].[sp_Attendance_GetByDate]"
+        Public Const SP_HR_ATTENDANCE_SAVE As String = "[HR].[sp_Attendance_Save]"
+
+        Public Const SP_HR_PAYROLL_GETBATCHES As String = "[HR].[sp_Payroll_GetBatches]"
+        Public Const SP_HR_PAYROLL_GETBATCHDETAILS As String = "[HR].[sp_Payroll_GetBatchDetails]"
+        Public Const SP_HR_PAYROLL_GENERATEBATCH As String = "[HR].[sp_Payroll_GenerateBatch]"
+        Public Const SP_HR_PAYROLL_SAVEDETAIL As String = "[HR].[sp_Payroll_SaveDetail]"
+        Public Const SP_HR_PAYROLL_APPROVEBATCH As String = "[HR].[sp_Payroll_ApproveBatch]"
+        Public Const SP_HR_PAYROLL_UNAPPROVEBATCH As String = "[HR].[sp_Payroll_UnapproveBatch]"
+
+        Public Const SP_HR_ENDOFSERVICE_GETALL As String = "[HR].[sp_EndOfService_GetAll]"
+        Public Const SP_HR_ENDOFSERVICE_SAVE As String = "[HR].[sp_EndOfService_Save]"
     End Class
 End Namespace

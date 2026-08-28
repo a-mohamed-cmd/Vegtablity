@@ -19,5 +19,6 @@ class ControlStoredProcedures:
     CTRL_COMPANY_SETTINGS_GET = "EXEC [Settings].[sp_CompanySettings_Get_Ctrl]"
 
     # Save company and system settings to selected database
-    CTRL_COMPANY_SETTINGS_SAVE = "EXEC [Settings].[sp_CompanySettings_Save_Ctrl] @ProductionMode=?, @UseCustomInvoiceDesign=?, @UseDetailedInvoiceDesign=?, @UnifiedPartnerSearch=?, @CompanyName=?, @CurrencySymbol=?, @Address=?, @Phone=?, @Email=?, @EnableDailyOrders=?, @DeliverySystemMode=?, @EnableSalesDiscounts=?"
+    CTRL_COMPANY_SETTINGS_SAVE = "EXEC [Settings].[sp_CompanySettings_Save_Ctrl] @ProductionMode=?, @UseCustomInvoiceDesign=?, @UseDetailedInvoiceDesign=?, @UnifiedPartnerSearch=?, @CompanyName=?, @CurrencySymbol=?, @Address=?, @Phone=?, @Email=?, @EnableDailyOrders=?, @DeliverySystemMode=?, @EnableSalesDiscounts=?, @EnableHR=?"
+
 

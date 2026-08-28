@@ -508,7 +508,15 @@ Namespace ViewModels
             If DetailsPage <> newPage Then
                 DetailsPage = newPage
             Else
-                UpdateDetailsPagination()
+                If CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.Details IsNot Nothing AndAlso CurrentInvoice.Details.Count < PAGE_SIZE Then
+                    CurrentInvoice.Details.Add(newItem)
+                    OnPropertyChanged(NameOf(DetailsTotalPages))
+                    OnPropertyChanged(NameOf(DetailsPageLabel))
+                    OnPropertyChanged(NameOf(CanGoNextDetails))
+                    OnPropertyChanged(NameOf(CanGoPrevDetails))
+                Else
+                    UpdateDetailsPagination()
+                End If
             End If
             RecalculateTotals()
         End Sub

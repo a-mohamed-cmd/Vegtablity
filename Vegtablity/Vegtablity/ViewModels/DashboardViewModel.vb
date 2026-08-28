@@ -398,6 +398,29 @@ Namespace ViewModels
             allItems.Add(New MenuItem With {.Title = "الطلبات اليومية", .Icon = "🚚", .FormName = "DailyOrders", .IsVisible = True})
             allItems.Add(New MenuItem With {.Title = "التقارير", .Icon = "📈", .FormName = "Reports", .IsVisible = True})
 
+            ' === قسم الموارد البشرية والرواتب (إذا كان مفعلاً من بيانات الشركة) ===
+            Dim enableHR As Boolean = (compInfo IsNot Nothing AndAlso compInfo.EnableHR)
+            If enableHR Then
+                Dim hrChildren As New ObservableCollection(Of MenuItem)()
+                hrChildren.Add(New MenuItem With {.Title = "شؤون الموظفين", .Icon = "👥", .FormName = "HREmployees", .IsVisible = True})
+                hrChildren.Add(New MenuItem With {.Title = "الإجازات ومباشرة العمل", .Icon = "🗓️", .FormName = "HRLeaves", .IsVisible = True})
+                hrChildren.Add(New MenuItem With {.Title = "تسجيل الحضور والانصراف", .Icon = "⏰", .FormName = "HRAttendance", .IsVisible = True})
+                hrChildren.Add(New MenuItem With {.Title = "مسير الرواتب الشهري", .Icon = "💵", .FormName = "HRPayroll", .IsVisible = True})
+                hrChildren.Add(New MenuItem With {.Title = "مكافأة نهاية الخدمة", .Icon = "📜", .FormName = "HREndOfService", .IsVisible = True})
+                hrChildren.Add(New MenuItem With {.Title = "تنبيهات الوثائق والتجديد", .Icon = "🔔", .FormName = "HRAlerts", .IsVisible = True})
+                hrChildren.Add(New MenuItem With {.Title = "إعدادات وتخصيص الحقول", .Icon = "⚙️", .FormName = "HRSettings", .IsVisible = True})
+
+                allItems.Add(New MenuItem With {
+                    .Title = "الموارد البشرية",
+                    .Icon = "👔",
+                    .FormName = "HRParent",
+                    .IsVisible = True,
+                    .IsParent = True,
+                    .IsExpanded = False,
+                    .Children = hrChildren
+                })
+            End If
+
             ' === قسم الإعدادات (قابل للتوسيع) ===
             Dim settingsChildren As New ObservableCollection(Of MenuItem)()
             settingsChildren.Add(New MenuItem With {.Title = "إعدادات عامة", .Icon = "⚙", .FormName = "Settings", .IsVisible = True})
@@ -664,6 +687,34 @@ Namespace ViewModels
 
                     Case "DailyOrders"
                         CurrentPage = New Views.DailyOrdersPage()
+                        IsHomePage = False
+
+                    Case "HREmployees"
+                        CurrentPage = New Views.HREmployeesPage()
+                        IsHomePage = False
+
+                    Case "HRLeaves"
+                        CurrentPage = New Views.HRLeavesPage()
+                        IsHomePage = False
+
+                    Case "HRAttendance"
+                        CurrentPage = New Views.HRAttendancePage()
+                        IsHomePage = False
+
+                    Case "HRPayroll"
+                        CurrentPage = New Views.HRPayrollPage()
+                        IsHomePage = False
+
+                    Case "HREndOfService"
+                        CurrentPage = New Views.HREndOfServicePage()
+                        IsHomePage = False
+
+                    Case "HRAlerts"
+                        CurrentPage = New Views.HRAlertsPage()
+                        IsHomePage = False
+
+                    Case "HRSettings"
+                        CurrentPage = New Views.HRSettingsPage()
                         IsHomePage = False
 
                     Case Else

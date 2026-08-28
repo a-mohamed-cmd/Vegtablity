@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "WhashaApp"
-#define MyAppVersion "2.1.1"
+#define MyAppVersion "2.1.3"
 #define MyAppPublisher "Mohamed Ragab"
 #define MyAppURL "www.mohamedRagab.com"
 #define MyAppExeName "Vegtablity.exe"
@@ -29,7 +29,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=D:\VB.NET\backup\Vegtablity\setup\Output
-OutputBaseFilename=WhashaApp_SetupV2.1.1
+OutputBaseFilename=WhashaApp_SetupV2.1.3
 SetupIconFile=D:\VB.NET\backup\Vegtablity\Vegtablity\lettuce.ico
 SolidCompression=yes
 WizardStyle=modern dynamic

@@ -1,0 +1,166 @@
+<UserControl x:Class="Controls.PayrollRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo"
+             HorizontalAlignment="Stretch">
+
+    <UserControl.Resources>
+        <Style x:Key="PayrollInputStyle" TargetType="TextBox" BasedOn="{StaticResource ModernTextBoxStyle}">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="2,0"/>
+            <Setter Property="Margin" Value="2,0"/>
+        </Style>
+
+        <Style x:Key="PayrollActionBtnStyle" TargetType="Button">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="6,1"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border x:Name="MainRowBorder" Background="White" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,6" Margin="0,0,0,4" SnapsToDevicePixels="True">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.02" BlurRadius="4" ShadowDepth="1"/>
+        </Border.Effect>
+
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <!-- 0: Code -->
+                <ColumnDefinition Width="75"/>
+                <!-- 1: Name & Dept -->
+                <ColumnDefinition Width="1.2*" MinWidth="130"/>
+                <!-- 2: Basic Salary -->
+                <ColumnDefinition Width="80"/>
+                <!-- 3: Allowances -->
+                <ColumnDefinition Width="75"/>
+                <!-- 4: Overtime Hours -->
+                <ColumnDefinition Width="65"/>
+                <!-- 5: Overtime Amount -->
+                <ColumnDefinition Width="80"/>
+                <!-- 6: Deduction Days -->
+                <ColumnDefinition Width="65"/>
+                <!-- 7: Deduction Amount -->
+                <ColumnDefinition Width="80"/>
+                <!-- 8: Advances / Loans -->
+                <ColumnDefinition Width="75"/>
+                <!-- 9: Net Salary -->
+                <ColumnDefinition Width="95"/>
+                <!-- 10: Payment Status -->
+                <ColumnDefinition Width="80"/>
+                <!-- 11: Actions -->
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 0: Code Badge -->
+            <Border Grid.Column="0" Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="6" Padding="6,3" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBlock Text="{Binding EmployeeCode}" FontWeight="Bold" FontSize="11.5" Foreground="#334155"/>
+            </Border>
+
+            <!-- 1: Employee Name & Subtitle -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0">
+                <TextBlock Text="{Binding EmployeeName}" FontWeight="Bold" FontSize="12.5" Foreground="#0F172A" TextTrimming="CharacterEllipsis"/>
+                <TextBlock FontSize="11" Foreground="#64748B" Margin="0,1,0,0" TextTrimming="CharacterEllipsis">
+                    <Run Text="{Binding Department}"/>
+                    <Run Text="•"/>
+                    <Run Text="{Binding JobTitle}"/>
+                </TextBlock>
+            </StackPanel>
+
+            <!-- 2: Basic Salary -->
+            <TextBox x:Name="TxtBasicSalary" Grid.Column="2" Text="{Binding BasicSalary, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="Bold" Foreground="#1E293B" Style="{StaticResource PayrollInputStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"
+                     PreviewKeyDown="InputBox_PreviewKeyDown" TabIndex="1"/>
+
+            <!-- 3: Total Allowances -->
+            <Border Grid.Column="3" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="6" Height="32" Margin="2,0" VerticalAlignment="Center"
+                    ToolTip="إجمالي البدلات (سكن، نقل، أخرى)">
+                <TextBlock Text="{Binding TotalAllowances, StringFormat=\{0:0.###\}}" FontWeight="Bold" FontSize="12" Foreground="#15803D" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- 4: Overtime Hours -->
+            <TextBox x:Name="TxtOvertimeHours" Grid.Column="4" Text="{Binding OvertimeHours, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.#\}}"
+                     FontWeight="Bold" Foreground="#0284C7" Style="{StaticResource PayrollInputStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"
+                     PreviewKeyDown="InputBox_PreviewKeyDown" TabIndex="2"
+                     ToolTip="ساعات الإضافي (تحسب تلقائياً القيمة بنسبة 1.5x)"/>
+
+            <!-- 5: Overtime Amount -->
+            <TextBox x:Name="TxtOvertimeAmount" Grid.Column="5" Text="{Binding OvertimeAmount, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="Bold" Foreground="#0369A1" Style="{StaticResource PayrollInputStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"
+                     PreviewKeyDown="InputBox_PreviewKeyDown" TabIndex="3"
+                     ToolTip="مبلغ الإضافي الإجمالي"/>
+
+            <!-- 6: Deduction Days -->
+            <TextBox x:Name="TxtDeductionDays" Grid.Column="6" Text="{Binding DeductionDays, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.#\}}"
+                     FontWeight="Bold" Foreground="#DC2626" Style="{StaticResource PayrollInputStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"
+                     PreviewKeyDown="InputBox_PreviewKeyDown" TabIndex="4"
+                     ToolTip="أيام الغياب / الخصم"/>
+
+            <!-- 7: Deduction Amount -->
+            <TextBox x:Name="TxtDeductionAmount" Grid.Column="7" Text="{Binding DeductionAmount, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="Bold" Foreground="#B91C1C" Style="{StaticResource PayrollInputStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"
+                     PreviewKeyDown="InputBox_PreviewKeyDown" TabIndex="5"
+                     ToolTip="مبلغ خصم الغياب والتأخير"/>
+
+            <!-- 8: Advances / Loans -->
+            <TextBox x:Name="TxtAdvancesDeductions" Grid.Column="8" Text="{Binding AdvancesDeductions, UpdateSourceTrigger=LostFocus, StringFormat=\{0:0.###\}}"
+                     FontWeight="Bold" Foreground="#9333EA" Style="{StaticResource PayrollInputStyle}"
+                     GotFocus="NumericBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput"
+                     PreviewKeyDown="InputBox_PreviewKeyDown" TabIndex="6"
+                     ToolTip="سلف والتزامات"/>
+
+            <!-- 9: Net Salary (Auto-calculated) -->
+            <Border Grid.Column="9" Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="6" Height="32" Margin="2,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding NetSalary, StringFormat=\{0:N3\}}" FontWeight="ExtraBold" FontSize="12.5" Foreground="#047857" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- 10: Payment Status -->
+            <ComboBox x:Name="CmbPaymentStatus" Grid.Column="10" SelectedValue="{Binding PaymentStatus, UpdateSourceTrigger=PropertyChanged}"
+                      SelectedValuePath="Tag" Height="32" FontSize="11.5" FontWeight="Bold" Margin="2,0"
+                      PreviewKeyDown="InputBox_PreviewKeyDown" TabIndex="7">
+                <ComboBoxItem Content="غير مدفوع" Tag="Unpaid" Foreground="#DC2626"/>
+                <ComboBoxItem Content="✓ مدفوع" Tag="Paid" Foreground="#15803D"/>
+            </ComboBox>
+
+            <!-- 11: Action Buttons -->
+            <StackPanel Grid.Column="11" Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+                <!-- Save Row -->
+                <Button x:Name="BtnSaveRow" Content="💾" ToolTip="حفظ تعديلات هذا الموظف (Enter)"
+                        Style="{StaticResource PayrollActionBtnStyle}"
+                        Background="#EEF2FF" BorderBrush="#C7D2FE" Foreground="#4F46E5"
+                        Width="28" Margin="0,0,3,0" Click="SaveRow_Click" TabIndex="8"/>
+
+                <!-- Print Payslip -->
+                <Button Content="🖨️" ToolTip="طباعة قسيمة الراتب المفصلة"
+                        Style="{StaticResource PayrollActionBtnStyle}"
+                        Background="#F1F5F9" BorderBrush="#CBD5E1" Foreground="#334155"
+                        Width="28" Click="PrintPayslip_Click" TabIndex="9"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

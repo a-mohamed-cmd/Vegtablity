@@ -23,13 +23,27 @@ Namespace Views
         End Sub
 
         Private Sub Page_Loaded(sender As Object, e As RoutedEventArgs)
-            ' يُستدعى مرة واحدة بعد اكتمال تحميل الصفحة — يضبط التاريخ للفاتورة الجديدة
+            ' يُستدعى مرة واحدة بعد اكتمال تحميل الصفحة — يضبط التاريخ والعميل
             RemoveHandler Me.Loaded, AddressOf Page_Loaded
             Dim vm = TryCast(Me.DataContext, QuoteViewModel)
             If vm Is Nothing Then Return
             TxtQuoteDate.Text = vm.QuoteDateText
             TxtExpiryDate.Text = vm.ExpiryDateText
-            PartnerDropdown.ClearSelection()  ' عرض سعر جديد — بدون شريك
+
+            If vm.CurrentQuote IsNot Nothing AndAlso vm.CurrentQuote.PartnerID > 0 Then
+                Dim name = vm.CurrentQuote.PartnerName
+                If String.IsNullOrEmpty(name) Then
+                    Dim p = vm.AllPartners.FirstOrDefault(Function(x) x.PartnerID = vm.CurrentQuote.PartnerID)
+                    If p IsNot Nothing Then name = p.PartnerName
+                End If
+                If Not String.IsNullOrEmpty(name) Then
+                    PartnerDropdown.SetDisplayText(name)
+                Else
+                    PartnerDropdown.ClearSelection()
+                End If
+            Else
+                PartnerDropdown.ClearSelection()
+            End If
         End Sub
 
         Private Sub OnViewModelPropertyChanged(sender As Object, e As System.ComponentModel.PropertyChangedEventArgs)
@@ -97,10 +111,18 @@ Namespace Views
                         Dim rowCtrl = FindVisualChild(Of Controls.QuoteItemRowControl)(container)
                         If rowCtrl IsNot Nothing Then
                             rowCtrl.FocusBarcode()
+                            Return
                         End If
                     End If
+                    DetailsItemsControl.Dispatcher.BeginInvoke(New Action(Sub()
+                        Dim retryContainer = DetailsItemsControl.ItemContainerGenerator.ContainerFromIndex(lastIndex)
+                        If retryContainer IsNot Nothing Then
+                            Dim retryCtrl = FindVisualChild(Of Controls.QuoteItemRowControl)(retryContainer)
+                            If retryCtrl IsNot Nothing Then retryCtrl.FocusBarcode()
+                        End If
+                    End Sub), System.Windows.Threading.DispatcherPriority.Loaded)
                 End If
-            End Sub), System.Windows.Threading.DispatcherPriority.Background)
+            End Sub), System.Windows.Threading.DispatcherPriority.Input)
         End Sub
 
         ' ══════════════════════════════════════════════════
@@ -196,8 +218,16 @@ Namespace Views
             Dim capturedName = partnerName
             Dim capturedID = partnerID
             Dispatcher.BeginInvoke(New Action(Sub()
-                If capturedID.HasValue AndAlso Not String.IsNullOrEmpty(capturedName) Then
-                    PartnerDropdown.SetDisplayText(capturedName)
+                If capturedID.HasValue AndAlso capturedID.Value > 0 Then
+                    If String.IsNullOrEmpty(capturedName) AndAlso vm IsNot Nothing Then
+                        Dim p = vm.AllPartners.FirstOrDefault(Function(x) x.PartnerID = capturedID.Value)
+                        If p IsNot Nothing Then capturedName = p.PartnerName
+                    End If
+                    If Not String.IsNullOrEmpty(capturedName) Then
+                        PartnerDropdown.SetDisplayText(capturedName)
+                    Else
+                        PartnerDropdown.ClearSelection()
+                    End If
                 Else
                     PartnerDropdown.ClearSelection()
                 End If

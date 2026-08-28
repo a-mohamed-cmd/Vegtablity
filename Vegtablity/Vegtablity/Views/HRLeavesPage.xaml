@@ -1,0 +1,287 @@
+<UserControl x:Class="Views.HRLeavesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             mc:Ignorable="d" 
+             d:DesignHeight="750" d:DesignWidth="1100"
+             FlowDirection="RightToLeft">
+
+    <UserControl.DataContext>
+        <vm:HRLeavesViewModel/>
+    </UserControl.DataContext>
+
+    <Grid Background="#F8FAFC" Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Header -->
+        <Border Grid.Row="0" Background="White" CornerRadius="12" Padding="16,12" Margin="0,0,0,15">
+            <Border.Effect>
+                <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.6"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="🗓️" FontSize="26" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel>
+                        <TextBlock Text="إدارة الإجازات ومباشرة العمل والرصيد المستحق" FontSize="18" FontWeight="Bold" Foreground="#1E293B"/>
+                        <TextBlock Text="تسجيل الإجازات، احتساب الرصيد السنوي تلقائياً، تسجيل عودة ومباشرة العمل وحساب التأخير" FontSize="12" Foreground="#64748B"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button x:Name="BtnToggleSidePanel" Content="◀ طي النماذج" Click="ToggleSidePanel_Click"
+                            Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#334155"
+                            Height="38" Padding="12,0" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"/>
+                    <Button Content="🖨️ طباعة طلب الإجازة" Command="{Binding PrintLeaveCommand}"
+                            Style="{StaticResource ModernButtonStyle}" Background="#4F46E5" Foreground="White"
+                            Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"/>
+                    <Button Content="🖨️ نموذج المباشرة" Command="{Binding PrintCommencementCommand}"
+                            Style="{StaticResource ModernButtonStyle}" Background="#0EA5E9" Foreground="White"
+                            Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Cursor="Hand"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Split Area -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: New Request & Resumption Controls with Collapse Animation -->
+            <Border x:Name="SidePanelBorder" Grid.Column="0" Width="400" Margin="0,0,15,0" ClipToBounds="True">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Card 1: Leave Request Box -->
+                        <Border Background="White" CornerRadius="12" Padding="16" Margin="0,0,0,15">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <TextBlock Text="🏖️ تقديم طلب إجازة جديد" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+
+                            <!-- Employee Select -->
+                            <TextBlock Text="اختر الموظف *:" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
+                            <controls:SearchableDropdown
+                                x:Name="EmployeeDropdown"
+                                ItemsSource="{Binding FilteredEmployees}"
+                                SelectedItem="{Binding SelectedEmployeeForLeave, Mode=TwoWay}"
+                                DisplayMemberPath="DisplayText"
+                                Watermark="🔍 ابحث باسم أو كود الموظف..."
+                                Height="38" Margin="0,0,0,10"
+                                SearchChanged="EmployeeDropdown_SearchChanged"
+                                ItemSelected="EmployeeDropdown_ItemSelected"
+                                ConfirmedAndMoveNext="EmployeeDropdown_MoveNext"/>
+
+                            <!-- Real-time Leave Balance Box -->
+                            <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="الرصيد المستحق:" FontSize="11" Foreground="#1E40AF"/>
+                                        <TextBlock Text="{Binding AccruedDays, StringFormat={}{0:0.#} يوم}" FontSize="15" FontWeight="Bold" Foreground="#1D4ED8"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="الرصيد المتبقي:" FontSize="11" Foreground="#047857"/>
+                                        <TextBlock Text="{Binding RemainingBalance, StringFormat={}{0:0.#} يوم}" FontSize="15" FontWeight="Bold" Foreground="#059669"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Leave Type -->
+                            <TextBlock Text="نوع الإجازة:" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding LeaveTypesList}" SelectedValue="{Binding NewLeave.LeaveTypeID}"
+                                      SelectedValuePath="LeaveTypeID" DisplayMemberPath="TypeName"
+                                      Height="36" FontSize="13" VerticalContentAlignment="Center" Margin="0,0,0,10"/>
+
+                            <!-- Dates Grid -->
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                    <TextBlock Text="تاريخ البدء:" FontWeight="Bold" FontSize="12" Foreground="#334155" Margin="0,0,0,4"/>
+                                    <controls:DateBoxControl SelectedDate="{Binding NewLeave.StartDate, Mode=TwoWay}" Height="36" FontSize="12.5"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="تاريخ الانتهاء:" FontWeight="Bold" FontSize="12" Foreground="#334155" Margin="0,0,0,4"/>
+                                    <controls:DateBoxControl SelectedDate="{Binding NewLeave.EndDate, Mode=TwoWay}" Height="36" FontSize="12.5"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Reason -->
+                            <TextBlock Text="سبب الإجازة / ملاحظات:" FontWeight="Bold" FontSize="12" Foreground="#334155" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding NewLeave.Reason, UpdateSourceTrigger=PropertyChanged}" Height="50" TextWrapping="Wrap" FontSize="12" Padding="6" Margin="0,0,0,12"/>
+
+                            <!-- Submit Button -->
+                            <Button Content="✈️ تسجيل واعتماد الإجازة" Command="{Binding SaveLeaveCommand}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#4F46E5" Foreground="White"
+                                    Height="40" FontSize="13.5" FontWeight="Bold" Cursor="Hand"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Card 2: Work Resumption Box -->
+                    <Border Background="White" CornerRadius="12" Padding="16">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <TextBlock Text="📝 تسجيل مباشرة العمل (بعد العودة)" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10"/>
+                            <TextBlock Text="اختر إجازة من الجدول لتسجيل تاريخ عودة ومباشرة الموظف:" FontSize="11.5" Foreground="#64748B" Margin="0,0,0,10"/>
+
+                            <TextBlock Text="تاريخ المباشرة الفعلي:" FontWeight="Bold" FontSize="12" Foreground="#334155" Margin="0,0,0,4"/>
+                            <controls:DateBoxControl SelectedDate="{Binding ResumptionActualDate, Mode=TwoWay}" Height="36" FontSize="12.5" Margin="0,0,0,10"/>
+
+                            <!-- Delay Indicator -->
+                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="أيام التأخير المحسوبة:" FontSize="12" FontWeight="Bold" Foreground="#991B1B" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding DelayDaysCount, StringFormat={}{0} يوم}" FontSize="14" FontWeight="ExtraBold" Foreground="#DC2626"/>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Text="ملاحظات المباشرة والتأخير:" FontWeight="Bold" FontSize="12" Foreground="#334155" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding ResumptionNotes, UpdateSourceTrigger=PropertyChanged}" Height="45" TextWrapping="Wrap" FontSize="12" Padding="6" Margin="0,0,0,12"/>
+
+                            <Button Content="✔ اعتماد المباشرة وتفعيل الموظف" Command="{Binding RecordResumptionCommand}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White"
+                                    Height="40" FontSize="13" FontWeight="Bold" Cursor="Hand"/>
+                        </StackPanel>
+                    </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Right: Leaves Log Table with Pagination -->
+            <Border Grid.Column="1" Background="White" CornerRadius="12" Padding="16">
+                <Border.Effect>
+                    <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="📋 سجل الإجازات والمباشرات المسجلة" FontSize="16" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+
+                    <!-- Modern Table Headers -->
+                    <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1,1,1,0" 
+                            CornerRadius="8,8,0,0" Padding="12,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="1.2*" MinWidth="130"/>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="1.3*" MinWidth="150"/>
+                                <ColumnDefinition Width="1.2*" MinWidth="140"/>
+                                <ColumnDefinition Width="85"/>
+                                <ColumnDefinition Width="95"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="كود الموظف" FontWeight="Bold" FontSize="12" Foreground="#475569"/>
+                            <TextBlock Grid.Column="1" Text="اسم الموظف / القسم" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="6,0"/>
+                            <TextBlock Grid.Column="2" Text="نوع الإجازة" FontWeight="Bold" FontSize="12" Foreground="#475569" TextAlignment="Center"/>
+                            <TextBlock Grid.Column="3" Text="فترة الإجازة والمدة" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="8,0"/>
+                            <TextBlock Grid.Column="4" Text="العودة والمباشرة" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="6,0"/>
+                            <TextBlock Grid.Column="5" Text="الالتزام والتأخير" FontWeight="Bold" FontSize="12" Foreground="#475569" TextAlignment="Center"/>
+                            <TextBlock Grid.Column="6" Text="الحالة" FontWeight="Bold" FontSize="12" Foreground="#475569" TextAlignment="Center"/>
+                            <TextBlock Grid.Column="7" Text="طباعة وإجراءات" FontWeight="Bold" FontSize="12" Foreground="#475569" TextAlignment="Center" Margin="6,0,0,0"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Custom ListBox using LeaveRowControl -->
+                    <ListBox Grid.Row="2" ItemsSource="{Binding Leaves}" SelectedItem="{Binding SelectedLeave}"
+                             BorderBrush="#E2E8F0" BorderThickness="1" Background="#FAFAFA"
+                             HorizontalContentAlignment="Stretch" Padding="6,6"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <controls:LeaveRowControl/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,0,0,3"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="8" Padding="0" Margin="0">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="#EFF6FF"/>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="#F8FAFC"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+
+                    <!-- Pagination Footer (10 per page) -->
+                    <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="8,10" Margin="0,10,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="◀ السابق" Command="{Binding PreviousPageCommand}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#E2E8F0" Foreground="#334155"
+                                    FontSize="12" FontWeight="SemiBold" Height="30" Padding="12,0" Cursor="Hand"/>
+                            <TextBlock Grid.Column="1" Text="{Binding PageInfo}"
+                                       FontSize="12" FontWeight="Bold" Foreground="#64748B"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Button Grid.Column="2" Content="التالي ▶" Command="{Binding NextPageCommand}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#E2E8F0" Foreground="#334155"
+                                    FontSize="12" FontWeight="SemiBold" Height="30" Padding="12,0" Cursor="Hand"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Modern Floating Snackbar Notification -->
+        <Border x:Name="SnackbarBorder" Grid.RowSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" 
+                Background="#0F172A" CornerRadius="12" Padding="20,12" Margin="0,0,0,30" 
+                Visibility="Collapsed" Panel.ZIndex="500" Opacity="0" IsHitTestVisible="False">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="25" ShadowDepth="4" Opacity="0.45" Color="#000000"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="SnackbarIcon" Text="✅" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock x:Name="SnackbarText" Text="تمت العملية بنجاح" Foreground="White" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خطة وتجربة نظام الموارد البشرية والرواتب المتقدم | HR & Payroll Interactive Plan</title>
+    <!-- Google Fonts Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --primary-light: #e0e7ff;
+            --secondary: #0ea5e9;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --dark-surface: #1e293b;
+            --light-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+            --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Top Header */
+        header {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+            color: white;
+            padding: 24px 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-title .icon-badge {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            backdrop-filter: blur(8px);
+        }
+
+        .header-title h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #c7d2fe;
+            margin-top: 2px;
+        }
+
+        .header-status-badge {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        /* Navigation Tabs */
+        .nav-bar {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 96px;
+            z-index: 90;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            overflow-x: auto;
+            gap: 4px;
+            padding: 8px 16px;
+        }
+
+        .nav-tab {
+            padding: 10px 18px;
+            border: none;
+            background: transparent;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text-muted);
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tab:hover {
+            background: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-tab.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 24px auto;
+            padding: 0 20px;
+        }
+
+        /* Tab Content Panel */
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Card Component */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .card-header h2 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-header p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        /* Stat Badges */
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .stat-val {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--dark);
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Forms & Inputs */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            height: 42px;
+            padding: 0 14px;
+            font-size: 13.5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: white;
+            color: #0f172a;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+
+        textarea.form-control {
+            height: auto;
+            padding: 10px 14px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 40px;
+            padding: 0 18px;
+            font-size: 13.5px;
+            font-weight: 700;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: #475569;
+        }
+
+        .btn-outline:hover {
+            background: #f1f5f9;
+            color: var(--dark);
+        }
+
+        /* Toggle Switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--success);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Data Tables */
+        .table-responsive {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+            font-size: 13px;
+        }
+
+        table.data-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        table.data-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #1e293b;
+        }
+
+        table.data-table tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+
+        .badge-danger { background: #fee2e2; color: #b91c1c; }
+        .badge-warning { background: #fef3c7; color: #b45309; }
+        .badge-success { background: #dcfce7; color: #15803d; }
+        .badge-info { background: #e0f2fe; color: #0369a1; }
+
+        /* Document Template (Print Preview) */
+        .document-sheet {
+            background: white;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            border: 1px solid #cbd5e1;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            border-radius: 4px;
+            font-size: 13.5px;
+            position: relative;
+        }
+
+        .doc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        .doc-logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .doc-title-box {
+            text-align: center;
+            background: #f1f5f9;
+            padding: 10px 24px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .doc-section-title {
+            background: #f8fafc;
+            border-right: 4px solid var(--primary);
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: 700;
+            margin: 20px 0 12px 0;
+            color: #1e293b;
+        }
+
+        .doc-signatures {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            text-align: center;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 24px;
+        }
+
+        .sig-line {
+            margin-top: 40px;
+            border-bottom: 1px solid #64748b;
+        }
+
+        /* Live Sidebar Demo Frame */
+        .sidebar-demo {
+            background: #0f172a;
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            width: 280px;
+            font-size: 13px;
+        }
+
+        .sidebar-section-title {
+            color: #94a3b8;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 16px 8px 6px 8px;
+            font-weight: 700;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #cbd5e1;
+            cursor: pointer;
+            margin-bottom: 2px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-item:hover, .sidebar-item.active {
+            background: #1e293b;
+            color: white;
+        }
+
+        .sidebar-subitem {
+            padding: 8px 12px 8px 28px;
+            color: #94a3b8;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+
+        .sidebar-subitem:hover {
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.08);
+        }
+
+        /* Notification Toast */
+        .toast-msg {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            background: #1e293b;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            font-weight: 600;
+            font-size: 14px;
+            border-right: 4px solid var(--success);
+        }
+
+        /* Print Media Style */
+        @media print {
+            header, .nav-bar, .no-print, .btn, .card-header {
+                display: none !important;
+            }
+            body, .main-container {
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .document-sheet {
+                border: none !important;
+                box-shadow: none !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="header-title">
+                <div class="icon-badge">👔</div>
+                <div>
+                    <h1>خطة وتجربة نظام الموارد البشرية والرواتب (HR & Payroll System)</h1>
+                    <p>نموذج محاكاة تفاعلي حي يوضح الحقول المخصصة العمودية (EAV)، التنبيهات، الإجازات، الرواتب، ونهاية الخدمة</p>
+                </div>
+            </div>
+            <div class="header-status-badge">
+                <span class="status-dot"></span>
+                <span>جاهز للتنفيذ والربط الفعلي</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-bar">
+        <div class="nav-container">
+            <button class="nav-tab active" onclick="switchTab('tab-overview')">🌟 1. المعمارية والتفعيل</button>
+            <button class="nav-tab" onclick="switchTab('tab-employees')">👥 2. الموظفون والحقول المخصصة (EAV)</button>
+            <button class="nav-tab" onclick="switchTab('tab-alerts')">🔔 3. تنبيهات الوثائق والتجديد</button>
+            <button class="nav-tab" onclick="switchTab('tab-leaves')">🗓️ 4. الإجازات ومباشرة العمل</button>
+            <button class="nav-tab" onclick="switchTab('tab-endofservice')">📜 5. مكافأة نهاية الخدمة</button>
+            <button class="nav-tab" onclick="switchTab('tab-payroll')">💵 6. مسير الرواتب والحضور</button>
+            <button class="nav-tab" onclick="switchTab('tab-forms')">🖨️ 7. النماذج الرسمية والطباعة</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-container">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: Overview & Architecture & Toggle   -->
+        <!-- ========================================== -->
+        <div id="tab-overview" class="tab-panel active">
+            <div class="grid-2">
+                <!-- Toggle Live Demonstration -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>⚙️ تجربة تفعيل النظام من إعدادات الشركة</h2>
+                            <p>جرب تفعيل أو إيقاف الموارد البشرية لمشاهدة التحديث التلقائي للقائمة والصلاحيات</p>
+                        </div>
+                    </div>
+
+                    <div class="switch-container" style="margin-bottom: 20px;">
+                        <label class="switch">
+                            <input type="checkbox" id="toggleHrModule" checked onchange="toggleHrLive(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <div>
+                            <strong style="font-size: 15px; color: var(--dark);">تفعيل نظام الموارد البشرية والرواتب (EnableHR)</strong>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">يتحكم في إظهار شاشات وقوائم الـ HR في الصلاحيات والشريط الجانبي (Default: 0)</p>
+                        </div>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; font-size: 13px;">
+                        <strong>🛡️ مبدأ عدم تعارض النسخ القديمة (100% Backward Compatible):</strong>
+                        <ul style="margin: 8px 20px 0 0; color: #475569; line-height: 1.8;">
+                            <li>العمود الجديد <code>EnableHR BIT NOT NULL DEFAULT 0</code> في <code>[Settings].[CompanySettings]</code>.</li>
+                            <li>عندما تكون القيمة <code>0</code> لا تتأثر أي شاشات قديمة أو تقارير أو حسابات.</li>
+                            <li>تظهر صلاحيات HR فقط إذا كانت القيمة <code>1</code>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Live Sidebar Simulation -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>📱 محاكاة القائمة الجانبية (Sidebar Menu)</h2>
+                            <p>تتفاعل فورياً عند التفعيل أو الإلغاء</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: center;">
+                        <div class="sidebar-demo">
+                            <div style="font-weight: 800; font-size: 15px; padding: 8px; border-bottom: 1px solid #334155; margin-bottom: 10px;">
+                                🏢 تطبيق Vegtablity POS
+                            </div>
+
+                            <div class="sidebar-item"><span>📊 لوحة التحكم</span></div>
+                            <div class="sidebar-item"><span>🛒 المبيعات والفواتير</span></div>
+                            <div class="sidebar-item"><span>🏪 إدارة المخزون</span></div>
+                            <div class="sidebar-item"><span>💰 الحسابات والقيود</span></div>
+
+                            <!-- Dynamic HR Section -->
+                            <div id="sidebarHrGroup">
+                                <div class="sidebar-section-title">👔 الموارد البشرية (HR System)</div>
+                                <div class="sidebar-subitem" onclick="switchTab('tab-employees')">👥 شؤون الموظفين</div>
+                                <div class="sidebar-subitem" onclick="switchTab('tab-leaves')">🗓️ الإجازات والمباشرة</div>
+                                <div class="sidebar-subitem" onclick="switchTab('tab-payroll')">⏰ الحضور والرواتب</div>
+                                <div class="sidebar-subitem" onclick="switchTab('tab-endofservice')">📜 مكافأة نهاية الخدمة</div>
+                                <div class="sidebar-subitem" onclick="switchTab('tab-alerts')">🔔 تنبيهات الوثائق <span class="badge badge-danger" style="font-size: 10px; padding: 1px 6px;">2</span></div>
+                            </div>
+
+                            <div class="sidebar-section-title">⚙️ النظام والإعدادات</div>
+                            <div class="sidebar-item"><span>🏢 بيانات الشركة</span></div>
+                            <div class="sidebar-item"><span>🔐 إدارة المستخدمين</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: Employees & Vertical EAV Custom Fields -->
+        <!-- ========================================== -->
+        <div id="tab-employees" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>👥 شؤون الموظفين ونظام الحقول المخصصة العمودية (EAV)</h2>
+                        <p>تخزين مرن لأي بيانات إضافية (انتهاء إقامة، جواز، رخصة، تأمين) مع تشغيل التنبيه التلقائي</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openAddCustomFieldModal()">➕ إضافة حقل مخصص جديد</button>
+                </div>
+
+                <div class="grid-4" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;">👥</div>
+                        <div>
+                            <div class="stat-val" id="totalEmpCount">4</div>
+                            <div class="stat-lbl">إجمالي الموظفين</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #dcfce7; color: #15803d;">💼</div>
+                        <div>
+                            <div class="stat-val">3</div>
+                            <div class="stat-lbl">على رأس العمل</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #fef3c7; color: #b45309;">🏖️</div>
+                        <div>
+                            <div class="stat-val">1</div>
+                            <div class="stat-lbl">في إجازة رسمية</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #fee2e2; color: #b91c1c;">⚠️</div>
+                        <div>
+                            <div class="stat-val">2</div>
+                            <div class="stat-lbl">وثائق تحتاج تجديد</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Employees Table with Dynamic Fields -->
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>كود الموظف</th>
+                                <th>الاسم الكامل</th>
+                                <th>الوظيفة / القسم</th>
+                                <th>تاريخ التعيين</th>
+                                <th>الراتب الأساسي</th>
+                                <th style="background: #eef2ff; color: var(--primary);">🏷️ انتهاء الإقامة (حقل مخصص)</th>
+                                <th style="background: #eef2ff; color: var(--primary);">✈️ انتهاء الجواز (حقل مخصص)</th>
+                                <th>الحالة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeesTableBody">
+                            <!-- Populated dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Dynamic Custom Fields Definition Area -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>🧩 الحقول المخصصة المعرفة في النظام ([HR].[CustomFieldDefinitions])</h2>
+                        <p>يمكن للمستخدم إضافة وتعديل خصائص الموظفين وتفعيل التنبيه المسبق عليها</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>اسم الحقل (عربي)</th>
+                                <th>المفتاح البرمجي</th>
+                                <th>نوع البيانات</th>
+                                <th>خاصية التنبيه (Alertable)</th>
+                                <th>أيام التنبيه قبل الانتهاء</th>
+                                <th>إلزامي؟</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customFieldsTableBody">
+                            <tr>
+                                <td><strong>تاريخ انتهاء الإقامة</strong></td>
+                                <td><code>ResidencyExpiryDate</code></td>
+                                <td><span class="badge badge-info">📅 تاريخ (Date)</span></td>
+                                <td><span class="badge badge-danger">🔔 مفعل للتنبيه</span></td>
+                                <td><strong>30 يوم</strong></td>
+                                <td>نعم</td>
+                            </tr>
+                            <tr>
+                                <td><strong>تاريخ انتهاء جواز السفر</strong></td>
+                                <td><code>PassportExpiryDate</code></td>
+                                <td><span class="badge badge-info">📅 تاريخ (Date)</span></td>
+                                <td><span class="badge badge-danger">🔔 مفعل للتنبيه</span></td>
+                                <td><strong>60 يوم</strong></td>
+                                <td>نعم</td>
+                            </tr>
+                            <tr>
+                                <td><strong>رقم الحساب البنكي (IBAN)</strong></td>
+                                <td><code>BankIBAN</code></td>
+                                <td><span class="badge badge-info">🔤 نص (Text)</span></td>
+                                <td><span class="badge badge-success">غير منتهي</span></td>
+                                <td>-</td>
+                                <td>لا</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: Expiration Alerts Dashboard        -->
+        <!-- ========================================== -->
+        <div id="tab-alerts" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>🔔 مركز متابعة وتنبيهات انتهاء الوثائق والتجديدات</h2>
+                        <p>فحص تلقائي يومي لكافة الحقول وتصنيفها اللوني حسب قرب موعد الانتهاء</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showToast('🔄 تم فحص جميع الوثائق وتحديث التنبيهات بنجاح')">🔄 فحص التنبيهات الآن</button>
+                </div>
+
+                <div class="grid-3" style="margin-bottom: 20px;">
+                    <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: #be123c; font-size: 15px;">🔴 منتهية الصلاحية (مطلوب تجديد فوري)</strong>
+                            <span class="badge badge-danger">1 وثيقة</span>
+                        </div>
+                        <p style="font-size: 12.5px; color: #9f1239; margin-top: 6px;">بطاقة مدنية / إقامة للموظف: محمد أحمد عثمان (منتهية منذ 5 أيام).</p>
+                    </div>
+
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: #b45309; font-size: 15px;">🟠 تنتهي قريباً (خلال 30 يوماً)</strong>
+                            <span class="badge badge-warning">1 وثيقة</span>
+                        </div>
+                        <p style="font-size: 12.5px; color: #92400e; margin-top: 6px;">جواز سفر للموظف: عمر خالد الزعبي (ينتهي بعد 18 يوماً).</p>
+                    </div>
+
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: #15803d; font-size: 15px;">🟢 سارية وصالحة</strong>
+                            <span class="badge badge-success">8 وثائق</span>
+                        </div>
+                        <p style="font-size: 12.5px; color: #166534; margin-top: 6px;">جميع الوثائق الأخرى مجددة وسارية لأكثر من 60 يوماً.</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الموظف</th>
+                                <th>نوع الوثيقة / الحقل</th>
+                                <th>رقم الوثيقة</th>
+                                <th>تاريخ الانتهاء</th>
+                                <th>المهلة المتبقية</th>
+                                <th>حالة التنبيه</th>
+                                <th>الإجراء السريع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>محمد أحمد عثمان</strong><br><span style="color: #64748b; font-size: 11px;">رقم: EMP-001</span></td>
+                                <td>بطاقة الإقامة المدنية</td>
+                                <td><code>294081544321</code></td>
+                                <td style="color: #b91c1c; font-weight: 700;">2026-08-21</td>
+                                <td><span class="badge badge-danger">منتهية منذ 5 أيام ⚠️</span></td>
+                                <td><span class="badge badge-danger">🔴 حرج</span></td>
+                                <td>
+                                    <button class="btn btn-outline" style="height: 30px; font-size: 11px;" onclick="showToast('📩 تم إرسال إشعار تذكير بالتجديد للموظف')">📱 إشعار واتساب</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>عمر خالد الزعبي</strong><br><span style="color: #64748b; font-size: 11px;">رقم: EMP-003</span></td>
+                                <td>جواز السفر</td>
+                                <td><code>P9823411</code></td>
+                                <td style="color: #b45309; font-weight: 700;">2026-09-13</td>
+                                <td><span class="badge badge-warning">متبقي 18 يوماً</span></td>
+                                <td><span class="badge badge-warning">🟠 تنبيه مسبق</span></td>
+                                <td>
+                                    <button class="btn btn-outline" style="height: 30px; font-size: 11px;" onclick="showToast('📩 تم إرسال إشعار تذكير بالتجديد للموظف')">📱 إشعار واتساب</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>سارة يوسف النجار</strong><br><span style="color: #64748b; font-size: 11px;">رقم: EMP-002</span></td>
+                                <td>عقد العمل والتأمين الصحي</td>
+                                <td><code>CNT-2024-88</code></td>
+                                <td style="color: #15803d; font-weight: 700;">2027-04-30</td>
+                                <td><span class="badge badge-success">متبقي 247 يوماً</span></td>
+                                <td><span class="badge badge-success">🟢 ساري</span></td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: Leaves & Work Resumption Live Demo  -->
+        <!-- ========================================== -->
+        <div id="tab-leaves" class="tab-panel">
+            <div class="grid-2">
+                <!-- Leave Request Simulation -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>🏖️ طلب إجازة واحتساب الرصيد التلقائي</h2>
+                            <p>المعادلة: رصيد الإجازة = (أيام الخدمة ÷ 365.25 × 30 يوماً) - الإجازات المستهلكة</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>اختر الموظف:</label>
+                        <select id="leaveEmpSelect" class="form-control" onchange="calculateLiveLeaveBalance()">
+                            <option value="1" data-hire="2023-01-01" data-used="15">محمد أحمد عثمان (تاريخ التعيين: 2023-01-01)</option>
+                            <option value="2" data-hire="2024-06-01" data-used="5">سارة يوسف النجار (تاريخ التعيين: 2024-06-01)</option>
+                            <option value="3" data-hire="2021-03-15" data-used="40">عمر خالد الزعبي (تاريخ التعيين: 2021-03-15)</option>
+                        </select>
+                    </div>
+
+                    <div class="grid-2" style="margin-bottom: 14px;">
+                        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <span style="font-size: 12px; color: var(--text-muted);">إجمالي الرصيد المستحق:</span>
+                            <div id="leaveTotalAccrued" style="font-size: 18px; font-weight: 800; color: var(--primary);">109 يوم</div>
+                        </div>
+                        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <span style="font-size: 12px; color: var(--text-muted);">الرصيد المتبقي المتاح:</span>
+                            <div id="leaveRemainingBalance" style="font-size: 18px; font-weight: 800; color: var(--success);">94 يوم</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>تاريخ بدء الإجازة:</label>
+                            <input type="date" id="leaveStartDate" class="form-control" value="2026-09-01">
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ العودة المتوقع:</label>
+                            <input type="date" id="leaveEndDate" class="form-control" value="2026-09-15">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="submitLeaveLive()">
+                        ✈️ تسجيل طلب الإجازة واعتماده
+                    </button>
+                </div>
+
+                <!-- Work Resumption (مباشرة العمل) Live Demo -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <h2>📝 تسجيل مباشرة العمل بعد العودة</h2>
+                            <p>حساب أيام التأخير تلقائياً وطباعة نموذج المباشرة</p>
+                        </div>
+                    </div>
+
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <strong>موظف حالياً في إجازة:</strong>
+                        <div style="margin-top: 4px; font-size: 13.5px; color: #1e3a8a;">
+                            👤 <strong>طارق نبيل الصالح</strong> (إجازة سنوية من 2026-08-10 حتى 2026-08-24)
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>تاريخ المباشرة الفعلي للعمل:</label>
+                        <input type="date" id="resumptionActualDate" class="form-control" value="2026-08-26" onchange="calcDelayLive()">
+                    </div>
+
+                    <div id="delayAlertBox" style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #be123c;">
+                        ⚠️ <strong>أيام التأخير عن موعد العودة المقرر:</strong> <span id="delayDaysCount" style="font-weight: 800; font-size: 16px;">2</span> يوم تأخير
+                    </div>
+
+                    <div class="form-group">
+                        <label>ملاحظات مباشرة العمل:</label>
+                        <input type="text" class="form-control" value="تمت مباشرة العمل وتأخر يومين بسبب حجوزات الطيران، يتم خصمها من رصيد الإجازات.">
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-success" style="flex: 1;" onclick="completeResumptionLive()">
+                            ✔ اعتماد المباشرة وتفعيل الموظف
+                        </button>
+                        <button class="btn btn-outline" onclick="previewDoc('commencement')">
+                            🖨️ طباعة نموذج المباشرة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: End of Service Indemnity Calculator -->
+        <!-- ========================================== -->
+        <div id="tab-endofservice" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>📜 حاسبة مكافأة نهاية الخدمة وتصفية المستحقات التفاعلية</h2>
+                        <p>وفق قانون العمل: (نصف شهر عن أول 5 سنوات + شهر عن كل سنة تالية + رصيد الإجازات المتبقي)</p>
+                    </div>
+                </div>
+
+                <div class="grid-3" style="margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>تاريخ التعيين (الالتحاق):</label>
+                        <input type="date" id="eosHireDate" class="form-control" value="2018-03-01" onchange="calculateEOSLive()">
+                    </div>
+                    <div class="form-group">
+                        <label>تاريخ انتهاء الخدمة:</label>
+                        <input type="date" id="eosEndDate" class="form-control" value="2026-08-26" onchange="calculateEOSLive()">
+                    </div>
+                    <div class="form-group">
+                        <label>سبب ترك العمل:</label>
+                        <select id="eosReason" class="form-control" onchange="calculateEOSLive()">
+                            <option value="termination">إنهاء خدمة من طرف الشركة (مكافأة 100%)</option>
+                            <option value="contract_end">انتهاء مدة العقد المتفق عليها (مكافأة 100%)</option>
+                            <option value="resignation">استقالة الموظف (حسب مدة الخدمة)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-4" style="margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>الراتب الأساسي الأخير (د.أ):</label>
+                        <input type="number" id="eosBasicSalary" class="form-control" value="600" oninput="calculateEOSLive()">
+                    </div>
+                    <div class="form-group">
+                        <label>البدلات الثابتة (د.أ):</label>
+                        <input type="number" id="eosAllowances" class="form-control" value="150" oninput="calculateEOSLive()">
+                    </div>
+                    <div class="form-group">
+                        <label>رصيد الإجازات المتبقي (أيام):</label>
+                        <input type="number" id="eosLeaveDays" class="form-control" value="24" oninput="calculateEOSLive()">
+                    </div>
+                    <div class="form-group">
+                        <label>سلف وخصومات مستحقة (د.أ):</label>
+                        <input type="number" id="eosDeductions" class="form-control" value="50" oninput="calculateEOSLive()">
+                    </div>
+                </div>
+
+                <!-- Calculation Result Box -->
+                <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: white; border-radius: 12px; padding: 24px; margin-top: 10px;">
+                    <div class="grid-3" style="border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 16px;">
+                        <div>
+                            <span style="color: #94a3b8; font-size: 12px;">مدة الخدمة الفعلية:</span>
+                            <div id="eosDurationTxt" style="font-size: 16px; font-weight: 800; color: #38bdf8;">8 سنوات، 5 أشهر، 25 يوماً</div>
+                        </div>
+                        <div>
+                            <span style="color: #94a3b8; font-size: 12px;">مكافأة نهاية الخدمة المحتسبة:</span>
+                            <div id="eosIndemnityTxt" style="font-size: 18px; font-weight: 800; color: #a7f3d0;">4,468.75 د.أ</div>
+                        </div>
+                        <div>
+                            <span style="color: #94a3b8; font-size: 12px;">بدل رصيد الإجازات المتبقي:</span>
+                            <div id="eosLeaveCompTxt" style="font-size: 18px; font-weight: 800; color: #fde68a;">600.00 د.أ</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                        <div>
+                            <span style="color: #94a3b8; font-size: 13px;">الصافي النهائي لمستحقات نهاية الخدمة:</span>
+                            <div id="eosNetTotalTxt" style="font-size: 28px; font-weight: 900; color: #4ade80;">5,018.75 د.أ</div>
+                        </div>
+                        <button class="btn btn-success" style="padding: 10px 24px; font-size: 15px;" onclick="previewDoc('settlement')">
+                            🖨️ طباعة نموذج تصفية المستحقات وإبراء الذمة
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 6: Monthly Payroll & Attendance Live   -->
+        <!-- ========================================== -->
+        <div id="tab-payroll" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>💵 مسير الرواتب الشهري وسجل الحضور والانصراف</h2>
+                        <p>احتساب تلقائي للراتب الصافي بناءً على الراتب الأساسي + البدلات + الإضافي - التأخير والخصم</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary" onclick="generatePayrollLive()">⚡ توليد مسير شهر 08 / 2026</button>
+                        <button class="btn btn-success" onclick="approvePayrollLive()">✔ اعتماد وترحيل القيد المحاسبي</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الموظف</th>
+                                <th>الأساسي</th>
+                                <th>البدلات</th>
+                                <th>أيام العمل</th>
+                                <th>ساعات إضافي</th>
+                                <th>قيمة الإضافي</th>
+                                <th>خصم تأخير/غياب</th>
+                                <th style="background: #ecfdf5; color: #065f46;">صافي الراتب</th>
+                                <th>الحالة</th>
+                                <th>قسيمة الراتب</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>محمد أحمد عثمان</strong></td>
+                                <td>550.000</td>
+                                <td>100.000</td>
+                                <td>30 يوم</td>
+                                <td><input type="number" class="form-control" style="width: 70px; height: 32px; text-align: center;" value="12" oninput="updatePayrollRow(this, 550, 100, 2.5)"></td>
+                                <td class="overtime-val">30.000</td>
+                                <td style="color: #e11d48;">0.000</td>
+                                <td style="font-weight: 800; color: #16a34a; font-size: 15px;" class="net-salary">680.000 د.أ</td>
+                                <td><span class="badge badge-success">جاهز للاعتماد</span></td>
+                                <td><button class="btn btn-outline" style="height: 28px; font-size: 11px;" onclick="previewDoc('payslip', 'محمد أحمد عثمان', 680)">🖨️ طباعة قسيمة</button></td>
+                            </tr>
+                            <tr>
+                                <td><strong>سارة يوسف النجار</strong></td>
+                                <td>700.000</td>
+                                <td>150.000</td>
+                                <td>30 يوم</td>
+                                <td><input type="number" class="form-control" style="width: 70px; height: 32px; text-align: center;" value="0" oninput="updatePayrollRow(this, 700, 150, 3.5)"></td>
+                                <td class="overtime-val">0.000</td>
+                                <td style="color: #e11d48;">23.330</td>
+                                <td style="font-weight: 800; color: #16a34a; font-size: 15px;" class="net-salary">826.670 د.أ</td>
+                                <td><span class="badge badge-success">جاهز للاعتماد</span></td>
+                                <td><button class="btn btn-outline" style="height: 28px; font-size: 11px;" onclick="previewDoc('payslip', 'سارة يوسف النجار', 826.67)">🖨️ طباعة قسيمة</button></td>
+                            </tr>
+                            <tr>
+                                <td><strong>عمر خالد الزعبي</strong></td>
+                                <td>450.000</td>
+                                <td>50.000</td>
+                                <td>30 يوم</td>
+                                <td><input type="number" class="form-control" style="width: 70px; height: 32px; text-align: center;" value="18" oninput="updatePayrollRow(this, 450, 50, 2.0)"></td>
+                                <td class="overtime-val">36.000</td>
+                                <td style="color: #e11d48;">0.000</td>
+                                <td style="font-weight: 800; color: #16a34a; font-size: 15px;" class="net-salary">536.000 د.أ</td>
+                                <td><span class="badge badge-success">جاهز للاعتماد</span></td>
+                                <td><button class="btn btn-outline" style="height: 28px; font-size: 11px;" onclick="previewDoc('payslip', 'عمر خالد الزعبي', 536)">🖨️ طباعة قسيمة</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Accounting Entry Preview -->
+                <div id="journalEntryBox" style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; display: none;">
+                    <div style="font-weight: 800; color: #1e293b; margin-bottom: 8px;">📋 قيد اليومية الآلي المولد عند اعتماد المسير:</div>
+                    <div style="font-family: monospace; font-size: 13px; color: #334155; line-height: 1.8;">
+                        • من حـ/ مصروف الرواتب والأجور (5101) : <strong>2,042.670 د.أ</strong> (مدين)<br>
+                        • إلى حـ/ الرواتب المستحقة أو البنك (2104) : <strong>2,042.670 د.أ</strong> (دائن)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 7: Official Printable Templates Preview-->
+        <!-- ========================================== -->
+        <div id="tab-forms" class="tab-panel">
+            <div class="card no-print">
+                <div class="card-header">
+                    <div>
+                        <h2>🖨️ استعراض وطباعة النماذج الرسمية (A4 Official Document Templates)</h2>
+                        <p>نماذج معتمدة جاهزة للطباعة والتوقيع المباشر</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-outline" onclick="previewDoc('commencement')">📄 نموذج مباشرة عمل</button>
+                        <button class="btn btn-outline" onclick="previewDoc('leave')">📄 نموذج طلب إجازة</button>
+                        <button class="btn btn-outline" onclick="previewDoc('settlement')">📄 تصفية نهاية الخدمة</button>
+                        <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة النموذج الحالي</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Printable Sheet Area -->
+            <div class="document-sheet" id="printSheetArea">
+                <!-- Content injected dynamically by JS previewDoc() -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-msg">
+        <span id="toastIcon">✔</span>
+        <span id="toastText">تمت العملية بنجاح</span>
+    </div>
+
+    <!-- Interactive JavaScript Engine -->
+    <script>
+        // Data Store
+        let employees = [
+            { id: 1, code: 'EMP-001', name: 'محمد أحمد عثمان', role: 'محاسب عام', dept: 'الإدارة المالية', hire: '2023-01-01', basic: 550, residencyExp: '2026-08-21', passportExp: '2028-05-10', status: 'Active' },
+            { id: 2, code: 'EMP-002', name: 'سارة يوسف النجار', role: 'مسؤولة مشتريات', dept: 'المستودعات', hire: '2024-06-01', basic: 700, residencyExp: '2027-04-15', passportExp: '2029-01-20', status: 'Active' },
+            { id: 3, code: 'EMP-003', name: 'عمر خالد الزعبي', role: 'مندوب مبيعات', dept: 'التسويق', hire: '2021-03-15', basic: 450, residencyExp: '2027-02-28', passportExp: '2026-09-13', status: 'Active' },
+            { id: 4, code: 'EMP-004', name: 'طارق نبيل الصالح', role: 'مشرف إنتاج', dept: 'المطبخ والإنتاج', hire: '2022-09-01', basic: 600, residencyExp: '2027-11-30', passportExp: '2028-10-15', status: 'OnLeave' }
+        ];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+            
+            const targetPanel = document.getElementById(tabId);
+            if (targetPanel) targetPanel.classList.add('active');
+            
+            const activeBtn = Array.from(document.querySelectorAll('.nav-tab')).find(b => b.getAttribute('onclick')?.includes(tabId));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            if (tabId === 'tab-forms') {
+                previewDoc('commencement');
+            }
+        }
+
+        function toggleHrLive(isChecked) {
+            const sidebarGroup = document.getElementById('sidebarHrGroup');
+            if (isChecked) {
+                sidebarGroup.style.display = 'block';
+                showToast('✅ تم تفعيل الموارد البشرية (EnableHR = 1) وظهور التبويبات في القائمة الجانبية');
+            } else {
+                sidebarGroup.style.display = 'none';
+                showToast('ℹ️ تم تعطيل الموارد البشرية (EnableHR = 0) وإخفاء القوائم مع حفظ البيانات');
+            }
+        }
+
+        function renderEmployees() {
+            const tbody = document.getElementById('employeesTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            employees.forEach(emp => {
+                const tr = document.createElement('tr');
+                const isResExp = new Date(emp.residencyExp) < new Date('2026-08-26');
+                const isPassExpSoon = new Date(emp.passportExp) < new Date('2026-09-30');
+
+                tr.innerHTML = `
+                    <td><strong>${emp.code}</strong></td>
+                    <td><strong>${emp.name}</strong></td>
+                    <td>${emp.role} <span style="color: #64748b; font-size: 11px;">(${emp.dept})</span></td>
+                    <td>${emp.hire}</td>
+                    <td><strong>${emp.basic.toFixed(2)} د.أ</strong></td>
+                    <td>
+                        <span class="badge ${isResExp ? 'badge-danger' : 'badge-success'}">
+                            ${emp.residencyExp} ${isResExp ? '⚠️ منتهية' : '✔ سارية'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${isPassExpSoon ? 'badge-warning' : 'badge-success'}">
+                            ${emp.passportExp} ${isPassExpSoon ? '🟠 تجديد قريب' : '✔ ساري'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${emp.status === 'Active' ? 'badge-success' : 'badge-warning'}">
+                            ${emp.status === 'Active' ? '✔ على رأس العمل' : '🏖️ في إجازة'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-outline" style="height: 28px; font-size: 11px;" onclick="showToast('📋 تم فتح بطاقة الموظف والحقول المخصصة')">✏️ بطاقة الموظف</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function calculateLiveLeaveBalance() {
+            const sel = document.getElementById('leaveEmpSelect');
+            const opt = sel.options[sel.selectedIndex];
+            const hireDate = new Date(opt.getAttribute('data-hire'));
+            const usedDays = parseFloat(opt.getAttribute('data-used'));
+            const today = new Date('2026-08-26');
+
+            const diffDays = Math.floor((today - hireDate) / (1000 * 60 * 60 * 24));
+            const accrued = Math.floor((diffDays / 365.25) * 30);
+            const remaining = accrued - usedDays;
+
+            document.getElementById('leaveTotalAccrued').innerText = accrued + ' يوم';
+            document.getElementById('leaveRemainingBalance').innerText = remaining + ' يوم';
+        }
+
+        function submitLeaveLive() {
+            showToast('✔ تم اعتماد طلب الإجازة وتحديث رصيد الموظف تلقائياً.');
+            previewDoc('leave');
+            switchTab('tab-forms');
+        }
+
+        function calcDelayLive() {
+            const actualDate = new Date(document.getElementById('resumptionActualDate').value);
+            const expectedDate = new Date('2026-08-24');
+            const diffDays = Math.max(0, Math.floor((actualDate - expectedDate) / (1000 * 60 * 60 * 24)));
+            
+            document.getElementById('delayDaysCount').innerText = diffDays;
+            const box = document.getElementById('delayAlertBox');
+            if (diffDays > 0) {
+                box.style.display = 'block';
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
+        function completeResumptionLive() {
+            showToast('✔ تم اعتماد مباشرة العمل وتحديث حالة الموظف إلى نشط (Active) بنجاح!');
+        }
+
+        function calculateEOSLive() {
+            const hire = new Date(document.getElementById('eosHireDate').value);
+            const end = new Date(document.getElementById('eosEndDate').value);
+            const basic = parseFloat(document.getElementById('eosBasicSalary').value) || 0;
+            const allowances = parseFloat(document.getElementById('eosAllowances').value) || 0;
+            const leaveDays = parseFloat(document.getElementById('eosLeaveDays').value) || 0;
+            const deductions = parseFloat(document.getElementById('eosDeductions').value) || 0;
+            const reason = document.getElementById('eosReason').value;
+
+            const totalSalary = basic + allowances;
+            const diffMs = end - hire;
+            const totalDays = Math.max(0, diffMs / (1000 * 60 * 60 * 24));
+            const years = Math.floor(totalDays / 365.25);
+            const remDays = totalDays % 365.25;
+            const months = Math.floor(remDays / 30.4375);
+            const days = Math.floor(remDays % 30.4375);
+
+            document.getElementById('eosDurationTxt').innerText = `${years} سنوات، ${months} أشهر، ${days} يوماً`;
+
+            // Calculate Base Indemnity
+            let fullIndemnity = 0;
+            const decimalYears = totalDays / 365.25;
+            if (decimalYears <= 5) {
+                fullIndemnity = decimalYears * (totalSalary * 0.5);
+            } else {
+                fullIndemnity = (5 * (totalSalary * 0.5)) + ((decimalYears - 5) * totalSalary);
+            }
+
+            // Reason Factor
+            let factor = 1.0;
+            if (reason === 'resignation') {
+                if (decimalYears < 3) factor = 0;
+                else if (decimalYears < 5) factor = 1/3;
+                else if (decimalYears < 10) factor = 2/3;
+                else factor = 1.0;
+            }
+
+            const finalIndemnity = fullIndemnity * factor;
+            const leaveComp = (totalSalary / 30) * leaveDays;
+            const netPayout = Math.max(0, finalIndemnity + leaveComp - deductions);
+
+            document.getElementById('eosIndemnityTxt').innerText = finalIndemnity.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' د.أ';
+            document.getElementById('eosLeaveCompTxt').innerText = leaveComp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' د.أ';
+            document.getElementById('eosNetTotalTxt').innerText = netPayout.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' د.أ';
+        }
+
+        function updatePayrollRow(input, basic, allowances, hourRate) {
+            const otHours = parseFloat(input.value) || 0;
+            const otAmount = otHours * hourRate;
+            const tr = input.closest('tr');
+            tr.querySelector('.overtime-val').innerText = otAmount.toFixed(3);
+            const net = basic + allowances + otAmount;
+            tr.querySelector('.net-salary').innerText = net.toFixed(3) + ' د.أ';
+        }
+
+        function approvePayrollLive() {
+            document.getElementById('journalEntryBox').style.display = 'block';
+            showToast('✔ تم اعتماد مسير الرواتب وترحيل القيد المحاسبي آلياً إلى الحسابات العامة!');
+        }
+
+        function previewDoc(type, empName = 'محمد أحمد عثمان', salary = 680) {
+            const container = document.getElementById('printSheetArea');
+            if (!container) return;
+
+            if (type === 'commencement') {
+                container.innerHTML = `
+                    <div class="doc-header">
+                        <div class="doc-logo-area">
+                            <span style="font-size: 32px;">🏢</span>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800;">شركة الخضار للتجارة العامة</h3>
+                                <p style="font-size: 11px; color: #64748b;">قسم إدارة الموارد البشرية والشؤون الإدارية</p>
+                            </div>
+                        </div>
+                        <div class="doc-title-box">
+                            <h2 style="font-size: 16px; font-weight: 800; color: #1e1b4b;">نموذج مباشرة عمل (تعيين / عودة من إجازة)</h2>
+                            <span style="font-size: 11px; color: #64748b;">الرقم المرجعي: HR-RES-2026-089</span>
+                        </div>
+                    </div>
+
+                    <div class="doc-section-title">1. البيانات الأساسية للموظف</div>
+                    <table style="width: 100%; font-size: 13px; line-height: 2;">
+                        <tr>
+                            <td style="width: 25%; color: #64748b;">اسم الموظف:</td>
+                            <td style="width: 25%;"><strong>طارق نبيل الصالح</strong></td>
+                            <td style="width: 25%; color: #64748b;">الرقم الوظيفي:</td>
+                            <td style="width: 25%;"><strong>EMP-004</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">المسمى الوظيفي:</td>
+                            <td><strong>مشرف إنتاج</strong></td>
+                            <td style="color: #64748b;">القسم / الإدارة:</td>
+                            <td><strong>المطبخ والإنتاج المركزي</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">الرقم المدني / القومي:</td>
+                            <td><strong>291051288411</strong></td>
+                            <td style="color: #64748b;">الجنسية:</td>
+                            <td><strong>أردني</strong></td>
+                        </tr>
+                    </table>
+
+                    <div class="doc-section-title">2. تفاصيل مباشرة العمل</div>
+                    <table style="width: 100%; font-size: 13px; line-height: 2;">
+                        <tr>
+                            <td style="width: 25%; color: #64748b;">نوع المباشرة:</td>
+                            <td style="width: 25%;"><strong>عودة من إجازة سنوية</strong></td>
+                            <td style="width: 25%; color: #64748b;">تاريخ المباشرة الفعلي:</td>
+                            <td style="width: 25%;"><strong>2026-08-26</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">تاريخ العودة المقرر أصلاً:</td>
+                            <td>2026-08-24</td>
+                            <td style="color: #64748b;">أيام التأخير المسجلة:</td>
+                            <td><strong style="color: #b91c1c;">2 يوم (تأخير معتمد)</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">ملاحظات المباشرة:</td>
+                            <td colspan="3">تمت مباشرة العمل بانتظام بعد قضاء الإجازة المقررة وتم تسليم المهام.</td>
+                        </tr>
+                    </table>
+
+                    <div class="doc-signatures">
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">توقيع الموظف</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">المدير المباشر</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">إدارة الموارد البشرية</span>
+                            <div class="sig-line"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'leave') {
+                container.innerHTML = `
+                    <div class="doc-header">
+                        <div class="doc-logo-area">
+                            <span style="font-size: 32px;">🏢</span>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800;">شركة الخضار للتجارة العامة</h3>
+                                <p style="font-size: 11px; color: #64748b;">طلب وموافقة إجازة رسمية</p>
+                            </div>
+                        </div>
+                        <div class="doc-title-box">
+                            <h2 style="font-size: 16px; font-weight: 800; color: #1e1b4b;">نموذج طلب إجازة</h2>
+                            <span style="font-size: 11px; color: #64748b;">الرقم: LV-2026-042</span>
+                        </div>
+                    </div>
+
+                    <div class="doc-section-title">بيانات الإجازة والرصيد</div>
+                    <table style="width: 100%; font-size: 13px; line-height: 2.2;">
+                        <tr>
+                            <td style="color: #64748b; width: 25%;">اسم الموظف:</td>
+                            <td style="width: 25%;"><strong>محمد أحمد عثمان</strong></td>
+                            <td style="color: #64748b; width: 25%;">نوع الإجازة:</td>
+                            <td style="width: 25%;"><strong>إجازة سنوية اعتيادية</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">تاريخ بدء الإجازة:</td>
+                            <td><strong>2026-09-01</strong></td>
+                            <td style="color: #64748b;">تاريخ الانتهاء:</td>
+                            <td><strong>2026-09-15</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">المدة المطلوبة:</td>
+                            <td><strong>15 يوماً</strong></td>
+                            <td style="color: #64748b;">رصيد الإجازات المتبقي:</td>
+                            <td><strong style="color: #15803d;">94 يوماً</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">الموظف القائم بالعمل البديل:</td>
+                            <td>سارة يوسف النجار</td>
+                            <td style="color: #64748b;">عنوان ورقم التواصل أثناء الإجازة:</td>
+                            <td>0791234567</td>
+                        </tr>
+                    </table>
+
+                    <div class="doc-signatures">
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">توقيع طالب الإجازة</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">موافقة الموظف البديل</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">اعتماد الموارد البشرية</span>
+                            <div class="sig-line"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'settlement') {
+                container.innerHTML = `
+                    <div class="doc-header">
+                        <div class="doc-logo-area">
+                            <span style="font-size: 32px;">🏢</span>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800;">شركة الخضار للتجارة العامة</h3>
+                                <p style="font-size: 11px; color: #64748b;">تصفية المستحقات ونهاية الخدمة</p>
+                            </div>
+                        </div>
+                        <div class="doc-title-box">
+                            <h2 style="font-size: 16px; font-weight: 800; color: #1e1b4b;">مخالصة نهائية وإبراء ذمة</h2>
+                            <span style="font-size: 11px; color: #64748b;">الرقم: EOS-2026-015</span>
+                        </div>
+                    </div>
+
+                    <div class="doc-section-title">بيانات مدة الخدمة والراتب</div>
+                    <table style="width: 100%; font-size: 13px; line-height: 2;">
+                        <tr>
+                            <td style="color: #64748b; width: 25%;">اسم الموظف:</td>
+                            <td style="width: 25%;"><strong>عمر خالد الزعبي</strong></td>
+                            <td style="color: #64748b; width: 25%;">الوظيفة:</td>
+                            <td style="width: 25%;">مندوب مبيعات</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">تاريخ التعيين:</td>
+                            <td>2018-03-01</td>
+                            <td style="color: #64748b;">تاريخ انتهاء الخدمة:</td>
+                            <td>2026-08-26</td>
+                        </tr>
+                        <tr>
+                            <td style="color: #64748b;">مدة الخدمة الإجمالية:</td>
+                            <td><strong>8 سنوات و 5 أشهر و 25 يوماً</strong></td>
+                            <td style="color: #64748b;">الراتب الأساسي + البدلات:</td>
+                            <td><strong>750.000 د.أ</strong></td>
+                        </tr>
+                    </table>
+
+                    <div class="doc-section-title">التفصيل المالي ومكافأة نهاية الخدمة</div>
+                    <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-top: 8px;">
+                        <tr style="background: #f1f5f9; font-weight: 700;">
+                            <td style="padding: 6px;">البند</td>
+                            <td style="padding: 6px; text-align: left;">المبلغ (د.أ)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">مكافأة نهاية الخدمة القانونية المستحقة</td>
+                            <td style="padding: 6px; text-align: left; border-bottom: 1px solid #e2e8f0;"><strong>4,468.750</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px; border-bottom: 1px solid #e2e8f0;">بدل رصيد إجازات سنوية غير مستهلكة (24 يوماً)</td>
+                            <td style="padding: 6px; text-align: left; border-bottom: 1px solid #e2e8f0;"><strong>600.000</strong></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px; border-bottom: 1px solid #e2e8f0; color: #b91c1c;">يخصم: سلف وذمم والتزامات مستحقة</td>
+                            <td style="padding: 6px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #b91c1c;"><strong>(50.000)</strong></td>
+                        </tr>
+                        <tr style="background: #ecfdf5; font-size: 14px; font-weight: 800; color: #065f46;">
+                            <td style="padding: 8px;">الصافي الإجمالي المستحق للصرف</td>
+                            <td style="padding: 8px; text-align: left;">5,018.750 د.أ</td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-top: 20px; font-size: 12px; line-height: 1.8; color: #475569; background: #f8fafc; padding: 12px; border-radius: 6px;">
+                        <strong>إقرار إبراء ذمة واستلام:</strong> أقر أنا الموقع أدناه بأنني استلمت كافة مستحقاتي العمالية والمالية ومكافأة نهاية الخدمة وبدل الإجازات بالكامل نقداً/بشيك، وأبرئ ذمة الشركة من أي مطالبات مالية أو قانونية سابقة أو لاحقة.
+                    </div>
+
+                    <div class="doc-signatures">
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">توقيع وإقرار الموظف</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">المحاسبة والشؤون المالية</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">المدير العام / المفوض</span>
+                            <div class="sig-line"></div>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'payslip') {
+                container.innerHTML = `
+                    <div class="doc-header">
+                        <div class="doc-logo-area">
+                            <span style="font-size: 32px;">🏢</span>
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 800;">شركة الخضار للتجارة العامة</h3>
+                                <p style="font-size: 11px; color: #64748b;">مسير الرواتب - قسيمة راتب شهرية</p>
+                            </div>
+                        </div>
+                        <div class="doc-title-box">
+                            <h2 style="font-size: 16px; font-weight: 800; color: #1e1b4b;">قسيمة راتب موظف (Pay Slip)</h2>
+                            <span style="font-size: 11px; color: #64748b;">عن شهر: 08 / 2026</span>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; font-size: 13px; line-height: 2; margin-bottom: 16px;">
+                        <tr>
+                            <td style="color: #64748b; width: 25%;">اسم الموظف:</td>
+                            <td style="width: 25%;"><strong>${empName}</strong></td>
+                            <td style="color: #64748b; width: 25%;">تاريخ الإصدار:</td>
+                            <td style="width: 25%;">2026-08-26</td>
+                        </tr>
+                    </table>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
+                            <strong style="color: #15803d;">➕ الاستحقاقات والبدلات:</strong>
+                            <table style="width: 100%; font-size: 12.5px; margin-top: 8px;">
+                                <tr><td>الراتب الأساسي:</td><td style="text-align: left;">550.000 د.أ</td></tr>
+                                <tr><td>بدل سكن وانتقال:</td><td style="text-align: left;">100.000 د.أ</td></tr>
+                                <tr><td>ساعات إضافي معتمدة:</td><td style="text-align: left;">30.000 د.أ</td></tr>
+                                <tr style="border-top: 1px solid #cbd5e1; font-weight: 700;"><td>إجمالي الاستحقاقات:</td><td style="text-align: left;">680.000 د.أ</td></tr>
+                            </table>
+                        </div>
+
+                        <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
+                            <strong style="color: #b91c1c;">➖ الاستقطاعات والخصومات:</strong>
+                            <table style="width: 100%; font-size: 12.5px; margin-top: 8px;">
+                                <tr><td>غياب أو تأخير:</td><td style="text-align: left;">0.000 د.أ</td></tr>
+                                <tr><td>سلف وقروض:</td><td style="text-align: left;">0.000 د.أ</td></tr>
+                                <tr><td>خصومات أخرى:</td><td style="text-align: left;">0.000 د.أ</td></tr>
+                                <tr style="border-top: 1px solid #cbd5e1; font-weight: 700;"><td>إجمالي الاستقطاعات:</td><td style="text-align: left;">0.000 د.أ</td></tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 16px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 800; font-size: 15px; color: #065f46;">صافي الراتب المستحق للصرف:</span>
+                        <span style="font-weight: 900; font-size: 20px; color: #047857;">${salary.toFixed(3)} د.أ</span>
+                    </div>
+
+                    <div class="doc-signatures">
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">توقيع المستلم</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">المحاسب المسؤول</span>
+                            <div class="sig-line"></div>
+                        </div>
+                        <div>
+                            <span style="font-weight: 700; color: #475569;">المدير المالي</span>
+                            <div class="sig-line"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function openAddCustomFieldModal() {
+            const fieldName = prompt("أدخل اسم الحقل المخصص الجديد (مثال: رقم التأمين الصحي، فصيلة الدم، رقم رخصة القيادة):");
+            if (fieldName && fieldName.trim()) {
+                const tbody = document.getElementById('customFieldsTableBody');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${fieldName.trim()}</strong></td>
+                    <td><code>Custom_${Date.now().toString().slice(-4)}</code></td>
+                    <td><span class="badge badge-info">📅 تاريخ / نص</span></td>
+                    <td><span class="badge badge-danger">🔔 مفعل للتنبيه</span></td>
+                    <td><strong>30 يوم</strong></td>
+                    <td>لا</td>
+                `;
+                tbody.appendChild(tr);
+                showToast(`✅ تم إضافة الحقل المخصص "${fieldName.trim()}" وتفعيله في قاعدة البيانات!`);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastText').innerText = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3500);
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderEmployees();
+            calculateLiveLeaveBalance();
+            calculateEOSLive();
+            previewDoc('commencement');
+        });
+    </script>
+</body>
+</html>

@@ -6703,7 +6703,9 @@ GO
 
 -- =============================================
 -- Trigger: trg_Shifts_StatusChange
--- عند تعديل حالة الوردية [Status] يتم حذف القيد القديم وإنشاؤه مجدداً
+-- عند تعديل حالة الوردية [Status]:
+--  - عند التغيير إلى [Open]: يتم مسح قيد ShiftClose من قيود اليومية وإلغاء ترحيل الفواتير والسندات.
+--  - عند التغيير إلى [Closed]: يتم ترحيل الفواتير والسندات وإنشاء قيد فرق الكاش (عجز/فائض) اعتماداً على العمليات النقدية (الكاش) فقط.
 -- =============================================
 IF OBJECT_ID('[Sales].[trg_Shifts_StatusChange]', 'TR') IS NOT NULL
     DROP TRIGGER [Sales].[trg_Shifts_StatusChange];
@@ -6724,157 +6726,239 @@ BEGIN
 
         DECLARE @ShiftID INT;
         DECLARE @NewStatus NVARCHAR(50);
-    DECLARE @OldStatus NVARCHAR(50);
+        DECLARE @OldStatus NVARCHAR(50);
 
-    DECLARE shift_cursor CURSOR LOCAL FAST_FORWARD FOR
-    SELECT i.ShiftID, i.Status AS NewStatus, d.Status AS OldStatus
-    FROM inserted i
-    INNER JOIN deleted d ON i.ShiftID = d.ShiftID
-    WHERE i.Status <> d.Status;
+        DECLARE shift_cursor CURSOR LOCAL FAST_FORWARD FOR
+        SELECT i.ShiftID, i.Status AS NewStatus, d.Status AS OldStatus
+        FROM inserted i
+        INNER JOIN deleted d ON i.ShiftID = d.ShiftID
+        WHERE i.Status <> d.Status;
 
-    OPEN shift_cursor;
-    FETCH NEXT FROM shift_cursor INTO @ShiftID, @NewStatus, @OldStatus;
+        OPEN shift_cursor;
+        FETCH NEXT FROM shift_cursor INTO @ShiftID, @NewStatus, @OldStatus;
 
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        -- 1. مسح القيد القديم للوردية من قيود اليومية
-        DELETE FROM [Accounting].[JournalEntries]
-        WHERE ReferenceType = 'ShiftClose' AND ReferenceID = @ShiftID;
-
-        IF OBJECT_ID('[Accounting].[JournalHeader]', 'U') IS NOT NULL AND OBJECT_ID('[Accounting].[JournalEntryDetails]', 'U') IS NOT NULL
+        WHILE @@FETCH_STATUS = 0
         BEGIN
-            DELETE FROM [Accounting].[JournalEntryDetails]
-            WHERE JID IN (
-                SELECT JID FROM [Accounting].[JournalHeader]
-                WHERE ReferenceType = 'ShiftClose' AND ReferenceID = @ShiftID
-            );
-
-            DELETE FROM [Accounting].[JournalHeader]
+            -- 1. مسح قيد الوردية القديم من قيود اليومية دائماً عند أي تغيير في الحالة
+            DELETE FROM [Accounting].[JournalEntries]
             WHERE ReferenceType = 'ShiftClose' AND ReferenceID = @ShiftID;
-        END
 
-        -- 2. إعادة إنشاء القيد عند تحول الحالة إلى Closed أو Open حسب وجود فرق كاش
-        IF @NewStatus IN ('Closed', 'Open')
-        BEGIN
-            DECLARE @StartingCash DECIMAL(18,3) = 0;
-            DECLARE @EndingCash DECIMAL(18,3) = 0;
-            DECLARE @UserID INT;
-            DECLARE @TotalPaidSales DECIMAL(18,3) = 0;
-            DECLARE @TotalPaidPurchases DECIMAL(18,3) = 0;
-            DECLARE @TotalReceiptV DECIMAL(18,3) = 0;
-            DECLARE @TotalPaymentV DECIMAL(18,3) = 0;
-            DECLARE @ExpectedCash DECIMAL(18,3) = 0;
-            DECLARE @Difference DECIMAL(18,3) = 0;
-
-            SELECT @StartingCash = ISNULL(StartingCash, 0),
-                   @EndingCash = ISNULL(EndingCash, 0),
-                   @UserID = UserID
-            FROM [Sales].[Shifts]
-            WHERE ShiftID = @ShiftID;
-
-            -- مبيعات مسددة
-            SELECT @TotalPaidSales = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
-            FROM [Sales].[InvoiceHeader]
-            WHERE InvType = 'Sales' AND ShiftID = @ShiftID;
-
-            -- مشتريات مسددة
-            SELECT @TotalPaidPurchases = ISNULL(SUM(CAST(PaidAmount AS DECIMAL(18,3))), 0)
-            FROM [Sales].[InvoiceHeader]
-            WHERE InvType = 'Purchase' AND ShiftID = @ShiftID;
-
-            -- سندات القبض
-            SELECT @TotalReceiptV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
-            FROM [Accounting].[Vouchers]
-            WHERE VoucherType = 'Receipt' AND ShiftID = @ShiftID;
-
-            -- سندات الصرف
-            SELECT @TotalPaymentV = ISNULL(SUM(CAST(Amount AS DECIMAL(18,3))), 0)
-            FROM [Accounting].[Vouchers]
-            WHERE VoucherType = 'Payment' AND ShiftID = @ShiftID;
-
-            SET @ExpectedCash = @StartingCash + @TotalPaidSales - @TotalPaidPurchases + @TotalReceiptV - @TotalPaymentV;
-            SET @Difference = @EndingCash - @ExpectedCash;
-
-            -- إنشاء القيد فقط إذا كان هناك فرق كاش فعلي
-            IF ABS(@Difference) > 0.001
+            IF OBJECT_ID('[Accounting].[JournalHeader]', 'U') IS NOT NULL AND OBJECT_ID('[Accounting].[JournalEntryDetails]', 'U') IS NOT NULL
             BEGIN
-                DECLARE @CashboxID INT;
-                DECLARE @RevenueIDchild INT;
-                DECLARE @AbsDiff DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
-                DECLARE @JournalDesc NVARCHAR(255);
-                DECLARE @EntryNo INT;
-                DECLARE @DebitAccID INT;
-                DECLARE @CreditAccID INT;
+                DELETE FROM [Accounting].[JournalEntryDetails]
+                WHERE JID IN (
+                    SELECT JID FROM [Accounting].[JournalHeader]
+                    WHERE ReferenceType = 'ShiftClose' AND ReferenceID = @ShiftID
+                );
 
-                SELECT TOP 1 @CashboxID = AccountID
-                FROM [Accounting].[ChartOfAccounts]
-                WHERE AccountCode = '1101';
+                DELETE FROM [Accounting].[JournalHeader]
+                WHERE ReferenceType = 'ShiftClose' AND ReferenceID = @ShiftID;
+            END
 
-                SELECT TOP 1 @RevenueIDchild = AccountID
-                FROM [Accounting].[ChartOfAccounts]
-                WHERE AccountCode = '411';
+            -- 2. إنشاء قيد تسوية فرق الكاش فقط وحصراً عند إغلاق الوردية (Closed)
+            IF @NewStatus = 'Closed'
+            BEGIN
+                DECLARE @StartingCash           DECIMAL(18,3) = 0;
+                DECLARE @EndingCash             DECIMAL(18,3) = 0;
+                DECLARE @UserID                 INT;
+                DECLARE @TotalPaidSalesCash     DECIMAL(18,3) = 0;
+                DECLARE @TotalPaidPurchasesCash DECIMAL(18,3) = 0;
+                DECLARE @TotalReceiptV          DECIMAL(18,3) = 0;
+                DECLARE @TotalPaymentV          DECIMAL(18,3) = 0;
+                DECLARE @ExpectedCash           DECIMAL(18,3) = 0;
+                DECLARE @Difference             DECIMAL(18,3) = 0;
 
-                IF @CashboxID IS NOT NULL AND @RevenueIDchild IS NOT NULL
+                SELECT @StartingCash = ISNULL(StartingCash, 0),
+                       @EndingCash   = ISNULL(EndingCash, 0),
+                       @UserID       = UserID
+                FROM [Sales].[Shifts]
+                WHERE ShiftID = @ShiftID;
+
+                -- مبيعات مسددة كاش فقط بالدرج (الحساب 1101 ومشتقاته حصراً أو الفواتير النقدية)
+                SELECT @TotalPaidSalesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+                FROM (
+                    -- فواتير مجزأة: الدفعات النقدية على حساب الصندوق 1101
+                    SELECT sp.Amount AS PaidCash
+                    FROM [Sales].[InvoicePaymentSplits] sp
+                    INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+                    LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+                    WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+                      AND (
+                          c.AccountCode = '1101'
+                          OR c.AccountCode LIKE '1101%'
+                          OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+                      )
+
+                    UNION ALL
+
+                    -- فواتير مباشرة (غير مجزأة): مسددة كاش
+                    SELECT h.PaidAmount AS PaidCash
+                    FROM [Sales].[InvoiceHeader] h
+                    LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+                    WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+                      AND h.PaidAmount > 0
+                      AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+                      AND (
+                          c.AccountID IS NULL
+                          OR c.AccountCode = '1101'
+                          OR c.AccountCode LIKE '1101%'
+                          OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+                      )
+                ) CashSalesUnion;
+
+                -- مشتريات مسددة كاش فقط من الدرج (الحساب 1101 ومشتقاته حصراً)
+                SELECT @TotalPaidPurchasesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+                FROM (
+                    -- فواتير مشتريات مجزأة: الدفعات النقدية
+                    SELECT sp.Amount AS PaidCash
+                    FROM [Sales].[InvoicePaymentSplits] sp
+                    INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+                    LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+                    WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+                      AND (
+                          c.AccountCode = '1101'
+                          OR c.AccountCode LIKE '1101%'
+                          OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+                      )
+
+                    UNION ALL
+
+                    -- فواتير مشتريات مباشرة: مسددة كاش
+                    SELECT h.PaidAmount AS PaidCash
+                    FROM [Sales].[InvoiceHeader] h
+                    LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+                    WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+                      AND h.PaidAmount > 0
+                      AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+                      AND (
+                          c.AccountID IS NULL
+                          OR c.AccountCode = '1101'
+                          OR c.AccountCode LIKE '1101%'
+                          OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+                      )
+                ) CashPurchasesUnion;
+
+                -- سندات القبض الكاش بالدرج
+                SELECT @TotalReceiptV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+                FROM [Accounting].[Vouchers] v
+                LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+                    CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+                ) = c.AccountID
+                WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+                  AND (
+                      c.AccountCode = '1101'
+                      OR c.AccountCode LIKE '1101%'
+                      OR v.PaymentMethod = 'Cash'
+                      OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+                  );
+
+                -- سندات الصرف الكاش من الدرج (المصروفات النقدية)
+                SELECT @TotalPaymentV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+                FROM [Accounting].[Vouchers] v
+                LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+                    CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+                ) = c.AccountID
+                WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+                  AND (
+                      c.AccountCode = '1101'
+                      OR c.AccountCode LIKE '1101%'
+                      OR v.PaymentMethod = 'Cash'
+                      OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+                  );
+
+                -- الكاش المتوقع = كاش الافتتاح + مبيعات نقدية - مشتريات نقدية + سندات قبض نقدية - سندات صرف نقدية
+                SET @ExpectedCash = @StartingCash + @TotalPaidSalesCash - @TotalPaidPurchasesCash + @TotalReceiptV - @TotalPaymentV;
+                SET @Difference = @EndingCash - @ExpectedCash;
+
+                -- إنشاء القيد فقط إذا كان هناك فرق كاش فعلي
+                IF ABS(@Difference) > 0.001
                 BEGIN
-                    IF @Difference > 0
+                    DECLARE @CashboxID INT;
+                    DECLARE @RevenueIDchild INT;
+                    DECLARE @AbsDiff DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
+                    DECLARE @JournalDesc NVARCHAR(255);
+                    DECLARE @EntryNo INT;
+                    DECLARE @DebitAccID INT;
+                    DECLARE @CreditAccID INT;
+
+                    SELECT TOP 1 @CashboxID = AccountID
+                    FROM [Accounting].[ChartOfAccounts]
+                    WHERE (AccountCode = '1101' OR AccountCode LIKE '1101%' OR LOWER(AccountName) LIKE '%cash%' OR AccountName LIKE N'%كاش%' OR AccountName LIKE N'%صندوق%')
+                      AND IsTransactional = 1;
+
+                    SELECT TOP 1 @RevenueIDchild = AccountID
+                    FROM [Accounting].[ChartOfAccounts]
+                    WHERE AccountCode = '412';
+
+                    IF @RevenueIDchild IS NULL
                     BEGIN
-                        SET @JournalDesc = N'فائض كاش - ' + CASE WHEN @NewStatus = 'Closed' THEN N'إغلاق' ELSE N'تعديل' END + N' الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
-                        SET @DebitAccID  = @CashboxID;
-                        SET @CreditAccID = @RevenueIDchild;
-                    END
-                    ELSE
-                    BEGIN
-                        SET @JournalDesc = N'عجز كاش - ' + CASE WHEN @NewStatus = 'Closed' THEN N'إغلاق' ELSE N'تعديل' END + N' الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
-                        SET @DebitAccID  = @RevenueIDchild;
-                        SET @CreditAccID = @CashboxID;
+                        SELECT TOP 1 @RevenueIDchild = AccountID
+                        FROM [Accounting].[ChartOfAccounts]
+                        WHERE AccountCode = '411' OR (AccountName LIKE N'%إيراد%' OR AccountName LIKE N'%أرباح%' OR AccountCode LIKE '4%')
+                          AND IsTransactional = 1;
                     END
 
-                    IF OBJECT_ID('[Accounting].[seq_EntryNo]', 'SO') IS NOT NULL
+                    IF @CashboxID IS NOT NULL AND @RevenueIDchild IS NOT NULL
                     BEGIN
-                        SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+                        IF @Difference > 0
+                        BEGIN
+                            SET @JournalDesc = N'فائض كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                            SET @DebitAccID  = @CashboxID;
+                            SET @CreditAccID = @RevenueIDchild;
+                        END
+                        ELSE
+                        BEGIN
+                            SET @JournalDesc = N'عجز كاش - إغلاق الوردية رقم ' + CAST(@ShiftID AS NVARCHAR(20));
+                            SET @DebitAccID  = @RevenueIDchild;
+                            SET @CreditAccID = @CashboxID;
+                        END
 
-                        INSERT INTO [Accounting].[JournalEntries]
-                            (EntryNo, EntryDate, ReferenceType, ReferenceID,
-                             AccountID, DebitAmount, CreditAmount, Description, UserID)
-                        VALUES
-                            (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
-                             @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID),
-                            (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
-                             @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
+                        IF OBJECT_ID('[Accounting].[seq_EntryNo]', 'SO') IS NOT NULL
+                        BEGIN
+                            SET @EntryNo = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+
+                            INSERT INTO [Accounting].[JournalEntries]
+                                (EntryNo, EntryDate, ReferenceType, ReferenceID,
+                                 AccountID, DebitAmount, CreditAmount, Description, UserID)
+                            VALUES
+                                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                                 @DebitAccID, @AbsDiff, 0, @JournalDesc, @UserID),
+                                (@EntryNo, GETDATE(), N'ShiftClose', @ShiftID,
+                                 @CreditAccID, 0, @AbsDiff, @JournalDesc, @UserID);
+                        END
                     END
                 END
             END
+
+            -- 3. تحديث حالة الترحيل IsPosted للفواتير والسندات التابعة للوردية
+            IF @NewStatus = 'Closed'
+            BEGIN
+                -- عند إغلاق الوردية: ترحيل كافة الفواتير والسندات المرتبطة بهذه الوردية
+                UPDATE [Sales].[InvoiceHeader]
+                SET IsPosted = 1
+                WHERE ShiftID = @ShiftID AND IsPosted = 0;
+
+                UPDATE [Accounting].[Vouchers]
+                SET IsPosted = 1
+                WHERE ShiftID = @ShiftID AND IsPosted = 0;
+            END
+            ELSE IF @NewStatus = 'Open'
+            BEGIN
+                -- عند إعادة فتح الوردية: الغاء ترحيل كافة الفواتير والسندات (تحويلها إلى غير مرحل 0)
+                UPDATE [Sales].[InvoiceHeader]
+                SET IsPosted = 0
+                WHERE ShiftID = @ShiftID AND IsPosted = 1;
+
+                UPDATE [Accounting].[Vouchers]
+                SET IsPosted = 0
+                WHERE ShiftID = @ShiftID AND IsPosted = 1;
+            END
+
+            FETCH NEXT FROM shift_cursor INTO @ShiftID, @NewStatus, @OldStatus;
         END
 
-        -- 3. تحديث حالة الترحيل IsPosted للفواتير والسندات التابعة للوردية
-        IF @NewStatus = 'Closed'
-        BEGIN
-            -- عند إغلاق الوردية: ترحيل كافة الفواتير والسندات المرتبطة بهذه الوردية
-            UPDATE [Sales].[InvoiceHeader]
-            SET IsPosted = 1
-            WHERE ShiftID = @ShiftID AND IsPosted = 0;
-
-            UPDATE [Accounting].[Vouchers]
-            SET IsPosted = 1
-            WHERE ShiftID = @ShiftID AND IsPosted = 0;
-        END
-        ELSE IF @NewStatus = 'Open'
-        BEGIN
-            -- عند إعادة فتح الوردية: الغاء ترحيل كافة الفواتير والسندات (تحويلها إلى غير مرحل 0)
-            UPDATE [Sales].[InvoiceHeader]
-            SET IsPosted = 0
-            WHERE ShiftID = @ShiftID AND IsPosted = 1;
-
-            UPDATE [Accounting].[Vouchers]
-            SET IsPosted = 0
-            WHERE ShiftID = @ShiftID AND IsPosted = 1;
-        END
-
-        FETCH NEXT FROM shift_cursor INTO @ShiftID, @NewStatus, @OldStatus;
-    END
-
-    CLOSE shift_cursor;
-    DEALLOCATE shift_cursor;
+        CLOSE shift_cursor;
+        DEALLOCATE shift_cursor;
 
         COMMIT TRANSACTION;
     END TRY
@@ -12318,13 +12402,14 @@ BEGIN
         Email,
         Logo,
         ISNULL(UnifiedPartnerSearch, 1) AS UnifiedPartnerSearch,
-        ISNULL(CurrencySymbol, N'د.ك') AS CurrencySymbol,
+        ISNULL(CurrencySymbol, N'') AS CurrencySymbol,
         ISNULL(UseDetailedInvoiceDesign, 0) AS UseDetailedInvoiceDesign,
         ISNULL(UseCustomInvoiceDesign, 0) AS UseCustomInvoiceDesign,
         ISNULL(ProductionMode, 0) AS ProductionMode,
         ISNULL(EnableDailyOrders, 0) AS EnableDailyOrders,
         DeliverySystemMode,
-        ISNULL(EnableSalesDiscounts, 0) AS EnableSalesDiscounts
+        ISNULL(EnableSalesDiscounts, 0) AS EnableSalesDiscounts,
+        ISNULL(EnableHR, 0) AS EnableHR
     FROM [Settings].[CompanySettings];
 END
 GO
@@ -12344,7 +12429,8 @@ CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
     @ProductionMode BIT = 0,
     @EnableDailyOrders BIT = 0,
     @DeliverySystemMode NVARCHAR(50) = NULL,
-    @EnableSalesDiscounts BIT = 0
+    @EnableSalesDiscounts BIT = 0,
+    @EnableHR BIT = 0
 AS
 BEGIN
     IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
@@ -12362,13 +12448,14 @@ BEGIN
             ProductionMode = @ProductionMode,
             EnableDailyOrders = @EnableDailyOrders,
             DeliverySystemMode = @DeliverySystemMode,
-            EnableSalesDiscounts = @EnableSalesDiscounts
+            EnableSalesDiscounts = @EnableSalesDiscounts,
+            EnableHR = @EnableHR
         WHERE SettingID = 1;
     END
     ELSE
     BEGIN
-        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders, DeliverySystemMode, EnableSalesDiscounts)
-        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders, @DeliverySystemMode, @EnableSalesDiscounts);
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders, DeliverySystemMode, EnableSalesDiscounts, EnableHR)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders, @DeliverySystemMode, @EnableSalesDiscounts, @EnableHR);
     END
 END
 GO
@@ -12401,7 +12488,8 @@ CREATE PROCEDURE [Settings].[sp_CompanySettings_Save_Ctrl]
     @Email NVARCHAR(150) = NULL,
     @EnableDailyOrders BIT = NULL,
     @DeliverySystemMode NVARCHAR(50) = NULL,
-    @EnableSalesDiscounts BIT = NULL
+    @EnableSalesDiscounts BIT = NULL,
+    @EnableHR BIT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -12417,7 +12505,8 @@ BEGIN
         Email = COALESCE(@Email, Email),
         EnableDailyOrders = ISNULL(@EnableDailyOrders, EnableDailyOrders),
         DeliverySystemMode = COALESCE(@DeliverySystemMode, DeliverySystemMode),
-        EnableSalesDiscounts = ISNULL(@EnableSalesDiscounts, EnableSalesDiscounts);
+        EnableSalesDiscounts = ISNULL(@EnableSalesDiscounts, EnableSalesDiscounts),
+        EnableHR = ISNULL(@EnableHR, EnableHR);
 END
 GO
 
@@ -13718,3 +13807,1148 @@ BEGIN
     GROUP BY p.PartnerName, prod.ProductName
     ORDER BY p.PartnerName, TotalSalesValue DESC;
 END
+GO
+
+PRINT N'=== [40] Adding HR System Schema, Tables, and Stored Procedures ===';
+
+-- 1. Alter CompanySettings to add EnableHR
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableHR')
+BEGIN
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableHR BIT NOT NULL DEFAULT 0;
+END
+GO
+
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL DROP PROCEDURE [Settings].[sp_CompanySettings_Save];
+GO
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
+    @CompanyName NVARCHAR(200),
+    @Address NVARCHAR(255) = NULL,
+    @Phone NVARCHAR(50) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Logo VARBINARY(MAX) = NULL,
+    @UnifiedPartnerSearch BIT = 1,
+    @CurrencySymbol NVARCHAR(100) = NULL,
+    @UseDetailedInvoiceDesign BIT = 0,
+    @UseCustomInvoiceDesign BIT = 0,
+    @ProductionMode BIT = 0,
+    @EnableDailyOrders BIT = 0,
+    @DeliverySystemMode NVARCHAR(50) = NULL,
+    @EnableSalesDiscounts BIT = 0,
+    @EnableHR BIT = 0
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
+    BEGIN
+        UPDATE [Settings].[CompanySettings]
+        SET CompanyName = @CompanyName,
+            Address = @Address,
+            Phone = @Phone,
+            Email = @Email,
+            Logo = @Logo,
+            UnifiedPartnerSearch = @UnifiedPartnerSearch,
+            CurrencySymbol = @CurrencySymbol,
+            UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign,
+            UseCustomInvoiceDesign = @UseCustomInvoiceDesign,
+            ProductionMode = @ProductionMode,
+            EnableDailyOrders = @EnableDailyOrders,
+            DeliverySystemMode = @DeliverySystemMode,
+            EnableSalesDiscounts = @EnableSalesDiscounts,
+            EnableHR = @EnableHR
+        WHERE SettingID = 1;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [Settings].[CompanySettings] (SettingID, CompanyName, Address, Phone, Email, Logo, UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign, UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders, DeliverySystemMode, EnableSalesDiscounts, EnableHR)
+        VALUES (1, @CompanyName, @Address, @Phone, @Email, @Logo, @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign, @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders, @DeliverySystemMode, @EnableSalesDiscounts, @EnableHR);
+    END
+END
+GO
+
+-- 2. Create Schema [HR]
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'HR')
+BEGIN
+    EXEC('CREATE SCHEMA [HR]');
+END
+GO
+
+-- 3. Create Tables
+
+-- Table: [HR].[Employees]
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Employees' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[Employees] (
+        EmployeeID INT IDENTITY(1,1) PRIMARY KEY,
+        EmployeeCode NVARCHAR(50) NOT NULL UNIQUE,
+        FullName NVARCHAR(150) NOT NULL,
+        NationalID NVARCHAR(50) NULL,
+        CivilID NVARCHAR(50) NULL,
+        PassportNumber NVARCHAR(50) NULL,
+        Nationality NVARCHAR(100) NULL,
+        Gender NVARCHAR(20) NULL,
+        BirthDate DATE NULL,
+        JobTitle NVARCHAR(100) NULL,
+        Department NVARCHAR(100) NULL,
+        HireDate DATE NOT NULL,
+        ContractType NVARCHAR(50) NULL, -- الدوام: كامل / جزئي / مؤقت
+        BasicSalary DECIMAL(18,3) NOT NULL DEFAULT 0,
+        HousingAllowance DECIMAL(18,3) NOT NULL DEFAULT 0,
+        TransportAllowance DECIMAL(18,3) NOT NULL DEFAULT 0,
+        OtherAllowances DECIMAL(18,3) NOT NULL DEFAULT 0,
+        BankName NVARCHAR(100) NULL,
+        IBAN NVARCHAR(100) NULL,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Active', -- Active, OnLeave, Resigned, Terminated
+        Notes NVARCHAR(MAX) NULL,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        CreatedBy NVARCHAR(100) NULL,
+        UpdatedAt DATETIME NULL,
+        UpdatedBy NVARCHAR(100) NULL
+    );
+END
+GO
+
+-- Table: [HR].[CustomFieldDefinitions] (تعريف الحقول المخصصة والتنبيهات)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CustomFieldDefinitions' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[CustomFieldDefinitions] (
+        FieldID INT IDENTITY(1,1) PRIMARY KEY,
+        FieldKey NVARCHAR(50) NOT NULL UNIQUE,
+        FieldNameAr NVARCHAR(100) NOT NULL,
+        FieldType NVARCHAR(50) NOT NULL DEFAULT 'Text', -- Text, Number, Date, Dropdown, File
+        OptionsJson NVARCHAR(MAX) NULL,
+        IsAlertable BIT NOT NULL DEFAULT 0, -- تفعيل التنبيه المسبق قبل الانتهاء
+        AlertDaysBefore INT NOT NULL DEFAULT 30, -- عدد الأيام قبل الانتهاء
+        IsRequired BIT NOT NULL DEFAULT 0,
+        SortOrder INT NOT NULL DEFAULT 0,
+        IsActive BIT NOT NULL DEFAULT 1,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
+    );
+
+    -- Insert Default Custom Fields
+    INSERT INTO [HR].[CustomFieldDefinitions] (FieldKey, FieldNameAr, FieldType, IsAlertable, AlertDaysBefore, IsRequired, SortOrder, IsActive)
+    VALUES 
+    (N'ResidencyExpiryDate', N'تاريخ انتهاء الإقامة', N'Date', 1, 30, 0, 1, 1),
+    (N'PassportExpiryDate', N'تاريخ انتهاء جواز السفر', N'Date', 1, 60, 0, 2, 1),
+    (N'DrivingLicenseExpiry', N'تاريخ انتهاء رخصة القيادة', N'Date', 1, 30, 0, 3, 1),
+    (N'MedicalInsuranceExpiry', N'تاريخ انتهاء التأمين الصحي', N'Date', 1, 30, 0, 4, 1),
+    (N'ContractRenewalDate', N'تاريخ تجديد عقد العمل', N'Date', 1, 45, 0, 5, 1),
+    (N'BloodType', N'فصيلة الدم', N'Text', 0, 0, 0, 6, 1);
+END
+GO
+
+-- Table: [HR].[EmployeeCustomValues] (تخزين قيم الحقول عمودياً لكل موظف EAV)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'EmployeeCustomValues' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[EmployeeCustomValues] (
+        ValueID INT IDENTITY(1,1) PRIMARY KEY,
+        EmployeeID INT NOT NULL FOREIGN KEY REFERENCES [HR].[Employees](EmployeeID) ON DELETE CASCADE,
+        FieldID INT NOT NULL FOREIGN KEY REFERENCES [HR].[CustomFieldDefinitions](FieldID) ON DELETE CASCADE,
+        TextValue NVARCHAR(MAX) NULL,
+        DateValue DATETIME NULL,
+        NumericValue DECIMAL(18,3) NULL,
+        UpdatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT UQ_Employee_Field UNIQUE(EmployeeID, FieldID)
+    );
+END
+GO
+
+-- Table: [HR].[LeaveTypes] (أنواع الإجازات)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LeaveTypes' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[LeaveTypes] (
+        LeaveTypeID INT IDENTITY(1,1) PRIMARY KEY,
+        TypeName NVARCHAR(100) NOT NULL,
+        AnnualDaysAllowance INT NOT NULL DEFAULT 30,
+        IsPaid BIT NOT NULL DEFAULT 1,
+        RequiresApproval BIT NOT NULL DEFAULT 1
+    );
+
+    -- Default Leave Types
+    INSERT INTO [HR].[LeaveTypes] (TypeName, AnnualDaysAllowance, IsPaid, RequiresApproval)
+    VALUES 
+    (N'إجازة سنوية اعتيادية', 30, 1, 1),
+    (N'إجازة مرضية', 14, 1, 1),
+    (N'إجازة طارئة / عارضة', 6, 1, 1),
+    (N'إجازة بدون راتب', 0, 0, 1),
+    (N'إجازة حج', 15, 1, 1),
+    (N'إجازة أمومة / وضع', 70, 1, 1);
+END
+GO
+
+-- Table: [HR].[EmployeeLeaves] (سجل الإجازات ومباشرة العمل)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'EmployeeLeaves' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[EmployeeLeaves] (
+        LeaveID INT IDENTITY(1,1) PRIMARY KEY,
+        EmployeeID INT NOT NULL FOREIGN KEY REFERENCES [HR].[Employees](EmployeeID) ON DELETE CASCADE,
+        LeaveTypeID INT NOT NULL FOREIGN KEY REFERENCES [HR].[LeaveTypes](LeaveTypeID),
+        StartDate DATE NOT NULL,
+        EndDate DATE NOT NULL,
+        DaysCount INT NOT NULL,
+        Reason NVARCHAR(MAX) NULL,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Approved', -- Pending, Approved, Rejected, Completed
+        ExpectedReturnDate DATE NOT NULL,
+        ActualReturnDate DATE NULL,
+        ResumptionDate DATE NULL, -- تاريخ مباشرة العمل الفعلي
+        DelayDays INT NOT NULL DEFAULT 0, -- أيام التأخير عن موعد العودة
+        ResumptionNotes NVARCHAR(MAX) NULL,
+        ApprovedBy NVARCHAR(100) NULL,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
+    );
+END
+GO
+
+-- Table: [HR].[Attendance] (الحضور والانصراف والإضافي/الخصم)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Attendance' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[Attendance] (
+        AttendanceID INT IDENTITY(1,1) PRIMARY KEY,
+        EmployeeID INT NOT NULL FOREIGN KEY REFERENCES [HR].[Employees](EmployeeID) ON DELETE CASCADE,
+        AttendanceDate DATE NOT NULL,
+        CheckIn TIME NULL,
+        CheckOut TIME NULL,
+        WorkHours DECIMAL(5,2) NOT NULL DEFAULT 8.0,
+        OvertimeHours DECIMAL(5,2) NOT NULL DEFAULT 0.0,
+        OvertimeDays DECIMAL(5,2) NOT NULL DEFAULT 0.0,
+        DelayMinutes INT NOT NULL DEFAULT 0,
+        AbsenceDeductionDays DECIMAL(5,2) NOT NULL DEFAULT 0.0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Present', -- Present, Absent, Leave, Holiday, Late
+        Notes NVARCHAR(MAX) NULL,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT UQ_Employee_AttendanceDate UNIQUE(EmployeeID, AttendanceDate)
+    );
+END
+GO
+
+-- Table: [HR].[PayrollBatches] (مسير الرواتب الشهري)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PayrollBatches' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[PayrollBatches] (
+        BatchID INT IDENTITY(1,1) PRIMARY KEY,
+        Month INT NOT NULL,
+        Year INT NOT NULL,
+        BatchDate DATE NOT NULL DEFAULT GETDATE(),
+        TotalBasic DECIMAL(18,3) NOT NULL DEFAULT 0,
+        TotalAllowances DECIMAL(18,3) NOT NULL DEFAULT 0,
+        TotalOvertime DECIMAL(18,3) NOT NULL DEFAULT 0,
+        TotalDeductions DECIMAL(18,3) NOT NULL DEFAULT 0,
+        TotalNetSalary DECIMAL(18,3) NOT NULL DEFAULT 0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Draft', -- Draft, Approved, Paid
+        ApprovedBy NVARCHAR(100) NULL,
+        ApprovedAt DATETIME NULL,
+        JournalID INT NULL,
+        Notes NVARCHAR(MAX) NULL,
+        CONSTRAINT UQ_Payroll_Month_Year UNIQUE(Month, Year)
+    );
+END
+GO
+
+-- Table: [HR].[PayrollDetails] (تفاصيل مسير الرواتب لكل موظف)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PayrollDetails' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[PayrollDetails] (
+        PayrollDetailID INT IDENTITY(1,1) PRIMARY KEY,
+        BatchID INT NOT NULL FOREIGN KEY REFERENCES [HR].[PayrollBatches](BatchID) ON DELETE CASCADE,
+        EmployeeID INT NOT NULL FOREIGN KEY REFERENCES [HR].[Employees](EmployeeID),
+        BasicSalary DECIMAL(18,3) NOT NULL DEFAULT 0,
+        HousingAllowance DECIMAL(18,3) NOT NULL DEFAULT 0,
+        TransportAllowance DECIMAL(18,3) NOT NULL DEFAULT 0,
+        OtherAllowances DECIMAL(18,3) NOT NULL DEFAULT 0,
+        WorkingDays INT NOT NULL DEFAULT 30,
+        AbsentDays INT NOT NULL DEFAULT 0,
+        OvertimeHours DECIMAL(5,2) NOT NULL DEFAULT 0,
+        OvertimeAmount DECIMAL(18,3) NOT NULL DEFAULT 0,
+        OvertimeDays DECIMAL(5,2) NOT NULL DEFAULT 0,
+        DeductionDays DECIMAL(5,2) NOT NULL DEFAULT 0,
+        DeductionAmount DECIMAL(18,3) NOT NULL DEFAULT 0,
+        DelayDeductions DECIMAL(18,3) NOT NULL DEFAULT 0,
+        AdvancesDeductions DECIMAL(18,3) NOT NULL DEFAULT 0,
+        NetSalary DECIMAL(18,3) NOT NULL DEFAULT 0,
+        PaymentStatus NVARCHAR(50) NOT NULL DEFAULT 'Unpaid',
+        Notes NVARCHAR(MAX) NULL
+    );
+END
+GO
+
+-- Table: [HR].[EndOfServiceSettlements] (مكافأة نهاية الخدمة وتصفية المستحقات)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'EndOfServiceSettlements' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[EndOfServiceSettlements] (
+        SettlementID INT IDENTITY(1,1) PRIMARY KEY,
+        EmployeeID INT NOT NULL FOREIGN KEY REFERENCES [HR].[Employees](EmployeeID),
+        HireDate DATE NOT NULL,
+        EndDate DATE NOT NULL,
+        ServiceYears INT NOT NULL DEFAULT 0,
+        ServiceMonths INT NOT NULL DEFAULT 0,
+        ServiceDays INT NOT NULL DEFAULT 0,
+        DepartureReason NVARCHAR(50) NOT NULL, -- Resignation, Termination, ContractExpiry, Retirement
+        LastBasicSalary DECIMAL(18,3) NOT NULL DEFAULT 0,
+        LastAllowances DECIMAL(18,3) NOT NULL DEFAULT 0,
+        IndemnityAmount DECIMAL(18,3) NOT NULL DEFAULT 0, -- مكافأة نهاية الخدمة
+        UnpaidLeaveBalanceDays DECIMAL(5,2) NOT NULL DEFAULT 0,
+        UnpaidLeaveCompensation DECIMAL(18,3) NOT NULL DEFAULT 0, -- تعويض رصيد الإجازات
+        OtherEntitlements DECIMAL(18,3) NOT NULL DEFAULT 0,
+        DeductionsLoans DECIMAL(18,3) NOT NULL DEFAULT 0,
+        NetSettlementAmount DECIMAL(18,3) NOT NULL DEFAULT 0, -- صافي المستحق النهائي
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Draft', -- Draft, Approved, Paid
+        Notes NVARCHAR(MAX) NULL,
+        ApprovedBy NVARCHAR(100) NULL,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE()
+    );
+END
+GO
+
+-- 4. Stored Procedures in [HR]
+
+-- 4.1. sp_Employee_GetAll (مع الترقيم 10 والبحث)
+IF OBJECT_ID('[HR].[sp_Employee_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Employee_GetAll];
+GO
+CREATE PROCEDURE [HR].[sp_Employee_GetAll]
+    @PageNumber INT = 1,
+    @PageSize INT = 10,
+    @SearchText NVARCHAR(150) = NULL,
+    @Department NVARCHAR(100) = NULL,
+    @Status NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+    DECLARE @Query NVARCHAR(150) = '%' + ISNULL(@SearchText, '') + '%';
+
+    -- Count total records
+    SELECT COUNT(1) AS TotalCount
+    FROM [HR].[Employees] e
+    WHERE (ISNULL(@SearchText, '') = '' OR e.FullName LIKE @Query OR e.EmployeeCode LIKE @Query OR e.NationalID LIKE @Query OR e.CivilID LIKE @Query)
+      AND (ISNULL(@Department, '') = '' OR e.Department = @Department)
+      AND (ISNULL(@Status, '') = '' OR e.Status = @Status);
+
+    -- Paged Data
+    SELECT 
+        e.*,
+        (e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances) AS TotalSalary
+    FROM [HR].[Employees] e
+    WHERE (ISNULL(@SearchText, '') = '' OR e.FullName LIKE @Query OR e.EmployeeCode LIKE @Query OR e.NationalID LIKE @Query OR e.CivilID LIKE @Query)
+      AND (ISNULL(@Department, '') = '' OR e.Department = @Department)
+      AND (ISNULL(@Status, '') = '' OR e.Status = @Status)
+    ORDER BY e.EmployeeID DESC
+    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 4.2. sp_Employee_GetById
+IF OBJECT_ID('[HR].[sp_Employee_GetById]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Employee_GetById];
+GO
+CREATE PROCEDURE [HR].[sp_Employee_GetById]
+    @EmployeeID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Result 1: Header
+    SELECT e.*, (e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances) AS TotalSalary
+    FROM [HR].[Employees] e
+    WHERE e.EmployeeID = @EmployeeID;
+
+    -- Result 2: Custom Values
+    SELECT 
+        v.ValueID,
+        v.EmployeeID,
+        v.FieldID,
+        d.FieldKey,
+        d.FieldNameAr,
+        d.FieldType,
+        d.IsAlertable,
+        d.AlertDaysBefore,
+        v.TextValue,
+        v.DateValue,
+        v.NumericValue
+    FROM [HR].[EmployeeCustomValues] v
+    INNER JOIN [HR].[CustomFieldDefinitions] d ON v.FieldID = d.FieldID
+    WHERE v.EmployeeID = @EmployeeID;
+END
+GO
+
+-- 4.3. sp_Employee_Save
+IF OBJECT_ID('[HR].[sp_Employee_Save]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Employee_Save];
+GO
+CREATE PROCEDURE [HR].[sp_Employee_Save]
+    @EmployeeID INT OUTPUT,
+    @EmployeeCode NVARCHAR(50),
+    @FullName NVARCHAR(150),
+    @NationalID NVARCHAR(50) = NULL,
+    @CivilID NVARCHAR(50) = NULL,
+    @PassportNumber NVARCHAR(50) = NULL,
+    @Nationality NVARCHAR(100) = NULL,
+    @Gender NVARCHAR(20) = NULL,
+    @BirthDate DATE = NULL,
+    @JobTitle NVARCHAR(100) = NULL,
+    @Department NVARCHAR(100) = NULL,
+    @HireDate DATE,
+    @ContractType NVARCHAR(50) = NULL,
+    @BasicSalary DECIMAL(18,3) = 0,
+    @HousingAllowance DECIMAL(18,3) = 0,
+    @TransportAllowance DECIMAL(18,3) = 0,
+    @OtherAllowances DECIMAL(18,3) = 0,
+    @BankName NVARCHAR(100) = NULL,
+    @IBAN NVARCHAR(100) = NULL,
+    @Status NVARCHAR(50) = 'Active',
+    @Notes NVARCHAR(MAX) = NULL,
+    @User NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @EmployeeID > 0 AND EXISTS (SELECT 1 FROM [HR].[Employees] WHERE EmployeeID = @EmployeeID)
+    BEGIN
+        UPDATE [HR].[Employees]
+        SET EmployeeCode = @EmployeeCode,
+            FullName = @FullName,
+            NationalID = @NationalID,
+            CivilID = @CivilID,
+            PassportNumber = @PassportNumber,
+            Nationality = @Nationality,
+            Gender = @Gender,
+            BirthDate = @BirthDate,
+            JobTitle = @JobTitle,
+            Department = @Department,
+            HireDate = @HireDate,
+            ContractType = @ContractType,
+            BasicSalary = @BasicSalary,
+            HousingAllowance = @HousingAllowance,
+            TransportAllowance = @TransportAllowance,
+            OtherAllowances = @OtherAllowances,
+            BankName = @BankName,
+            IBAN = @IBAN,
+            Status = @Status,
+            Notes = @Notes,
+            UpdatedAt = GETDATE(),
+            UpdatedBy = @User
+        WHERE EmployeeID = @EmployeeID;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [HR].[Employees] 
+        (EmployeeCode, FullName, NationalID, CivilID, PassportNumber, Nationality, Gender, BirthDate, JobTitle, Department, HireDate, ContractType, BasicSalary, HousingAllowance, TransportAllowance, OtherAllowances, BankName, IBAN, Status, Notes, CreatedAt, CreatedBy)
+        VALUES 
+        (@EmployeeCode, @FullName, @NationalID, @CivilID, @PassportNumber, @Nationality, @Gender, @BirthDate, @JobTitle, @Department, @HireDate, @ContractType, @BasicSalary, @HousingAllowance, @TransportAllowance, @OtherAllowances, @BankName, @IBAN, @Status, @Notes, GETDATE(), @User);
+
+        SET @EmployeeID = SCOPE_IDENTITY();
+    END
+END
+GO
+
+-- 4.4. sp_Employee_SaveCustomValue
+IF OBJECT_ID('[HR].[sp_Employee_SaveCustomValue]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Employee_SaveCustomValue];
+GO
+CREATE PROCEDURE [HR].[sp_Employee_SaveCustomValue]
+    @EmployeeID INT,
+    @FieldID INT,
+    @TextValue NVARCHAR(MAX) = NULL,
+    @DateValue DATETIME = NULL,
+    @NumericValue DECIMAL(18,3) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1 FROM [HR].[EmployeeCustomValues] WHERE EmployeeID = @EmployeeID AND FieldID = @FieldID)
+    BEGIN
+        UPDATE [HR].[EmployeeCustomValues]
+        SET TextValue = @TextValue,
+            DateValue = @DateValue,
+            NumericValue = @NumericValue,
+            UpdatedAt = GETDATE()
+        WHERE EmployeeID = @EmployeeID AND FieldID = @FieldID;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [HR].[EmployeeCustomValues] (EmployeeID, FieldID, TextValue, DateValue, NumericValue, UpdatedAt)
+        VALUES (@EmployeeID, @FieldID, @TextValue, @DateValue, @NumericValue, GETDATE());
+    END
+END
+GO
+
+-- 4.5. sp_Employee_Delete
+IF OBJECT_ID('[HR].[sp_Employee_Delete]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Employee_Delete];
+GO
+CREATE PROCEDURE [HR].[sp_Employee_Delete]
+    @EmployeeID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [HR].[Employees] WHERE EmployeeID = @EmployeeID;
+END
+GO
+
+-- 4.6. sp_CustomField_GetAll
+IF OBJECT_ID('[HR].[sp_CustomField_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_CustomField_GetAll];
+GO
+CREATE PROCEDURE [HR].[sp_CustomField_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM [HR].[CustomFieldDefinitions] ORDER BY SortOrder ASC, FieldID ASC;
+END
+GO
+
+-- 4.7. sp_CustomField_Save
+IF OBJECT_ID('[HR].[sp_CustomField_Save]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_CustomField_Save];
+GO
+CREATE PROCEDURE [HR].[sp_CustomField_Save]
+    @FieldID INT OUTPUT,
+    @FieldKey NVARCHAR(50),
+    @FieldNameAr NVARCHAR(100),
+    @FieldType NVARCHAR(50),
+    @OptionsJson NVARCHAR(MAX) = NULL,
+    @IsAlertable BIT = 0,
+    @AlertDaysBefore INT = 30,
+    @IsRequired BIT = 0,
+    @SortOrder INT = 0,
+    @IsActive BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @FieldID > 0 AND EXISTS (SELECT 1 FROM [HR].[CustomFieldDefinitions] WHERE FieldID = @FieldID)
+    BEGIN
+        UPDATE [HR].[CustomFieldDefinitions]
+        SET FieldKey = @FieldKey,
+            FieldNameAr = @FieldNameAr,
+            FieldType = @FieldType,
+            OptionsJson = @OptionsJson,
+            IsAlertable = @IsAlertable,
+            AlertDaysBefore = @AlertDaysBefore,
+            IsRequired = @IsRequired,
+            SortOrder = @SortOrder,
+            IsActive = @IsActive
+        WHERE FieldID = @FieldID;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [HR].[CustomFieldDefinitions] (FieldKey, FieldNameAr, FieldType, OptionsJson, IsAlertable, AlertDaysBefore, IsRequired, SortOrder, IsActive)
+        VALUES (@FieldKey, @FieldNameAr, @FieldType, @OptionsJson, @IsAlertable, @AlertDaysBefore, @IsRequired, @SortOrder, @IsActive);
+        SET @FieldID = SCOPE_IDENTITY();
+    END
+END
+GO
+
+-- 4.8. sp_CustomField_Delete
+IF OBJECT_ID('[HR].[sp_CustomField_Delete]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_CustomField_Delete];
+GO
+CREATE PROCEDURE [HR].[sp_CustomField_Delete]
+    @FieldID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM [HR].[CustomFieldDefinitions] WHERE FieldID = @FieldID;
+END
+GO
+
+-- 4.9. sp_Alerts_GetActive (حساب تنبيهات انتهاء الوثائق)
+IF OBJECT_ID('[HR].[sp_Alerts_GetActive]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Alerts_GetActive];
+GO
+CREATE PROCEDURE [HR].[sp_Alerts_GetActive]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Today DATE = CAST(GETDATE() AS DATE);
+
+    SELECT 
+        v.ValueID,
+        e.EmployeeID,
+        e.EmployeeCode,
+        e.FullName AS EmployeeName,
+        e.Department,
+        d.FieldID,
+        d.FieldKey,
+        d.FieldNameAr,
+        v.DateValue AS ExpiryDate,
+        DATEDIFF(DAY, @Today, CAST(v.DateValue AS DATE)) AS DaysRemaining,
+        CASE 
+            WHEN CAST(v.DateValue AS DATE) < @Today THEN N'Expired'
+            WHEN DATEDIFF(DAY, @Today, CAST(v.DateValue AS DATE)) <= d.AlertDaysBefore THEN N'ExpiringSoon'
+            ELSE N'Valid'
+        END AS AlertStatus
+    FROM [HR].[EmployeeCustomValues] v
+    INNER JOIN [HR].[CustomFieldDefinitions] d ON v.FieldID = d.FieldID
+    INNER JOIN [HR].[Employees] e ON v.EmployeeID = e.EmployeeID
+    WHERE d.IsAlertable = 1 
+      AND v.DateValue IS NOT NULL
+      AND DATEDIFF(DAY, @Today, CAST(v.DateValue AS DATE)) <= d.AlertDaysBefore
+    ORDER BY v.DateValue ASC;
+END
+GO
+
+-- 4.10. sp_LeaveType_GetAll
+IF OBJECT_ID('[HR].[sp_LeaveType_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_LeaveType_GetAll];
+GO
+CREATE PROCEDURE [HR].[sp_LeaveType_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM [HR].[LeaveTypes] ORDER BY LeaveTypeID ASC;
+END
+GO
+
+-- 4.11. sp_Leave_GetAll
+IF OBJECT_ID('[HR].[sp_Leave_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Leave_GetAll];
+GO
+CREATE PROCEDURE [HR].[sp_Leave_GetAll]
+    @PageNumber INT = 1,
+    @PageSize INT = 10,
+    @EmployeeID INT = NULL,
+    @Status NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    -- Total Count
+    SELECT COUNT(1) AS TotalCount
+    FROM [HR].[EmployeeLeaves] l
+    WHERE (@EmployeeID IS NULL OR l.EmployeeID = @EmployeeID)
+      AND (ISNULL(@Status, '') = '' OR l.Status = @Status);
+
+    -- Paged data
+    SELECT 
+        l.*,
+        e.EmployeeCode,
+        e.FullName AS EmployeeName,
+        e.Department,
+        t.TypeName AS LeaveTypeName
+    FROM [HR].[EmployeeLeaves] l
+    INNER JOIN [HR].[Employees] e ON l.EmployeeID = e.EmployeeID
+    INNER JOIN [HR].[LeaveTypes] t ON l.LeaveTypeID = t.LeaveTypeID
+    WHERE (@EmployeeID IS NULL OR l.EmployeeID = @EmployeeID)
+      AND (ISNULL(@Status, '') = '' OR l.Status = @Status)
+    ORDER BY l.LeaveID DESC
+    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 4.12. sp_Leave_Save
+IF OBJECT_ID('[HR].[sp_Leave_Save]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Leave_Save];
+GO
+CREATE PROCEDURE [HR].[sp_Leave_Save]
+    @LeaveID INT OUTPUT,
+    @EmployeeID INT,
+    @LeaveTypeID INT,
+    @StartDate DATE,
+    @EndDate DATE,
+    @DaysCount INT,
+    @Reason NVARCHAR(MAX) = NULL,
+    @Status NVARCHAR(50) = 'Approved',
+    @ExpectedReturnDate DATE,
+    @ApprovedBy NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @LeaveID > 0 AND EXISTS (SELECT 1 FROM [HR].[EmployeeLeaves] WHERE LeaveID = @LeaveID)
+    BEGIN
+        UPDATE [HR].[EmployeeLeaves]
+        SET EmployeeID = @EmployeeID,
+            LeaveTypeID = @LeaveTypeID,
+            StartDate = @StartDate,
+            EndDate = @EndDate,
+            DaysCount = @DaysCount,
+            Reason = @Reason,
+            Status = @Status,
+            ExpectedReturnDate = @ExpectedReturnDate,
+            ApprovedBy = @ApprovedBy
+        WHERE LeaveID = @LeaveID;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [HR].[EmployeeLeaves]
+        (EmployeeID, LeaveTypeID, StartDate, EndDate, DaysCount, Reason, Status, ExpectedReturnDate, ApprovedBy, CreatedAt)
+        VALUES
+        (@EmployeeID, @LeaveTypeID, @StartDate, @EndDate, @DaysCount, @Reason, @Status, @ExpectedReturnDate, @ApprovedBy, GETDATE());
+
+        SET @LeaveID = SCOPE_IDENTITY();
+    END
+
+    -- Update Employee Status to OnLeave if approved and date is current
+    IF @Status = 'Approved' AND CAST(GETDATE() AS DATE) BETWEEN @StartDate AND @EndDate
+    BEGIN
+        UPDATE [HR].[Employees] SET Status = 'OnLeave' WHERE EmployeeID = @EmployeeID;
+    END
+END
+GO
+
+-- 4.13. sp_Leave_RecordResumption (تسجيل مباشرة العمل وحساب التأخير)
+IF OBJECT_ID('[HR].[sp_Leave_RecordResumption]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Leave_RecordResumption];
+GO
+CREATE PROCEDURE [HR].[sp_Leave_RecordResumption]
+    @LeaveID INT,
+    @ActualReturnDate DATE,
+    @ResumptionDate DATE,
+    @ResumptionNotes NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @ExpectedReturnDate DATE;
+    DECLARE @EmployeeID INT;
+    DECLARE @DelayDays INT = 0;
+
+    SELECT @ExpectedReturnDate = ExpectedReturnDate, @EmployeeID = EmployeeID
+    FROM [HR].[EmployeeLeaves]
+    WHERE LeaveID = @LeaveID;
+
+    IF @ActualReturnDate > @ExpectedReturnDate
+    BEGIN
+        SET @DelayDays = DATEDIFF(DAY, @ExpectedReturnDate, @ActualReturnDate);
+    END
+
+    UPDATE [HR].[EmployeeLeaves]
+    SET ActualReturnDate = @ActualReturnDate,
+        ResumptionDate = @ResumptionDate,
+        DelayDays = @DelayDays,
+        ResumptionNotes = @ResumptionNotes,
+        Status = 'Completed'
+    WHERE LeaveID = @LeaveID;
+
+    -- Set Employee back to Active
+    UPDATE [HR].[Employees] SET Status = 'Active' WHERE EmployeeID = @EmployeeID;
+END
+GO
+
+-- 4.14. sp_Leave_GetBalance (حساب رصيد الإجازات المستحق والمتبقي)
+IF OBJECT_ID('[HR].[sp_Leave_GetBalance]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Leave_GetBalance];
+GO
+CREATE PROCEDURE [HR].[sp_Leave_GetBalance]
+    @EmployeeID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @HireDate DATE;
+    DECLARE @TotalServiceDays INT;
+    DECLARE @AccruedDays DECIMAL(5,2);
+    DECLARE @UsedDays INT = 0;
+
+    SELECT @HireDate = HireDate FROM [HR].[Employees] WHERE EmployeeID = @EmployeeID;
+    SET @TotalServiceDays = DATEDIFF(DAY, @HireDate, CAST(GETDATE() AS DATE));
+    SET @AccruedDays = (@TotalServiceDays / 365.25) * 30.0;
+
+    SELECT @UsedDays = ISNULL(SUM(DaysCount), 0)
+    FROM [HR].[EmployeeLeaves]
+    WHERE EmployeeID = @EmployeeID AND Status IN ('Approved', 'Completed');
+
+    SELECT 
+        @EmployeeID AS EmployeeID,
+        @HireDate AS HireDate,
+        @TotalServiceDays AS TotalServiceDays,
+        ROUND(@AccruedDays, 1) AS AccruedDays,
+        @UsedDays AS UsedDays,
+        ROUND(@AccruedDays - @UsedDays, 1) AS RemainingBalance;
+END
+GO
+
+-- 4.15. sp_Attendance_GetByDate
+IF OBJECT_ID('[HR].[sp_Attendance_GetByDate]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Attendance_GetByDate];
+GO
+CREATE PROCEDURE [HR].[sp_Attendance_GetByDate]
+    @AttendanceDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        e.EmployeeID,
+        e.EmployeeCode,
+        e.FullName AS EmployeeName,
+        e.Department,
+        e.JobTitle,
+        ISNULL(a.AttendanceID, 0) AS AttendanceID,
+        ISNULL(a.AttendanceDate, @AttendanceDate) AS AttendanceDate,
+        a.CheckIn,
+        a.CheckOut,
+        ISNULL(a.WorkHours, 8.0) AS WorkHours,
+        ISNULL(a.OvertimeHours, 0.0) AS OvertimeHours,
+        ISNULL(a.OvertimeDays, 0.0) AS OvertimeDays,
+        ISNULL(a.DelayMinutes, 0) AS DelayMinutes,
+        ISNULL(a.AbsenceDeductionDays, 0.0) AS AbsenceDeductionDays,
+        ISNULL(a.Status, 'Present') AS Status,
+        a.Notes
+    FROM [HR].[Employees] e
+    LEFT JOIN [HR].[Attendance] a ON e.EmployeeID = a.EmployeeID AND a.AttendanceDate = @AttendanceDate
+    WHERE e.Status <> 'Terminated' AND e.Status <> 'Resigned'
+    ORDER BY e.EmployeeID ASC;
+END
+GO
+
+-- 4.16. sp_Attendance_Save
+IF OBJECT_ID('[HR].[sp_Attendance_Save]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Attendance_Save];
+GO
+CREATE PROCEDURE [HR].[sp_Attendance_Save]
+    @EmployeeID INT,
+    @AttendanceDate DATE,
+    @CheckIn TIME = NULL,
+    @CheckOut TIME = NULL,
+    @WorkHours DECIMAL(5,2) = 8.0,
+    @OvertimeHours DECIMAL(5,2) = 0.0,
+    @OvertimeDays DECIMAL(5,2) = 0.0,
+    @DelayMinutes INT = 0,
+    @AbsenceDeductionDays DECIMAL(5,2) = 0.0,
+    @Status NVARCHAR(50) = 'Present',
+    @Notes NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1 FROM [HR].[Attendance] WHERE EmployeeID = @EmployeeID AND AttendanceDate = @AttendanceDate)
+    BEGIN
+        UPDATE [HR].[Attendance]
+        SET CheckIn = @CheckIn,
+            CheckOut = @CheckOut,
+            WorkHours = @WorkHours,
+            OvertimeHours = @OvertimeHours,
+            OvertimeDays = @OvertimeDays,
+            DelayMinutes = @DelayMinutes,
+            AbsenceDeductionDays = @AbsenceDeductionDays,
+            Status = @Status,
+            Notes = @Notes
+        WHERE EmployeeID = @EmployeeID AND AttendanceDate = @AttendanceDate;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [HR].[Attendance] (EmployeeID, AttendanceDate, CheckIn, CheckOut, WorkHours, OvertimeHours, OvertimeDays, DelayMinutes, AbsenceDeductionDays, Status, Notes)
+        VALUES (@EmployeeID, @AttendanceDate, @CheckIn, @CheckOut, @WorkHours, @OvertimeHours, @OvertimeDays, @DelayMinutes, @AbsenceDeductionDays, @Status, @Notes);
+    END
+END
+GO
+
+-- 4.17. sp_Payroll_GetBatches
+IF OBJECT_ID('[HR].[sp_Payroll_GetBatches]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_GetBatches];
+GO
+CREATE PROCEDURE [HR].[sp_Payroll_GetBatches]
+    @PageNumber INT = 1,
+    @PageSize INT = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    SELECT COUNT(1) AS TotalCount FROM [HR].[PayrollBatches];
+
+    SELECT * 
+    FROM [HR].[PayrollBatches]
+    ORDER BY Year DESC, Month DESC, BatchID DESC
+    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 4.18. sp_Payroll_GetBatchDetails
+IF OBJECT_ID('[HR].[sp_Payroll_GetBatchDetails]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_GetBatchDetails];
+GO
+CREATE PROCEDURE [HR].[sp_Payroll_GetBatchDetails]
+    @BatchID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- Batch Header
+    SELECT * FROM [HR].[PayrollBatches] WHERE BatchID = @BatchID;
+
+    -- Batch Details
+    SELECT 
+        d.*,
+        e.EmployeeCode,
+        e.FullName AS EmployeeName,
+        e.Department,
+        e.JobTitle
+    FROM [HR].[PayrollDetails] d
+    INNER JOIN [HR].[Employees] e ON d.EmployeeID = e.EmployeeID
+    WHERE d.BatchID = @BatchID
+    ORDER BY e.EmployeeID ASC;
+END
+GO
+
+-- 4.19. sp_Payroll_GenerateBatch
+IF OBJECT_ID('[HR].[sp_Payroll_GenerateBatch]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_GenerateBatch];
+GO
+CREATE PROCEDURE [HR].[sp_Payroll_GenerateBatch]
+    @Month INT,
+    @Year INT,
+    @User NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @BatchID INT;
+
+    -- Check if batch exists
+    SELECT @BatchID = BatchID FROM [HR].[PayrollBatches] WHERE Month = @Month AND Year = @Year;
+
+    IF @BatchID IS NULL
+    BEGIN
+        INSERT INTO [HR].[PayrollBatches] (Month, Year, BatchDate, Status, Notes)
+        VALUES (@Month, @Year, GETDATE(), 'Draft', N'مسير رواتب شهر ' + CAST(@Month AS NVARCHAR) + '/' + CAST(@Year AS NVARCHAR));
+
+        SET @BatchID = SCOPE_IDENTITY();
+    END
+    ELSE
+    BEGIN
+        DELETE FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID;
+    END
+
+    -- Populate Details from Employees and Attendance
+    INSERT INTO [HR].[PayrollDetails] 
+    (BatchID, EmployeeID, BasicSalary, HousingAllowance, TransportAllowance, OtherAllowances, WorkingDays, AbsentDays, OvertimeHours, OvertimeAmount, OvertimeDays, DeductionDays, DeductionAmount, DelayDeductions, AdvancesDeductions, NetSalary, PaymentStatus)
+    SELECT 
+        @BatchID,
+        e.EmployeeID,
+        e.BasicSalary,
+        e.HousingAllowance,
+        e.TransportAllowance,
+        e.OtherAllowances,
+        30,
+        0,
+        ISNULL(att.TotOvertimeHours, 0),
+        ROUND(ISNULL(att.TotOvertimeHours, 0) * (e.BasicSalary / 240.0 * 1.25), 3),
+        ISNULL(att.TotOvertimeDays, 0),
+        ISNULL(att.TotAbsenceDays, 0),
+        ROUND(ISNULL(att.TotAbsenceDays, 0) * (e.BasicSalary / 30.0), 3),
+        0,
+        0,
+        ROUND((e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances) + 
+              (ISNULL(att.TotOvertimeHours, 0) * (e.BasicSalary / 240.0 * 1.25)) - 
+              (ISNULL(att.TotAbsenceDays, 0) * (e.BasicSalary / 30.0)), 3),
+        'Unpaid'
+    FROM [HR].[Employees] e
+    LEFT JOIN (
+        SELECT 
+            EmployeeID,
+            SUM(OvertimeHours) AS TotOvertimeHours,
+            SUM(OvertimeDays) AS TotOvertimeDays,
+            SUM(AbsenceDeductionDays) AS TotAbsenceDays
+        FROM [HR].[Attendance]
+        WHERE MONTH(AttendanceDate) = @Month AND YEAR(AttendanceDate) = @Year
+        GROUP BY EmployeeID
+    ) att ON e.EmployeeID = att.EmployeeID
+    WHERE e.Status <> 'Terminated' AND e.Status <> 'Resigned';
+
+    -- Update Batch Totals
+    UPDATE [HR].[PayrollBatches]
+    SET TotalBasic = (SELECT ISNULL(SUM(BasicSalary), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
+        TotalAllowances = (SELECT ISNULL(SUM(HousingAllowance + TransportAllowance + OtherAllowances), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
+        TotalOvertime = (SELECT ISNULL(SUM(OvertimeAmount), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
+        TotalDeductions = (SELECT ISNULL(SUM(DeductionAmount + DelayDeductions + AdvancesDeductions), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
+        TotalNetSalary = (SELECT ISNULL(SUM(NetSalary), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID)
+    WHERE BatchID = @BatchID;
+
+    SELECT @BatchID AS BatchID;
+END
+GO
+
+-- 4.20. sp_Payroll_SaveDetail
+IF OBJECT_ID('[HR].[sp_Payroll_SaveDetail]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_SaveDetail];
+GO
+CREATE PROCEDURE [HR].[sp_Payroll_SaveDetail]
+    @PayrollDetailID INT,
+    @OvertimeHours DECIMAL(5,2),
+    @OvertimeAmount DECIMAL(18,3),
+    @DeductionAmount DECIMAL(18,3),
+    @AdvancesDeductions DECIMAL(18,3),
+    @NetSalary DECIMAL(18,3),
+    @Notes NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [HR].[PayrollDetails]
+    SET OvertimeHours = @OvertimeHours,
+        OvertimeAmount = @OvertimeAmount,
+        DeductionAmount = @DeductionAmount,
+        AdvancesDeductions = @AdvancesDeductions,
+        NetSalary = @NetSalary,
+        Notes = @Notes
+    WHERE PayrollDetailID = @PayrollDetailID;
+
+    -- Update batch totals
+    DECLARE @BatchID INT = (SELECT BatchID FROM [HR].[PayrollDetails] WHERE PayrollDetailID = @PayrollDetailID);
+    UPDATE [HR].[PayrollBatches]
+    SET TotalOvertime = (SELECT ISNULL(SUM(OvertimeAmount), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
+        TotalDeductions = (SELECT ISNULL(SUM(DeductionAmount + DelayDeductions + AdvancesDeductions), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
+        TotalNetSalary = (SELECT ISNULL(SUM(NetSalary), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID)
+    WHERE BatchID = @BatchID;
+END
+GO
+
+-- 4.21. sp_Payroll_ApproveBatch
+IF OBJECT_ID('[HR].[sp_Payroll_ApproveBatch]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_ApproveBatch];
+GO
+CREATE PROCEDURE [HR].[sp_Payroll_ApproveBatch]
+    @BatchID INT,
+    @ApprovedBy NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [HR].[PayrollBatches]
+    SET Status = 'Approved',
+        ApprovedBy = @ApprovedBy,
+        ApprovedAt = GETDATE()
+    WHERE BatchID = @BatchID;
+END
+GO
+
+-- 4.21.1. sp_Payroll_UnapproveBatch
+IF OBJECT_ID('[HR].[sp_Payroll_UnapproveBatch]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_UnapproveBatch];
+GO
+CREATE PROCEDURE [HR].[sp_Payroll_UnapproveBatch]
+    @BatchID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [HR].[PayrollBatches]
+    SET Status = 'Draft',
+        ApprovedBy = NULL,
+        ApprovedAt = NULL
+    WHERE BatchID = @BatchID;
+END
+GO
+
+-- 4.22. sp_EndOfService_GetAll
+IF OBJECT_ID('[HR].[sp_EndOfService_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_EndOfService_GetAll];
+GO
+CREATE PROCEDURE [HR].[sp_EndOfService_GetAll]
+    @PageNumber INT = 1,
+    @PageSize INT = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @Offset INT = (@PageNumber - 1) * @PageSize;
+
+    SELECT COUNT(1) AS TotalCount FROM [HR].[EndOfServiceSettlements];
+
+    SELECT 
+        s.*,
+        e.EmployeeCode,
+        e.FullName AS EmployeeName,
+        e.Department
+    FROM [HR].[EndOfServiceSettlements] s
+    INNER JOIN [HR].[Employees] e ON s.EmployeeID = e.EmployeeID
+    ORDER BY s.SettlementID DESC
+    OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 4.23. sp_EndOfService_Save
+IF OBJECT_ID('[HR].[sp_EndOfService_Save]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_EndOfService_Save];
+GO
+CREATE PROCEDURE [HR].[sp_EndOfService_Save]
+    @SettlementID INT OUTPUT,
+    @EmployeeID INT,
+    @HireDate DATE,
+    @EndDate DATE,
+    @ServiceYears INT,
+    @ServiceMonths INT,
+    @ServiceDays INT,
+    @DepartureReason NVARCHAR(50),
+    @LastBasicSalary DECIMAL(18,3),
+    @LastAllowances DECIMAL(18,3),
+    @IndemnityAmount DECIMAL(18,3),
+    @UnpaidLeaveBalanceDays DECIMAL(5,2),
+    @UnpaidLeaveCompensation DECIMAL(18,3),
+    @OtherEntitlements DECIMAL(18,3),
+    @DeductionsLoans DECIMAL(18,3),
+    @NetSettlementAmount DECIMAL(18,3),
+    @Status NVARCHAR(50) = 'Approved',
+    @Notes NVARCHAR(MAX) = NULL,
+    @ApprovedBy NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @SettlementID > 0 AND EXISTS (SELECT 1 FROM [HR].[EndOfServiceSettlements] WHERE SettlementID = @SettlementID)
+    BEGIN
+        UPDATE [HR].[EndOfServiceSettlements]
+        SET EmployeeID = @EmployeeID,
+            HireDate = @HireDate,
+            EndDate = @EndDate,
+            ServiceYears = @ServiceYears,
+            ServiceMonths = @ServiceMonths,
+            ServiceDays = @ServiceDays,
+            DepartureReason = @DepartureReason,
+            LastBasicSalary = @LastBasicSalary,
+            LastAllowances = @LastAllowances,
+            IndemnityAmount = @IndemnityAmount,
+            UnpaidLeaveBalanceDays = @UnpaidLeaveBalanceDays,
+            UnpaidLeaveCompensation = @UnpaidLeaveCompensation,
+            OtherEntitlements = @OtherEntitlements,
+            DeductionsLoans = @DeductionsLoans,
+            NetSettlementAmount = @NetSettlementAmount,
+            Status = @Status,
+            Notes = @Notes,
+            ApprovedBy = @ApprovedBy
+        WHERE SettlementID = @SettlementID;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [HR].[EndOfServiceSettlements] 
+        (EmployeeID, HireDate, EndDate, ServiceYears, ServiceMonths, ServiceDays, DepartureReason, LastBasicSalary, LastAllowances, IndemnityAmount, UnpaidLeaveBalanceDays, UnpaidLeaveCompensation, OtherEntitlements, DeductionsLoans, NetSettlementAmount, Status, Notes, ApprovedBy, CreatedAt)
+        VALUES
+        (@EmployeeID, @HireDate, @EndDate, @ServiceYears, @ServiceMonths, @ServiceDays, @DepartureReason, @LastBasicSalary, @LastAllowances, @IndemnityAmount, @UnpaidLeaveBalanceDays, @UnpaidLeaveCompensation, @OtherEntitlements, @DeductionsLoans, @NetSettlementAmount, @Status, @Notes, @ApprovedBy, GETDATE());
+
+        SET @SettlementID = SCOPE_IDENTITY();
+    END
+
+    -- Update Employee Status to Resigned or Terminated
+    IF @Status = 'Approved'
+    BEGIN
+        UPDATE [HR].[Employees] 
+        SET Status = CASE WHEN @DepartureReason = 'Resignation' THEN 'Resigned' ELSE 'Terminated' END 
+        WHERE EmployeeID = @EmployeeID;
+    END
+END
+GO
+
+PRINT N'✅ تم إنشاء سكريبت جداول وإجراءات الموارد البشرية [HR] بنجاح';
+
+IF OBJECT_ID('[Sales].[sp_Report_CustomerInvoicesDetail]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_CustomerInvoicesDetail];
+GO
+create PROCEDURE [Sales].[sp_Report_CustomerInvoicesDetail]
+    @PartnerID INT,
+    @StartDate DATETIME,
+    @EndDate   DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        h.InvID,
+        h.InvDate,
+        h.ReferenceNo,
+        h.TotalAmount,
+        h.Discount,
+        h.NetAmount,
+        ISNULL(Det.TotalCost, 0) AS TotalCOGS,
+        h.NetAmount - ISNULL(Det.TotalCost, 0) AS Profit
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN (
+        SELECT InvID, SUM(Quantity * CostPrice) AS TotalCost
+        FROM [Sales].[InvoiceDetails]
+        GROUP BY InvID
+    ) Det ON h.InvID = Det.InvID
+    WHERE h.InvType = 'Sales' AND h.IsPosted = 1
+      AND h.PartnerID = @PartnerID
+      AND h.InvDate BETWEEN @StartDate AND @EndDate
+    ORDER BY h.InvDate DESC;
+END
+go
+
+IF OBJECT_ID('[Sales].[sp_Report_CustomerSalesSummary]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_CustomerSalesSummary];
+GO
+create PROCEDURE [Sales].[sp_Report_CustomerSalesSummary]
+    @StartDate DATETIME,
+    @EndDate   DATETIME
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.PartnerID,
+        p.PartnerName,
+        p.AccountID,
+        COUNT(h.InvID) AS InvoiceCount,
+        SUM(h.NetAmount) AS TotalSales,
+        SUM(ISNULL(Det.TotalCost, 0)) AS TotalCOGS,
+        SUM(h.NetAmount) - SUM(ISNULL(Det.TotalCost, 0)) AS TotalProfit
+    FROM [Sales].[Partners] p
+    INNER JOIN [Sales].[InvoiceHeader] h ON p.PartnerID = h.PartnerID
+    LEFT JOIN (
+        SELECT InvID, SUM(Quantity * CostPrice) AS TotalCost
+        FROM [Sales].[InvoiceDetails]
+        GROUP BY InvID
+    ) Det ON h.InvID = Det.InvID
+    WHERE h.InvType = 'Sales' AND h.IsPosted = 1
+      AND h.InvDate BETWEEN @StartDate AND @EndDate
+    GROUP BY p.PartnerID, p.PartnerName, p.AccountID
+    ORDER BY TotalSales DESC;
+END
+go

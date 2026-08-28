@@ -187,22 +187,44 @@ Namespace Controls
             Dim val As Decimal = 0
             Dim txt = tb.Text.Trim().Replace(",", ".")
             If Decimal.TryParse(txt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, val) Then
+                Dim changed = False
                 Dim qDetail = TryCast(Me.DataContext, QuoteDetail)
-                If qDetail IsNot Nothing Then
+                If qDetail IsNot Nothing AndAlso qDetail.QuotedPrice <> val Then
                     qDetail.QuotedPrice = val
+                    changed = True
                 End If
                 Dim pqDetail = TryCast(Me.DataContext, PurchaseQuoteDetail)
-                If pqDetail IsNot Nothing Then
+                If pqDetail IsNot Nothing AndAlso pqDetail.UnitPrice <> val Then
                     pqDetail.UnitPrice = val
+                    changed = True
+                End If
+                If changed Then
+                    RaiseEvent AmountChanged(Me, EventArgs.Empty)
                 End If
             End If
-            RaiseEvent AmountChanged(Me, EventArgs.Empty)
         End Sub
 
         Private Sub QuotedPriceBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
             If e.Key = Key.Enter Then
                 e.Handled = True
-                QuotedPriceBox_LostFocus(QuotedPriceBox, New RoutedEventArgs())
+                Dim val As Decimal = 0
+                Dim txt = QuotedPriceBox.Text.Trim().Replace(",", ".")
+                If Decimal.TryParse(txt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, val) Then
+                    Dim changed = False
+                    Dim qDetail = TryCast(Me.DataContext, QuoteDetail)
+                    If qDetail IsNot Nothing AndAlso qDetail.QuotedPrice <> val Then
+                        qDetail.QuotedPrice = val
+                        changed = True
+                    End If
+                    Dim pqDetail = TryCast(Me.DataContext, PurchaseQuoteDetail)
+                    If pqDetail IsNot Nothing AndAlso pqDetail.UnitPrice <> val Then
+                        pqDetail.UnitPrice = val
+                        changed = True
+                    End If
+                    If changed Then
+                        RaiseEvent AmountChanged(Me, EventArgs.Empty)
+                    End If
+                End If
                 RaiseEvent RequestAddNewRow(Me, EventArgs.Empty)
             End If
         End Sub

@@ -355,6 +355,17 @@ Namespace ViewModels
         Private Sub ExecuteEditQuote(parameter As Object)
             Dim q = TryCast(parameter, PurchaseQuoteHeader)
             If q IsNot Nothing Then
+                ' Ensure PartnerName is populated if missing
+                If String.IsNullOrEmpty(q.PartnerName) AndAlso q.PartnerID > 0 Then
+                    Dim partner = FilteredPartners.FirstOrDefault(Function(p) p.PartnerID = q.PartnerID)
+                    If partner IsNot Nothing Then
+                        q.PartnerName = partner.PartnerName
+                    Else
+                        Dim pDb = _partnerService.GetPartnerByID(q.PartnerID)
+                        If pDb IsNot Nothing Then q.PartnerName = pDb.PartnerName
+                    End If
+                End If
+
                 _allDetails.Clear()
                 
                 ' تحميل التفاصيل من قاعدة البيانات باستخدام SP الجديد
@@ -385,7 +396,15 @@ Namespace ViewModels
             If _detailsPage <> newPage Then
                 DetailsPage = newPage
             Else
-                UpdateDetailsPagination()
+                If CurrentQuote IsNot Nothing AndAlso CurrentQuote.Details IsNot Nothing AndAlso CurrentQuote.Details.Count < PAGE_SIZE Then
+                    CurrentQuote.Details.Add(newItem)
+                    OnPropertyChanged(NameOf(DetailsTotalPages))
+                    OnPropertyChanged(NameOf(DetailsPageLabel))
+                    OnPropertyChanged(NameOf(CanGoNextDetails))
+                    OnPropertyChanged(NameOf(CanGoPrevDetails))
+                Else
+                    UpdateDetailsPagination()
+                End If
             End If
         End Sub
 

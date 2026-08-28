@@ -1,0 +1,62 @@
+<UserControl x:Class="Controls.DynamicFieldEditorControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="300" d:DesignWidth="600"
+             FlowDirection="RightToLeft">
+
+    <UserControl.Resources>
+        <helpers:NullToVisibilityConverter x:Key="NullToVis"/>
+        <helpers:StringEqualsToVisibilityConverter x:Key="StrEqToVis"/>
+    </UserControl.Resources>
+
+    <ItemsControl x:Name="FieldsItemsControl" ItemsSource="{Binding CustomValues}">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal"/>
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <Border Width="260" Margin="0,0,15,12" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10">
+                    <StackPanel>
+                        <!-- Field Header / Label with Alert Indicator -->
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding FieldNameAr}" FontWeight="Bold" FontSize="12.5" Foreground="#334155"/>
+                            <Border Grid.Column="1" Background="#FEE2E2" CornerRadius="10" Padding="6,1" Visibility="{Binding IsAlertable, Converter={StaticResource NullToVis}}">
+                                <TextBlock Text="🔔 منبه" FontSize="10" FontWeight="Bold" Foreground="#B91C1C"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- If Date Field -->
+                        <controls:DateBoxControl SelectedDate="{Binding DateValue, Mode=TwoWay}"
+                                                 Height="34" FontSize="12"
+                                                 Visibility="{Binding FieldType, Converter={StaticResource StrEqToVis}, ConverterParameter=Date}"/>
+
+                        <!-- If Text / Dropdown Field -->
+                        <TextBox Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Height="34" Padding="8,0" FontSize="12"
+                                 VerticalContentAlignment="Center"
+                                 Style="{DynamicResource ModernTextBoxStyle}"
+                                 Visibility="{Binding FieldType, Converter={StaticResource StrEqToVis}, ConverterParameter=Text}"/>
+
+                        <!-- If Number Field -->
+                        <TextBox Text="{Binding NumericValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, StringFormat=\{0:N2\}}"
+                                 Height="34" Padding="8,0" FontSize="12"
+                                 VerticalContentAlignment="Center"
+                                 Style="{DynamicResource ModernTextBoxStyle}"
+                                 Visibility="{Binding FieldType, Converter={StaticResource StrEqToVis}, ConverterParameter=Number}"/>
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>
