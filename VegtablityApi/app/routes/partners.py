@@ -6,6 +6,7 @@ from typing import List
 
 router = APIRouter()
 
+@router.get("", response_model=List[Partner], include_in_schema=False)
 @router.get("/", response_model=List[Partner])
 async def get_partners(
     type: str = Query(..., description="Customer or Supplier"),

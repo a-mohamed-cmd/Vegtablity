@@ -1,0 +1,1 @@
+ build\\web\\manifest.json:  D:\\VB.NET\\backup\\Vegtablity\\VegtablityManagerApp\\web\\index.html D:\\VB.NET\\backup\\Vegtablity\\VegtablityManagerApp\\web\\manifest.json

@@ -12,8 +12,8 @@
 *   **نظام الموارد البشرية والرواتب (جديد بالكامل):**
     *   [HREmployeesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HREmployeesPage.xaml) - شاشة إدارة شؤون الموظفين، الترقيم (10 موظفين/صفحة)، الحقول المخصصة العمودية (EAV)، ومفردات الرواتب.
     *   [DynamicFieldEditorControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/DynamicFieldEditorControl.xaml) - محرر ديناميكي مخصص لإنشاء وتعديل قيم الحقول والوثائق وشارات التنبيه المسبق 🔔.
-    *   [HRLeavesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml) - شاشة طلبات الإجازات واحتساب الرصيد السنوي المتبقي آلياً، وتسجيل مباشرة العمل بعد العودة وحساب أيام التأخير.
-    *   [LeaveRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml) - أداة السطر المخصصة لسجل الإجازات ومباشرات العمل وبادجات التأخير وطباعة النماذج الفورية.
+    *   [HRLeavesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml) & [HRLeavesPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml.vb) - شاشة طلبات الإجازات واحتساب الرصيد السنوي، تم تزويدها بزر جديد "➕ جديد / مسح" ومزامنة اسم الموظف بالقائمة المنسدلة الذكية وتوسيع اللوحة تلقائياً عند الاختيار، وإمكانية تعديل السجل الحالي، وتطبيق ضوابط الصلاحيات الأمنية.
+    *   [LeaveRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml) & [LeaveRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml.vb) - أداة السطر المخصصة لسجل الإجازات ومباشرات العمل وبادجات التأخير وطباعة النماذج الفورية، مع إضافة زر الإجراء السريع "✏️ تعديل" لاختيار السجل وفتح لوحة التعديل الفوري.
     *   [HRAttendancePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRAttendancePage.xaml) - شاشة تسجيل الحضور والانصراف، ساعات وأيام الإضافي، دقائق التأخير، وخصومات الغياب.
     *   [AttendanceRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AttendanceRowControl.xaml) - أداة السطر التفاعلية لسجل الحضور والانصراف مع التلوين حسب الحالة وأزرار التحضير السريع.
     *   [HRPayrollPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRPayrollPage.xaml) - شاشة توليد مسير الرواتب الشهري، تعديل الاستحقاقات والاستقطاعات، الاعتماد المالي وقفل التعديل، وطباعة قسائم الرواتب.
@@ -50,7 +50,8 @@
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
 *   **نماذج ومتحكمات الموارد البشرية والرواتب (جديدة):**
     *   [HREmployeesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HREmployeesViewModel.vb) - إدارة الموظفين، الترقيم 10/صفحة، والحقول المرنة.
-    *   [HRLeavesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRLeavesViewModel.vb) - إدارة الإجازات، الرصيد المتبقي، والمباشرة بعد العودة.
+    *   [HRLeavesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRLeavesViewModel.vb) - إدارة الإجازات، الرصيد المتبقي، والمباشرة بعد العودة، معالجة أمر الإضافة الجديد `NewLeaveCommand` وتفريغ الاختيار، وتحديث سجلات الإجازة والمباشرة القائمة وحمايتها بالصلاحيات الممنوحة `CanAdd, CanEdit`.
+    *   [EmployeeLeave.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/HR/EmployeeLeave.vb) - نموذج بيانات الإجازة، وراثته من `BaseViewModel` وتفعيل إشعارات التغيير `SetProperty` للربط ثنائي الاتجاه اللحظي.
     *   [HRAttendanceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRAttendanceViewModel.vb) - متابعة الحضور والانصراف والإضافي والغياب.
     *   [HRPayrollViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRPayrollViewModel.vb) - توليد مسيرات الرواتب الشهرية، الاعتماد المالي وترحيل القيد، وإلغاء الاعتماد.
     *   [HREndOfServiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HREndOfServiceViewModel.vb) - احتساب مكافأة نهاية الخدمة، بدل الإجازات، والطباعة.
@@ -1866,7 +1867,7 @@
   - **التخزين المحلي المستمر:** تم تحديث [ShiftProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart) لتخزين `ShiftID` الخاص بالوردية المفتوحة حالياً في الذاكرة الدائمة `SharedPreferences` تحت مفتاح `active_shift_id` فور فتح الوردية أو التحقق من وجود وردية نشطة.
   - **مسح بيانات الوردية:** إضافة دالة `clearShiftData()` ومسح مفتاح `active_shift_id` من الذاكرة المحلية والـ Provider عند تسجيل الخروج بـ [AuthProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/auth_provider.dart) وعند إغلاق الوردية لتفادي استخدام وردية منتهية.
 
-* **تمرير `ShiftID` بالفواتير المحفوظة (`PosProvider` & `PartnerBillingScreen`):**
+  - تمرير `ShiftID` بالفواتير المحفوظة (`PosProvider` & `PartnerBillingScreen`):
   - تم تحديث [PosProvider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) و [PartnerBillingScreen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) ليتم جلب `active_shift_id` وإرفاقه تلقائياً بحقل `ShiftID` بداخل جسم الفاتورة (`JSON Payload`) سواء عند الحفظ المباشر عبر الـ API أو التخزين الأوفلاين.
 
 * **تحديث نماذج وخدمات الـ API (`FastAPI Backend`):**
@@ -1925,13 +1926,76 @@
     - تحويل سطور القيد إلى `UserControl` مخصص فائق الاستجابة والخفة دون الاعتماد على مشاكل DataGrid الافتراضية.
     - تثبيت عرض حقل الحساب على `Width="280"` لمنح وضوح تام للاسم ورقم الحساب، وجعل حقل البيان متمدداً تلقائياً (`Width="*"`) لاستغلال كامل المساحة عند تكبير الشاشة.
     - توسيط مبالغ المدين والدائن في منتصف الخانات (`TextAlignment="Center"` و `HorizontalContentAlignment="Center"`).
-    - ضبط الهوامش والبادينج الداخلي (`Padding="8,4"` و `MinHeight="46"`) لحل مشكلة تآكل الحروف والأرقام من الأسفل نهائياً.
-    - دعم التنقل السلس بمفتاح `Enter` بين خانات السطر وإضافة سطر جديد تلقائياً عند الضغط على `Enter` في خانة البيان.
-  - **أداة البحث المنسدلة السريعة ([SearchableDropdown.xaml / .vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml)):**
-    - توفير بحث فوري ذكي برقم واسم الحساب مع نافذة منبثقة تفاعلية ودعم الاختيار بالأسهم و `Enter` والانتقال المباشر للخانة التالية.
+    - ضبط الهوامش والبادينج الداخلي (`Padding="8,4"` و `MinHeight="46"`) لحل مشكل14. **📱 التجاوب الكامل مع كافة أحجام شاشات الموبايل (Full Mobile Responsiveness & Adaptive UI):**
+    - **شاشة تسجيل الدخول [LoginScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/login_screen.dart):** تكيف الهوامش وأحجام الخطوط والشعار مع الشاشات الضيقة (< 400px)، وتأمين الواجهة بـ `SafeArea` و `SingleChildScrollView` لمنع أي RenderFlex Overflow عند ظهور لوحة المفاتيح.
+    - **كروت المؤشرات [KpiCardWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/kpi_card_widget.dart):** إضافة `FittedBox` التلقائي لتقليص حجم المبالغ المالية الكبيرة تلقائياً داخل البطاقة دون الخروج عن الإطار.
+    - **أشرطة التصفية والتقارير:** تزويد جميع الأشرطة العلوية بالتمرير الأفقي السلس `SingleChildScrollView(scrollDirection: Axis.horizontal)`, وتنسيق بطاقات الفواتير والأصناف والديون عبر `Wrap` التلقائي لمنع تداخل النصوص.
+    - **الرسوم البيانية [SalesChartWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/sales_chart_widget.dart):** ضبط الترويسة ومفتاح الألوان عبر `Wrap` لتتكيف تلقائياً مع الشاشات الضيقة.
 
-* **نمط المعمارية ومنطق الأعمال ([JournalEntryViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/JournalEntryViewModel.vb)):**
-  - تطبيق نمط MVVM بالكامل مع ربط الأوامر التفاعلية: `NewCommand`, `SaveCommand`, `PostCommand`, `UnpostCommand`, `AutoBalanceCommand`, `AddLineCommand`, `DeleteLineCommand`, `PrintCommand`, `ExportPdfCommand`, `RefreshCommand`, `NextPageCommand`, `PreviousPageCommand`.
+---
+
+## 78. تحديثات وتطويرات نظام إدارة الإجازات ومباشرة العمل (HR Leaves & Resumptions) بنظام WPF
+
+### 📌 الأهداف والتطوير المنفذ:
+1. **معالجة مزامنة وتحديد اسم الموظف بالقائمة المنسدلة (`SearchableDropdown`):**
+   - **المشكلة السابقة:** عند الضغط على أي سطر إجازة في الجدول، كانت البيانات تتحمل في اللوحة الجانبية، ولكن اسم الموظف في القائمة المنسدلة الذكية `EmployeeDropdown` يظل ثابتاً ولا يعكس اسم الموظف صاحب السجل المختار.
+   - **السبب الجذري:** كان موجه التحديد `SelectedLeave` يستدعي فقط دالة احتساب الرصيد `LoadLeaveBalance` دون تحديث الخاصية المرتبطة بالقائمة `SelectedEmployeeForLeave`.
+   - **الحل الجذري:**
+     - تحديث [HRLeavesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRLeavesViewModel.vb) بإضافة دالة `LoadSelectedLeaveDetails`: تبحث عن كائن الموظف المطابق لـ `Leave.EmployeeID` من قائمة الموظفين `Employees` وتعيينه في `SelectedEmployeeForLeave`، مما يطلق حدث التغيير `OnSelectedItemChanged` في أداة `SearchableDropdown` ويقوم بتحديث نص صندوق البحث `SearchBox.Text` فورياً باسم الموظف.
+     - في [HRLeavesPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml.vb): استدعاء `ExpandSidePanel()` تلقائياً عند تحديد أي سجل لفتح اللوحة الجانبية بسلاسة وإظهار كافة تفاصيل الإجازة والمباشرة.
+
+2. **إضافة زر مخصص "جديد / مسح" (New Record Creation):**
+   - إضافة زر "➕ جديد / مسح" في اللوحة الجانبية وزر "➕ إجازة جديدة" في الهيدر العلوي لشاشة [HRLeavesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml).
+   - تنفيذ أمر `NewLeaveCommand` (`ExecuteNewLeave`):
+     - تصفير `SelectedLeave` وتهيئته إلى وضع الإضافة الجديد (`LeaveID = 0`).
+     - إنشاء كائن `NewLeave` جديد بالقيم الافتراضية، وتصفير `SelectedEmployeeForLeave`.
+     - تصفير حقول مباشرة العمل وملاحظاتها وتصفير أيام التأخير.
+     - إطلاق حدث `RequestClearDropdown` الموجه إلى واجهة `HRLeavesPage.xaml.vb` لاستدعاء `EmployeeDropdown.ClearSelection()` لتفريغ أداة الاختيار تماماً لتمكين تسجيل موظف جديد.
+
+3. **إمكانية تعديل السجل الحالي وتحديث البيانات (In-place Record Editing):**
+   - **ترقية النموذج [EmployeeLeave.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/HR/EmployeeLeave.vb):** تم توريث النموذج من `BaseViewModel` وتطبيق نمط `SetProperty` لكافة الحقول (LeaveID, EmployeeID, LeaveTypeID, StartDate, EndDate, DaysCount, Reason, Notes, Status, ResumptionDate, ResumptionNotes, DelayDays) لدعم الربط ثنائي الاتجاه (Two-Way Data Binding) اللحظي.
+   - **الزر الديناميكي للحفظ:** يتحول الزر تلقائياً إلى "💾 حفظ التعديلات" بلون كهرماني/أزرق مع إظهار شارة "✏️ وضع التعديل (سجل رقم #...)" عند تحديد سجل قائم (`LeaveID > 0`)، ويتحول إلى "✈️ تسجيل واعتماد الإجازة" عند إضافة سجل جديد.
+   - **زر الإجراء السريع بالجدول:** إضافة زر "✏️ تعديل" في سطر كل إجازة داخل [LeaveRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml) و [LeaveRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml.vb) لاختيار السجل وفتح لوحة التعديل فوراً.
+   - **حفظ الإجازة والمباشرة:**
+     - في `HRLeavesViewModel.SaveLeave()`: في حال `LeaveID > 0` يتم إرسال معرف السجل للإجراء المخزن `[HR].[sp_Leave_Save]` لتحديث بيانات الإجازة والسبب والتواريخ، وتحديث الجدول تلقائياً.
+     - في `HRLeavesViewModel.RecordResumption()`: تسجيل مباشرة العمل وتحديث تاريخ العودة الفعلي وملاحظات المباشرة وأيام التأخير وتحديث حالة الموظف بالدوام عبر `[HR].[sp_Leave_RecordResumption]`.
+
+4. **إدارة وتطبيق الصلاحيات الأمنية (Role-Based Access Control):**
+   - ربط إمكانية الحفظ والتعديل والمباشرة بنظام الصلاحيات العام للمستخدم الحالي عبر `CurrentPermissions` و `LoadPermissions("HRLeaves")`.
+   - توفير خصائص الصلاحيات الصارمة: `CanAdd`, `CanEdit`, `CanDelete`, `CanPrint`, `CanSaveLeave`, `CanRecordResumption`.
+   - إظهار شريط تنبيهي واضح للمستخدمين الذين يملكون صلاحية القراءة فقط ("⚠️ لديك صلاحية القراءة فقط، لا يمكنك تعديل أو إضافة إجازات") مع تعطيل أزرار الحفظ والمباشرة تلقائياً.
+
+5. **الالتزام الكامل بالهيكل المعماري للإجراءات المخزنة (Stored Procedures Compliance):**
+   - الالتزام الصارم باستدعاء كافة الإجراءات المخزنة الخاصة بمخطط `[HR]` حصراً عبر الفئة المركزية [StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb) دون أي نصوص SQL مدمجة (Hardcoded SQL) داخل الخدمات أو الـ ViewModels:
+     - `Helpers.StoredProcedures.SP_HR_LEAVE_GETALL` ⬅️ جلب سجلات الإجازات والمباشرات.
+     - `Helpers.StoredProcedures.SP_HR_LEAVE_SAVE` ⬅️ إضافة وتعديل الإجازات.
+     - `Helpers.StoredProcedures.SP_HR_LEAVE_RECORDRESUMPTION` ⬅️ تسجيل واعتماد مباشرة العمل.
+     - `Helpers.StoredProcedures.SP_HR_LEAVE_GETBALANCE` ⬅️ احتساب الرصيد المتبقي والمستهلك آلياً.
+     - `Helpers.StoredProcedures.SP_HR_LEAVETYPE_GETALL` ⬅️ جلب أنواع الإجازات الرسمية.
+
+---
+
+## 79. ضبط توجيه الدومين المتعدد (Multi-Tenant Routing) لرابط https://vegtablity.vegtablity.cc وموقف الاعتماد والتشغيل
+
+### 📌 الأهداف والتطوير المنفذ:
+1. **توجيه النطاق `https://vegtablity.vegtablity.cc` إلى قاعدة بيانات [VegtablityDB]:**
+   - **الخادم الخلفي FastAPI ([database.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/database.py) & [reports.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/reports.py) & [auth.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/auth.py)):**
+     - تم تحديث مصفوفة الأسماء المستعارة `DATABASE_ALIASES` لتشمل:
+       - `vegtablity.vegtablity.cc` ⬅️ `VegtablityDB`
+       - `veg.vegtablity.cc` ⬅️ `VegtablityDB`
+       - `vegtablity.cc` ⬅️ `VegtablityDB`
+     - تم ضبط اسم قاعدة البيانات الاحتياطية الافتراضية `DB_NAME` في حال عدم وجود أي ساب دومين لتكون `VegtablityDB` بدلاً من `WashaDB`.
+     - تم التحقق من سلامة وعزل كافة الشركات الأخرى (`washa` ⬅️ `WashaDB`, `jawhara` ⬅️ `JawharaDB`, `zatter` ⬅️ `zatterDB`, `oman` ⬅️ `OmanCustmerDB`) دون أي تداخل أو تأثير على قواعد بياناتهم أو إعداداتهم.
+   - **تطبيق الويب للمديرين Flutter Web ([app_config.dart](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/core/app_config.dart) & [reports_provider.dart](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/providers/reports_provider.dart)):**
+     - تم تحديث دالة `detectDefaultCompany`: تحليل الساب دومين الأول؛ فإذا كان `vegtablity` أو `veg` يتم اختيار معرف شركة الخضار الرئيسية `VegtablityDB` تلقائياً.
+     - إضافة دالة `isDedicatedCompanySubdomain()`: معالجة مشكلة الكاش القديم (Stale Cache) بـ `SharedPreferences`, بحيث يتم تجاوز أي معرف شركة مخزن محلياً إذا كان المستخدم يتصفح نطاقاً فرعياً مخصصاً لشركة معينة، لضمان استعراض قاعدة بيانات `VegtablityDB` دائماً وبشكل قطعي.
+
+2. **القاعدة الأساسية في جلب التقارير المالية (Posted Journal Entries):**
+   - التأكيد البرمجي والمحاسبي في استعلامات النظام وتقارير الأرباح والخسائر وقوائم الدخل وميزان المراجعة على أن **القاعدة الأساسية في جلب البيانات المالية هي جدول القيود اليومية المرحلة** `[Accounting].[JournalDetails]` مع شرط الترحيل الإلزامي `IsPosted = 1` لضمان صحة وسلامة الأرقام المحاسبية المعتمدة.
+
+3. **موقف الاعتماد وحالة بيئة الإنتاج الحالية (Current Deployment Status):**
+   - **حالة الكود والملفات:** تم استكمال وتنفيذ كافة التعديلات والتطويرات البرمجية أعلاه في الكود المصدري، وبناء واختبار تطبيق WPF بنجاح عبر MSBuild وخلوه تماماً من أية أخطاء (0 Errors).
+   - **موقف العميل والاعتماد الفعلي:** **لم يقم المستخدم باعتماد الإضافات والتعديلات الأخيرة للنشر الحي، وتم الإبقاء على الوضع الحالي المشغل في بيئة الإنتاج كما هو**، مع توثيق كافة التفاصيل والحلول في هذا الملف لتبقى مرجعاً جاهزاً عند الرغبة في الاعتماد والنشر المستقبلي.
   - حساب فوري وتحديث حي لإجماليات المدين والدائن وفارق الاتزان ولون الحالة (`DifferenceFormatted`, `DifferenceColor`).
   - التحقق الصارم من قواعد القيود المحاسبية قبل الحفظ (سطرين على الأقل، اتزان المدين والدائن، اختيار الحسابات لكافة الأسطر، ومنع القيود الصفرية، وتنظيف الأسطر الفارغة تلقائياً).
   - معالجة التحديث السلس لتفادي تجميد الواجهة أثناء التحميل وإعادة جلب البيانات.
@@ -2753,5 +2817,111 @@
    - ترقية [dashboard_home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/dashboard_home_screen.dart):
      - فحص التحديثات تلقائياً في الخلفية عند فتح لوحة التحكم الرئيسية.
      - إضافة زر مخصص في الشريط العلوي (AppBar) للفحص اليدوي اللحظي للتحديثات مع مؤشر تحميل وتنبيهات تفاعلية.
+
+---
+
+## 77. إطلاق تطبيق الويب والتقارير التنفيذية [VegtablityManagerApp] وتوجيه الروابط المتعددة (Multi-Tenant Web System)
+
+### 📌 الأهداف والتطوير المنفذ:
+1. **إنشاء تطبيق الويب والـ PWA المخصص للمديرين [VegtablityManagerApp]:**
+   - تطبيق عصري فخم مبني بـ **Flutter Web / PWA** متوافق 100% مع متصفح سفاري على هواتف الآيفون (iOS Safari Standalone) بدون شريط عنوان المتصفح.
+   - **الداشبورد التنفيذية (Executive KPI Dashboard):** كروت إحصائية ومؤشرات مالية فورية (المبيعات، الأرباح الصافية، هامش الربح %، عدد الفواتير، متوسط قيمة الفاتورة، الديون والذمم المتبقية، تقييم المخزون).
+   - **رسوم بيانية تفاعلية (fl_chart):**
+     - منحنى المبيعات وتدفق الأرباح اليومية والشهرية مع التدرج اللوني.
+     - أعمدة مقارنة أعلى الأصناف تحقيقاً للأرباح.
+   - **شاشات وتقارير تفصيلية شاملة مطابقة لتقارير WPF:**
+     1. 📊 **أرباح الأصناف:** مع شريط بحث لحظي وفرز وهوامش الربح الملونة (أخضر/برتقالي/أحمر).
+     2. 🧾 **أرباح الفواتير:** تفاصيل الفواتير، التكلفة، والربح المحقق واسم العميل والكاشير.
+     3. 📅 **حركة المبيعات:** تحليل مبيعات النقد والشبكة والأرباح اليومية.
+     4. 👤 **كبار العملاء:** ترتيب العملاء بحجم المشتريات والمدفوعات والمتبقي.
+     5. ⏳ **أعمار الديون:** تصنيف الديون حسب فترات التأخير (0-30، 31-60، 61-90، +90 يوم).
+     6. 📦 **تقييم المخزون:** حساب رأس المال المجمد وقيمة البيع والأرباح المتوقعة.
+     7. 💤 **الأصناف الراكدة:** رصد الأصناف بطيئة الحركة وتكلفة رأس المال المجمد.
+     8. 💰 **تحليل المصروفات:** تصنيف بنود الصرف ومجاميعها.
+
+2. **دعم التوجيه التلقائي والعزل التام للشركات (Multi-Tenant Subdomain Isolation):**
+   - دعم التوجيه التلقائي والعزل الصارم عبر [AppConfig.dart](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/core/app_config.dart):
+     - `https://washa.vegtablity.cc` ⬅️ يفتح مباشرة على بوابة وبيانات مغسلة وشا (`WashaDB`).
+     - `https://jawhara.vegtablity.cc` ⬅️ يفتح مباشرة على بوابة وبيانات شركة الجوهرة (`JawharaDB`).
+     - `https://veg.vegtablity.cc` ⬅️ يفتح مباشرة على بوابة وبيانات نظام الخضار الرئيسي (`VegtablityDB`).
+     - `https://zatter.vegtablity.cc` ⬅️ يفتح مباشرة على بوابة وبيانات مطاعم زعتر (`zatterDB`).
+     - `https://oman.vegtablity.cc` ⬅️ يفتح مباشرة على بوابة وبيانات فرع سلطنة عمان (`OmanCustmerDB`).
+   - **خصوصية وعزل تام:** كل شركة تملك بوابة إدارة مستقلة ومعزولة بهويتها وشعارها الثابت مع إلغاء أي إمكانية للتبديل بين الشركات للحفاظ على سرية وخصوصية العملاء.
+
+3. **الاستغناء الكامل عن Nginx والعمل بـ FastAPI فقط (FastAPI + Cloudflare Architecture):**
+   - **هل يلزم تثبيت Nginx؟** ❌ **لا، لا يلزم إطلاقاً!** يعمل النظام بالكامل بـ **تطبيق وخدمة FastAPI واحدة فقط** بفضل التكامل السلس مع Cloudflare:
+     - **Cloudflare:** يستقبل كافة الروابط الفرعية `*.vegtablity.cc` عبر سجل الـ Wildcard `*` ويوفر شهادة الـ HTTPS/SSL مجاناً ويخفي IP السيرفر ويوجه الطلبات للمنفذ `80` على الـ VPS.
+     - **FastAPI:** يستقبل كافة الطلبات من المنفذ `80`، ويقوم بما يلي:
+       1. خدمة تطبيق الويب والواجهات (Flutter Web) على المسار الجذري `/static/web/`.
+       2. التعرف التلقائي الذكي على الشركة وقاعدة بياناتها من الـ `Host Header` (عبر دالة `extract_database`) وتوجيه استعلامات التقارير والـ Stored Procedures لقاعدة البيانات المعنية فوراً وبشكل معزول.
+     - **أمر التشغيل الموحد للسيرفر:**
+       ```bash
+       uvicorn app.main:app --host 0.0.0.0 --port 80 --workers 4
+       ```
+
+4. **⚡ الضبط الحاسم لشهادة الأمان في Cloudflare (Flexible SSL Mode):**
+   > ⚠️ **ملحوظة تشغيلية جوهرية (Crucial Configuration):**
+   > - يجب ضبط وضع التشفير في Cloudflare على **`Flexible`** (مرن) عبر المسار:
+   >   `Cloudflare Dashboard > SSL/TLS > Overview > Encryption Mode: Flexible`
+   > - **السبب التقني:** لأن الاتصال بين المتصفح و Cloudflare يكون **مشفر وآمن 100% بـ HTTPS (Port 443)**، ثم يقوم Cloudflare بتمرير الطلب إلى سيرفر الـ VPS على المنفذ **`80` (HTTP)** الذي يستمع عليه `uvicorn`.
+   > - *(في حال اختيار وضع Full سيحاول Cloudflare البحث عن منفذ 443 على السيرفر ويفشل الاتصال بخطأ 521 وتظهر الـ Logs فارغة).*
+
+5. **📜 سكربت التشغيل التلقائي المعتمد لويندوز سيرفر (Windows Batch Script):**
+   - تم إنشاء وتأكيد عمل سكربت التشغيل التالي لتشغيل السيرفر والبيئة الافتراضية وحفظ السجلات:
+     ```bat
+     @echo off
+     Title Web Server
+     chcp 65001 >nul
+     cd /d "%~dp0"
+     call .\.venv\Scripts\activate.bat
+     echo Starting Server at %DATE% %TIME% >> logWeb.txt
+     uvicorn app.main:app --host 0.0.0.0 --port 80 --workers 4 >> logWeb.txt 2>&1
+     pause
+     ```
+
+6. **🛡️ إعداد الجدار الناري في ويندوز (Windows Defender Firewall):**
+   - السماح بالمنفذ **`80` (TCP Inbound Rule)** لضمان استقبال حركة المرور القادمة من Cloudflare.
+
+7. **🔄 التوافق والاستمرارية مع تطبيقات الـ POS الحالية للكاشيرات:**
+   - تستمر تطبيقات الـ POS الحالية (Android APK & Windows .exe) بالعمل بكفاءة 100% على منافذها المعتادة (`8000`, `8001`...) دون أي انقطاع أو تضارب مع المنفذ `80`.
+
+8. **تطوير محرك التقارير في السيرفر [VegtablityApi]:**
+   - إنشاء [report_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/report_service.py) لاستدعاء الـ `Stored Procedures` المعتمدة في النظام.
+   - إنشاء [reports.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/reports.py) وتضمينه في [main.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/main.py).
+   - تركيب واستضافة تطبيق الويب المبني بـ Flutter Web في المسار الجذري `/static/web/` ليتم خدمته مباشرة مع الـ API بنجاح.
+
+9. **إعداد التوثيق الشامل في [Plans/Manager](file:///d:/VB.NET/backup/Vegtablity/Plans/Manager):**
+   - إعداد أدلة الإعداد لـ Hostinger و Cloudflare و Wildcard DNS وتشغيل FastAPI المستقل عبر خدمة Systemd على Linux أو ملف Batch على Windows Server.
+
+10. **🔐 نظام التحقق والـ Authentication والربط الحي لشعار واسم المنشأة:**
+    - **شاشة تسجيل الدخول [LoginScreen]:** واجهة زجاجية داكنة فاخرة، مع فحص اسم المستخدم وكلمة المرور عبر `/auth/login` المعزول وإصدار رمز `Bearer Token` وحفظ الجلسة في `SharedPreferences`.
+    - **الربط الحي لـ `CompanySettings`:** استدعاء شعار الشركة المرمز (`Base64`) واسم الشركة التجاري المسجل من قاعدة البيانات وعرضهما في شاشة تسجيل الدخول والترويسة [CompanySelectorHeader].
+    - **زر تسجيل الخروج وإدارة المستخدم:** إضافة اسم المستخدم وزر تسجيل الخروج الآمن في الشريط العلوي (AppBar).
+    - **التوافق التام 100%:** دعم استقبال تسجيل الدخول بصيغة JSON و Form-Data دون أي تأثير على تطبيقات الكاشير أو النسخ السابقة.
+
+11. **🌱 توحيد الشعار الرسمي لتطبيق الويب (Web App & PWA Logo Integration):**
+    - **اعتماد الشعار الرسمي:** اعتماد شعار الخس المعتمد (`lettuce.png` / `lettuce.ico`) الخاص بتطبيق الأندرويد كشعار رسمي موحد لتطبيق الويب ولوحة الإدارة والـ PWA.
+    - **أيقونات التبويب والتثبيت:** تحديث [favicon.png](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/web/favicon.png) وكافة أيقونات الـ Manifest (`Icon-192.png`, `Icon-512.png`, `Icon-maskable-*.png`).
+    - **شاشة التحميل الأولية للمتصفح:** تضمين الشعار الرسمي في شاشة بدء تشغيل محرك Flutter في [web/index.html](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/web/index.html) مع تأثير نبض ضوئي فخم ومتناسق مع الثيم الداكن.
+    - **واجهات التطبيق الداخلية:** إدراج الشعار في إطار شاشة تسجيل الدخول الزجاجي، وفي الشريط العلوي لـ [ManagerMainScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/manager_main_screen.dart)، وفي رأس القائمة الجانبية للجوال (Mobile Drawer).
+
+12. **⚡ معالجة وحظر الكاش القديم في المتصفح والسيرفر (Cache-Busting & Service Worker Auto-Update):**
+    - **حل مشكلة كاش المتصفح:** تطبيقات Flutter Web تقوم بتسجيل Service Worker يقوم بتخزين الملفات القديمة، مما قد يمنع ظهور التحديثات فوراً بدون تفريغ يدوي للكاش.
+    - **ترويسات منع الكاش في السيرفر [main.py](file:///d:/Vegtablity/VegtablityApi/app/main.py):** ضبط مسارات تسليم تطبيق الويب (`/` و `/index.html`) لترسل ترويسات `Cache-Control: no-cache, no-store, must-revalidate` و `Pragma: no-cache`.
+    - **تحديث الـ Service Worker برمجياً:** إضافة سكربت مخصص في [index.html](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/web/index.html) يقوم بإلغاء تسجيل أي Service Worker قديم وتفريغ الكاش تلقائياً عند فتح الموقع لضمان تحميل أحدث إصدار فوراً.
+
+13. **🔧 إصلاح محرك استعلامات التقارير والربط بمخطط قاعدة البيانات (Report Engine & SQL Schema Alignment):**
+    - **تشخيص السبب الجذري لعدم تحميل البيانات:** كان السيرفر في [report_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/report_service.py) يستعلم عن جداول وأعمدة بأسماء غير مطابقة لقاعدة بيانات Vegtablity الفعلية (مثل `[Sales].[Invoices]` بدلاً من `[Sales].[InvoiceHeader]` وأعمدة `NetTotal, RemainingAmount` بدلاً من `NetAmount, Remainder`).
+    - **تحديث استعلامات الـ SQL:** إعادة كتابة كافة استعلامات [ReportService](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/report_service.py) لتطابق بدقة جداول `[Sales].[InvoiceHeader]`, `[Sales].[InvoiceDetails]`, `[Inventory].[ProductStock]`, `[Inventory].[Products]`, `[Sales].[Partners]`, `[Accounting].[JournalDetails]`.
+    - **استعلامات احتياطية مباشرة (Direct SQL Fallbacks):** تزويد محرك التقارير باستعلامات مباشرة بديلة في حال عدم توفر أو اختلاف بارامترات الإجراءات المخزنة في أي قاعدة بيانات فرعية (WashaDB, JawharaDB, VegtablityDB, zatterDB, OmanCustmerDB) لمنع حدوث أي خطأ 500 وضمان استمرار عرض البيانات اللحظية 100%.
+    - **مرونة فك ترميز النماذج [report_models.dart](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/models/report_models.dart):** تحديث كافة دوال `fromJson` لتقرأ المسميات البديلة للأعمدة (PascalCase / camelCase / snake_case) بسلاسة.
+
+14. **📱 التجاوب الكامل مع كافة أحجام شاشات الموبايل (Full Mobile Responsiveness & Adaptive UI):**
+    - **شاشة تسجيل الدخول [LoginScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/login_screen.dart):** تكيف الهوامش وأحجام الخطوط والشعار مع الشاشات الضيقة (< 400px)، وتأمين الواجهة بـ `SafeArea` و `SingleChildScrollView` لمنع أي RenderFlex Overflow عند ظهور لوحة المفاتيح.
+    - **كروت المؤشرات [KpiCardWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/kpi_card_widget.dart):** إضافة `FittedBox` التلقائي لتقليص حجم المبالغ المالية الكبيرة تلقائياً داخل البطاقة دون الخروج عن الإطار.
+    - **أشرطة التصفية والتقارير:** تزويد جميع الأشرطة العلوية بالتمرير الأفقي السلس `SingleChildScrollView(scrollDirection: Axis.horizontal)`، وتنسيق بطاقات الفواتير والأصناف والديون عبر `Wrap` التلقائي لمنع تداخل النصوص.
+    - **الرسوم البيانية [SalesChartWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/sales_chart_widget.dart):** ضبط الترويسة ومفتاح الألوان عبر `Wrap` لتتكيف تلقائياً مع الشاشات الضيقة.
+
+
 
 

@@ -7,6 +7,7 @@ from app.core.security import get_current_user_id
 router = APIRouter()
 service = SalesQuoteService()
 
+@router.get("", response_model=List[SalesQuoteResponse], include_in_schema=False)
 @router.get("/", response_model=List[SalesQuoteResponse])
 async def get_sales_quotes(
     search: Optional[str] = None,

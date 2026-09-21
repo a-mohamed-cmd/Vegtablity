@@ -318,7 +318,7 @@ Namespace Services
 
                 report.MonthlyRevenuesTotal(m.MonthKey) = mRevTotal
                 report.MonthlyExpensesTotal(m.MonthKey) = mExpTotal
-                report.MonthlyNetProfit(m.MonthKey) = mRevTotal + mExpTotal
+                report.MonthlyNetProfit(m.MonthKey) = Math.Abs(mRevTotal) - Math.Abs(mExpTotal)
             Next
 
             ' 3. Calculate period totals and percentages for each row
@@ -337,7 +337,7 @@ Namespace Services
 
             report.TotalRevenues = grandTotalRev
             report.TotalExpenses = grandTotalExp
-            report.TotalNetProfit = grandTotalRev + grandTotalExp
+            report.TotalNetProfit = Math.Abs(grandTotalRev) - Math.Abs(grandTotalExp)
 
             Dim baseSales = Math.Abs(grandTotalRev)
 

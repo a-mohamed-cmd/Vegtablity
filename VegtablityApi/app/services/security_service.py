@@ -1,4 +1,5 @@
 from app.core.database import get_db_connection
+from app.core.db_procedures import StoredProcedures
 import datetime
 
 class SecurityService:
@@ -6,7 +7,7 @@ class SecurityService:
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT IsActive, ExpiryDate FROM [Security].[DeviceLicenses] WHERE MachineHWID = ?", (hwid,))
+            cursor.execute(StoredProcedures.DEVICE_LICENSE_CHECK, (hwid,))
             row = cursor.fetchone()
             if row:
                 is_active = bool(row[0])

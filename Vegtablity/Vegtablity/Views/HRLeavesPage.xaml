@@ -10,6 +10,10 @@
              d:DesignHeight="750" d:DesignWidth="1100"
              FlowDirection="RightToLeft">
 
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
     <UserControl.DataContext>
         <vm:HRLeavesViewModel/>
     </UserControl.DataContext>
@@ -43,12 +47,18 @@
                     <Button x:Name="BtnToggleSidePanel" Content="◀ طي النماذج" Click="ToggleSidePanel_Click"
                             Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#334155"
                             Height="38" Padding="12,0" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"/>
+                    <Button Content="➕ إجازة جديدة" Command="{Binding NewLeaveCommand}"
+                            Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White"
+                            Height="38" Padding="14,0" FontSize="13" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"
+                            IsEnabled="{Binding CanAdd}" ToolTip="إضافة طلب إجازة جديد ومسح الحقول"/>
                     <Button Content="🖨️ طباعة طلب الإجازة" Command="{Binding PrintLeaveCommand}"
                             Style="{StaticResource ModernButtonStyle}" Background="#4F46E5" Foreground="White"
-                            Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"/>
+                            Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"
+                            IsEnabled="{Binding CanPrint}"/>
                     <Button Content="🖨️ نموذج المباشرة" Command="{Binding PrintCommencementCommand}"
                             Style="{StaticResource ModernButtonStyle}" Background="#0EA5E9" Foreground="White"
-                            Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Cursor="Hand"/>
+                            Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Cursor="Hand"
+                            IsEnabled="{Binding CanPrint}"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -70,7 +80,37 @@
                             <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
                         </Border.Effect>
                         <StackPanel>
-                            <TextBlock Text="🏖️ تقديم طلب إجازة جديد" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,12"/>
+                            <!-- Header with Mode Badge -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding FormTitle}" FontSize="15" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                <Border Grid.Column="1" Background="#FEF3C7" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="6" Padding="8,3"
+                                        Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="✏️ وضع التعديل" FontSize="11" FontWeight="Bold" Foreground="#B45309"/>
+                                </Border>
+                            </Grid>
+
+                            <!-- Warning banner if editing without edit permission -->
+                            <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,0,10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding IsEditMode}" Value="True"/>
+                                                    <Condition Binding="{Binding CanEdit}" Value="False"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="⚠️ ليس لديك صلاحية لتعديل بيانات هذا السجل (عرض فقط)" Foreground="#DC2626" FontSize="11.5" FontWeight="Bold" TextAlignment="Center"/>
+                            </Border>
 
                             <!-- Employee Select -->
                             <TextBlock Text="اختر الموظف *:" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
@@ -129,10 +169,21 @@
                             <TextBlock Text="سبب الإجازة / ملاحظات:" FontWeight="Bold" FontSize="12" Foreground="#334155" Margin="0,0,0,4"/>
                             <TextBox Text="{Binding NewLeave.Reason, UpdateSourceTrigger=PropertyChanged}" Height="50" TextWrapping="Wrap" FontSize="12" Padding="6" Margin="0,0,0,12"/>
 
-                            <!-- Submit Button -->
-                            <Button Content="✈️ تسجيل واعتماد الإجازة" Command="{Binding SaveLeaveCommand}"
-                                    Style="{StaticResource ModernButtonStyle}" Background="#4F46E5" Foreground="White"
-                                    Height="40" FontSize="13.5" FontWeight="Bold" Cursor="Hand"/>
+                            <!-- Action Buttons Grid: Save/Edit + New/Reset -->
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="{Binding SaveButtonText}" Command="{Binding SaveLeaveCommand}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="{Binding SaveButtonBackground}" Foreground="White"
+                                        Height="40" FontSize="13.5" FontWeight="Bold" Cursor="Hand"
+                                        IsEnabled="{Binding CanSaveLeave}" Margin="0,0,8,0"/>
+                                <Button Grid.Column="1" Content="➕ جديد / مسح" Command="{Binding NewLeaveCommand}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1"
+                                        Height="40" Padding="12,0" FontSize="12.5" FontWeight="Bold" Cursor="Hand"
+                                        IsEnabled="{Binding CanAdd}" ToolTip="تفريغ الحقول وإدخال موظف أو إجازة جديدة"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -165,7 +216,9 @@
 
                             <Button Content="✔ اعتماد المباشرة وتفعيل الموظف" Command="{Binding RecordResumptionCommand}"
                                     Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White"
-                                    Height="40" FontSize="13" FontWeight="Bold" Cursor="Hand"/>
+                                    Height="40" FontSize="13" FontWeight="Bold" Cursor="Hand"
+                                    IsEnabled="{Binding CanRecordResumption}"
+                                    ToolTip="اعتماد المباشرة وإنهاء الإجازة وتفعيل الموظف"/>
                         </StackPanel>
                     </Border>
                     </StackPanel>

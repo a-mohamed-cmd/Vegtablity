@@ -66,6 +66,90 @@ Namespace ViewModels
         Public Property FilteredEmployees As ObservableCollection(Of Employee)
         Public Property LeaveTypesList As ObservableCollection(Of LeaveType)
 
+        ' === Mode & UI State ===
+        Private _isEditMode As Boolean = False
+        Public Property IsEditMode As Boolean
+            Get
+                Return _isEditMode
+            End Get
+            Set(value As Boolean)
+                If SetProperty(_isEditMode, value) Then
+                    NotifyStateChanged()
+                End If
+            End Set
+        End Property
+
+        Public ReadOnly Property FormTitle As String
+            Get
+                If IsEditMode AndAlso NewLeave IsNot Nothing AndAlso NewLeave.LeaveID > 0 Then
+                    Return $"✏️ تعديل بيانات الإجازة (رقم السجل: #{NewLeave.LeaveID})"
+                Else
+                    Return "🏖️ تقديم طلب إجازة جديد"
+                End If
+            End Get
+        End Property
+
+        Public ReadOnly Property SaveButtonText As String
+            Get
+                If IsEditMode Then
+                    Return "💾 حفظ التعديلات على الإجازة"
+                Else
+                    Return "✈️ تسجيل واعتماد الإجازة"
+                End If
+            End Get
+        End Property
+
+        Public ReadOnly Property SaveButtonBackground As String
+            Get
+                If IsEditMode Then
+                    Return "#059669"
+                Else
+                    Return "#4F46E5"
+                End If
+            End Get
+        End Property
+
+        ' === Permissions ===
+        Public ReadOnly Property CanAdd As Boolean
+            Get
+                Return CurrentPermissions Is Nothing OrElse CurrentPermissions.CanAdd
+            End Get
+        End Property
+
+        Public ReadOnly Property CanEdit As Boolean
+            Get
+                Return CurrentPermissions Is Nothing OrElse CurrentPermissions.CanEdit
+            End Get
+        End Property
+
+        Public ReadOnly Property CanDelete As Boolean
+            Get
+                Return CurrentPermissions Is Nothing OrElse CurrentPermissions.CanDelete
+            End Get
+        End Property
+
+        Public ReadOnly Property CanPrint As Boolean
+            Get
+                Return CurrentPermissions Is Nothing OrElse CurrentPermissions.CanPrint
+            End Get
+        End Property
+
+        Public ReadOnly Property CanSaveLeave As Boolean
+            Get
+                If IsEditMode Then
+                    Return CanEdit
+                Else
+                    Return CanAdd
+                End If
+            End Get
+        End Property
+
+        Public ReadOnly Property CanRecordResumption As Boolean
+            Get
+                Return CanEdit AndAlso SelectedLeave IsNot Nothing
+            End Get
+        End Property
+
         Private _selectedEmployeeForLeave As Employee
         Public Property SelectedEmployeeForLeave As Employee
             Get
@@ -76,8 +160,21 @@ Namespace ViewModels
                     If value IsNot Nothing Then
                         If NewLeave IsNot Nothing Then
                             NewLeave.EmployeeID = value.EmployeeID
+                            NewLeave.EmployeeCode = value.EmployeeCode
+                            NewLeave.EmployeeName = value.FullName
+                            NewLeave.Department = value.Department
                         End If
                         LoadLeaveBalance(value.EmployeeID)
+                    Else
+                        If NewLeave IsNot Nothing AndAlso Not IsEditMode Then
+                            NewLeave.EmployeeID = 0
+                            NewLeave.EmployeeCode = String.Empty
+                            NewLeave.EmployeeName = String.Empty
+                            NewLeave.Department = String.Empty
+                        End If
+                        AccruedDays = 0
+                        UsedDays = 0
+                        RemainingBalance = 0
                     End If
                 End If
             End Set
@@ -107,13 +204,16 @@ Namespace ViewModels
                 Return _selectedLeave
             End Get
             Set(value As EmployeeLeave)
-                If SetProperty(_selectedLeave, value) AndAlso value IsNot Nothing Then
-                    LoadLeaveBalance(value.EmployeeID)
+                If SetProperty(_selectedLeave, value) Then
+                    If value IsNot Nothing Then
+                        LoadSelectedLeaveDetails(value)
+                    End If
+                    NotifyStateChanged()
                 End If
             End Set
         End Property
 
-        ' === New Leave Request Model ===
+        ' === New / Edit Leave Request Model ===
         Private _newLeave As EmployeeLeave
         Public Property NewLeave As EmployeeLeave
             Get
@@ -191,13 +291,17 @@ Namespace ViewModels
         ' === Commands ===
         Public Property NextPageCommand As ICommand
         Public Property PreviousPageCommand As ICommand
+        Public Property NewLeaveCommand As ICommand
         Public Property SaveLeaveCommand As ICommand
         Public Property RecordResumptionCommand As ICommand
         Public Property PrintLeaveCommand As ICommand
         Public Property PrintCommencementCommand As ICommand
         Public Property RefreshCommand As ICommand
 
+        ' === Events ===
         Public Event RequestSnackbar As Action(Of String)
+        Public Event RequestClearDropdown As Action
+        Public Event RequestExpandSidePanel As Action
 
         Public Sub New()
             Leaves = New ObservableCollection(Of EmployeeLeave)()
@@ -207,6 +311,7 @@ Namespace ViewModels
 
             NextPageCommand = New RelayCommand(AddressOf GoToNextPage, Function() HasNextPage)
             PreviousPageCommand = New RelayCommand(AddressOf GoToPreviousPage, Function() HasPreviousPage)
+            NewLeaveCommand = New RelayCommand(AddressOf ExecuteNewLeave)
             SaveLeaveCommand = New RelayCommand(AddressOf SaveLeave)
             RecordResumptionCommand = New RelayCommand(AddressOf RecordResumption)
             PrintLeaveCommand = New RelayCommand(AddressOf PrintLeave)
@@ -217,6 +322,11 @@ Namespace ViewModels
             ResetNewLeave()
             LoadInitialData()
             LoadLeaves()
+        End Sub
+
+        Public Shadows Sub LoadPermissions(formName As String)
+            MyBase.LoadPermissions(formName)
+            NotifyStateChanged()
         End Sub
 
         Private Sub LoadInitialData()
@@ -235,10 +345,7 @@ Namespace ViewModels
                     LeaveTypesList.Add(lt)
                 Next
 
-                If EmployeesList.Any() Then
-                    SelectedEmployeeForLeave = EmployeesList.First()
-                End If
-                If LeaveTypesList.Any() Then
+                If LeaveTypesList.Any() AndAlso NewLeave IsNot Nothing Then
                     NewLeave.LeaveTypeID = LeaveTypesList.First().LeaveTypeID
                 End If
             Catch
@@ -272,16 +379,99 @@ Namespace ViewModels
 
         Private Sub ResetNewLeave()
             NewLeave = New EmployeeLeave With {
+                .LeaveID = 0,
                 .StartDate = DateTime.Today.AddDays(1),
                 .EndDate = DateTime.Today.AddDays(7),
                 .ExpectedReturnDate = DateTime.Today.AddDays(8),
                 .DaysCount = 7,
-                .Status = "Approved"
+                .Status = "Approved",
+                .Reason = String.Empty
             }
+            If LeaveTypesList IsNot Nothing AndAlso LeaveTypesList.Any() Then
+                NewLeave.LeaveTypeID = LeaveTypesList.First().LeaveTypeID
+            End If
+        End Sub
+
+        Public Sub ExecuteNewLeave(parameter As Object)
+            _selectedLeave = Nothing
+            OnPropertyChanged(NameOf(SelectedLeave))
+
+            IsEditMode = False
+            ResetNewLeave()
+
+            _selectedEmployeeForLeave = Nothing
+            OnPropertyChanged(NameOf(SelectedEmployeeForLeave))
+            FilterEmployees(String.Empty)
+
+            AccruedDays = 0
+            UsedDays = 0
+            RemainingBalance = 0
+
+            ResumptionActualDate = DateTime.Today
+            ResumptionNotes = String.Empty
+            DelayDaysCount = 0
+
+            NotifyStateChanged()
+            RaiseEvent RequestClearDropdown()
+            RaiseEvent RequestExpandSidePanel()
+            RaiseEvent RequestSnackbar("📄 تم تفريغ الحقول لإضافة سجل جديد")
+        End Sub
+
+        Private Sub LoadSelectedLeaveDetails(leave As EmployeeLeave)
+            If leave Is Nothing Then Return
+
+            IsEditMode = True
+
+            ' 1. Synchronize Employee in Dropdown
+            FilterEmployees(String.Empty)
+            Dim emp = EmployeesList.FirstOrDefault(Function(e) e.EmployeeID = leave.EmployeeID)
+            If emp Is Nothing AndAlso leave.EmployeeID > 0 Then
+                emp = _hrService.GetEmployeeById(leave.EmployeeID)
+                If emp IsNot Nothing Then
+                    EmployeesList.Add(emp)
+                    FilteredEmployees.Add(emp)
+                End If
+            End If
+            SelectedEmployeeForLeave = emp
+
+            ' 2. Populate Leave Form Data for Editing
+            NewLeave = New EmployeeLeave With {
+                .LeaveID = leave.LeaveID,
+                .EmployeeID = leave.EmployeeID,
+                .EmployeeCode = leave.EmployeeCode,
+                .EmployeeName = leave.EmployeeName,
+                .Department = leave.Department,
+                .LeaveTypeID = leave.LeaveTypeID,
+                .LeaveTypeName = leave.LeaveTypeName,
+                .StartDate = leave.StartDate,
+                .EndDate = leave.EndDate,
+                .DaysCount = leave.DaysCount,
+                .Reason = leave.Reason,
+                .Status = leave.Status,
+                .ExpectedReturnDate = leave.ExpectedReturnDate,
+                .ActualReturnDate = leave.ActualReturnDate,
+                .ResumptionDate = leave.ResumptionDate,
+                .DelayDays = leave.DelayDays,
+                .ResumptionNotes = leave.ResumptionNotes,
+                .ApprovedBy = leave.ApprovedBy,
+                .CreatedAt = leave.CreatedAt
+            }
+
+            ' 3. Populate Resumption Data
+            ResumptionActualDate = If(leave.ActualReturnDate.HasValue, leave.ActualReturnDate.Value, If(leave.ResumptionDate.HasValue, leave.ResumptionDate.Value, DateTime.Today))
+            ResumptionNotes = If(leave.ResumptionNotes, String.Empty)
+            CalculateResumptionDelay()
+
+            ' 4. Load Balance
+            LoadLeaveBalance(leave.EmployeeID)
+
+            ' 5. Notify UI & Expand side panel if collapsed
+            NotifyStateChanged()
+            RaiseEvent RequestExpandSidePanel()
         End Sub
 
         Private Sub SaveLeave(parameter As Object)
-            If NewLeave.EmployeeID <= 0 Then
+            If NewLeave Is Nothing OrElse NewLeave.EmployeeID <= 0 Then
                 MessageBox.Show("يرجى اختيار الموظف أولاً", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
                 Return
             End If
@@ -291,16 +481,40 @@ Namespace ViewModels
                 Return
             End If
 
+            Dim isUpdate = (NewLeave.LeaveID > 0)
+            If isUpdate AndAlso Not CanEdit Then
+                MessageBox.Show("ليس لديك صلاحية لتعديل سجلات الإجازات", "صلاحيات غير كافية", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+            If Not isUpdate AndAlso Not CanAdd Then
+                MessageBox.Show("ليس لديك صلاحية لإضافة إجازات جديدة", "صلاحيات غير كافية", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
             NewLeave.DaysCount = Math.Max(1, CInt((NewLeave.EndDate - NewLeave.StartDate).TotalDays) + 1)
             NewLeave.ExpectedReturnDate = NewLeave.EndDate.AddDays(1)
             NewLeave.ApprovedBy = If(Session.CurrentUser?.Username, "Admin")
 
             Try
-                _hrService.SaveLeave(NewLeave)
-                RaiseEvent RequestSnackbar("🏖️ تم تسجيل واعتماد طلب الإجازة بنجاح 👌")
+                Dim savedId = _hrService.SaveLeave(NewLeave)
+                NewLeave.LeaveID = savedId
+
+                If isUpdate Then
+                    RaiseEvent RequestSnackbar("💾 تم تعديل وحفظ بيانات الإجازة بنجاح 👌")
+                Else
+                    RaiseEvent RequestSnackbar("🏖️ تم تسجيل واعتماد طلب الإجازة بنجاح 👌")
+                End If
+
                 LoadLeaves()
                 LoadLeaveBalance(NewLeave.EmployeeID)
-                ResetNewLeave()
+
+                If isUpdate Then
+                    _selectedLeave = Leaves.FirstOrDefault(Function(l) l.LeaveID = savedId)
+                    OnPropertyChanged(NameOf(SelectedLeave))
+                    NotifyStateChanged()
+                Else
+                    ExecuteNewLeave(Nothing)
+                End If
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء حفظ الإجازة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
@@ -318,10 +532,17 @@ Namespace ViewModels
                 Return
             End If
 
+            If Not CanEdit Then
+                MessageBox.Show("ليس لديك صلاحية لتسجيل أو تعديل مباشرة العمل", "صلاحيات غير كافية", MessageBoxButton.OK, MessageBoxImage.Warning)
+                Return
+            End If
+
             Try
                 _hrService.RecordResumption(SelectedLeave.LeaveID, ResumptionActualDate, ResumptionActualDate, ResumptionNotes)
-                RaiseEvent RequestSnackbar("🏢 تم تسجيل مباشرة العمل وتحديث حالة الموظف إلى نشط (Active) بنجاح 👌")
+                RaiseEvent RequestSnackbar("🏢 تم اعتماد مباشرة العمل وتحديث حالة الموظف بنجاح 👌")
+                Dim curId = SelectedLeave.LeaveID
                 LoadLeaves()
+                SelectedLeave = Leaves.FirstOrDefault(Function(l) l.LeaveID = curId)
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء تسجيل المباشرة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
@@ -345,6 +566,20 @@ Namespace ViewModels
             End If
             Dim emp = _hrService.GetEmployeeById(l.EmployeeID)
             _printer.PrintJobCommencement(emp, l, l.ResumptionNotes)
+        End Sub
+
+        Private Sub NotifyStateChanged()
+            OnPropertyChanged(NameOf(IsEditMode))
+            OnPropertyChanged(NameOf(FormTitle))
+            OnPropertyChanged(NameOf(SaveButtonText))
+            OnPropertyChanged(NameOf(SaveButtonBackground))
+            OnPropertyChanged(NameOf(CanAdd))
+            OnPropertyChanged(NameOf(CanEdit))
+            OnPropertyChanged(NameOf(CanDelete))
+            OnPropertyChanged(NameOf(CanPrint))
+            OnPropertyChanged(NameOf(CanSaveLeave))
+            OnPropertyChanged(NameOf(CanRecordResumption))
+            CommandManager.InvalidateRequerySuggested()
         End Sub
 
         Private Sub NotifyPaginationChanged()

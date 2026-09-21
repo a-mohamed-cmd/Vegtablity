@@ -1,0 +1,45 @@
+### =========================================================================
+### اختبار مسارات الدومين الجديد والسيرفر (vegtablity.cc & API Endpoints)
+### =========================================================================
+
+@baseUrl = https://api.vegtablity.cc
+@database = WashaDB
+@token = YOUR_JWT_TOKEN_HERE
+
+### 1. فحص الاتصال بالحالة العامة للسيرفر (Health Check)
+GET {{baseUrl}}/docs
+Accept: application/json
+
+### 2. فحص التحديثات التلقائية (Check Updates)
+GET {{baseUrl}}/updates/check?platform=windows_flutter&flavor=license_manager&current_version=1.0.0
+Accept: application/json
+
+### 3. ملخص لوحة التحكم والـ KPI (Executive Dashboard Summary)
+GET {{baseUrl}}/reports/dashboard-summary?database={{database}}&from_date=2026-08-01&to_date=2026-08-30
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 4. تقرير أرباح الأصناف (Item Profitability)
+GET {{baseUrl}}/reports/item-profitability?database={{database}}&from_date=2026-08-01&to_date=2026-08-30
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 5. تقرير اتجاهات ومقارنة المبيعات اليومية/الشهرية (Sales Trends)
+GET {{baseUrl}}/reports/sales-trends?database={{database}}&period=daily&year=2026&month=8
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 6. تقرير مبيعات كبار العملاء (Top Customers)
+GET {{baseUrl}}/reports/customer-sales?database={{database}}&from_date=2026-08-01&to_date=2026-08-30&top_n=10
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 7. تقرير أعمار الديون (Aging of Receivables)
+GET {{baseUrl}}/reports/aging-debt?database={{database}}
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 8. تقرير جرد وتقييم المخزون اللحظي (Stock Valuation)
+GET {{baseUrl}}/reports/inventory-valuation?database={{database}}
+Authorization: Bearer {{token}}
+Accept: application/json

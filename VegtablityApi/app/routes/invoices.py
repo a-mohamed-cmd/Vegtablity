@@ -6,6 +6,7 @@ from typing import List
 
 router = APIRouter()
 
+@router.get("", response_model=List[dict], include_in_schema=False)
 @router.get("/", response_model=List[dict])
 async def get_invoices(
     type: str = "Sales", 

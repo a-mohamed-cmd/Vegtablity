@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="منظومة التقارير والتحليلات التنفيذية الشاملة لنظام Vegtablity">
+
+  <!-- Cache Busting Headers -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
+  <!-- iOS Meta Tags & PWA Icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="لوحة الإدارة">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Mobile Viewport Responsive for All Screen Sizes -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0F172A">
+
+  <link rel="icon" type="image/png" href="favicon.png?v=2"/>
+  <title>لوحة الإدارة والتقارير التنفيذية | Vegtablity Manager</title>
+  <link rel="manifest" href="manifest.json?v=2">
+
+  <style>
+    html, body {
+      background-color: #0F172A;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .loading-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 9999;
+      background-color: #0F172A;
+      transition: opacity 0.35s ease-out, visibility 0.35s ease-out;
+    }
+    .app-logo {
+      width: 76px;
+      height: 76px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25);
+      animation: pulse 2s infinite ease-in-out;
+    }
+    .loading-spinner {
+      width: 38px;
+      height: 38px;
+      border: 3.5px solid rgba(245, 158, 11, 0.15);
+      border-top-color: #F59E0B;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    .loading-text {
+      color: #94A3B8;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.85; }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-container" id="loading">
+    <img src="favicon.png?v=2" alt="Vegtablity Logo" class="app-logo" />
+    <div class="loading-spinner"></div>
+    <div class="loading-text">جاري تحميل لوحة المؤشرات والتقارير...</div>
+  </div>
+
+  <script>
+    function removeLoadingScreen() {
+      var loader = document.getElementById('loading');
+      if (loader) {
+        loader.style.opacity = '0';
+        loader.style.pointerEvents = 'none';
+        setTimeout(function() {
+          if (loader && loader.parentNode) {
+            loader.parentNode.removeChild(loader);
+          }
+        }, 350);
+      }
+    }
+
+    // 1. Flutter standard event when first frame is rendered
+    window.addEventListener('flutter-first-frame', removeLoadingScreen);
+
+    // 2. MutationObserver: when flutter-view or flt-glass-pane is added into DOM
+    var observer = new MutationObserver(function(mutations, obs) {
+      if (document.querySelector('flutter-view') || document.querySelector('flt-glass-pane')) {
+        setTimeout(removeLoadingScreen, 150);
+        obs.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // 3. Expose globally so Dart can call it immediately
+    window.removeLoadingScreen = removeLoadingScreen;
+
+    // 4. Safety fallback: if anything stalls or takes time, never trap the user
+    setTimeout(removeLoadingScreen, 2500);
+
+    // Ensure browsers always load the latest build without being trapped by old service workers
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (let name of names) {
+          caches.delete(name);
+        }
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js?v=4" async></script>
+</body>
+</html>

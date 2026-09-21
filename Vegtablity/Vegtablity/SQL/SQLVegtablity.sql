@@ -2004,24 +2004,35 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- 1. Calculate Transactional Totals for Revenue and Expenses
+    -- 1. حساب إجمالي الحركات من قيود اليومية لجميع حسابات الإيرادات والمصروفات
+    -- متطابق كلياً مع إجراء الويب (CAST AS DATE لشمول كامل اليوم الأخير حتى 23:59:59)
     WITH RawTotals AS (
         SELECT 
             A.AccountID,
             SUM(
                 CASE 
-                    WHEN A.AccountType = 'Revenue' THEN (JE.DebitAmount - JE.CreditAmount )
-                    WHEN A.AccountType = 'Expenses' THEN (JE.DebitAmount - JE.CreditAmount)
-                    ELSE (JE.DebitAmount - JE.CreditAmount)
+                    -- الإيرادات: الدائن - المدين (مطابق لإجراء الويب)
+                    WHEN (A.AccountType IN ('Revenue', N'إيرادات', N'الايرادات') OR A.AccountCode LIKE '4%') 
+                        THEN (ISNULL(JE.CreditAmount, 0) - ISNULL(JE.DebitAmount, 0))
+                    -- المصروفات وتكلفة المبيعات: المدين - الدائن
+                    WHEN (A.AccountType IN ('Expenses', 'COGS', N'مصروفات', N'المصروفات', N'تكلفة المبيعات') OR A.AccountCode LIKE '5%' OR A.AccountCode LIKE '6%') 
+                        THEN (ISNULL(JE.DebitAmount, 0) - ISNULL(JE.CreditAmount, 0))
+                    ELSE (ISNULL(JE.DebitAmount, 0) - ISNULL(JE.CreditAmount, 0))
                 END
             ) as PeriodBalance
         FROM [Accounting].[JournalEntries] JE
-        JOIN [Accounting].[ChartOfAccounts] A ON JE.AccountID = A.AccountID
-        WHERE A.AccountType IN ('Revenue', 'Expenses')
-          AND JE.EntryDate BETWEEN @StartDate AND @EndDate
+        INNER JOIN [Accounting].[ChartOfAccounts] A ON JE.AccountID = A.AccountID
+        WHERE (
+            A.AccountType IN ('Revenue', 'Expenses', 'COGS', N'إيرادات', N'الايرادات', N'مصروفات', N'المصروفات', N'تكلفة المبيعات')
+            OR A.AccountCode LIKE '4%' 
+            OR A.AccountCode LIKE '5%' 
+            OR A.AccountCode LIKE '6%'
+        )
+          -- حل مشكلة نقص اليوم: تحويل التاريخ لـ DATE لضمان شمول كامل حركات اليوم الأخير
+          AND CAST(JE.EntryDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
         GROUP BY A.AccountID
     ),
-    -- 2. Build Hierarchy
+    -- 2. بناء تسلسل شجرة الحسابات (Hierarchy)
     Hierarchy AS (
         SELECT 
             AccountID, 
@@ -2032,8 +2043,13 @@ BEGIN
             IsTransactional,
             AccountID as RootParentID
         FROM [Accounting].[ChartOfAccounts]
-        WHERE AccountLevel = @ReportLevel
-          AND AccountType IN ('Revenue', 'Expenses')
+        WHERE (AccountLevel = @ReportLevel OR (@ReportLevel = 0 AND ParentAccountID IS NULL))
+          AND (
+            AccountType IN ('Revenue', 'Expenses', 'COGS', N'إيرادات', N'الايرادات', N'مصروفات', N'المصروفات') 
+            OR AccountCode LIKE '4%' 
+            OR AccountCode LIKE '5%' 
+            OR AccountCode LIKE '6%'
+          )
 
         UNION ALL
 
@@ -2047,20 +2063,50 @@ BEGIN
             h.RootParentID
         FROM [Accounting].[ChartOfAccounts] c
         JOIN Hierarchy h ON c.ParentAccountID = h.AccountID
+    ),
+    -- 3. تجميع البيانات وضمان عدم سقوط أي قيد يومية مسجل
+    AggregatedData AS (
+        SELECT 
+            h.RootParentID as AccountID,
+            p.AccountCode,
+            p.AccountName,
+            CASE 
+                WHEN p.AccountType IN ('Revenue', N'إيرادات', N'الايرادات') OR p.AccountCode LIKE '4%' THEN 'Revenue'
+                ELSE 'Expenses'
+            END AS AccountType,
+            SUM(ISNULL(r.PeriodBalance, 0)) as Balance
+        FROM Hierarchy h
+        LEFT JOIN RawTotals r ON h.AccountID = r.AccountID
+        JOIN [Accounting].[ChartOfAccounts] p ON h.RootParentID = p.AccountID
+        WHERE (h.IsTransactional = 1 OR NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] child WHERE child.ParentAccountID = h.AccountID) OR r.PeriodBalance IS NOT NULL)
+        GROUP BY h.RootParentID, p.AccountCode, p.AccountName,
+                 CASE WHEN p.AccountType IN ('Revenue', N'إيرادات', N'الايرادات') OR p.AccountCode LIKE '4%' THEN 'Revenue' ELSE 'Expenses' END
+
+        UNION ALL
+
+        -- ضمان الأمان المحاسبي التام: الحسابات التي عليها قيود يومية وسقط تسلسلها في الشجرة
+        SELECT 
+            a.AccountID,
+            a.AccountCode,
+            a.AccountName,
+            CASE 
+                WHEN a.AccountType IN ('Revenue', N'إيرادات', N'الايرادات') OR a.AccountCode LIKE '4%' THEN 'Revenue'
+                ELSE 'Expenses'
+            END AS AccountType,
+            r.PeriodBalance as Balance
+        FROM RawTotals r
+        JOIN [Accounting].[ChartOfAccounts] a ON r.AccountID = a.AccountID
+        WHERE r.AccountID NOT IN (SELECT AccountID FROM Hierarchy)
     )
-    -- 3. Aggregation
     SELECT 
-        h.RootParentID as AccountID,
-        p.AccountCode,
-        p.AccountName,
-        p.AccountType,
-        SUM(ISNULL(r.PeriodBalance, 0)) as Balance
-    FROM Hierarchy h
-    LEFT JOIN RawTotals r ON h.AccountID = r.AccountID
-    JOIN [Accounting].[ChartOfAccounts] p ON h.RootParentID = p.AccountID
-    WHERE h.IsTransactional = 1
-    GROUP BY h.RootParentID, p.AccountCode, p.AccountName, p.AccountType
-    ORDER BY p.AccountCode;
+        AccountID,
+        AccountCode,
+        AccountName,
+        AccountType,
+        SUM(Balance) as Balance
+    FROM AggregatedData
+    GROUP BY AccountID, AccountCode, AccountName, AccountType
+    ORDER BY AccountCode;
 END
 GO
 
@@ -14925,30 +14971,857 @@ go
 
 IF OBJECT_ID('[Sales].[sp_Report_CustomerSalesSummary]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Report_CustomerSalesSummary];
 GO
-create PROCEDURE [Sales].[sp_Report_CustomerSalesSummary]
+CREATE PROCEDURE [Sales].[sp_Report_CustomerSalesSummary]
     @StartDate DATETIME,
-    @EndDate   DATETIME
+    @EndDate   DATETIME,
+    @TopN      INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. استخراج تكلفة البضاعة المباعة (COGS) من قيود اليومية لكل فاتورة مرحلة
+    ;WITH JournalInvoiceCOGS AS (
+        SELECT 
+            je.ReferenceID AS InvID,
+            SUM(je.DebitAmount - je.CreditAmount) AS COGSCost
+        FROM [Accounting].[JournalEntries] je
+        INNER JOIN [Accounting].[ChartOfAccounts] a ON je.AccountID = a.AccountID
+        WHERE je.ReferenceType = 'Invoice'
+          AND (a.AccountType = 'COGS' OR a.AccountCode LIKE '51%')
+          AND CAST(je.EntryDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
+        GROUP BY je.ReferenceID
+    ),
+    -- 2. القاعدة الأساسية: تجميع المبيعات والسداد والأرصدة بالكامل من جدول القيود اليومية المرحلة
+    CustomerJournalStats AS (
+        SELECT 
+            p.PartnerID,
+            p.AccountID,
+            -- عدد الفواتير المرحلة للعميل من واقع قيود اليومية
+            COUNT(DISTINCT CASE 
+                WHEN je.ReferenceType = 'Invoice' 
+                     AND CAST(je.EntryDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
+                THEN je.ReferenceID 
+                ELSE NULL 
+            END) AS InvoiceCount,
+            -- إجمالي مبيعات العميل من واقع قيود اليومية المرحلة (الطرف المدين لقيود فواتير المبيعات)
+            ISNULL(SUM(CASE 
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
+                     AND je.ReferenceType = 'Invoice'
+                THEN (je.DebitAmount - je.CreditAmount)
+                ELSE 0 
+            END), 0) AS TotalSales,
+            -- إجمالي سداد العميل من واقع قيود اليومية المرحلة (الطرف الدائن للسدادات وسندات القبض)
+            ISNULL(SUM(CASE 
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
+                     AND (je.ReferenceType IN ('Payment', 'Voucher', 'Manual', 'Receipt') OR je.ReferenceType <> 'Invoice')
+                     AND je.CreditAmount > 0
+                THEN je.CreditAmount
+                ELSE 0 
+            END), 0) AS TotalPaid,
+            -- رصيد مديونية العميل التراكمي حتى نهاية الفترة من واقع قيود اليومية المرحلة (المدين - الدائن)
+            ISNULL(SUM(CASE 
+                WHEN CAST(je.EntryDate AS DATE) <= CAST(@EndDate AS DATE)
+                THEN (je.DebitAmount - je.CreditAmount)
+                ELSE 0 
+            END), 0) AS OutstandingDebt
+        FROM [Sales].[Partners] p
+        INNER JOIN [Accounting].[JournalEntries] je ON je.AccountID = p.AccountID
+        GROUP BY p.PartnerID, p.AccountID
+    ),
+    -- 3. تكلفة المبيعات المحسوبة من قيود الفواتير المرتبطة بكل عميل
+    CustomerCOGSFromJournals AS (
+        SELECT 
+            p.PartnerID,
+            ISNULL(SUM(cogs.COGSCost), 0) AS TotalCOGS
+        FROM [Sales].[Partners] p
+        INNER JOIN [Accounting].[JournalEntries] je_cust ON je_cust.AccountID = p.AccountID AND je_cust.ReferenceType = 'Invoice'
+        INNER JOIN JournalInvoiceCOGS cogs ON je_cust.ReferenceID = cogs.InvID
+        WHERE CAST(je_cust.EntryDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
+        GROUP BY p.PartnerID
+    ),
+    -- 4. دعم العملاء النقديين الذين ليس لهم حسابات دائن/مدين في دليل الحسابات (احتياطي فقط)
+    CashCustomerInvoices AS (
+        SELECT 
+            p.PartnerID,
+            ISNULL(p.PartnerName, N'عميل نقدي') AS PartnerName,
+            ISNULL(p.Phone, '') AS Phone,
+            p.AccountID,
+            COUNT(DISTINCT h.InvID) AS InvoiceCount,
+            ISNULL(SUM(h.NetAmount), 0) AS TotalSales,
+            ISNULL(SUM(ISNULL(Det.TotalCost, 0)), 0) AS TotalCOGS,
+            ISNULL(SUM(h.PaidAmount), 0) AS TotalPaid,
+            ISNULL(SUM(h.Remainder), 0) AS OutstandingDebt
+        FROM [Sales].[Partners] p
+        INNER JOIN [Sales].[InvoiceHeader] h ON p.PartnerID = h.PartnerID
+        LEFT JOIN (
+            SELECT InvID, SUM(ISNULL(Quantity, 1) * ISNULL(CostPrice, 0)) AS TotalCost
+            FROM [Sales].[InvoiceDetails]
+            GROUP BY InvID
+        ) Det ON h.InvID = Det.InvID
+        WHERE p.AccountID IS NULL
+          AND (h.InvType = 'Sales' OR h.InvType = 'Sale' OR h.InvType IS NULL OR h.InvType = '' OR h.InvType = N'مبيعات' OR h.InvType NOT LIKE '%Purchase%')
+          AND h.IsPosted = 1
+          AND CAST(h.InvDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
+        GROUP BY p.PartnerID, p.PartnerName, p.Phone, p.AccountID
+    ),
+    -- 5. دمج البيانات مع إعطاء الأولوية التامة والمطلقة لقيود اليومية المرحلة
+    CombinedResults AS (
+        SELECT 
+            p.PartnerID,
+            p.PartnerName,
+            ISNULL(p.Phone, '') AS Phone,
+            p.AccountID,
+            j.InvoiceCount,
+            j.TotalSales,
+            -- تكلفة البضاعة من قيود اليومية، وبديل تفاصيل الفاتورة إذا لم يتم قيد التكلفة محاسبياً
+            CASE 
+                WHEN ISNULL(c.TotalCOGS, 0) > 0 THEN c.TotalCOGS
+                ELSE ISNULL((
+                    SELECT SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, 0))
+                    FROM [Sales].[InvoiceHeader] ih
+                    JOIN [Sales].[InvoiceDetails] d ON ih.InvID = d.InvID
+                    WHERE ih.PartnerID = p.PartnerID AND ih.IsPosted = 1
+                      AND CAST(ih.InvDate AS DATE) BETWEEN CAST(@StartDate AS DATE) AND CAST(@EndDate AS DATE)
+                ), 0)
+            END AS TotalCOGS,
+            j.TotalPaid,
+            j.OutstandingDebt
+        FROM [Sales].[Partners] p
+        INNER JOIN CustomerJournalStats j ON p.PartnerID = j.PartnerID
+        LEFT JOIN CustomerCOGSFromJournals c ON p.PartnerID = c.PartnerID
+        WHERE (j.TotalSales > 0 OR j.TotalPaid > 0 OR j.OutstandingDebt <> 0)
+
+        UNION ALL
+
+        -- العملاء النقديون بدون قيود في حال وجودهم
+        SELECT 
+            csh.PartnerID,
+            csh.PartnerName,
+            csh.Phone,
+            csh.AccountID,
+            csh.InvoiceCount,
+            csh.TotalSales,
+            csh.TotalCOGS,
+            csh.TotalPaid,
+            csh.OutstandingDebt
+        FROM CashCustomerInvoices csh
+        WHERE csh.PartnerID NOT IN (SELECT PartnerID FROM CustomerJournalStats)
+    )
+    -- 6. الاستعلام النهائي
+    SELECT TOP (ISNULL(NULLIF(@TopN, 0), 2147483647))
+        r.PartnerID,
+        r.PartnerName,
+        r.Phone,
+        r.AccountID,
+        r.InvoiceCount,
+        r.TotalSales,
+        r.TotalCOGS,
+        r.TotalCOGS AS TotalCost,
+        (r.TotalSales - r.TotalCOGS) AS TotalProfit,
+        (r.TotalSales - r.TotalCOGS) AS NetProfit,
+        CASE 
+            WHEN r.TotalSales > 0 
+            THEN ((r.TotalSales - r.TotalCOGS) / r.TotalSales) * 100 
+            ELSE 0 
+        END AS ProfitMarginPercent,
+        r.TotalPaid,
+        r.OutstandingDebt
+    FROM CombinedResults r
+    ORDER BY TotalProfit DESC;
+END
+GO
+
+-- =============================================
+-- 10. إجراءات التقارير ولوحة المؤشرات (Schema: Reports)
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Reports') EXEC('CREATE SCHEMA [Reports]');
+GO
+
+-- 1. ملخص المبيعات والفواتير والمصروفات وصافي الأرباح للداشبورد
+IF OBJECT_ID('[Reports].[sp_Report_DashboardSalesSummary]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_DashboardSalesSummary];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_DashboardSalesSummary]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @TotalInvoices INT = 0;
+    DECLARE @TotalSales DECIMAL(18,2) = 0;
+    DECLARE @TotalPaid DECIMAL(18,2) = 0;
+    DECLARE @TotalCredit DECIMAL(18,2) = 0;
+    DECLARE @TotalDiscounts DECIMAL(18,2) = 0;
+    DECLARE @TotalCost DECIMAL(18,2) = 0;
+    DECLARE @TotalExpenses DECIMAL(18,2) = 0;
+    DECLARE @GrossProfit DECIMAL(18,2) = 0;
+    DECLARE @NetProfit DECIMAL(18,2) = 0;
+
+    -- 1. إحصائيات الفواتير والمدفوعات والمتبقي والخصومات من رأس الفاتورة
+    SELECT 
+        @TotalInvoices = COUNT(InvID),
+        @TotalPaid = ISNULL(SUM(PaidAmount), 0),
+        @TotalCredit = ISNULL(SUM(Remainder), 0),
+        @TotalDiscounts = ISNULL(SUM(Discount), 0)
+    FROM [Sales].[InvoiceHeader]
+    WHERE CAST(InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (InvType = 'Sales' OR InvType = 'Sale' OR InvType IS NULL OR InvType = '' OR InvType = N'مبيعات' OR InvType NOT LIKE '%Purchase%');
+
+    -- 2. حساب إجمالي المبيعات من واقع قيود اليومية JournalEntries (حسابات الإيرادات: الدائن - المدين)
+    IF OBJECT_ID('[Accounting].[JournalEntries]', 'U') IS NOT NULL AND OBJECT_ID('[Accounting].[ChartOfAccounts]', 'U') IS NOT NULL
+    BEGIN
+        SELECT @TotalSales = ISNULL(SUM(je.CreditAmount - je.DebitAmount), 0)
+        FROM [Accounting].[JournalEntries] je
+        INNER JOIN [Accounting].[ChartOfAccounts] a ON je.AccountID = a.AccountID
+        WHERE (a.AccountType = 'Revenue' OR a.AccountCode LIKE '4%')
+          AND CAST(je.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate;
+    END
+
+    -- اعتماد احتياطي في حال عدم وجود قيود مسجلة للفترة (الناتج 0) لضمان عدم توقف أي عمليات سابقة للنظام
+    IF @TotalSales = 0
+    BEGIN
+        SELECT @TotalSales = ISNULL(SUM(NetAmount), 0)
+        FROM [Sales].[InvoiceHeader]
+        WHERE CAST(InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+          AND (InvType = 'Sales' OR InvType = 'Sale' OR InvType IS NULL OR InvType = '' OR InvType = N'مبيعات' OR InvType NOT LIKE '%Purchase%');
+    END
+
+    -- 3. إجمالي تكلفة البضاعة المباعة (COGS)
+    SELECT 
+        @TotalCost = ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0)
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+    LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%');
+
+    SET @GrossProfit = @TotalSales - @TotalCost;
+
+    -- 3. المصروفات التشغيلية من جدول JournalEntries
+    IF OBJECT_ID('[Accounting].[JournalEntries]', 'U') IS NOT NULL AND OBJECT_ID('[Accounting].[ChartOfAccounts]', 'U') IS NOT NULL
+    BEGIN
+        SELECT @TotalExpenses = ISNULL(SUM(je.DebitAmount - je.CreditAmount), 0)
+        FROM [Accounting].[JournalEntries] je
+        INNER JOIN [Accounting].[ChartOfAccounts] a ON je.AccountID = a.AccountID
+        WHERE a.AccountType = 'Expenses'
+          AND CAST(je.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate;
+    END
+
+    -- 4. صافي الأرباح بعد خصم المصروفات
+    SET @NetProfit = @GrossProfit - @TotalExpenses;
+
+    SELECT 
+        @TotalInvoices AS TotalInvoices,
+        @TotalSales AS TotalSales,
+        @TotalPaid AS TotalPaid,
+        @TotalCredit AS TotalCredit,
+        @TotalDiscounts AS TotalDiscounts,
+        @TotalCost AS TotalCost,
+        @GrossProfit AS GrossProfit,
+        @TotalExpenses AS TotalExpenses,
+        @NetProfit AS NetProfit,
+        CASE WHEN @TotalSales > 0 THEN (@NetProfit / @TotalSales) * 100 ELSE 0 END AS NetProfitMarginPercent;
+END
+GO
+
+-- 2. إجمالي الذمم المدينة والديون المعلقة (مطابق لآلية مديونيات العملاء في WPF)
+IF OBJECT_ID('[Reports].[sp_Report_TotalReceivables]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_TotalReceivables];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_TotalReceivables]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- حساب مجموع مديونيات العملاء بنفس آلية شاشة الداشبورد في WPF من واقع قيود اليومية والحسابات
+    SELECT ISNULL(SUM(Balance), 0) AS TotalReceivables
+    FROM (
+        SELECT ISNULL(SUM(JE.DebitAmount - JE.CreditAmount), 0) AS Balance
+        FROM [Sales].[Partners] p
+        INNER JOIN [Accounting].[JournalEntries] JE ON JE.AccountID = p.AccountID
+        WHERE p.PartnerType IN ('Customer', 'Both')
+        GROUP BY p.PartnerID
+        HAVING ISNULL(SUM(JE.DebitAmount - JE.CreditAmount), 0) > 0
+    ) CustDebts;
+END
+GO
+
+-- 3. ملخص المخزون الحالي وقيمته
+IF OBJECT_ID('[Reports].[sp_Report_InventorySummary]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_InventorySummary];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_InventorySummary]
 AS
 BEGIN
     SET NOCOUNT ON;
     SELECT 
-        p.PartnerID,
-        p.PartnerName,
-        p.AccountID,
-        COUNT(h.InvID) AS InvoiceCount,
-        SUM(h.NetAmount) AS TotalSales,
-        SUM(ISNULL(Det.TotalCost, 0)) AS TotalCOGS,
-        SUM(h.NetAmount) - SUM(ISNULL(Det.TotalCost, 0)) AS TotalProfit
-    FROM [Sales].[Partners] p
-    INNER JOIN [Sales].[InvoiceHeader] h ON p.PartnerID = h.PartnerID
-    LEFT JOIN (
-        SELECT InvID, SUM(Quantity * CostPrice) AS TotalCost
-        FROM [Sales].[InvoiceDetails]
-        GROUP BY InvID
-    ) Det ON h.InvID = Det.InvID
-    WHERE h.InvType = 'Sales' AND h.IsPosted = 1
-      AND h.InvDate BETWEEN @StartDate AND @EndDate
-    GROUP BY p.PartnerID, p.PartnerName, p.AccountID
-    ORDER BY TotalSales DESC;
+        COUNT(DISTINCT p.ProductID) AS TotalItemsCount,
+        ISNULL(SUM(ISNULL(s.CurrentQty, 0) * ISNULL(s.AvgCostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS TotalCostValue,
+        ISNULL(SUM(ISNULL(s.CurrentQty, 0) * ISNULL(p.SalePrice, 0)), 0) AS TotalSaleValue
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Inventory].[ProductStock] s ON p.ProductID = s.ProductID;
 END
-go
+GO
+
+-- 4. تقرير أرباح الأصناف مع المرونة وترتيب النتائج
+IF OBJECT_ID('[Reports].[sp_Report_ProductProfits]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_ProductProfits];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_ProductProfits]
+    @StartDate DATE,
+    @EndDate DATE,
+    @OrderBy NVARCHAR(50) = 'ProfitDesc'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID,
+        ISNULL(p.Barcode, '') AS Barcode,
+        ISNULL(p.ProductName, N'صنف غير معرف') AS ProductName,
+        ISNULL(u.UnitName, N'حبة') AS UnitName,
+        ISNULL(SUM(d.Quantity), 0) AS TotalQtySold,
+        ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))), 0) AS TotalRevenue,
+        ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS TotalCost,
+        ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))) - SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS NetProfit,
+        CASE WHEN ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))), 0) > 0 
+             THEN ((ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))), 0) - ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0)) / SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0)))) * 100 
+             ELSE 0 END AS ProfitMarginPercent
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+    GROUP BY p.ProductID, p.Barcode, p.ProductName, u.UnitName
+    ORDER BY 
+        CASE WHEN @OrderBy = 'QtyDesc' THEN ISNULL(SUM(d.Quantity), 0) END DESC,
+        CASE WHEN @OrderBy = 'RevenueDesc' THEN ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))), 0) END DESC,
+        CASE WHEN @OrderBy NOT IN ('QtyDesc', 'RevenueDesc') THEN ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))) - SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) END DESC;
+END
+GO
+
+-- 5. تقرير أرباح الفواتير التفصيلي
+IF OBJECT_ID('[Reports].[sp_Report_InvoiceProfits]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_InvoiceProfits];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_InvoiceProfits]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        i.InvID,
+        i.InvDate,
+        ISNULL(p.PartnerName, N'عميل نقدي') AS CustomerName,
+        ISNULL(u.FullName, N'الكاشير') AS CashierName,
+        i.TotalAmount AS GrossTotal,
+        ISNULL(i.Discount, 0) AS Discount,
+        i.NetAmount,
+        ISNULL((SELECT SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(pr.PurchasePrice, 0))) 
+                FROM [Sales].[InvoiceDetails] d 
+                INNER JOIN [Inventory].[Products] pr ON d.ProductID = pr.ProductID 
+                WHERE d.InvID = i.InvID), 0) AS TotalCost,
+        i.NetAmount - ISNULL((SELECT SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(pr.PurchasePrice, 0))) 
+                              FROM [Sales].[InvoiceDetails] d 
+                              INNER JOIN [Inventory].[Products] pr ON d.ProductID = pr.ProductID 
+                              WHERE d.InvID = i.InvID), 0) AS NetProfit,
+        ISNULL(i.PaidAmount, 0) AS PaidAmount,
+        ISNULL(i.Remainder, 0) AS Remainder
+    FROM [Sales].[InvoiceHeader] i
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    LEFT JOIN [Security].[Users] u ON i.UserID = u.UserID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+    ORDER BY i.InvDate DESC, i.InvID DESC;
+END
+GO
+
+-- 6. تقرير حركة المبيعات وتطورها (يومي / شهري لعرض بيانات العام بالكامل)
+IF OBJECT_ID('[Reports].[sp_Report_SalesTrends]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_SalesTrends];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_SalesTrends]
+    @StartDate DATE,
+    @EndDate DATE,
+    @PeriodType NVARCHAR(20) = 'Daily'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- إذا كانت الفترة شهرية أو كان الفارق الزمني أكثر من 60 يوماً (مثل فلتر هذا العام)
+    IF @PeriodType = 'Monthly' OR @PeriodType = 'Yearly' OR DATEDIFF(DAY, @StartDate, @EndDate) > 60
+    BEGIN
+        ;WITH SalesData AS (
+            SELECT 
+                CONVERT(VARCHAR(7), CAST(i.InvDate AS DATE), 120) AS PeriodString,
+                i.InvID,
+                i.TotalAmount,
+                i.Discount,
+                i.NetAmount,
+                i.PaidAmount,
+                i.Remainder
+            FROM [Sales].[InvoiceHeader] i
+            WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+              AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+        ),
+        CostData AS (
+            SELECT 
+                CONVERT(VARCHAR(7), CAST(i.InvDate AS DATE), 120) AS PeriodString,
+                ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS TotalCost
+            FROM [Sales].[InvoiceDetails] d
+            INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+            LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+            WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+              AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+            GROUP BY CONVERT(VARCHAR(7), CAST(i.InvDate AS DATE), 120)
+        )
+        SELECT 
+            s.PeriodString,
+            COUNT(s.InvID) AS InvoiceCount,
+            ISNULL(SUM(s.TotalAmount), 0) AS TotalGrossAmount,
+            ISNULL(SUM(s.Discount), 0) AS TotalDiscounts,
+            ISNULL(SUM(s.NetAmount), 0) AS TotalNetAmount,
+            ISNULL(SUM(s.PaidAmount), 0) AS TotalPaid,
+            ISNULL(SUM(s.Remainder), 0) AS TotalCredit,
+            ISNULL(c.TotalCost, 0) AS TotalCost,
+            ISNULL(SUM(s.NetAmount), 0) - ISNULL(c.TotalCost, 0) AS TotalProfit
+        FROM SalesData s
+        LEFT JOIN CostData c ON s.PeriodString = c.PeriodString
+        GROUP BY s.PeriodString, c.TotalCost
+        ORDER BY s.PeriodString ASC;
+    END
+    ELSE
+    BEGIN
+        ;WITH SalesData AS (
+            SELECT 
+                CONVERT(VARCHAR(10), CAST(i.InvDate AS DATE), 120) AS PeriodString,
+                i.InvID,
+                i.TotalAmount,
+                i.Discount,
+                i.NetAmount,
+                i.PaidAmount,
+                i.Remainder
+            FROM [Sales].[InvoiceHeader] i
+            WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+              AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+        ),
+        CostData AS (
+            SELECT 
+                CONVERT(VARCHAR(10), CAST(i.InvDate AS DATE), 120) AS PeriodString,
+                ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS TotalCost
+            FROM [Sales].[InvoiceDetails] d
+            INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+            LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+            WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+              AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+            GROUP BY CONVERT(VARCHAR(10), CAST(i.InvDate AS DATE), 120)
+        )
+        SELECT 
+            s.PeriodString,
+            COUNT(s.InvID) AS InvoiceCount,
+            ISNULL(SUM(s.TotalAmount), 0) AS TotalGrossAmount,
+            ISNULL(SUM(s.Discount), 0) AS TotalDiscounts,
+            ISNULL(SUM(s.NetAmount), 0) AS TotalNetAmount,
+            ISNULL(SUM(s.PaidAmount), 0) AS TotalPaid,
+            ISNULL(SUM(s.Remainder), 0) AS TotalCredit,
+            ISNULL(c.TotalCost, 0) AS TotalCost,
+            ISNULL(SUM(s.NetAmount), 0) - ISNULL(c.TotalCost, 0) AS TotalProfit
+        FROM SalesData s
+        LEFT JOIN CostData c ON s.PeriodString = c.PeriodString
+        GROUP BY s.PeriodString, c.TotalCost
+        ORDER BY s.PeriodString ASC;
+    END
+END
+GO
+
+-- 7. تقرير كبار العملاء
+IF OBJECT_ID('[Reports].[sp_Report_TopCustomers]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_TopCustomers];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_TopCustomers]
+    @StartDate DATE,
+    @EndDate DATE,
+    @TopN INT = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP (@TopN)
+        ISNULL(p.PartnerID, 0) AS PartnerID,
+        ISNULL(p.PartnerName, N'عميل نقدي') AS PartnerName,
+        ISNULL(p.Phone, '') AS Phone,
+        COUNT(i.InvID) AS TotalInvoices,
+        ISNULL(SUM(i.NetAmount), 0) AS TotalPurchases,
+        ISNULL(SUM(i.PaidAmount), 0) AS TotalPaid,
+        ISNULL(SUM(i.Remainder), 0) AS TotalCreditBalance
+    FROM [Sales].[InvoiceHeader] i
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+    GROUP BY p.PartnerID, p.PartnerName, p.Phone
+    ORDER BY TotalPurchases DESC;
+END
+GO
+
+-- 8. تقرير أعمار الديون
+IF OBJECT_ID('[Reports].[sp_Report_AgingDebt]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_AgingDebt];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_AgingDebt]
+    @AsOfDate DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @TargetDate DATE = ISNULL(@AsOfDate, CAST(GETDATE() AS DATE));
+    
+    SELECT 
+        i.InvID,
+        i.InvDate,
+        ISNULL(p.PartnerName, N'عميل نقدي') AS CustomerName,
+        ISNULL(p.Phone, '') AS Phone,
+        i.NetAmount,
+        i.PaidAmount,
+        i.Remainder AS UnpaidBalance,
+        DATEDIFF(DAY, i.InvDate, @TargetDate) AS DaysOverdue,
+        CASE 
+            WHEN DATEDIFF(DAY, i.InvDate, @TargetDate) <= 30 THEN '1_0_to_30_Days'
+            WHEN DATEDIFF(DAY, i.InvDate, @TargetDate) <= 60 THEN '2_31_to_60_Days'
+            WHEN DATEDIFF(DAY, i.InvDate, @TargetDate) <= 90 THEN '3_61_to_90_Days'
+            ELSE '4_Over_90_Days'
+        END AS AgingBucket
+    FROM [Sales].[InvoiceHeader] i
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    WHERE i.Remainder > 0
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+    ORDER BY DaysOverdue DESC, i.Remainder DESC;
+END
+GO
+
+-- 9. تقرير تقييم المخزون
+IF OBJECT_ID('[Reports].[sp_Report_InventoryValuation]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_InventoryValuation];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_InventoryValuation]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID,
+        ISNULL(p.Barcode, '') AS Barcode,
+        ISNULL(p.ProductName, N'صنف غير معرف') AS ProductName,
+        ISNULL(w.WarehouseName, N'المخزن الرئيسي') AS WarehouseName,
+        ISNULL(s.CurrentQty, 0) AS CurrentQty,
+        ISNULL(s.AvgCostPrice, ISNULL(p.PurchasePrice, 0)) AS UnitCost,
+        ISNULL(p.SalePrice, 0) AS UnitSellingPrice,
+        ISNULL(s.CurrentQty * ISNULL(s.AvgCostPrice, ISNULL(p.PurchasePrice, 0)), 0) AS TotalCostValue,
+        ISNULL(s.CurrentQty * ISNULL(p.SalePrice, 0), 0) AS TotalRetailValue
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Inventory].[ProductStock] s ON p.ProductID = s.ProductID
+    LEFT JOIN [Settings].[Warehouses] w ON s.WarehouseID = w.WarehouseID
+    ORDER BY TotalCostValue DESC, p.ProductName ASC;
+END
+GO
+
+-- 10. تقرير الأصناف الراكدة
+IF OBJECT_ID('[Reports].[sp_Report_SlowMovingStock]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_SlowMovingStock];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_SlowMovingStock]
+    @ThresholdDays INT = 30
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID,
+        ISNULL(p.Barcode, '') AS Barcode,
+        ISNULL(p.ProductName, N'صنف غير معرف') AS ProductName,
+        ISNULL(SUM(s.CurrentQty), 0) AS CurrentTotalStock,
+        ISNULL(p.PurchasePrice, 0) AS PurchasePrice,
+        ISNULL(SUM(s.CurrentQty * ISNULL(p.PurchasePrice, 0)), 0) AS TotalCostValue,
+        MAX(i.InvDate) AS LastSoldDate,
+        ISNULL(DATEDIFF(DAY, MAX(i.InvDate), GETDATE()), 999) AS DaysSinceLastSale
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Inventory].[ProductStock] s ON p.ProductID = s.ProductID
+    LEFT JOIN [Sales].[InvoiceDetails] d ON p.ProductID = d.ProductID
+    LEFT JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+    GROUP BY p.ProductID, p.Barcode, p.ProductName, p.PurchasePrice
+    HAVING ISNULL(SUM(s.CurrentQty), 0) > 0 
+       AND (MAX(i.InvDate) IS NULL OR DATEDIFF(DAY, MAX(i.InvDate), GETDATE()) >= @ThresholdDays)
+    ORDER BY DaysSinceLastSale DESC, TotalCostValue DESC;
+END
+GO
+
+-- 11. تقرير تحليل المصروفات التشغيلية من جدول JournalEntries
+IF OBJECT_ID('[Reports].[sp_Report_ExpensesAnalysis]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_ExpensesAnalysis];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_ExpensesAnalysis]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF OBJECT_ID('[Accounting].[JournalEntries]', 'U') IS NOT NULL AND OBJECT_ID('[Accounting].[ChartOfAccounts]', 'U') IS NOT NULL
+    BEGIN
+        SELECT 
+            ISNULL(c.AccountCode, 'EXP') AS AccountCode,
+            c.AccountName AS AccountName,
+            N'مصروفات تشغيلية' AS Category,
+            COUNT(je.EntryID) AS TransactionCount,
+            ISNULL(SUM(je.DebitAmount - je.CreditAmount), 0) AS TotalExpense
+        FROM [Accounting].[JournalEntries] je
+        INNER JOIN [Accounting].[ChartOfAccounts] c ON je.AccountID = c.AccountID
+        WHERE c.AccountType = 'Expenses'
+          AND CAST(je.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate
+        GROUP BY c.AccountCode, c.AccountName
+        HAVING ISNULL(SUM(je.DebitAmount - je.CreditAmount), 0) > 0
+        ORDER BY TotalExpense DESC;
+    END
+    ELSE
+    BEGIN
+        SELECT 
+            'EXP' AS AccountCode,
+            N'مصروفات تشغيلية' AS AccountName,
+            N'مصروفات تشغيلية' AS Category,
+            0 AS TransactionCount,
+            CAST(0.00 AS DECIMAL(18,2)) AS TotalExpense
+        WHERE 1 = 0;
+    END
+END
+GO
+
+-- 12. تقرير أرباح التصنيفات (Category Profits & Margin Analysis)
+IF OBJECT_ID('[Reports].[sp_Report_CategoryProfits]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_CategoryProfits];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_CategoryProfits]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        ISNULL(c.CatID, 0) AS CategoryID,
+        ISNULL(c.CatName, N'تصنيف عام') AS CategoryName,
+        COUNT(DISTINCT p.ProductID) AS ProductCount,
+        ISNULL(SUM(d.Quantity), 0) AS TotalQtySold,
+        ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))), 0) AS TotalRevenue,
+        ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS TotalCost,
+        ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))) - SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS NetProfit,
+        CASE WHEN ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))), 0) > 0 
+             THEN ((ISNULL(SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0))), 0) - ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0)) / SUM(ISNULL(d.TotalPrice, ISNULL(d.Quantity, 1) * ISNULL(d.UnitPrice, 0)))) * 100 
+             ELSE 0 END AS ProfitMarginPercent
+    FROM [Sales].[InvoiceDetails] d
+    INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+    INNER JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+    GROUP BY c.CatID, c.CatName
+    ORDER BY NetProfit DESC;
+END
+GO
+
+-- 13. تقرير أداء ومبيعات الكاشير والموظفين (Cashier Performance & Discounts)
+IF OBJECT_ID('[Reports].[sp_Report_CashierPerformance]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_CashierPerformance];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_CashierPerformance]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        ISNULL(u.UserID, 0) AS UserID,
+        ISNULL(u.FullName, ISNULL(u.Username, N'غير محدد')) AS CashierName,
+        COUNT(i.InvID) AS InvoiceCount,
+        ISNULL(SUM(i.TotalAmount), 0) AS TotalGrossSales,
+        ISNULL(SUM(i.Discount), 0) AS TotalDiscountsGiven,
+        ISNULL(SUM(i.NetAmount), 0) AS TotalNetSales,
+        ISNULL(SUM(i.PaidAmount), 0) AS TotalCashCollected,
+        ISNULL(SUM(i.Remainder), 0) AS TotalCreditSales,
+        CASE WHEN COUNT(i.InvID) > 0 THEN ISNULL(SUM(i.NetAmount), 0) / COUNT(i.InvID) ELSE 0 END AS AverageInvoiceValue
+    FROM [Sales].[InvoiceHeader] i
+    LEFT JOIN [Security].[Users] u ON i.UserID = u.UserID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+    GROUP BY u.UserID, u.FullName, u.Username
+    ORDER BY TotalNetSales DESC;
+END
+GO
+
+-- 14. تقرير تحليل طرق الدفع والمقبوضات (Payment Methods Breakdown)
+IF OBJECT_ID('[Reports].[sp_Report_PaymentMethodsBreakdown]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_PaymentMethodsBreakdown];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_PaymentMethodsBreakdown]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        ISNULL(a.AccountID, 0) AS AccountID,
+        ISNULL(a.AccountName, N'نقد / كاش') AS PaymentMethodName,
+        COUNT(DISTINCT i.InvID) AS InvoiceCount,
+        ISNULL(SUM(i.PaidAmount), 0) AS TotalAmountCollected
+    FROM [Sales].[InvoiceHeader] i
+    LEFT JOIN [Accounting].[ChartOfAccounts] a ON i.PaymentAccountID = a.AccountID
+    WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND i.PaidAmount > 0
+      AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+    GROUP BY a.AccountID, a.AccountName
+    ORDER BY TotalAmountCollected DESC;
+END
+GO
+
+-- 15. تقرير ربحية العملاء التفصيلي (Customer Profitability & Margin)
+-- يعتمد كلياً على نفس الإجراء المستخدم في WPF [Sales].[sp_Report_CustomerSalesSummary] لقيود اليومية
+IF OBJECT_ID('[Reports].[sp_Report_CustomerProfitability]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_CustomerProfitability];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_CustomerProfitability]
+    @StartDate DATE,
+    @EndDate DATE,
+    @TopN INT = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+    EXEC [Sales].[sp_Report_CustomerSalesSummary] @StartDate = @StartDate, @EndDate = @EndDate, @TopN = @TopN;
+END
+GO
+
+-- 16. تقرير ملخص الأرباح والخسائر التنفيذي (Executive PnL Summary)
+IF OBJECT_ID('[Reports].[sp_Report_ExecutivePnLSummary]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_ExecutivePnLSummary];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_ExecutivePnLSummary]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @GrossRevenue DECIMAL(18,2) = 0;
+    DECLARE @TotalDiscounts DECIMAL(18,2) = 0;
+    DECLARE @NetRevenue DECIMAL(18,2) = 0;
+    DECLARE @TotalCOGS DECIMAL(18,2) = 0;
+    DECLARE @GrossProfit DECIMAL(18,2) = 0;
+    DECLARE @OperatingExpenses DECIMAL(18,2) = 0;
+    DECLARE @WastageLoss DECIMAL(18,2) = 0;
+    DECLARE @NetOperatingProfit DECIMAL(18,2) = 0;
+
+    -- 1. الاعتماد الكلي على قيود اليومية JournalEntries للعمليات المرحلة (مطابق لقائمة الأرباح والخسائر في WPF)
+    IF OBJECT_ID('[Accounting].[JournalEntries]', 'U') IS NOT NULL AND OBJECT_ID('[Accounting].[ChartOfAccounts]', 'U') IS NOT NULL
+    BEGIN
+        SELECT 
+            -- إجمالي الإيرادات الدائنة
+            @GrossRevenue = ISNULL(SUM(CASE WHEN (a.AccountType = 'Revenue' OR a.AccountCode LIKE '4%') THEN je.CreditAmount ELSE 0 END), 0),
+            -- الخصومات والتخفيضات والمردودات المدينة المسجلة على الإيرادات
+            @TotalDiscounts = ISNULL(SUM(CASE WHEN (a.AccountType = 'Revenue' OR a.AccountCode LIKE '4%') THEN je.DebitAmount ELSE 0 END), 0),
+            -- صافي الإيرادات (الدائن - المدين)
+            @NetRevenue = ISNULL(SUM(CASE WHEN (a.AccountType = 'Revenue' OR a.AccountCode LIKE '4%') THEN (je.CreditAmount - je.DebitAmount) ELSE 0 END), 0),
+            -- تكلفة البضاعة المباعة (COGS) من قيود اليومية
+            @TotalCOGS = ISNULL(SUM(CASE WHEN (a.AccountType = 'COGS' OR a.AccountCode LIKE '51%') THEN (je.DebitAmount - je.CreditAmount) ELSE 0 END), 0),
+            -- المصروفات التشغيلية من قيود اليومية (مع استبعاد تكلفة البضاعة لمنع الازدواجية)
+            @OperatingExpenses = ISNULL(SUM(CASE WHEN (a.AccountType = 'Expenses' AND a.AccountCode NOT LIKE '51%') THEN (je.DebitAmount - je.CreditAmount) ELSE 0 END), 0)
+        FROM [Accounting].[JournalEntries] je
+        INNER JOIN [Accounting].[ChartOfAccounts] a ON je.AccountID = a.AccountID
+        WHERE CAST(je.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate;
+    END
+
+    -- 2. اعتماد احتياطي ذكي في حال عدم وجود قيود بعد للفترة المحددة لضمان عدم توقف السيستم القديم
+    IF @NetRevenue = 0 AND @TotalCOGS = 0
+    BEGIN
+        SELECT 
+            @GrossRevenue = ISNULL(SUM(TotalAmount), 0),
+            @TotalDiscounts = ISNULL(SUM(Discount), 0),
+            @NetRevenue = ISNULL(SUM(NetAmount), 0)
+        FROM [Sales].[InvoiceHeader]
+        WHERE CAST(InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+          AND IsPosted = 1
+          AND (InvType = 'Sales' OR InvType = 'Sale' OR InvType IS NULL OR InvType = '' OR InvType = N'مبيعات' OR InvType NOT LIKE '%Purchase%');
+
+        SELECT 
+            @TotalCOGS = ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0)
+        FROM [Sales].[InvoiceDetails] d
+        INNER JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+        LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+        WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+          AND i.IsPosted = 1
+          AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%');
+    END
+
+    SET @GrossProfit = @NetRevenue - @TotalCOGS;
+
+    -- 3. خسائر الهالك والتوالف
+    IF OBJECT_ID('[Inventory].[WastageHeader]', 'U') IS NOT NULL
+    BEGIN
+        SELECT @WastageLoss = ISNULL(SUM(TotalValue), 0)
+        FROM [Inventory].[WastageHeader]
+        WHERE CAST(WastageDate AS DATE) BETWEEN @StartDate AND @EndDate;
+    END
+
+    -- 6. صافي الربح التشغيلي النهائي
+    SET @NetOperatingProfit = @GrossProfit - @OperatingExpenses - @WastageLoss;
+
+    SELECT 
+        @GrossRevenue AS GrossRevenue,
+        @TotalDiscounts AS TotalDiscounts,
+        @NetRevenue AS NetRevenue,
+        @TotalCOGS AS CostOfGoodsSold,
+        @GrossProfit AS GrossProfit,
+        CASE WHEN @NetRevenue > 0 THEN (@GrossProfit / @NetRevenue) * 100 ELSE 0 END AS GrossProfitMarginPercent,
+        @OperatingExpenses AS OperatingExpenses,
+        @WastageLoss AS WastageLoss,
+        @NetOperatingProfit AS NetOperatingProfit,
+        CASE WHEN @NetRevenue > 0 THEN (@NetOperatingProfit / @NetRevenue) * 100 ELSE 0 END AS NetProfitMarginPercent;
+END
+GO
+
+-- 17. تقرير الهالك والتوالف (Wastage & Spoilage Loss Analysis)
+IF OBJECT_ID('[Reports].[sp_Report_WastageAnalysis]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_WastageAnalysis];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_WastageAnalysis]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        p.ProductID,
+        p.Barcode,
+        p.ProductName,
+        ISNULL(c.CatName, N'عام') AS CategoryName,
+        ISNULL(SUM(wd.Quantity), 0) AS TotalWastageQty,
+        ISNULL(SUM(wd.CostPrice * wd.Quantity), 0) AS TotalLossValue,
+        COUNT(DISTINCT wh.WastageID) AS IncidentsCount
+    FROM [Inventory].[WastageDetails] wd
+    INNER JOIN [Inventory].[WastageHeader] wh ON wd.WastageID = wh.WastageID
+    INNER JOIN [Inventory].[Products] p ON wd.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    WHERE CAST(wh.WastageDate AS DATE) BETWEEN @StartDate AND @EndDate
+    GROUP BY p.ProductID, p.Barcode, p.ProductName, c.CatName
+    ORDER BY TotalLossValue DESC;
+END
+GO
+
+-- 18. تقرير حركة وأرباح الورديات (Shifts Analytics)
+IF OBJECT_ID('[Reports].[sp_Report_ShiftsAnalytics]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_ShiftsAnalytics];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_ShiftsAnalytics]
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        s.ShiftID,
+        ISNULL(u.FullName, u.Username) AS CashierName,
+        s.StartTime,
+        s.EndTime,
+        s.Status,
+        ISNULL(s.StartingCash, 0) AS StartingCash,
+        ISNULL(s.EndingCash, 0) AS EndingCash,
+        COUNT(DISTINCT i.InvID) AS InvoiceCount,
+        ISNULL(SUM(CASE WHEN i.InvType = 'Sales' THEN i.NetAmount ELSE 0 END), 0) AS TotalSales,
+        ISNULL(SUM(CASE WHEN i.InvType = 'Sales' THEN i.NetAmount ELSE 0 END), 0) AS TotalInvoicesNet,
+        ISNULL(SUM(CASE WHEN i.InvType = 'Sales' THEN i.PaidAmount ELSE 0 END), 0) AS TotalPaidCollected,
+        0.00 AS TotalPurchases,
+        0.00 AS TotalCashIn,
+        0.00 AS TotalCashOut
+    FROM [Sales].[Shifts] s
+    LEFT JOIN [Security].[Users] u ON s.UserID = u.UserID
+    LEFT JOIN [Sales].[InvoiceHeader] i ON s.ShiftID = i.ShiftID
+    WHERE CAST(s.StartTime AS DATE) BETWEEN @StartDate AND @EndDate
+    GROUP BY s.ShiftID, u.FullName, u.Username, s.StartTime, s.EndTime, s.Status, s.StartingCash, s.EndingCash
+    ORDER BY s.StartTime DESC;
+END
+GO
+
+PRINT N'✅ تم إنشاء سكريبت جداول وإجراءات التقارير [Reports] الموسعة بنجاح';

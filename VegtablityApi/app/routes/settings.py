@@ -1,14 +1,20 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request, Query
+from typing import Optional
 from app.services.settings_service import SettingsService
 from app.schemas.settings import PrinterSettingsSaveRequest
+from app.routes.reports import extract_database
 
 router = APIRouter()
 
 @router.get("/company", response_model=dict)
-async def get_company_settings():
+async def get_company_settings(
+    request: Request,
+    database: Optional[str] = Query(None, description="Database name/alias e.g. WashaDB, washa")
+):
+    db = extract_database(request, database)
     service = SettingsService()
     try:
-        settings = service.get_company_settings()
+        settings = service.get_company_settings(catalog=db)
         return settings
     except Exception as e:
         raise HTTPException(

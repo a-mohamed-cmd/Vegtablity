@@ -4,8 +4,8 @@ from app.core.db_procedures import StoredProcedures as SP
 import base64
 
 class SettingsService:
-    def get_company_settings(self) -> dict:
-        conn = get_db_connection()
+    def get_company_settings(self, catalog: str = None) -> dict:
+        conn = get_db_connection(catalog)
         cursor = conn.cursor()
         try:
             # Stored procedure: [Settings].[sp_CompanySettings_Get]

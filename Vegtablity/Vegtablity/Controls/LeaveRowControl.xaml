@@ -107,6 +107,11 @@
 
             <!-- 7: Quick Actions -->
             <StackPanel Grid.Column="7" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0">
+                <Button Content="✏️ تعديل" ToolTip="تعديل بيانات هذه الإجازة ومباشرتها"
+                        Style="{StaticResource RowActionBtnStyle}"
+                        Background="#EFF6FF" BorderBrush="#BFDBFE" Foreground="#1D4ED8"
+                        Margin="0,0,4,0" Click="EditLeave_Click"/>
+
                 <Button Content="📄 طلب" ToolTip="طباعة طلب الإجازة المعتمد"
                         Style="{StaticResource RowActionBtnStyle}"
                         Background="#F8FAFC" BorderBrush="#CBD5E1" Foreground="#1E293B"

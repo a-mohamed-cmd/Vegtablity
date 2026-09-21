@@ -352,9 +352,9 @@ Namespace ViewModels
         End Sub
 
         Private Sub UpdateNetProfit()
-            NetProfit = TotalRevenues + TotalExpenses
+            NetProfit = Math.Abs(TotalRevenues) - Math.Abs(TotalExpenses)
 
-            If NetProfit < 0 Then
+            If NetProfit >= 0 Then
                 NetProfitLabel = "صافي الربح للفترة"
             Else
                 NetProfitLabel = "صافي الخسارة للفترة"

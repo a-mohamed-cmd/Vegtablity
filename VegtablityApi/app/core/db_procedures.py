@@ -276,4 +276,42 @@ class StoredProcedures:
     """
     PRODUCT_DISCOUNTS_DELETE = "EXEC [Sales].[sp_ProductDiscounts_Delete] @DiscountID=?"
 
+    # =========================================================================
+    # Reports & Dashboard Analytics (Schema: Reports)
+    # Aligned with Helpers/StoredProcedures.vb & SQLVegtablity.sql
+    # =========================================================================
+    DASHBOARD_GET_SUMMARY = "EXEC [Reports].[sp_Dashboard_GetSummary]"
+    DASHBOARD_GET_SALES_CHART = "EXEC [Reports].[sp_Dashboard_GetSalesChart] @Days=?"
+    DASHBOARD_GET_ALERT_PRODUCTS = "EXEC [Reports].[sp_Dashboard_GetAlertProducts]"
+    DASHBOARD_GET_CUSTOMER_DEBTS = "EXEC [Reports].[sp_Dashboard_GetCustomerDebts]"
+    DASHBOARD_GET_SUPPLIER_DEBTS = "EXEC [Reports].[sp_Dashboard_GetSupplierDebts]"
+
+    REPORT_DASHBOARD_SALES_SUMMARY = "EXEC [Reports].[sp_Report_DashboardSalesSummary] @StartDate=?, @EndDate=?"
+    REPORT_TOTAL_RECEIVABLES = "EXEC [Reports].[sp_Report_TotalReceivables]"
+    REPORT_INVENTORY_SUMMARY = "EXEC [Reports].[sp_Report_InventorySummary]"
+    REPORT_PRODUCT_PROFITS = "EXEC [Reports].[sp_Report_ProductProfits] @StartDate=?, @EndDate=?, @OrderBy=?"
+    REPORT_INVOICE_PROFITS = "EXEC [Reports].[sp_Report_InvoiceProfits] @StartDate=?, @EndDate=?"
+    REPORT_SALES_TRENDS = "EXEC [Reports].[sp_Report_SalesTrends] @StartDate=?, @EndDate=?, @PeriodType=?"
+    REPORT_SALES_SUMMARY_BY_PERIOD = "EXEC [Reports].[sp_Report_SalesSummaryByPeriod] @StartDate=?, @EndDate=?, @PeriodType=?"
+    REPORT_TOP_CUSTOMERS = "EXEC [Reports].[sp_Report_TopCustomers] @StartDate=?, @EndDate=?, @TopN=?"
+    REPORT_AGING_DEBT = "EXEC [Reports].[sp_Report_AgingDebt] @AsOfDate=?"
+    REPORT_UNPAID_INVOICES_AGING = "EXEC [Reports].[sp_Report_UnpaidInvoicesAging] @AsOfDate=?, @PartnerID=?"
+    REPORT_INVENTORY_VALUATION = "EXEC [Reports].[sp_Report_InventoryValuation]"
+    REPORT_SLOW_MOVING_STOCK = "EXEC [Reports].[sp_Report_SlowMovingStock] @ThresholdDays=?"
+    REPORT_STOCK_MOVEMENT = "EXEC [Reports].[sp_Report_StockMovement] @ProductID=?, @WarehouseID=?, @StartDate=?, @EndDate=?"
+    REPORT_EXPENSES_ANALYSIS = "EXEC [Reports].[sp_Report_ExpensesAnalysis] @StartDate=?, @EndDate=?"
+    REPORT_QUOTATIONS_STATUS = "EXEC [Reports].[sp_Report_QuotationsStatus] @Status=?"
+
+    # Advanced Profitability & Analytics Procedures
+    REPORT_CATEGORY_PROFITS = "EXEC [Reports].[sp_Report_CategoryProfits] @StartDate=?, @EndDate=?"
+    REPORT_CASHIER_PERFORMANCE = "EXEC [Reports].[sp_Report_CashierPerformance] @StartDate=?, @EndDate=?"
+    REPORT_PAYMENT_METHODS_BREAKDOWN = "EXEC [Reports].[sp_Report_PaymentMethodsBreakdown] @StartDate=?, @EndDate=?"
+    REPORT_CUSTOMER_PROFITABILITY = "EXEC [Sales].[sp_Report_CustomerSalesSummary] @StartDate=?, @EndDate=?, @TopN=?"
+    REPORT_EXECUTIVE_PNL_SUMMARY = "EXEC [Reports].[sp_Report_ExecutivePnLSummary] @StartDate=?, @EndDate=?"
+    REPORT_WASTAGE_ANALYSIS = "EXEC [Reports].[sp_Report_WastageAnalysis] @StartDate=?, @EndDate=?"
+    REPORT_SHIFTS_ANALYTICS = "EXEC [Reports].[sp_Report_ShiftsAnalytics] @StartDate=?, @EndDate=?"
+
+
+
+
 

@@ -22,11 +22,15 @@ Namespace Views
             Dim oldVm = TryCast(e.OldValue, HRLeavesViewModel)
             If oldVm IsNot Nothing Then
                 RemoveHandler oldVm.RequestSnackbar, AddressOf ShowSnackbar
+                RemoveHandler oldVm.RequestClearDropdown, AddressOf OnRequestClearDropdown
+                RemoveHandler oldVm.RequestExpandSidePanel, AddressOf ExpandSidePanel
             End If
 
             Dim newVm = TryCast(e.NewValue, HRLeavesViewModel)
             If newVm IsNot Nothing Then
                 AddHandler newVm.RequestSnackbar, AddressOf ShowSnackbar
+                AddHandler newVm.RequestClearDropdown, AddressOf OnRequestClearDropdown
+                AddHandler newVm.RequestExpandSidePanel, AddressOf ExpandSidePanel
             End If
         End Sub
 
@@ -34,7 +38,18 @@ Namespace Views
             Dim vm = TryCast(Me.DataContext, HRLeavesViewModel)
             If vm IsNot Nothing Then
                 RemoveHandler vm.RequestSnackbar, AddressOf ShowSnackbar
+                RemoveHandler vm.RequestClearDropdown, AddressOf OnRequestClearDropdown
+                RemoveHandler vm.RequestExpandSidePanel, AddressOf ExpandSidePanel
+
                 AddHandler vm.RequestSnackbar, AddressOf ShowSnackbar
+                AddHandler vm.RequestClearDropdown, AddressOf OnRequestClearDropdown
+                AddHandler vm.RequestExpandSidePanel, AddressOf ExpandSidePanel
+            End If
+        End Sub
+
+        Private Sub OnRequestClearDropdown()
+            If EmployeeDropdown IsNot Nothing Then
+                EmployeeDropdown.ClearSelection()
             End If
         End Sub
 
@@ -111,6 +126,20 @@ Namespace Views
             SidePanelBorder.BeginAnimation(FrameworkElement.WidthProperty, anim)
             _isSidePanelCollapsed = Not _isSidePanelCollapsed
             BtnToggleSidePanel.Content = If(_isSidePanelCollapsed, "▶ فتح النماذج", "◀ طي النماذج")
+        End Sub
+
+        Public Sub ExpandSidePanel()
+            If _isSidePanelCollapsed Then
+                Dim anim As New DoubleAnimation With {
+                    .To = 400,
+                    .Duration = TimeSpan.FromSeconds(0.35),
+                    .EasingFunction = New CubicEase With {.EasingMode = EasingMode.EaseInOut}
+                }
+                SidePanelBorder.Margin = New Thickness(0, 0, 15, 0)
+                SidePanelBorder.BeginAnimation(FrameworkElement.WidthProperty, anim)
+                _isSidePanelCollapsed = False
+                BtnToggleSidePanel.Content = "◀ طي النماذج"
+            End If
         End Sub
 
         ' ══════════════════════════════════════════════════════

@@ -64,6 +64,16 @@ Namespace Controls
             End If
         End Sub
 
+        Private Sub EditLeave_Click(sender As Object, e As RoutedEventArgs)
+            Dim leave = TryCast(Me.DataContext, EmployeeLeave)
+            If leave Is Nothing Then Return
+
+            Dim parentListBox = FindVisualParent(Of ListBox)(Me)
+            If parentListBox IsNot Nothing Then
+                parentListBox.SelectedItem = leave
+            End If
+        End Sub
+
         Private Sub PrintLeave_Click(sender As Object, e As RoutedEventArgs)
             Dim leave = TryCast(Me.DataContext, EmployeeLeave)
             If leave Is Nothing Then Return

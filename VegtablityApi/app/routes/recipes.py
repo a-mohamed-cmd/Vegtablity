@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 
 router = APIRouter()
 
+@router.get("", response_model=List[Dict[str, Any]], include_in_schema=False)
 @router.get("/", response_model=List[Dict[str, Any]])
 async def get_all_recipes(
     user_id: int = Depends(get_current_user_id)

@@ -1,15 +1,14 @@
+from typing import Optional
 from app.core.database import get_db_connection
 from app.core.db_procedures import StoredProcedures as SP
-from app.core.security import hash_password_net_style
 
 class AuthService:
-    def authenticate_user(self, username: str, password: str):
-        # The password is currently saved without a hash in the database
-        conn = get_db_connection()
+    def authenticate_user(self, username: str, password: str, database: Optional[str] = None):
+        # The password is validated via [Security].[sp_User_Login]
+        conn = get_db_connection(database)
         cursor = conn.cursor()
         
         try:
-            # Calling [Security].[sp_User_Login]
             cursor.execute(SP.USER_LOGIN, (username, password))
             row = cursor.fetchone()
             

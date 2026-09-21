@@ -6,6 +6,7 @@ from typing import List
 
 router = APIRouter()
 
+@router.get("", response_model=List[Product], include_in_schema=False)
 @router.get("/", response_model=List[Product])
 async def get_products(
     search: str = Query("", description="Search by name or barcode"),
