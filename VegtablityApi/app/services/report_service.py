@@ -101,31 +101,16 @@ class ReportService:
             except Exception as e:
                 print(f"Error executing REPORT_INVENTORY_SUMMARY: {e}")
 
-            # 1.1 Total Sales from JournalEntries (Revenue accounts)
+            # Total Sales, Invoices, Profits, and Expenses via SP
             tot_sales_val = float(sales_stats.get('TotalSales', 0.0))
-            try:
-                cursor.execute("""
-                    SELECT ISNULL(SUM(je.CreditAmount - je.DebitAmount), 0)
-                    FROM [Accounting].[JournalEntries] je
-                    INNER JOIN [Accounting].[ChartOfAccounts] a ON je.AccountID = a.AccountID
-                    WHERE (a.AccountType = 'Revenue' OR a.AccountCode LIKE '4%')
-                      AND CAST(je.EntryDate AS DATE) BETWEEN ? AND ?
-                """, (s_date, e_date))
-                j_row = cursor.fetchone()
-                if j_row and j_row[0] is not None and float(j_row[0]) > 0:
-                    tot_sales_val = float(j_row[0])
-            except Exception as e:
-                print(f"Error querying journal sales from JournalEntries: {e}")
-
-            # Average ticket
             tot_invs = int(sales_stats.get('TotalInvoices', 0))
             avg_ticket = round(tot_sales_val / tot_invs, 2) if tot_invs > 0 else 0.0
 
-            # Profit and Expenses calculation (خصم المصروفات من الأرباح بدقة)
             gross_profit = float(sales_stats.get('GrossProfit', profit_sum))
             total_expenses = float(sales_stats.get('TotalExpenses', 0.0))
             net_profit = float(sales_stats.get('NetProfit', gross_profit - total_expenses))
-            if tot_sales_val > 0:
+            margin_percent = float(sales_stats.get('NetProfitMarginPercent', 0.0))
+            if margin_percent == 0.0 and tot_sales_val > 0:
                 margin_percent = round((net_profit / tot_sales_val) * 100, 1)
 
             return {
@@ -141,7 +126,6 @@ class ReportService:
                 "average_ticket": avg_ticket,
                 "total_paid": float(sales_stats.get('TotalPaid', 0.0)),
                 "total_credit": float(sales_stats.get('TotalCredit', 0.0)),
-                "total_tax": 0.0,
                 "total_discounts": float(sales_stats.get('TotalDiscounts', 0.0)),
                 "total_receivables": round(total_receivables, 2),
                 "inventory_items_count": int(inv_stats.get('TotalItemsCount', 0)),
@@ -339,48 +323,6 @@ class ReportService:
                 res = self._row_to_dict(cursor, row) if row else {}
             except Exception as e:
                 print(f"Error executing REPORT_EXECUTIVE_PNL_SUMMARY: {e}")
-
-            # التحقق من جلب الإيرادات والمصروفات مباشرة من قيود اليومية لضمان الدقة وفق معايير WPF
-            try:
-                cursor.execute("""
-                    SELECT 
-                        ISNULL(SUM(CASE WHEN a.AccountType = 'Revenue' OR a.AccountCode LIKE '4%' THEN (je.CreditAmount - je.DebitAmount) ELSE 0 END), 0) AS JournalRevenue,
-                        ISNULL(SUM(CASE WHEN a.AccountType = 'COGS' OR a.AccountCode LIKE '51%' THEN (je.DebitAmount - je.CreditAmount) ELSE 0 END), 0) AS JournalCOGS,
-                        ISNULL(SUM(CASE WHEN a.AccountType = 'Expenses' AND a.AccountCode NOT LIKE '51%' THEN (je.DebitAmount - je.CreditAmount) ELSE 0 END), 0) AS JournalExpenses
-                    FROM [Accounting].[JournalEntries] je
-                    INNER JOIN [Accounting].[ChartOfAccounts] a ON je.AccountID = a.AccountID
-                    WHERE (a.AccountType IN ('Revenue', 'Expenses', 'COGS') OR a.AccountCode LIKE '4%' OR a.AccountCode LIKE '5%')
-                      AND CAST(je.EntryDate AS DATE) BETWEEN ? AND ?
-                """, (s_date, e_date))
-                j_row = cursor.fetchone()
-                if j_row:
-                    j_rev = float(j_row[0]) if j_row[0] is not None else 0.0
-                    j_cogs = float(j_row[1]) if j_row[1] is not None else 0.0
-                    j_exp = float(j_row[2]) if j_row[2] is not None else 0.0
-
-                    if j_rev > 0:
-                        res['NetRevenue'] = j_rev
-                        discounts = float(res.get('TotalDiscounts', 0.0))
-                        res['GrossRevenue'] = j_rev + discounts
-                    if j_cogs > 0:
-                        res['CostOfGoodsSold'] = j_cogs
-                    if j_exp > 0:
-                        res['OperatingExpenses'] = j_exp
-
-                    # إعادة حساب هوامش ومجمل وصافي الربح بدقة
-                    net_rev = float(res.get('NetRevenue', 0.0))
-                    cogs = float(res.get('CostOfGoodsSold', 0.0))
-                    gross_profit = net_rev - cogs
-                    res['GrossProfit'] = round(gross_profit, 2)
-                    res['GrossProfitMarginPercent'] = round((gross_profit / net_rev * 100), 1) if net_rev > 0 else 0.0
-                    
-                    op_exp = float(res.get('OperatingExpenses', 0.0))
-                    wastage = float(res.get('WastageLoss', 0.0))
-                    net_op_profit = gross_profit - op_exp - wastage
-                    res['NetOperatingProfit'] = round(net_op_profit, 2)
-                    res['NetProfitMarginPercent'] = round((net_op_profit / net_rev * 100), 1) if net_rev > 0 else 0.0
-            except Exception as e2:
-                print(f"Error checking journal entries in get_executive_pnl_summary: {e2}")
 
             return res
         finally:

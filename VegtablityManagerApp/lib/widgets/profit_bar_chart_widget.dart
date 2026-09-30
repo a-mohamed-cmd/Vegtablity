@@ -6,11 +6,13 @@ import '../models/report_models.dart';
 class ProfitBarChartWidget extends StatelessWidget {
   final List<ProductProfitModel> items;
   final String title;
+  final VoidCallback? onHeaderTap;
 
   const ProfitBarChartWidget({
     super.key,
     required this.items,
     this.title = "أعلى الأصناف تحقيقاً للأرباح 🏆",
+    this.onHeaderTap,
   });
 
   @override
@@ -48,9 +50,30 @@ class ProfitBarChartWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              if (onHeaderTap != null)
+                InkWell(
+                  onTap: onHeaderTap,
+                  borderRadius: BorderRadius.circular(6),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text("أرباح الأصناف", style: TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 3),
+                        Icon(Icons.open_in_new_rounded, color: Colors.amber, size: 12),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 20),
           SizedBox(

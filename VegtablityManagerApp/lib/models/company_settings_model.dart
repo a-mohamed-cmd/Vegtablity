@@ -22,7 +22,9 @@ class CompanySettingsModel {
 
   factory CompanySettingsModel.fromJson(Map<String, dynamic> json) {
     return CompanySettingsModel(
-      settingId: json['SettingID'] is int ? json['SettingID'] : (int.tryParse(json['SettingID']?.toString() ?? '0') ?? 0),
+      settingId: json['SettingID'] is int
+          ? json['SettingID']
+          : (int.tryParse(json['SettingID']?.toString() ?? '0') ?? 0),
       companyName: json['CompanyName']?.toString() ?? '',
       address: json['Address']?.toString(),
       phone: json['Phone']?.toString(),

@@ -6,11 +6,13 @@ import '../models/report_models.dart';
 class SalesChartWidget extends StatelessWidget {
   final List<SalesTrendModel> salesTrends;
   final String title;
+  final VoidCallback? onHeaderTap;
 
   const SalesChartWidget({
     super.key,
     required this.salesTrends,
     this.title = "منحنى المبيعات والأرباح اليومية",
+    this.onHeaderTap,
   });
 
   @override
@@ -71,6 +73,24 @@ class SalesChartWidget extends StatelessWidget {
                   _buildLegend(color: const Color(0xFF06B6D4), label: "المبيعات"),
                   const SizedBox(width: 12),
                   _buildLegend(color: const Color(0xFF10B981), label: "الأرباح"),
+                  if (onHeaderTap != null) ...[
+                    const SizedBox(width: 14),
+                    InkWell(
+                      onTap: onHeaderTap,
+                      borderRadius: BorderRadius.circular(6),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text("التقرير الكامل", style: TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)),
+                            SizedBox(width: 3),
+                            Icon(Icons.open_in_new_rounded, color: Colors.amber, size: 12),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],

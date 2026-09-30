@@ -100,9 +100,30 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final reports = Provider.of<ReportsProvider>(context, listen: false);
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        auth.fetchCompanySettings(database: reports.selectedCompany.id, force: true);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ReportsProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
+
+    if (authProvider.loadedCompanyDb != provider.selectedCompany.id && !authProvider.isLoadingCompanySettings) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          authProvider.fetchCompanySettings(database: provider.selectedCompany.id, force: true);
+        }
+      });
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
     final isMobile = screenWidth < 600;
@@ -111,7 +132,7 @@ class _ManagerMainScreenState extends State<ManagerMainScreen> {
     final currentUser = authProvider.currentUser;
     final liveSettings = authProvider.companySettings;
     final companyDisplayName = (liveSettings != null && liveSettings.companyName.trim().isNotEmpty)
-        ? liveSettings.companyName
+        ? liveSettings.companyName.trim()
         : provider.selectedCompany.name;
 
     final Widget bodyContent;

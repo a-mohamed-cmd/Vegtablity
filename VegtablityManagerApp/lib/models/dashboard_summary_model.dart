@@ -9,7 +9,6 @@ class DashboardSummaryModel {
   final double averageTicket;
   final double totalPaid;
   final double totalCredit;
-  final double totalTax;
   final double totalDiscounts;
   final double totalReceivables;
   final int inventoryItemsCount;
@@ -29,7 +28,6 @@ class DashboardSummaryModel {
     required this.averageTicket,
     required this.totalPaid,
     required this.totalCredit,
-    required this.totalTax,
     required this.totalDiscounts,
     required this.totalReceivables,
     required this.inventoryItemsCount,
@@ -51,7 +49,6 @@ class DashboardSummaryModel {
       averageTicket: (json['average_ticket'] as num?)?.toDouble() ?? 0.0,
       totalPaid: (json['total_paid'] as num?)?.toDouble() ?? 0.0,
       totalCredit: (json['total_credit'] as num?)?.toDouble() ?? 0.0,
-      totalTax: (json['total_tax'] as num?)?.toDouble() ?? 0.0,
       totalDiscounts: (json['total_discounts'] as num?)?.toDouble() ?? 0.0,
       totalReceivables: (json['total_receivables'] as num?)?.toDouble() ?? 0.0,
       inventoryItemsCount: (json['inventory_items_count'] as num?)?.toInt() ?? 0,
@@ -74,7 +71,6 @@ class DashboardSummaryModel {
       averageTicket: 0.0,
       totalPaid: 0.0,
       totalCredit: 0.0,
-      totalTax: 0.0,
       totalDiscounts: 0.0,
       totalReceivables: 0.0,
       inventoryItemsCount: 0,

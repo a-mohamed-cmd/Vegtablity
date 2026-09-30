@@ -46,8 +46,37 @@
 *   **شاشة البحث السريع عن الفواتير (جديدة):** [InvoiceLookupScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart) - شاشة الاستعلام السريع برقم الفاتورة لعرض كافة البيانات المالية والتفاصيل والدليفري وإعادة الطباعة الحرارية 🖨️.
 *   **شاشة إغلاق الوردية وجرد وتسوية الكاش (معدلة):** [CloseShiftScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/close_shift_screen.dart) - إعادة تنظيم بطاقة تسوية وجرد الكاش بالدرج لعرض مبيعات ومشتريات الكاش النقدية الفعلية فقط وسندات القبض والصرف، وتقسيم بطاقة المبيعات لـ (كاش / شبكة K-Net / آجل) وبطاقة المشتريات لـ (كاش / غير نقدي / آجل)، وعرض بطاقة تفاصيل طرق الدفع.
 *   **صفحة الورديات وإدارة التدفق النقدي المكتبي (معدلة):** [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml) - ضبط وتوحيد رؤوس أقسام الإيرادات والمدفوعات لإظهار إجمالي المبيعات والمشتريات، وحصر مبالغ التدفق النقدي بالكاش الفعلي بالدرج.
+*   **منظومة التقارير والتحليلات التنفيذية لمدراء الفروع [VegtablityManagerApp] (جديدة بالكامل - 16 تبويباً وشاشة تفاعلية بنمط MVVM):**
+    *   [ManagerMainScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/manager_main_screen.dart) - الشاشة الرئيسية الشاملة للوحة الإدارة متعددة الشركات مع شريط التصفية الزمني الذكي، القائمة الجانبية المتكيفة (Sidebar/Drawer)، ومزامنة `initState` اللحظية لاسم وشعار الشركة من قاعدة البيانات.
+    *   [LoginScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/login_screen.dart) - بوابة تسجيل الدخول الموحدة للشركات، تدعم التعرف التلقائي على الدومين الفرعي، وإصدار رمز JWT وتخزين الجلسة الآمنة.
+    *   [DashboardOverviewTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/dashboard_overview_tab.dart) - لوحة المؤشرات التفاعلية بالكامل (Clickable KPI Cards)، تدعم النقر اللحظي على كافة البطاقات والرسوم البيانية وكبار العملاء لفتح التفاصيل المالية العميقة.
+    *   [MetricDetailSheet](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/metric_detail_sheet.dart) - نافذة منبثقة تفاعلية ذكية (Modal Bottom Sheet للجوال و Dialog فخم للديسكتوب) للحفر المالي واستعراض تفاصيل المبيعات، الأرباح، الفواتير، الديون، وبطاقات العملاء مع إلغاء حقل الضريبة كلياً.
+    *   [ProductProfitsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/product_profits_tab.dart) - تبويب أرباح الأصناف مع البحث اللحظي وتصنيف الهوامش الربحية الملونة والفرز التفاعلي.
+    *   [InvoiceProfitsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/invoice_profits_tab.dart) - تبويب أرباح الفواتير وتحليل هوامش كل فاتورة وتكلفة بضاعتها واسم الكاشير والعميل.
+    *   [CategoryProfitsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/category_profits_tab.dart) - تبويب أرباح التصنيفات ومقارنة مساهمة كل قسم في المبيعات والأرباح الإجمالية.
+    *   [ExecutivePnLTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/executive_pnl_tab.dart) - تبويب قائمة الأرباح والخسائر التنفيذية (P&L) وحساب صافي الدخل التشغيلي ومجمل الربح والمصروفات.
+    *   [CustomerProfitabilityTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/customer_profitability_tab.dart) - تبويب ربحية العملاء ورصد العملاء الأكثر والأقل تحقيقاً للأرباح.
+    *   [SalesTrendsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/sales_trends_tab.dart) - تبويب حركة واتجاهات المبيعات وتحليل فترات الذروة والمقارنة اليومية والشهرية بالرسوم البيانية.
+    *   [TopCustomersTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/top_customers_tab.dart) - تبويب كبار العملاء وترتيبهم بحجم المبيعات والمدفوعات والمستحقات المتبقية وبطاقات التفاصيل المنبثقة.
+    *   [AgingDebtTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/aging_debt_tab.dart) - تبويب تقادم وأعمار الديون بجدولة الفترات الائتمانية (0-30، 31-60، 61-90، +90 يوم).
+    *   [InventoryValuationTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/inventory_valuation_tab.dart) - تبويب تقييم المخزون ورأس المال المجمد وقيمة البيع والأرباح الكامنة بالمستودعات.
+    *   [SlowMovingTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/slow_moving_tab.dart) - تبويب الأصناف الراكدة وبطيئة الحركة وتحليل رأس المال المعطل.
+    *   [ExpensesAnalysisTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/expenses_analysis_tab.dart) - تبويب تحليل وتصنيف المصروفات والبنود التشغيلية والإدارية.
+    *   [CashierPerformanceTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/cashier_performance_tab.dart) - تبويب أداء الكاشيرات ومتابعة كفاءة المستخدمين وحجم فواتيرهم.
+    *   [PaymentMethodsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/payment_methods_tab.dart) - تبويب تحليل وتوزيع طرق الدفع (نقد، شبكة/كي نت، آجل، دفع مقسم).
+    *   [WastageAnalysisTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/wastage_analysis_tab.dart) - تبويب تحليل الهوالك والتوالف وتكلفتها الإجمالية ونسب الهدر لكل صنف ومستودع.
+    *   [ShiftsAnalyticsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/shifts_analytics_tab.dart) - تبويب تحليلات وحركة الورديات ومقارنة النقدية الفعلية بالمتوقعة بالدرج ورصد الفروقات.
 
 ### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
+*   **نماذج ومزودات تطبيق إدارة التقارير [VegtablityManagerApp] (جديدة ومعدلة):**
+    *   [ReportsProvider](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/providers/reports_provider.dart) - مزود الحالة الرئيسي بنمط MVVM لإدارة جلب وتحميل التقارير الـ 16 والفلترة الزمنية والتكامل مع الشركة النشطة.
+    *   [AuthProvider](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/providers/auth_provider.dart) - إدارة جلسات الدخول والتوكن والربط الحي التلقائي الفوري لإعدادات واسم وشعار الشركة من قاعدة البيانات مع منع الكاش القديم `force: true`.
+    *   [CompanySettingsModel](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/models/company_settings_model.dart) - نموذج إعدادات المنشأة، مزود بآلية مرنة ديناميكية 100% لاستخلاص اسم الشركة `CompanyName` بجميع الصيغ بدون أي تثبيت مسبق.
+    *   [DashboardSummaryModel](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/models/dashboard_summary_model.dart) - نموذج الملخص التنفيذي ومؤشرات الأداء مع الحذف التام لحقل الضريبة الملغي.
+    *   [KpiCardWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/kpi_card_widget.dart) - عنصر واجهة تفاعلي قابل للنقر دائماً بمؤشر الفأرة اليدوي والتموج المائي وشارة `تفاصيل ❯`.
+    *   [CompanySelectorHeader](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/company_selector_header.dart) - ترويسة الشركة الحية لعرض الاسم التجاري الفعلي المأخوذ من الداتابيز والشعار المعتمد.
+    *   [ApiClient](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/core/api_client.dart) - عميل Dio الموحد لإرسال ترويسات التفويض وتوجيه الروابط.
+    *   [NoCacheStaticFiles](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/main.py) - فئة مخصصة في خادم FastAPI لخدمة ملفات الويب مع حظر كاش المتصفح نهائياً وإلزام المتصفح بتحميل أحدث ملفات JS فوراً.
 *   **نماذج ومتحكمات الموارد البشرية والرواتب (جديدة):**
     *   [HREmployeesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HREmployeesViewModel.vb) - إدارة الموظفين، الترقيم 10/صفحة، والحقول المرنة.
     *   [HRLeavesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRLeavesViewModel.vb) - إدارة الإجازات، الرصيد المتبقي، والمباشرة بعد العودة، معالجة أمر الإضافة الجديد `NewLeaveCommand` وتفريغ الاختيار، وتحديث سجلات الإجازة والمباشرة القائمة وحمايتها بالصلاحيات الممنوحة `CanAdd, CanEdit`.
@@ -2921,6 +2950,64 @@
     - **كروت المؤشرات [KpiCardWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/kpi_card_widget.dart):** إضافة `FittedBox` التلقائي لتقليص حجم المبالغ المالية الكبيرة تلقائياً داخل البطاقة دون الخروج عن الإطار.
     - **أشرطة التصفية والتقارير:** تزويد جميع الأشرطة العلوية بالتمرير الأفقي السلس `SingleChildScrollView(scrollDirection: Axis.horizontal)`، وتنسيق بطاقات الفواتير والأصناف والديون عبر `Wrap` التلقائي لمنع تداخل النصوص.
     - **الرسوم البيانية [SalesChartWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/sales_chart_widget.dart):** ضبط الترويسة ومفتاح الألوان عبر `Wrap` لتتكيف تلقائياً مع الشاشات الضيقة.
+
+---
+
+## 78. تطوير الداشبورد التفاعلية (Clickable Deep Drill-Down) والتوافق الصارم مع الإجراءات المخزنة (Pure Stored Procedures) وحظر الكاش
+
+### 📌 الأهداف والتطوير المنفذ:
+
+1. **الداشبورد التفاعلية واستكشاف التفاصيل بالضغط (Clickable Dashboard & MetricDetailSheet):**
+   - **تحويل بطاقات المؤشرات (KPI Cards) إلى عناصر قابلة للنقر دائماً:**
+     - ترقية [KpiCardWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/kpi_card_widget.dart) لتدعم خاصية `onTap`، مع إضافة تأثير التموج (Ripple Effect)، وتغيير مؤشر الفأرة إلى يد تفاعلية (`SystemMouseCursors.click`)، وإظهار شارة نصية وأيقونة أنيقة في الركن السفلي: `تفاصيل ❯`.
+     - في [DashboardOverviewTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/dashboard_overview_tab.dart)، تم ربط البطاقات الأربع الرئيسية بنموذج `effectiveSummary` لضمان قابليتها للنقر اللحظي 100% في جميع الأوقات حتى أثناء مراحل التحميل الأولية.
+   - **نافذة التفاصيل العميقة المنبثقة [MetricDetailSheet](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/metric_detail_sheet.dart):**
+     - تصميم نافذة عصرية متكيفة تظهر كـ `Modal Bottom Sheet` انسيابي على شاشات الهواتف المحمولة وكـ `Dialog` منسق على شاشات سطح المكتب والأجهزة اللوحية.
+     - **تفاصيل المبيعات (`MetricType.sales`):** إجمالي المبيعات، المبيعات النقدية المعتمدة، المبيعات الآجلة، إجمالي الخصومات، ومتوسط قيمة الفاتورة.
+     - **تفاصيل الأرباح (`MetricType.profit`):** مجمل الربح من المبيعات، المصروفات التشغيلية المخصومة، صافي الربح التشغيلي، وهامش الربح الصافي %.
+     - **تفاصيل الفواتير (`MetricType.invoices`):** إجمالي عدد الفواتير المنفذة، متوسط الفاتورة الواحدة، القيمة الإجمالية، والمعدل التقديري لعدد الفواتير يومياً.
+     - **تفاصيل الذمم والديون (`MetricType.receivables`):** إجمالي المستحقات والديون المتبقية، مبيعات الآجل، ونسبة مساهمة الآجل في المبيعات.
+     - **تفاصيل كبار العملاء (`CustomerDetailSheet`):** عند النقر على أي عميل من قائمة كبار العملاء في الداشبورد، تفتح بطاقة تحليلية تتضمن (اسم العميل، إجمالي المسحوبات، عدد الفواتير، متوسط قيمة الطلب، ونسبة مساهمته المئوية في إجمالي مبيعات الفترة).
+   - **التنقل السريع من الرسوم البيانية:**
+     - تحويل ترويسات [SalesChartWidget](file:///d:/Vegtablity/VegtablityManagerApp/lib/widgets/sales_chart_widget.dart) و [ProfitBarChartWidget](file:///d:/Vegtablity/VegtablityManagerApp/lib/widgets/profit_bar_chart_widget.dart) إلى أزرار تنقل تفاعلية فورية تنقل المستخدم إلى تبويب حركة المبيعات (Tab 6) وتبويب أرباح الأصناف (Tab 1) بضغطة زر واحدة.
+   - **إلغاء حقل ضريبة المبيعات (`totalTax`) كلياً:**
+     - بناءً على التوجيه المعتمد ("لا حاجة لها")، تم حذف حقل `totalTax` و `total_tax` تماماً من:
+       - كلاس [DashboardSummaryModel](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/models/dashboard_summary_model.dart).
+       - خدمة [report_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/report_service.py).
+       - واجهات العرض والرسوم البيانية ونافذة التفاصيل [MetricDetailSheet](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/metric_detail_sheet.dart).
+
+2. **الاعتماد الصارم على معمارية الإجراءات المخزنة فقط (Pure Stored Procedures Architecture):**
+   - **منع الاستعلامات المباشرة (No Inline SQL):** تنقيح دالتي `get_dashboard_summary` و `get_executive_pnl_summary` داخل [report_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/report_service.py) من أي جمل SQL نصية مباشرة، والاعتماد الحصري الكامل على تنفيذ الإجراءات المخزنة:
+     - `EXEC [Reports].[sp_DashboardSummary]`
+     - `EXEC [Reports].[sp_ExecutivePnLSummary]`
+     - `EXEC [Settings].[sp_CompanySettings_Get]`
+   - **توحيد وتبويب الإجراءات المخزنة:** ترتيب وتبويب الإجراءات في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) واستدعائها قياسياً عبر [db_procedures.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures.py) لضمان أقصى سرعة وأمان وتوافق مع قواعد البيانات الفرعية.
+
+3. **اسم وشعار المنشأة ديناميكي 100% من جدول `[Settings].[CompanySettings]`:**
+   - **قراءة الاسم الحقيقي للشركة دون أي تعديل ("كما كان الأول"):**
+     - تمكين جلب وعرض اسم الشركة كما هو مسجل في قاعدة البيانات دون إضافة ملحقات ثابتة أو العودة لنصوص برمجية صلبة.
+     - ترقية [CompanySettingsModel.fromJson](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/models/company_settings_model.dart) للبحث المرن عن حقل اسم الشركة عبر فحص كافة التسميات المحتملة (`CompanyName`, `company_name`, `companyName`, `Name`, `name`) والتنظيف من الفراغات الزائدة.
+   - **التحديث الفوري وإلغاء الكاش القديم:**
+     - تعديل [auth_provider.dart](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/providers/auth_provider.dart) لقراءة قاعدة البيانات المحددة المحفوظة في `SharedPreferences` أولاً، وتمرير معامل `force: true` عند الاستدعاء الأولي لمنع الاحتفاظ ببيانات شركة سابقة في الذاكرة.
+     - إضافة دورة حياة `initState` إلى [manager_main_screen.dart](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/manager_main_screen.dart) ومراقبة فورية لمطابقة `loadedCompanyDb` مع الشركة المحددة، مما يضمن تحديث اسم وشعار الشركة فور تبديل المنشأة أو فتح اللوحة.
+   - **استدعاء الـ SP القياسي:** ضبط `SETTINGS_COMPANY_GET = "EXEC [Settings].[sp_CompanySettings_Get]"` لضمان سرعة الاستجابة والتوافق مع محرك pyodbc.
+
+4. **حظر كاش المتصفح القديم وإلغاء Service Worker Caching نهائياً:**
+   - **تشخيص سبب عدم انعكاس خاصية Clickable بعد إعادة البناء:**
+     - عند بناء Flutter Web، يقوم محرك Flutter افتراضياً بإنشاء Service Worker باستراتيجية `offline-first`، مما كان يجعل المتصفحات تقرأ كود `main.dart.js` القديم من كاش الذاكرة المحلي للمتصفح (`CacheStorage`) وتتجاهل النسخة الجديدة المنقولة للسيرفر.
+   - **فئة `NoCacheStaticFiles` بخادم FastAPI [main.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/main.py):**
+     - تم إنشاء فئة مخصصة لحظر الكاش ترسل ترويسات منع التخزين الصارمة على كافة ملفات الواجهة (`.js`, `.html`, `.json`, `.wasm`):
+       ```http
+       Cache-Control: no-cache, no-store, must-revalidate
+       Pragma: no-cache
+       Expires: 0
+       ```
+   - **بناء الويب باستراتيجية إلغاء الكاش:**
+     - بناء الحزمة بأمر:
+       ```bash
+       flutter build web --release --pwa-strategy=none
+       ```
+     - ترفيع مؤشر إصدار البوتستراب في [web/index.html](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/web/index.html) إلى `?v=5`، وتفعيل كود الجافاسكربت لإلغاء أي Service Worker قديم ومسح `window.caches` تلقائياً عند فتح الصفحة.
 
 
 

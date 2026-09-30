@@ -24,11 +24,11 @@ class AppConfig {
   static const List<CompanyInfoModel> companies = [
     CompanyInfoModel(
       id: "WashaDB",
-      name: "مغسلة وشا (Washa)",
+      name: " وشا (Washa)",
       code: "washa",
-      iconName: "local_car_wash",
+      iconName: "washa",
       colorHex: "#06B6D4",
-      description: "نظام مغاسل السيارات ونقاط البيع",
+      description: "نظام  نقاط البيع",
       apiPort: 8000,
     ),
     CompanyInfoModel(

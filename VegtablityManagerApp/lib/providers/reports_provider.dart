@@ -201,6 +201,8 @@ class ReportsProvider with ChangeNotifier {
               database: db, startDate: s, endDate: e);
           _executivePnL = await _service.getExecutivePnL(
               database: db, startDate: s, endDate: e);
+          _productProfits = await _service.getProductProfits(
+              database: db, startDate: s, endDate: e);
           break;
         case 1: // أرباح الأصناف
           _productProfits = await _service.getProductProfits(

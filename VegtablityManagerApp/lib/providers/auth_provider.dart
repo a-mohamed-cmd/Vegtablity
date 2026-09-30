@@ -33,6 +33,9 @@ class AuthProvider with ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  String? get loadedCompanyDb => _loadedCompanyDb;
+  String get dynamicCompanyName => _companySettings?.companyName.trim() ?? '';
+
   AuthProvider() {
     initAuth();
   }
@@ -42,10 +45,14 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final defaultCompany = AppConfig.detectDefaultCompany();
-      await fetchCompanySettings(database: defaultCompany.id);
-
       final prefs = await SharedPreferences.getInstance();
+      final savedCompId = prefs.getString('selected_company_id');
+      final targetDb = (savedCompId != null && savedCompId.isNotEmpty)
+          ? savedCompId
+          : AppConfig.detectDefaultCompany().id;
+
+      await fetchCompanySettings(database: targetDb, force: true);
+
       final sessionJson = prefs.getString('user_session');
       if (sessionJson != null && sessionJson.isNotEmpty) {
         final Map<String, dynamic> data = jsonDecode(sessionJson);
