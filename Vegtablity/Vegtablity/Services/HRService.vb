@@ -213,7 +213,17 @@ Namespace Services
         ' ============================================================
         Public Function GetAttendanceByDate(attDate As DateTime) As List(Of AttendanceRecord)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.Query(Of AttendanceRecord)(Helpers.StoredProcedures.SP_HR_ATTENDANCE_GETBYDATE, New With {.AttendanceDate = attDate}, commandType:=CommandType.StoredProcedure).ToList()
+                Dim p As New DynamicParameters()
+                p.Add("@AttendanceDate", attDate.Date, DbType.Date)
+                Return conn.Query(Of AttendanceRecord)(Helpers.StoredProcedures.SP_HR_ATTENDANCE_GETBYDATE, p, commandType:=CommandType.StoredProcedure).ToList()
+            End Using
+        End Function
+
+        Public Function GetEmployeesOnLeaveByDate(attDate As DateTime) As List(Of EmployeeLeave)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim p As New DynamicParameters()
+                p.Add("@AttendanceDate", attDate.Date, DbType.Date)
+                Return conn.Query(Of EmployeeLeave)(Helpers.StoredProcedures.SP_HR_ATTENDANCE_GETONLEAVE, p, commandType:=CommandType.StoredProcedure).ToList()
             End Using
         End Function
 
@@ -221,7 +231,7 @@ Namespace Services
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Dim p As New DynamicParameters()
                 p.Add("@EmployeeID", record.EmployeeID)
-                p.Add("@AttendanceDate", record.AttendanceDate)
+                p.Add("@AttendanceDate", record.AttendanceDate.Date, DbType.Date)
                 p.Add("@CheckIn", record.CheckIn)
                 p.Add("@CheckOut", record.CheckOut)
                 p.Add("@WorkHours", record.WorkHours)
@@ -306,6 +316,15 @@ Namespace Services
                 conn.Execute(Helpers.StoredProcedures.SP_HR_PAYROLL_UNAPPROVEBATCH, New With {.BatchID = batchID}, commandType:=CommandType.StoredProcedure)
             End Using
         End Sub
+
+        Public Function GetPayrollBatchByMonthYear(month As Integer, year As Integer) As PayrollBatch
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim p As New DynamicParameters()
+                p.Add("@Month", month)
+                p.Add("@Year", year)
+                Return conn.QueryFirstOrDefault(Of PayrollBatch)(Helpers.StoredProcedures.SP_HR_PAYROLL_GETBATCHBYMONTHYEAR, p, commandType:=CommandType.StoredProcedure)
+            End Using
+        End Function
 
         ' ============================================================
         ' 6. End of Service

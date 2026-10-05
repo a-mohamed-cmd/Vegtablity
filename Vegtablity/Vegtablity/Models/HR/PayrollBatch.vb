@@ -94,6 +94,9 @@ Namespace Models.HR
                     OnPropertyChanged(NameOf(Status))
                     OnPropertyChanged(NameOf(IsApproved))
                     OnPropertyChanged(NameOf(IsEditable))
+                    OnPropertyChanged(NameOf(StatusDisplay))
+                    OnPropertyChanged(NameOf(StatusBadgeBackground))
+                    OnPropertyChanged(NameOf(StatusBadgeForeground))
                 End If
             End Set
         End Property
@@ -107,6 +110,36 @@ Namespace Models.HR
         Public ReadOnly Property IsEditable As Boolean
             Get
                 Return Not IsApproved
+            End Get
+        End Property
+
+        Public ReadOnly Property StatusDisplay As String
+            Get
+                If IsApproved Then
+                    Return "معتمد 🔒"
+                Else
+                    Return "مسودة ✏️"
+                End If
+            End Get
+        End Property
+
+        Public ReadOnly Property StatusBadgeBackground As String
+            Get
+                If IsApproved Then
+                    Return "#ECFDF5"
+                Else
+                    Return "#FEF3C7"
+                End If
+            End Get
+        End Property
+
+        Public ReadOnly Property StatusBadgeForeground As String
+            Get
+                If IsApproved Then
+                    Return "#047857"
+                Else
+                    Return "#B45309"
+                End If
             End Get
         End Property
 

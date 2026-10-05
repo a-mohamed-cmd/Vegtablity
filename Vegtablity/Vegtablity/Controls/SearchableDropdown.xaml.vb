@@ -127,6 +127,7 @@ Namespace Controls
                 _busy = False
                 _pendingText = Nothing
             End If
+            UpdateActionButtonsVisibility()
         End Sub
 
         ' ══════════════════════════════════════════════════════
@@ -163,6 +164,7 @@ Namespace Controls
                 ' الـ Control لم يتحمّل بعد — احفظ النص لتطبيقه في OnLoaded
                 ctrl._pendingText = displayText
             End If
+            ctrl.UpdateActionButtonsVisibility()
         End Sub
 
         Private Shared Sub OnDisplayMemberPathChanged(d As DependencyObject, e As DependencyPropertyChangedEventArgs)
@@ -202,6 +204,8 @@ Namespace Controls
             If _busy OrElse Not _isInitialized Then Return
             If Not IsEnabled Then Return
 
+            UpdateActionButtonsVisibility()
+
             ' إذا كان النص يتطابق مع الاختيار الحالي → تحديث برمجي، تجاهله
             If SelectedItem IsNot Nothing Then
                 Dim currentDisplay = GetDisplayText(SelectedItem)
@@ -215,6 +219,31 @@ Namespace Controls
 
             ' أطلق حدث الفلترة
             RaiseEvent SearchChanged(Me, SearchBox.Text)
+
+            ' فتح القائمة المنسدلة تلقائياً بالنتائج عند إدخال نص بواسطة المستخدم
+            If SearchBox.IsKeyboardFocused OrElse SearchBox.IsFocused OrElse SearchBox.IsKeyboardFocusWithin Then
+                If Not String.IsNullOrWhiteSpace(SearchBox.Text) Then
+                    DropPopup.IsOpen = True
+                Else
+                    DropPopup.IsOpen = False
+                End If
+            End If
+        End Sub
+
+        Private Sub SearchBox_PreviewMouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs)
+            ' عند النقر على مربع النص وهو غير مركز عليه، نركز عليه ونحدد النص كاملاً
+            ' هذا يتيح للمستخدم مسحه فوراً بزر Backspace أو الكتابة فوقه مباشرة دون أي عوائق
+            If Not SearchBox.IsKeyboardFocusWithin Then
+                SearchBox.Focus()
+                SearchBox.SelectAll()
+                e.Handled = True
+                Return
+            End If
+        End Sub
+
+        Private Sub SearchBox_MouseDoubleClick(sender As Object, e As MouseButtonEventArgs)
+            SearchBox.SelectAll()
+            e.Handled = True
         End Sub
 
         Private Sub SearchBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)
@@ -234,6 +263,9 @@ Namespace Controls
                     e.Handled = True
                     If DropPopup.IsOpen AndAlso ItemsList.SelectedItem IsNot Nothing Then
                         CommitSelection(ItemsList.SelectedItem)
+                    ElseIf DropPopup.IsOpen AndAlso ItemsList.Items.Count > 0 Then
+                        ' إذا كانت القائمة مفتوحة ولم يُحدد عنصر بعينه، اختر أول عنصر من النتائج المطابقة فوراً
+                        CommitSelection(ItemsList.Items(0))
                     ElseIf ItemsList.Items.Count = 1 Then
                         CommitSelection(ItemsList.Items(0))
                     ElseIf SelectedItem IsNot Nothing Then
@@ -249,8 +281,13 @@ Namespace Controls
                     End If
 
                 Case Key.Escape
-                    DropPopup.IsOpen = False
-                    e.Handled = True
+                    If DropPopup.IsOpen Then
+                        DropPopup.IsOpen = False
+                        e.Handled = True
+                    ElseIf SelectedItem IsNot Nothing OrElse Not String.IsNullOrEmpty(SearchBox.Text) Then
+                        ClearSelection()
+                        e.Handled = True
+                    End If
             End Select
         End Sub
 
@@ -297,8 +334,9 @@ Namespace Controls
 
         Private Sub DropPopup_Opened(sender As Object, e As EventArgs)
             ' تأكد من أن عرض الـ Popup مساوٍ لعرض الـ TextBox
-            If PopupBorder IsNot Nothing Then
+            If PopupBorder IsNot Nothing AndAlso SearchBox.ActualWidth > 0 Then
                 PopupBorder.MinWidth = SearchBox.ActualWidth
+                PopupBorder.Width = SearchBox.ActualWidth
             End If
         End Sub
 
@@ -317,11 +355,41 @@ Namespace Controls
             DropPopup.IsOpen = False
             _busy = False
 
+            UpdateActionButtonsVisibility()
+
             RaiseEvent ItemSelected(Me, item)
             RaiseEvent ConfirmedAndMoveNext(Me, EventArgs.Empty)
 
             ' أعد التركيز للـ TextBox
             SearchBox.Focus()
+        End Sub
+
+        ' ══════════════════════════════════════════════════════
+        '  Action Buttons Handlers
+        ' ══════════════════════════════════════════════════════
+
+        Private Sub BtnClear_Click(sender As Object, e As RoutedEventArgs)
+            ClearSelection()
+        End Sub
+
+        Private Sub BtnToggleDrop_Click(sender As Object, e As RoutedEventArgs)
+            If Not IsEnabled Then Return
+
+            If DropPopup.IsOpen Then
+                DropPopup.IsOpen = False
+            Else
+                If SelectedItem IsNot Nothing Then
+                    SearchBox.SelectAll()
+                End If
+                DropPopup.IsOpen = True
+                SearchBox.Focus()
+            End If
+        End Sub
+
+        Private Sub UpdateActionButtonsVisibility()
+            If BtnClear Is Nothing Then Return
+            Dim hasContent = (SelectedItem IsNot Nothing) OrElse Not String.IsNullOrEmpty(SearchBox?.Text)
+            BtnClear.Visibility = If(hasContent, Visibility.Visible, Visibility.Collapsed)
         End Sub
 
         ''' <summary>استخراج نص العرض من كائن باستخدام DisplayMemberPath عبر Reflection</summary>
@@ -373,12 +441,15 @@ Namespace Controls
         ''' <summary>امسح الاختيار والنص</summary>
         Public Sub ClearSelection()
             _busy = True
-            SelectedItem = Nothing
-            If _isInitialized Then
-                SearchBox.Text = String.Empty
-            End If
-            _pendingText = Nothing
+            SearchBox.Text = String.Empty
             _busy = False
+
+            SelectedItem = Nothing
+            _pendingText = Nothing
+            UpdateActionButtonsVisibility()
+
+            RaiseEvent SearchChanged(Me, String.Empty)
+            SearchBox.Focus()
         End Sub
 
         ''' <summary>
@@ -393,6 +464,7 @@ Namespace Controls
                 _pendingText = If(text, String.Empty)
             End If
             _busy = False
+            UpdateActionButtonsVisibility()
         End Sub
 
         ''' <summary>التركيز على مربع النص الخاص بالبحث وتحديد النص</summary>

@@ -6,6 +6,7 @@
              HorizontalAlignment="Stretch">
 
     <UserControl.Resources>
+        <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
         <Style x:Key="PayrollInputStyle" TargetType="TextBox" BasedOn="{StaticResource ModernTextBoxStyle}">
             <Setter Property="Height" Value="32"/>
             <Setter Property="FontSize" Value="12.5"/>
@@ -85,6 +86,12 @@
                     <Run Text="•"/>
                     <Run Text="{Binding JobTitle}"/>
                 </TextBlock>
+                <!-- Leave / Resumption Status Note Badge -->
+                <Border Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="4" Padding="5,2" Margin="0,3,0,0"
+                        HorizontalAlignment="Left"
+                        Visibility="{Binding Notes, Converter={StaticResource StringToVisConverter}}">
+                    <TextBlock Text="{Binding Notes}" FontSize="10" FontWeight="SemiBold" Foreground="#92400E" TextTrimming="CharacterEllipsis"/>
+                </Border>
             </StackPanel>
 
             <!-- 2: Basic Salary -->

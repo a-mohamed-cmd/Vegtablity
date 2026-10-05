@@ -17,11 +17,27 @@ Namespace Controls
         End Sub
 
         Private Sub OnLoaded(sender As Object, e As RoutedEventArgs)
+            SyncStatusWithRecord()
             UpdateRowStyling()
         End Sub
 
         Private Sub OnDataContextChanged(sender As Object, e As DependencyPropertyChangedEventArgs)
+            SyncStatusWithRecord()
             UpdateRowStyling()
+        End Sub
+
+        Private Sub SyncStatusWithRecord()
+            Dim record = TryCast(Me.DataContext, AttendanceRecord)
+            If record Is Nothing OrElse CmbStatus Is Nothing Then Return
+
+            For Each item As ComboBoxItem In CmbStatus.Items
+                If String.Equals(CStr(item.Tag), record.Status, StringComparison.OrdinalIgnoreCase) Then
+                    If CmbStatus.SelectedItem IsNot item Then
+                        CmbStatus.SelectedItem = item
+                    End If
+                    Exit For
+                End If
+            Next
         End Sub
 
         Public Sub UpdateRowStyling()
@@ -52,16 +68,18 @@ Namespace Controls
 
         Private Sub CmbStatus_SelectionChanged(sender As Object, e As SelectionChangedEventArgs)
             Dim record = TryCast(Me.DataContext, AttendanceRecord)
-            If record IsNot Nothing AndAlso CmbStatus.SelectedValue IsNot Nothing Then
-                Dim val = CStr(CmbStatus.SelectedValue)
-                record.Status = val
+            If record Is Nothing OrElse CmbStatus.SelectedValue Is Nothing Then Return
 
-                ' Smart auto-adjustment
+            Dim val = CStr(CmbStatus.SelectedValue)
+            record.Status = val
+
+            ' Smart auto-adjustment: فقط عند قيام المستخدم بتغيير القيمة بنفسه
+            If CmbStatus.IsDropDownOpen OrElse CmbStatus.IsKeyboardFocusWithin Then
                 If val = "Absent" Then
-                    If record.WorkHours = 8 Then record.WorkHours = 0
-                    If record.AbsenceDeductionDays = 0 Then record.AbsenceDeductionDays = 1.0D
+                    If record.WorkHours = 8.0D Then record.WorkHours = 0.0D
+                    If record.AbsenceDeductionDays = 0.0D Then record.AbsenceDeductionDays = 1.0D
                 ElseIf val = "Present" Then
-                    If record.WorkHours = 0 Then record.WorkHours = 8.0D
+                    If record.WorkHours = 0.0D Then record.WorkHours = 8.0D
                     record.AbsenceDeductionDays = 0.0D
                 End If
             End If
@@ -75,6 +93,7 @@ Namespace Controls
             record.WorkHours = 8.0D
             record.DelayMinutes = 0
             record.AbsenceDeductionDays = 0.0D
+            SyncStatusWithRecord()
             UpdateRowStyling()
         End Sub
 
@@ -84,6 +103,7 @@ Namespace Controls
             record.Status = "Absent"
             record.WorkHours = 0.0D
             record.AbsenceDeductionDays = 1.0D
+            SyncStatusWithRecord()
             UpdateRowStyling()
         End Sub
 
@@ -102,5 +122,28 @@ Namespace Controls
         Private Sub IntegerBox_PreviewTextInput(sender As Object, e As TextCompositionEventArgs)
             e.Handled = Not Regex.IsMatch(e.Text, "^\d+$")
         End Sub
+
+        Private Sub SaveRow_Click(sender As Object, e As RoutedEventArgs)
+            Dim record = TryCast(Me.DataContext, AttendanceRecord)
+            If record Is Nothing Then Return
+
+            Dim vm = FindParentViewModel()
+            If vm IsNot Nothing AndAlso vm.SaveSingleRecordCommand IsNot Nothing Then
+                vm.SaveSingleRecordCommand.Execute(record)
+            End If
+        End Sub
+
+        Private Function FindParentViewModel() As ViewModels.HRAttendanceViewModel
+            Dim current As DependencyObject = Me
+            While current IsNot Nothing
+                If TypeOf current Is FrameworkElement Then
+                    Dim fe = DirectCast(current, FrameworkElement)
+                    Dim vm = TryCast(fe.DataContext, ViewModels.HRAttendanceViewModel)
+                    If vm IsNot Nothing Then Return vm
+                End If
+                current = VisualTreeHelper.GetParent(current)
+            End While
+            Return Nothing
+        End Function
     End Class
 End Namespace

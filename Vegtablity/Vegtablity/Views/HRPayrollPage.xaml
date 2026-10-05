@@ -104,8 +104,8 @@
                                             <TextBlock Text="{Binding DisplayTitle}" FontWeight="Bold" FontSize="13" Foreground="#0F172A"/>
                                             <TextBlock Text="{Binding TotalNetSalary, StringFormat={}{0:N3}}" FontSize="12.5" FontWeight="Bold" Foreground="#10B981" Margin="0,3,0,0"/>
                                         </StackPanel>
-                                        <Border Grid.Column="1" Background="#ECFDF5" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Status}" FontSize="10.5" FontWeight="Bold" Foreground="#047857"/>
+                                        <Border Grid.Column="1" Background="{Binding StatusBadgeBackground}" CornerRadius="6" Padding="6,2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding StatusDisplay}" FontSize="10.5" FontWeight="Bold" Foreground="{Binding StatusBadgeForeground}"/>
                                         </Border>
                                     </Grid>
                                 </Border>

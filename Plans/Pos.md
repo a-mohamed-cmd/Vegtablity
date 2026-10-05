@@ -6,58 +6,33 @@
 
 ---
 
-## 📌 الفهرس العام للصفحات والملفات والكلاسات المضافة حديثاً (Index of Recent Additions)
+## 📌 الفهرس العام الشامل لكافة صفحات وملفات وأقسام النظام (Comprehensive System Index)
 
-### 1. الصفحات الجديدة والمعدلة (Added & Modified Pages / Screens):
-*   **نظام الموارد البشرية والرواتب (جديد بالكامل):**
-    *   [HREmployeesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HREmployeesPage.xaml) - شاشة إدارة شؤون الموظفين، الترقيم (10 موظفين/صفحة)، الحقول المخصصة العمودية (EAV)، ومفردات الرواتب.
-    *   [DynamicFieldEditorControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/DynamicFieldEditorControl.xaml) - محرر ديناميكي مخصص لإنشاء وتعديل قيم الحقول والوثائق وشارات التنبيه المسبق 🔔.
-    *   [HRLeavesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml) & [HRLeavesPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml.vb) - شاشة طلبات الإجازات واحتساب الرصيد السنوي، تم تزويدها بزر جديد "➕ جديد / مسح" ومزامنة اسم الموظف بالقائمة المنسدلة الذكية وتوسيع اللوحة تلقائياً عند الاختيار، وإمكانية تعديل السجل الحالي، وتطبيق ضوابط الصلاحيات الأمنية.
-    *   [LeaveRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml) & [LeaveRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml.vb) - أداة السطر المخصصة لسجل الإجازات ومباشرات العمل وبادجات التأخير وطباعة النماذج الفورية، مع إضافة زر الإجراء السريع "✏️ تعديل" لاختيار السجل وفتح لوحة التعديل الفوري.
-    *   [HRAttendancePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRAttendancePage.xaml) - شاشة تسجيل الحضور والانصراف، ساعات وأيام الإضافي، دقائق التأخير، وخصومات الغياب.
-    *   [AttendanceRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AttendanceRowControl.xaml) - أداة السطر التفاعلية لسجل الحضور والانصراف مع التلوين حسب الحالة وأزرار التحضير السريع.
-    *   [HRPayrollPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRPayrollPage.xaml) - شاشة توليد مسير الرواتب الشهري، تعديل الاستحقاقات والاستقطاعات، الاعتماد المالي وقفل التعديل، وطباعة قسائم الرواتب.
-    *   [PayrollRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/PayrollRowControl.xaml) - أداة السطر التفاعلية الذكية لمسير الرواتب بالتنقل بـ Enter وإعادة الاحتساب الفوري وقفل السطور المعتمدة.
-    *   [HREndOfServicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HREndOfServicePage.xaml) - حاسبة مكافأة نهاية الخدمة، البحث بالموظف عبر SearchableDropdown، والتحكم الذكي بالأرقام والكسور.
-    *   [EndOfServiceRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/EndOfServiceRowControl.xaml) - أداة السطر المخصصة لسجل تصفيات نهاية الخدمة وبادجات أسباب الترك والطباعة الفورية.
-    *   [HRAlertsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRAlertsPage.xaml) - لوحة متابعة الوثائق المنتهية والتي قاربت على الانتهاء مع إمكانية إرسال إشعارات سريعة.
-    *   [HRSettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRSettingsPage.xaml) - إعدادات وتخصيص الحقول، بتصميم شبكي (Cards Grid) وتلميحات الأنواع الفورية (Tooltips & Tags).
-    *   [CustomFieldCardControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/CustomFieldCardControl.xaml) - أداة البطاقة الشبكية للحقول المخصصة بأيقونات الأنواع (📅 📝 🔢) وتلميحات التاج وشارات التفعيل.
-    *   [DateBoxControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/DateBoxControl.xaml) - أداة الإدخال والتنسيق التلقائي الموحد للتواريخ بدلاً من DatePicker.
+### 1. الصفحات وعناصر التحكم الجديدة والمعدلة (Added & Modified Pages, Screens & UI Controls):
+*   **نظام بطاقات العملاء والموردين التفاعلية (Partners Cards Grid Ecosystem):**
+    *   [PartnerCardControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/PartnerCardControl.xaml) & [PartnerCardControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/PartnerCardControl.xaml.vb) - أداة بطاقة الشريك المخصصة (عميل / مورد) للتصميم الشبكي المتجاوب (`WrapPanel`) بمقاس 320px، تتضمن شارات الأنواع الذكية، الأرصدة الملونة، وقائمة عروض الأسعار المصغرة التفاعلية مع دعم النقر المباشر للتعديل أو فتح تفاصيل عرض السعر.
+    *   [PartnersPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PartnersPage.xaml) - شاشة العملاء والموردين المطورة كلياً بالتصميم الشبكي التفاعلي وإلغاء جداول الـ DataGrid والقوائم الجانبية المزدحمة.
 
-*   **نافذة التحديث التلقائي لسطح المكتب (جديدة):** [UpdateAvailableDialog.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/UpdateAvailableDialog.xaml) - نافذة عصرية لعرض تفاصيل الإصدار الجديد وملاحظات التحديث وشريط تقدم التنزيل الفوري.
-*   **نافذة حوار التحديث التلقائي للموبايل (جديدة):** [UpdateDialog](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/update_dialog.dart) - نافذة تفاعلية لتنزيل حزم الـ APK وتثبيتها تلقائياً عبر `open_filex`.
-*   **شاشة تسجيل الدخول والشاشة الرئيسية لسطح المكتب (معدلة):** [LoginWindow.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/LoginWindow.xaml.vb) & [DashboardWindow.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DashboardWindow.xaml.vb) - فحص السيرفر تلقائياً عند بدء التشغيل وإظهار نافذة التحديث فوراً عند توفر إصدار أحدث.
-*   **شاشة إعدادات الطابعة الحرارية (معدلة):** [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - إضافة خيار تحديد نمط طباعة الشبكة (النص المباشر الافتراضي vs الطباعة الصورية عالية الدقة HD Raster Canvas)، وإضافة حقل تحديد عدد نسخ الطباعة (Print Copies) لطابعات الشبكة فقط، وقصر حفظ إعدادات الطباعة كلياً على الذاكرة المحلية للجهاز (SharedPreferences).
-*   **شاشة اختيار الشركاء والموردين (جديدة):** [PartnerSelectionScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_selection_screen.dart) - شاشة للبحث واختيار العملاء/الموردين عند بدء فاتورة جديدة أو التعديل من الـ POS.
-*   **شاشة إدخال تفاصيل ومواعيد شحن وتوصيل الطلبات للعملاء (جديدة):** [TemporaryOrderScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) - تحديد موعد التسليم والملاحظات للعملاء، وتخصيصها ديناميكياً لإخفاء بطاقة الزبون المؤقت للعملاء المسجلين.
-*   **شاشة نقطة البيع والشاشات المنسدلة (معدلة):** [PosScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart) & [PartnerBillingScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart) & [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - محاذاة باج الخصم لأقصى اليمين بكارت الصنف وتناسب الاسم عبر Expanded وتغليف الخصم بـ Flexible و FittedBox، وإلغاء تعديل سعر البيع بـ POS، إضافة زر إعادة طباعة أحدث إضافة بالنظام 🖨️ بالهيدر العلوي، وحل خطأ RenderFlex Overflow بإضافة `isExpanded: true` شمولياً.
-*   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة زر التحقق اليدوي من وجود تحديثات، إضافة خيار تخصيص معروضات الصفحة الرئيسية وخيارات تفعيل وتوجيه نظام التوصيل.
-*   **شاشة الصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - الفحص الصامت التلقائي للتحديثات عند الإقلاع، فلترة بطاقات الاختصارات ديناميكياً بناءً على رغبة المستخدم وإضافة زر طباعة أحدث مستند مضاف.
-*   **شاشة عروض مبيعات العملاء (معدلة):** [PartnerOffersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_offers_screen.dart) - تكامل شاشة التوصيل قبل الفوترة لعروض العملاء.
-*   **شاشة تقرير الفواتير اليومية (معدلة):** [DailyInvoicesScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_invoices_screen.dart) - دعم إعادة طباعة تفاصيل ومواعيد التوصيل للعملاء.
-*   **شاشة إعدادات الشركة (معدلة):** [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - إضافة خيار تفعيل التصميم الجديد للطباعة وتفعيل التصميم المخصص الجديد (UseCustomInvoiceDesign)، وإزالة كروت تفضيلات النظام ليتم التحكم بها من الداتابيز.
-*   **صفحة فاتورة المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - إضافة زر "تصدير PDF" في شريط الأدوات العلوي، وإضافة ميزة الفوكس التلقائي والانتقال لخانة الكمية عند تحديد الصنف.
-*   **صفحة فاتورة المبيعات (معدلة):** [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) - إضافة ميزة الفوكس التلقائي والانتقال لخانة الكمية عند تحديد الصنف.
-*   **شاشة الطلبات اليومية للتوصيل (جديدة):** [DailyOrdersPage](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/DailyOrdersPage.xaml) - شاشة سطح المكتب لعرض طلبات التوصيل اليومية وجدولة أوقات الشحن على هيئة كروت مطوية.
-*   **شاشة الطلبات اليومية للتوصيل للهاتف (جديدة):** [DailyOrdersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart) - شاشة تطبيق الموبايل لمتابعة شحنات التوصيل اليومية وإعادة طباعتها حرارياً.
-*   **شاشة إدارة وصفات ومكونات المنتجات لسطح المكتب (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) - إضافة قائمة اختيار المستودع، زري تصدير PDF و Excel، إشعار Snackbar منزلق، وتحسين التنقل بين الخلايا.
-*   **شاشة إدارة الوصفات للموبايل (جديدة):** [RecipeManagementScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) - شاشة تطبيق الهاتف لاستعراض الوصفات ومكوناتها.
-*   **شاشة البحث السريع عن الفواتير (جديدة):** [InvoiceLookupScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart) - شاشة الاستعلام السريع برقم الفاتورة لعرض كافة البيانات المالية والتفاصيل والدليفري وإعادة الطباعة الحرارية 🖨️.
-*   **شاشة إغلاق الوردية وجرد وتسوية الكاش (معدلة):** [CloseShiftScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/close_shift_screen.dart) - إعادة تنظيم بطاقة تسوية وجرد الكاش بالدرج لعرض مبيعات ومشتريات الكاش النقدية الفعلية فقط وسندات القبض والصرف، وتقسيم بطاقة المبيعات لـ (كاش / شبكة K-Net / آجل) وبطاقة المشتريات لـ (كاش / غير نقدي / آجل)، وعرض بطاقة تفاصيل طرق الدفع.
-*   **صفحة الورديات وإدارة التدفق النقدي المكتبي (معدلة):** [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml) - ضبط وتوحيد رؤوس أقسام الإيرادات والمدفوعات لإظهار إجمالي المبيعات والمشتريات، وحصر مبالغ التدفق النقدي بالكاش الفعلي بالدرج.
-*   **منظومة التقارير والتحليلات التنفيذية لمدراء الفروع [VegtablityManagerApp] (جديدة بالكامل - 16 تبويباً وشاشة تفاعلية بنمط MVVM):**
-    *   [ManagerMainScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/manager_main_screen.dart) - الشاشة الرئيسية الشاملة للوحة الإدارة متعددة الشركات مع شريط التصفية الزمني الذكي، القائمة الجانبية المتكيفة (Sidebar/Drawer)، ومزامنة `initState` اللحظية لاسم وشعار الشركة من قاعدة البيانات.
-    *   [LoginScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/login_screen.dart) - بوابة تسجيل الدخول الموحدة للشركات، تدعم التعرف التلقائي على الدومين الفرعي، وإصدار رمز JWT وتخزين الجلسة الآمنة.
-    *   [DashboardOverviewTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/dashboard_overview_tab.dart) - لوحة المؤشرات التفاعلية بالكامل (Clickable KPI Cards)، تدعم النقر اللحظي على كافة البطاقات والرسوم البيانية وكبار العملاء لفتح التفاصيل المالية العميقة.
-    *   [MetricDetailSheet](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/metric_detail_sheet.dart) - نافذة منبثقة تفاعلية ذكية (Modal Bottom Sheet للجوال و Dialog فخم للديسكتوب) للحفر المالي واستعراض تفاصيل المبيعات، الأرباح، الفواتير، الديون، وبطاقات العملاء مع إلغاء حقل الضريبة كلياً.
+*   **مركز تنبيهات انتهاء الوثائق الرسمية للموظفين (HR Alerts & Document Expiry):**
+    *   [DocumentAlertRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/DocumentAlertRowControl.xaml) & [DocumentAlertRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/DocumentAlertRowControl.xaml.vb) - أداة عرض صفوف تنبيهات الوثائق المنتهية والتي قاربت على الانتهاء، مزودة بشريط مؤشر رأسي ملون (🔴 أحمر منتهي / 🟠 كهرماني ينتهي قريباً)، وأزرار الإجراء السريع لإرسال إشعار WhatsApp المباشر ونسخ نص الرسالة.
+    *   [HRAlertsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRAlertsPage.xaml) - مركز متابعة وتصفية الوثائق بالبحث اللحظي السريع، الكروت الإحصائية التفاعلية للفلترة الفورية، وتبويبات الفرز السريع (الكل / منتهية / تنتهي قريباً).
+
+*   **تطبيق المشرف وإدارة التراخيص [LicenseManagerApp]:**
+    *   [company_settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/company_settings_screen.dart) - شاشة الخصائص وتفضيلات النظام المستقلة لإدارة قواعد البيانات والتحكم بمفتاح تفعيل الموارد البشرية `EnableHR`، وضع التصنيع `ProductionMode`، وتصاميم الفواتير المخصصة والعملات وزر الحفظ المباشر.
+    *   [dashboard_home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/screens/dashboard_home_screen.dart) - لوحة التحكم الرئيسية المنظمة لكارتي إدارة التراخيص والخصائص، مع الفحص التلقائي واليدوي للتحديثات بضغطة زر.
+
+*   **منظومة التقارير والتحليلات التنفيذية لمدراء الفروع [VegtablityManagerApp] (16 شاشة وتبويباً بنمط MVVM وتحديثات الداشبورد التفاعلية Clickable):**
+    *   [ManagerMainScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/manager_main_screen.dart) - الشاشة الرئيسية الشاملة للوحة الإدارة متعددة الشركات مع شريط التصفية الزمني الذكي، القائمة الجانبية المتكيفة (Sidebar/Drawer)، ومزامنة `initState` اللحظية لاسم وشعار الشركة من قاعدة البيانات مع حظر الكاش القديم.
+    *   [LoginScreen](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/login_screen.dart) - بوابة تسجيل الدخول الموحدة للشركات مع التعرف التلقائي على الدومين الفرعي، وحفظ الجلسة الآمنة، وجلب الشعار والاسم الفعلي.
+    *   [DashboardOverviewTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/dashboard_overview_tab.dart) - لوحة المؤشرات التفاعلية بالكامل (Clickable KPI Cards)، تدعم النقر الفوري على كافة البطاقات والرسوم البيانية وقائمة كبار العملاء لفتح التفاصيل المالية العميقة.
+    *   [MetricDetailSheet](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/metric_detail_sheet.dart) - نافذة التفاصيل العميقة المنبثقة الذكية (Modal Bottom Sheet للجوال و Dialog فخم للديسكتوب) لاستعراض تفاصيل المبيعات، الأرباح، الفواتير، الديون، وبطاقات العملاء مع الإلغاء الكامل لحقل الضريبة.
     *   [ProductProfitsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/product_profits_tab.dart) - تبويب أرباح الأصناف مع البحث اللحظي وتصنيف الهوامش الربحية الملونة والفرز التفاعلي.
     *   [InvoiceProfitsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/invoice_profits_tab.dart) - تبويب أرباح الفواتير وتحليل هوامش كل فاتورة وتكلفة بضاعتها واسم الكاشير والعميل.
     *   [CategoryProfitsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/category_profits_tab.dart) - تبويب أرباح التصنيفات ومقارنة مساهمة كل قسم في المبيعات والأرباح الإجمالية.
     *   [ExecutivePnLTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/executive_pnl_tab.dart) - تبويب قائمة الأرباح والخسائر التنفيذية (P&L) وحساب صافي الدخل التشغيلي ومجمل الربح والمصروفات.
     *   [CustomerProfitabilityTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/customer_profitability_tab.dart) - تبويب ربحية العملاء ورصد العملاء الأكثر والأقل تحقيقاً للأرباح.
-    *   [SalesTrendsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/sales_trends_tab.dart) - تبويب حركة واتجاهات المبيعات وتحليل فترات الذروة والمقارنة اليومية والشهرية بالرسوم البيانية.
-    *   [TopCustomersTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/top_customers_tab.dart) - تبويب كبار العملاء وترتيبهم بحجم المبيعات والمدفوعات والمستحقات المتبقية وبطاقات التفاصيل المنبثقة.
+    *   [SalesTrendsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/sales_trends_tab.dart) - تبويب حركة واتجاهات المبيعات وتحليل فترات الذروة والمقارنة بالرسوم البيانية.
+    *   [TopCustomersTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/top_customers_tab.dart) - تبويب كبار العملاء وترتيبهم بحجم المبيعات والمدفوعات والمستحقات وبطاقات التفاصيل المنبثقة.
     *   [AgingDebtTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/aging_debt_tab.dart) - تبويب تقادم وأعمار الديون بجدولة الفترات الائتمانية (0-30، 31-60، 61-90، +90 يوم).
     *   [InventoryValuationTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/inventory_valuation_tab.dart) - تبويب تقييم المخزون ورأس المال المجمد وقيمة البيع والأرباح الكامنة بالمستودعات.
     *   [SlowMovingTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/slow_moving_tab.dart) - تبويب الأصناف الراكدة وبطيئة الحركة وتحليل رأس المال المعطل.
@@ -67,100 +42,215 @@
     *   [WastageAnalysisTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/wastage_analysis_tab.dart) - تبويب تحليل الهوالك والتوالف وتكلفتها الإجمالية ونسب الهدر لكل صنف ومستودع.
     *   [ShiftsAnalyticsTab](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/screens/shifts_analytics_tab.dart) - تبويب تحليلات وحركة الورديات ومقارنة النقدية الفعلية بالمتوقعة بالدرج ورصد الفروقات.
 
-### 2. الكلاسات ومزودات الحالة الجديدة والمعدلة (Added & Modified Classes / ViewModels / Providers):
-*   **نماذج ومزودات تطبيق إدارة التقارير [VegtablityManagerApp] (جديدة ومعدلة):**
+*   **نظام الموارد البشرية والرواتب لسطح المكتب (WPF HR & Payroll):**
+    *   [HREmployeesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HREmployeesPage.xaml) - شاشة إدارة شؤون الموظفين، الترقيم (10 موظفين/صفحة)، الحقول المخصصة العمودية (EAV)، ومفردات الرواتب.
+    *   [DynamicFieldEditorControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/DynamicFieldEditorControl.xaml) - محرر ديناميكي مخصص لإنشاء وتعديل قيم الحقول والوثائق وشارات التنبيه المسبق 🔔.
+    *   [HRLeavesPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml) & [HRLeavesPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRLeavesPage.xaml.vb) - شاشة طلبات الإجازات واحتساب الرصيد السنوي، زر "➕ جديد / مسح"، مزامنة اسم الموظف، البحث الفوري الذكي بالموظف مع فتح القائمة المنسدلة تلقائياً بمجرد إدخال النص دون الحاجة للضغط على السهم، وإمكانية تعديل السجل الحالي مع حماية الصلاحيات.
+    *   [LeaveRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml) & [LeaveRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/LeaveRowControl.xaml.vb) - أداة السطر المخصصة لسجل الإجازات ومباشرات العمل وبادجات التأخير وطباعة النماذج الفورية مع زر "✏️ تعديل".
+    *   [HRAttendancePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRAttendancePage.xaml) - شاشة تسجيل الحضور والانصراف، ساعات الإضافي، دقائق التأخير، وخصومات الغياب وزر التحضير الجماعي.
+    *   [AttendanceRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AttendanceRowControl.xaml) - أداة السطر التفاعلية لسجل الحضور والانصراف مع التلوين حسب الحالة.
+    *   [HRPayrollPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRPayrollPage.xaml) - شاشة توليد مسير الرواتب الشهري، تعديل الاستحقاقات والاستقطاعات، الاعتماد المالي وقفل التعديل، وطباعة قسائم الرواتب، مع حظر قاطع لتوليد مسير جديد لشهر معتمد ومقفل وإلزام المستخدم بإلغاء الاعتماد أولاً لحماية سلامة البيانات المالية.
+    *   [PayrollRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/PayrollRowControl.xaml) - أداة السطر التفاعلية الذكية لمسير الرواتب بالتنقل بـ Enter وإعادة الاحتساب الفوري وقفل السطور المعتمدة.
+    *   [HREndOfServicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HREndOfServicePage.xaml) - حاسبة مكافأة نهاية الخدمة، البحث بالموظف عبر SearchableDropdown، والتحكم الذكي بالأرقام وبدل الإجازات النقدي.
+    *   [EndOfServiceRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/EndOfServiceRowControl.xaml) - أداة السطر المخصصة لسجل تصفيات نهاية الخدمة وبادجات أسباب الترك والطباعة الفورية.
+    *   [HRSettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRSettingsPage.xaml) - إعدادات وتخصيص الحقول بتصميم شبكي (Cards Grid) وتلميحات الأنواع الفورية (Tooltips & Tags).
+    *   [CustomFieldCardControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/CustomFieldCardControl.xaml) - أداة البطاقة الشبكية للحقول المخصصة بأيقونات الأنواع (📅 📝 🔢) وتلميحات التاج وشارات التفعيل.
+    *   [DateBoxControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/DateBoxControl.xaml) - أداة الإدخال والتنسيق التلقائي الموحد للتواريخ بدلاً من DatePicker.
+
+*   **أدوات إدخال السطور وعناصر التحكم لسطح المكتب (Desktop Controls & Custom Row Controls):**
+    *   [InvoiceItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml) & [InvoiceItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml.vb) - عنصر تحكم مخصص لحل محل DataGrid في فواتير المبيعات والمشتريات، يدعم البحث بالباركود وبالقائمة الذكية `SearchableDropdown`، فحص عروض الأسعار، الحماية من تكرار الفاصلة العشرية، فحص رصيد المخزون بشكل غير متزامن `Task.Run`، وتسريع دورة التنقل بـ Enter دون تجميد الواجهة.
+    *   [QuoteItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml) & [QuoteItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور عروض الأسعار (مبيعات ومشتريات) مع التنقل السريع وتحديث الموديل الحسابي المباشر.
+    *   [RecipeItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml) & [RecipeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور مكونات الوصفات والمواد الخام بالبحث الذكي وحساب تكلفة الوحدة والتنقل بـ Enter.
+    *   [WastageItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml) & [WastageItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور التوالف والهوالك وعرض الرصيد بعد الخصم وحذف الصف.
+    *   [StockTakeItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml) & [StockTakeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور الجرد الآلي وحساب الفروقات وزر تحديث الرصيد الدفتري 🔄.
+    *   [AccountTreeControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AccountTreeControl.xaml) & [AccountNode.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/AccountNode.vb) - أداة شجرة الحسابات الهرمية التفاعلية متعددة المستويات مع التظليل الذكي وإضافة الحسابات الفرعية التلقائية.
+    *   [SearchableDropdown.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml) & [SearchableDropdown.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml.vb) - أداة القائمة المنسدلة الذكية القابلة للبحث البديلة للـ ComboBox، والمستخدمة على نطاق واسع في النظام (اختيار الموظفين، الشركاء، الحسابات، والأصناف). تم تطويرها وتحديثها لمعالجة تداخل أحداث ماوس WPF، دعم التحديد الكلي الفوري بنقرة واحدة (Single-Click SelectAll) والنقر المزدوج، إضافة أزرار الإجراء السريع (زر المسح المباشر ✕ وزر السهم المنسدل ▼)، دعم زر Esc الذكي، وتكييف الارتفاع تلقائياً مع دعم كامل لاتجاه RTL.
+
+*   **شاشات سطح المكتب المطورة (WPF Desktop Pages):**
+    *   [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) & [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - فواتير المبيعات والمشتريات المطورة بالـ ItemsControl وسطور `InvoiceItemRowControl` وسرعة الإضافة المباشرة للسطور والفوكس التلقائي على الكمية وتصدير PDF.
+    *   [QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml) & [PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml) - شاشات عروض الأسعار مع سطور `QuoteItemRowControl` المتجاوبة السريعة.
+    *   [JournalEntryPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml) - كارت البحث والتصفية المتقدم المتحرك (Animation) للبحث برقم القيد والحالة ونطاق التاريخ.
+    *   [ProfitLossPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProfitLossPage.xaml) - تقرير الأرباح والخسائر والمقارنة الشهرية الأفقية ورسوم LiveCharts والنسبة من المبيعات.
+    *   [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) - إدارة الوصفات مع كارت الفلترة المنزلق وترقيم الصفحات 10/صفحة واللوحة الجانبية القابلة للطي.
+    *   [WastagePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml) & [StockTakePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/StockTakePage.xaml) - كروت الفلترة وترقيم صفحات سجلات الهالك والجرد الآلي بمعدل 10 سجلات/صفحة وزر طباعة سند الجرد الرسمي PDF.
+    *   [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml) - ضبط وتوحيد رؤوس أقسام التدفق النقدي الفعلي بالدرج وتثبيت حساب الصندوق الرئيسي على 1101.
+    *   [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - قصر الشاشة على البيانات التجارية الأساسية، وإزالة كروت التفضيلات ليتم التحكم بها من تطبيق الإدارة وقواعد البيانات.
+    *   [UpdateAvailableDialog.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/UpdateAvailableDialog.xaml) - نافذة حوار التحديث التلقائي لسطح المكتب مع شريط تقدم التنزيل الفوري.
+
+*   **شاشات وتحديثات تطبيق الموبايل [Vegtablity_App]:**
+    *   [BarcodePrintScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/barcode_print_screen.dart) - شاشة طباعة ملصقات الباركود للمنتجات (عادية/تصنيع/وسيط) وتحديد النسخ والمعاينة والطباعة الحرارية المباشرة.
+    *   [InvoiceLookupScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/invoice_lookup_screen.dart) - شاشة الاستعلام السريع برقم الفاتورة لعرض التفاصيل المالية والبيانات والدليفري وإعادة الطباعة.
+    *   [DailyOrdersScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/daily_orders_screen.dart) - شاشة متابعة وجدولة شحنات التوصيل اليومية وإعادة طباعتها حرارياً.
+    *   [RecipeManagementScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/recipe_management_screen.dart) & [AddRecipeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/add_recipe_screen.dart) - شاشات استعراض وإدخال الوصفات بالكاميرا ومسح الباركود السريع لمنتجات التصنيع.
+    *   [CloseShiftScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/close_shift_screen.dart) - إعادة تنظيم بطاقة تسوية الكاش لعرض مبيعات ومشتريات الكاش النقدية الفعلية فقط وسندات الصندوق وعزل مبيعات الشبكة.
+    *   [TemporaryOrderScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) - إدخال تفاصيل ومواعيد شحن وتوصيل الطلبات للعملاء وإخفاء تفاصيل الزبون المؤقت للعملاء المسجلين.
+    *   [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - خيار نمط طباعة الشبكة (Direct Text vs HD Canvas Raster) وعدد النسخ وحفظ الإعدادات محلياً في SharedPreferences.
+    *   [UpdateDialog](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/update_dialog.dart) - نافذة حوار التحديث التلقائي للموبايل لتنزيل الـ APK وتثبيته بـ `open_filex`.
+
+---
+
+### 2. الكلاسات ومزودات الحالة ومحركات الطباعة والخدمات (Classes, ViewModels, Providers & Services):
+*   **نماذج ومزودات تطبيق إدارة التقارير [VegtablityManagerApp]:**
     *   [ReportsProvider](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/providers/reports_provider.dart) - مزود الحالة الرئيسي بنمط MVVM لإدارة جلب وتحميل التقارير الـ 16 والفلترة الزمنية والتكامل مع الشركة النشطة.
-    *   [AuthProvider](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/providers/auth_provider.dart) - إدارة جلسات الدخول والتوكن والربط الحي التلقائي الفوري لإعدادات واسم وشعار الشركة من قاعدة البيانات مع منع الكاش القديم `force: true`.
+    *   [AuthProvider](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/providers/auth_provider.dart) - إدارة جلسات الدخول والتوكن والربط الحي التلقائي الفوري لإعدادات واسم وشعار الشركة من قاعدة البيانات مع منع الكاش القديم `force: true` ومطابقة الشركة المحددة بـ `SharedPreferences`.
     *   [CompanySettingsModel](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/models/company_settings_model.dart) - نموذج إعدادات المنشأة، مزود بآلية مرنة ديناميكية 100% لاستخلاص اسم الشركة `CompanyName` بجميع الصيغ بدون أي تثبيت مسبق.
     *   [DashboardSummaryModel](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/models/dashboard_summary_model.dart) - نموذج الملخص التنفيذي ومؤشرات الأداء مع الحذف التام لحقل الضريبة الملغي.
     *   [KpiCardWidget](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/kpi_card_widget.dart) - عنصر واجهة تفاعلي قابل للنقر دائماً بمؤشر الفأرة اليدوي والتموج المائي وشارة `تفاصيل ❯`.
     *   [CompanySelectorHeader](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/widgets/company_selector_header.dart) - ترويسة الشركة الحية لعرض الاسم التجاري الفعلي المأخوذ من الداتابيز والشعار المعتمد.
     *   [ApiClient](file:///d:/VB.NET/backup/Vegtablity/VegtablityManagerApp/lib/core/api_client.dart) - عميل Dio الموحد لإرسال ترويسات التفويض وتوجيه الروابط.
-    *   [NoCacheStaticFiles](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/main.py) - فئة مخصصة في خادم FastAPI لخدمة ملفات الويب مع حظر كاش المتصفح نهائياً وإلزام المتصفح بتحميل أحدث ملفات JS فوراً.
-*   **نماذج ومتحكمات الموارد البشرية والرواتب (جديدة):**
+
+*   **محرك وسيرفر الـ API الخلفي [VegtablityApi]:**
+    *   [NoCacheStaticFiles](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/main.py) - فئة مخصصة في خادم FastAPI لخدمة ملفات الويب مع حظر كاش المتصفح نهائياً وإلزام المتصفح بتحميل أحدث ملفات JS وحظر Service Worker القديم.
+    *   [report_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/report_service.py) - محرك التقارير المعتمد حصرياً على الإجراءات المخزنة (Pure Stored Procedures) وحظر أي استعلام SQL مباشر، مع إلغاء حقل الضريبة كلياً.
+    *   [license_control_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/license_control_service.py) & [db_procedures_controls.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures_controls.py) - إدارة إعدادات المنشآت والتراخيص بالـ API وتمرير باراميتر `@EnableHR` و `@ProductionMode`.
+    *   [update_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/update_service.py) & [updates_manifest.json](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/data/updates_manifest.json) - محرك إدارة التحديثات التلقائية ودعم نكهة تطبيق الإدارة `license_manager`.
+    *   [shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py) & [shift.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/shift.py) - دعم تفصيل الكاش والشبكة وحساب النقدية المتوقعة بالدرج وتصفير كاش الوردية عند الإغلاق.
+
+*   **متحكمات ونماذج الموارد البشرية والرواتب (WPF ViewModels & Models):**
+    *   [PartnersViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PartnersViewModel.vb) - إدارة البطاقات الشبكية للعملاء والموردين وربط عروض الأسعار المجمعة `PartnerQuoteSummaryItem` لسرعة العرض دون استعلامات متكررة.
+    *   [HRAlertsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRAlertsViewModel.vb) - إدارة وتصفية تنبيهات الوثائق المنتهية، الفلترة اللحظية، وتوليد إشعار واتساب التلقائي وفحص WhatsApp Desktop أولاً ثم التحول لـ WhatsApp Web ونسخ النص للحافظة.
+    *   [HRDocumentPrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/HRDocumentPrinter.vb) - محرك طباعة مستندات الموارد البشرية الـ 5 مع رسم شعار وبيانات الشركة ديناميكياً من `CompanySettings` مع الحفاظ على النسبة والتناسب `Aspect Ratio`.
     *   [HREmployeesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HREmployeesViewModel.vb) - إدارة الموظفين، الترقيم 10/صفحة، والحقول المرنة.
-    *   [HRLeavesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRLeavesViewModel.vb) - إدارة الإجازات، الرصيد المتبقي، والمباشرة بعد العودة، معالجة أمر الإضافة الجديد `NewLeaveCommand` وتفريغ الاختيار، وتحديث سجلات الإجازة والمباشرة القائمة وحمايتها بالصلاحيات الممنوحة `CanAdd, CanEdit`.
-    *   [EmployeeLeave.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/HR/EmployeeLeave.vb) - نموذج بيانات الإجازة، وراثته من `BaseViewModel` وتفعيل إشعارات التغيير `SetProperty` للربط ثنائي الاتجاه اللحظي.
+    *   [HRLeavesViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRLeavesViewModel.vb) & [EmployeeLeave.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/HR/EmployeeLeave.vb) - إدارة الإجازات، أمر الإضافة الجديد `NewLeaveCommand`، وتحديث سجلات الإجازة والمباشرة القائمة وحمايتها بالصلاحيات.
     *   [HRAttendanceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRAttendanceViewModel.vb) - متابعة الحضور والانصراف والإضافي والغياب.
     *   [HRPayrollViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRPayrollViewModel.vb) - توليد مسيرات الرواتب الشهرية، الاعتماد المالي وترحيل القيد، وإلغاء الاعتماد.
-    *   [HREndOfServiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HREndOfServiceViewModel.vb) - احتساب مكافأة نهاية الخدمة، بدل الإجازات، والطباعة.
-    *   [HRAlertsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRAlertsViewModel.vb) - رصد الوثائق المنتهية وإرسال رسائل WhatsApp المباشرة.
+    *   [HREndOfServiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HREndOfServiceViewModel.vb) - احتساب مكافأة نهاية الخدمة، بدل الإجازات النقدي، والطباعة الرسمية.
     *   [HRSettingsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/HRSettingsViewModel.vb) - تعريف وتعديل الحقول المخصصة EAV.
-    *   [HRService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/HRService.vb) - خدمة التعامل مع كافة الإجراءات المخزنة لمخطط [HR].
-    *   [HRDocumentPrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/HRDocumentPrinter.vb) - محرك طباعة المستندات الرسمية الـ 5 (المباشرة، الإجازة، المخالصة، القسيمة، والكشف الكامل).
+    *   [HRService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/HRService.vb) - خدمة استدعاء كافة الإجراءات المخزنة لمخطط [HR].
 
-*   **خدمة تهيئة قاعدة البيانات والتشفير (معدلة ومؤمنة):** [DatabaseHelper.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/DatabaseHelper.vb) - تشفير قالب الاتصال وبيانات السيرفر والمستخدم داخلياً، استيراد اسم قاعدة البيانات فقط مشفراً بـ AES-256 من ملف `dbconfig.dat` الخارجي، إلغاء القيم الافتراضية، وإظهار خطأ صريح عند غياب الملف.
-*   **خدمة التحديث التلقائي لسطح المكتب (جديدة):** [AutoUpdateService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AutoUpdateService.vb) - فحص السيرفر وتنزيل ملفات التثبيت وتشغيل Inno Setup صامتاً مع إغلاق وإعادة فتح التطبيق المحدث.
-*   **خدمة التحديث التلقائي للموبايل (جديدة):** [UpdateService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/update_service.dart) - قراءة الإصدار و Version Code ديناميكياً عبر `package_info_plus` وتنزيل الـ APK وفتحه للتثبيت التلقائي عبر `open_filex`.
-*   **مركز تحكم وإدارة التحديثات بالـ API (جديد):** [updates_manifest.json](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/data/updates_manifest.json) & [update_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/update_service.py) & [updates.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/updates.py) - مسارات التحقق `GET /updates/check` والنشر `POST /updates/publish` واستضافة الملفات الثابتة عبر `/static/updates/` مع مقارنة الإصدارات الدقيقة بـ 4 أرقام.
-*   **إجراءات ملخص وإغلاق الوردية المحاسبية (معدلة):** `[Sales].[sp_Shift_GetSummary]` & `[Sales].[sp_Shift_Close]` - تثبيت حساب الصندوق الرئيسي على الحساب `1101` و `1101%` حصراً، وعزل مبيعات ومشتريات الشبكة والبنوك `1102` لحساب الكاش المتوقع بالدرج بدقة 100%.
-*   **خدمة ومخطط الورديات بالـ API (معدلة):** [shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py) & [shift.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/shift.py) - دعم `TotalCashSales`, `TotalKnetSales`, `TotalCashPurchases`, `TotalNonCashPurchases` وحساب النقدية المتوقعة بالدرج.
-*   **نموذج ومتحكم الورديات لسطح المكتب (معدل):** [Shift.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/Shift.vb) & [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) - إضافة خصائص الكاش والشبكة المخصصة وتثبيت فحص حساب الكاش على `1101`.
-*   **مصمم تقرير الوردية الحراري (معدل):** [ShiftReportPrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/shift_report_print_designer.dart) - فصل مبيعات الكاش والشبكة وخصم مشتريات الكاش من النقدية المتوقعة بالدرج.
-*   **سكربتات بناء تطبيقات Flutter التلقائية (جديدة):** [build_all.bat](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/build_all.bat) & [build_all.ps1](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/build_all.ps1) - سكربتات لتحديث الحزم وبناء تطبيق Android APK و Windows Desktop EXE بضغطة زر واحدة.
-*   **متحكم استعلام الفواتير (جديد):** [InvoiceLookupViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/invoice_lookup_viewmodel.dart) - متحكم نمط MVVM الخاص بالبحث والاستعلام عن الفواتير وتجهيز الإيصالات للطباعة.
-*   **متحكم فاتورة المبيعات (معدل):** [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر البيع = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
-*   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة دالة `ValidateInvoiceItemsBeforeSave` لمراجعة وتجميع الأصناف بدون كمية (`الكمية = 0`) والأصناف بدون سعر (`سعر الشراء = 0`) في قسم مخصص أسفل رسالة التنبيه بفاصل مميز قبل الحفظ.
-*   **خدمة الطابعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - تسجيل المستندات المضافة ودالة `printLastAddedDocument()` لطباعة أحدث مستند بالنظام فوراً، تكرار طباعة الشبكة لعدد النسخ `printCopies` محلياً، وإلغاء مزامنة الداتابيز لقصر الإعدادات على SharedPreferences الجهاز فقط.
-*   **مصمم الفواتير الحرارية والـ Canvas (معدل):** [InvoicePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart) - إضافة وطباعة وقت الفاتورة `HH:mm:ss A` بجانب التاريخ وإدراج الإجمالي والخصم والصافي (Net Total) بكافة محركات الطباعة، اعتماد مسمى `خصم الصنف` المترجم، وحذف رمز العملة من الخصوم المطبوعة.
-*   **مصمم الإيصالات الحرارية (معدل):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - دعم الطباعة الديناميكية باللغة العربية والإنجليزية بحسب لغة التطبيق، وتحويل الفاتورة واللوجو والتقرير إلى صورة Canvas عالية الدقة لطابعات الشبكة POS 80.
-*   **متحكم الوصفات (معدل):** [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - دعم الربط الدقيق للمستودع `SelectedWarehouseID` مع جلب أسعار التكلفة للمواد الخام وتنشيط إشعارات الـ Snackbar والتنظيف التلقائي للصفوف الفارغة قبل الحفظ.
-*   **خدمة الأصناف (معدلة):** [ProductService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ProductService.vb) - إضافة دالة `GetProductsForRecipeIngredients` لجلب المواد الخام والوسيطة بالتكلفة المرجحة من `ProductStock`.
-*   **خدمة الوصفات (معدلة):** [RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb) - تمرير `WarehouseID` لإجراء حفظ وتحديث الوصفات.
-*   **كلاس تصدير التقارير (معدل):** [ReportExporter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - إضافة الدالتين `ExportRecipeToPdf` و `ExportRecipeToCsv` لطباعة وتصدير الوصفات بهيكل تفصيلي كامل.
-*   **إجراء جلب المواد الخام للوصفة (جديد):** `[Inventory].[sp_Product_GetForRecipeIngredients]` - جلب المواد الخام والأصناف الوسيطة والعادية وحساب تكلفة `AvgCostPrice` من `ProductStock` حسْب المستودع المختار مع التراجع لـ 0.
-*   **إجراء حفظ الوصفة (معدل):** `[Inventory].[sp_Recipe_Save_XML]` - قبول `@WarehouseID` وإدراج/تحديث المنتج المصنع بـ `ProductStock` بالتكلفة الإجمالية وحجم رصيد 0.
-*   **إجراء جلب تفاصيل الوصفة (معدل):** `[Inventory].[sp_Recipe_GetByProduct]` - جلب تفاصيل المكونات والتكلفة بالربط المباشر مع `@WarehouseID` أو التراجع لأقل تكلفة.
-*   **كلاس تصميم الإيصالات وتنسيق الطباعة الحرارية (جديد):** [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - كلاس تنسيق رأس وتذييل وأصناف الإيصال وتعديل حجم الورق وطباعة الشعار.
-*   **كود التحكم بالطباعة المكتبي (معدل):** [InvoicePrinter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - رسم الجدول ورأس وتذييل الفاتورة التفصيلية A4 مكرراً في كل صفحة وتعديل توسيط موقع رسم نوع الفاتورة `نوع الفاتورة / cash` بمنتصف الصفحة عند `gt(5.0F)` وضبط الملاحظات أسفل اسم العميل.
-*   **كلاس طابعة الفواتير المخصص الجديد (جديد):** [InvoicePrinterCustom](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinterCustom.vb) - كلاس طباعة مستقل مخصص لمحاكاة وتعديل مقاسات الفاتورة وتفقيطها وجدولها بمقدار 1 سم للأسفل للتصميم الرئيسي.
-*   **نموذج بيانات الشركة (معدل):** [CompanyInfo](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/CompanyInfo.vb) - إضافة خاصيتي `UseDetailedInvoiceDesign` و `UseCustomInvoiceDesign`.
-*   **متحكم صفحة الإعدادات (معدل):** [CompanySettingsViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CompanySettingsViewModel.vb) - إدارة وتمرير حالتي تصميم الطباعة (المفصل والمخصص) لقاعدة البيانات.
-*   **خدمة إعدادات الشركة (معدلة):** [SettingsService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/SettingsService.vb) - تضمين حقل `UseCustomInvoiceDesign` في جمل الاستعلام والحفظ.
-*   **مزود حالة المبيعات والمشتريات (معدل):** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - حفظ إجمالي الخصم المالي بحقل `Discount` وقيم `TotalAmount` (قبل الخصم) و `NetAmount` (الصافي) بـ `InvoiceHeader` بالداتابيز، وحساب قيم المدفوع والمتبقي وتنسيق حفظ الفاتورة الآجلة.
-*   **متحكم فاتورة المشتريات (معدل):** [PurchaseInvoiceViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - إضافة ومعالجة أمر تصدير الفاتورة لـ PDF.
-*   **كلاس تصدير التقارير (معدل):** [ReportExporter](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - إضافة دالة `ExportInvoiceToPdf` المخصصة لتصدير المبيعات والمشتريات بهيكل PDF احترافي.
-*   **نموذج بيانات طباعة الفاتورة (معدل):** [InvoiceReportHeader](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/InvoiceReportData.vb) - إضافة حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
-*   **ملف الـ Trigger لقاعدة البيانات (معدل):** [14_Invoices_Post_Trigger.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/14_Invoices_Post_Trigger.sql) - ترحيل المخازن والحسابات بأمان مع معالجة السجلات المفقودة وإعادة احتساب متوسط التكلفة عند إلغاء ترحيل المشتريات.
-*   **سكربت تحديث الإجراء المخزن (جديد):** [29_sp_Report_InvoicePrint_Update.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/29_sp_Report_InvoicePrint_Update.sql) - جلب حقول `Remainder`, `PaidAmount`, `NetAmount` للطباعة.
-*   **ملف سكربت الـ SQL الرئيسي لقاعدة البيانات (معدل):** [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) - دمج جلب حقل المدفوع والمتبقي لتحديد نوع الفاتورة نقدي/آجل تلقائياً، وتصحيح تنشيط حسابات المبيعات والإيرادات `411` و `412` و `1201`.
-*   **ملفي تشغيل خادم الـ API (معدلة):** [Run.bat / start_server.bat](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/Run.bat) - إزالة تعارض خيار `--workers 4` مع `--reload` لتفادي خطأ ويندوز `WinError 10022`.
-*   **متحكم شاشة الطلبات اليومية (جديد):** [DailyOrdersViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/DailyOrdersViewModel.vb) - إدارة عمليات التصفية بالتاريخ وعرض الفاتورة وجلب البيانات.
-*   **خدمة جلب وإدارة الطلبات (جديد):** [OrderService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/OrderService.vb) - استدعاء إجراءات التوصيل والطلبات اليومية من قاعدة البيانات.
-*   **نموذج بيانات الطلبات المجدولة (جديد):** [DailyOrder](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/DailyOrder.vb) - تمثيل بيانات الشحن والتسجيل والتوصيل للعملاء.
-*   **خدمة الـ API للتطبيق المحمول (معدلة):** [ApiService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/api_service.dart) - إضافة دالة جلب الطلبات اليومية `getDailyOrders(String date)`.
-*   **مزود حالة الوردية للموبايل (معدل):** [ShiftProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart) - حفظ واسترجاع ومسح `active_shift_id` بالذاكرة الدائمة `SharedPreferences` عند فتح وإغلاق الوردية، وتوفير دالة `clearShiftData()` للتنظيف الشامل.
-*   **مزود نقاط البيع للموبايل (معدل):** [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) - إرفاق `active_shift_id` بحقل `ShiftID` تلقائياً عند حفظ الفاتورة بالـ API أو بالذاكرة المحلية للأوفلاين.
-*   **خدمة ومخطط الفواتير بالـ API (معدلة):** [invoices.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/invoices.py) & [invoice_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/invoice_service.py) - دعم إرسال واستقبال `ShiftID` في الفاتورة والاعتماد عليه مباشرة وتسهيل حفظ الفواتير بوردية الكاشير.
-*   **خدمة الورديات بالـ API (معدلة):** [shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py) - التثبت الجازم من كون الوردية مفتوحة `Open` ومسح الكاش `_active_shift_cache` كلياً عند إغلاق الوردية لعدم الربط بوردية مغلقة.
-*   **متحكم الورديات لسطح المكتب (معدل):** [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) - تحسين التعرف على حساب الكاش الرئيسي `AccountCode = "1101"` ومسميات الصندوق وتصحيح خطوات الحفظ ومنع استثناءات التحويل.
-*   **الإجراءات المخزنة وسكربتات قاعدة البيانات (معدلة):** [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) & [sp_Shift_GetSummary_and_Close.sql](file:///d:/VB.NET/backup/Vegtablity/SQL/sp_Shift_GetSummary_and_Close.sql) & [37_PaymentMethods_SplitPayment.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/37_PaymentMethods_SplitPayment.sql) - تصحيح وحساب ملخص إغلاق الوردية وتجميع وسائل الدفع المقسمة والمباشرة، وإضافة معامل تصفية الشريك `@PartnerID` لتقرير أعمار الديون.
-*   **ملف حزمة التثبيت (معدل):** [Washa.iss](file:///d:/VB.NET/backup/Vegtablity/setup/Washa.iss) - ترقية إصدار حزمة التثبيت إلى `SetupV7` واستهداف التحديثات النهائية.
-*   **شاشة طباعة ملصقات الباركود (جديدة):** [BarcodePrintScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/barcode_print_screen.dart) - شاشة جديدة مخصصة لاستعراض وتصفية طباعة ملصقات الباركود للمنتجات (عادية / تصنيع / وسيط) وتحديد عدد النسخ ومعاينة الملصق والطباعة الحرارية المباشرة.
-*   **متحكم شاشة طباعة الباركود (جديد):** [BarcodePrintViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/barcode_print_viewmodel.dart) - متحكم النمط المعماري MVVM الخاص بشاشة طباعة ملصقات الباركود لإدارة جلب الأصناف والتصفية واقتناص أخطاء الـ API والتحقق من مصادقة المستخدم Token.
-*   **الملف الرئيسي للتطبيق المحمول (معدل):** [main.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/main.dart) - تسجيل `BarcodePrintViewModel` في `MultiProvider` وإضافة `WidgetsFlutterBinding.ensureInitialized()` لتهيئة البيئة والتفضيلات المحلية.
-*   **مصمم ملصقات الباركود (جديد):** [BarcodePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/barcode_print_designer.dart) - مصمم ومولد ملصقات الباركود عالي الدقة (HD Canvas Raster Bitmap + Bluetooth ESC/POS Code128 + Sunmi Native Printer) لجميع أنواع طابعات الملصقات والإيصالات الحرارية.
-*   **خدمة الطباعة الحرارية (معدلة):** [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - إضافة دالة `printBarcodeLabel()` لمعالجة وتكرار إرسال الملصق حسب عدد النسخ المطلوبة على كافة وسائط الاتصال.
-*   **شاشة الإعدادات العامة (معدلة):** [GeneralSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart) - إضافة مفتاح التحكم `show_barcode_printing` لإظهار أو إخفاء الشاشة من القائمة الجانبية.
-*   **القائمة الجانبية بالصفحة الرئيسية (معدلة):** [HomeScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart) - إضافة بند "طباعة ملصقات الباركود" بالـ Drawer الجانبي بربط ديناميكي بشرط تفعيله من الإعدادات العامة.
-*   **أداة إدخال سطر الأصناف للفواتير (جديدة):** [InvoiceItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml) & [InvoiceItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml.vb) - عنصر تحكم مخصص لحل محل DataGrid في فواتير المبيعات والمشتريات، يدعم البحث بالباركود وبالقائمة الذكية `SearchableDropdown`، وفحص عروض الأسعار بالـ SP أولاً، والتحقق الصارم من مدخلات الكمية والسعر وحماية الفاصلة العشرية، والتنقل بـ Enter.
-*   **أداة إدخال سطر الأصناف لعروض الأسعار (جديدة):** [QuoteItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml) & [QuoteItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb) - عنصر تحكم مخصص لعروض أسعار المبيعات والمشتريات (كود، اسم الصنف، وحدة، سعر العرض المقترح، حذف)، يدعم التنقل بـ Enter والبحث الذكي والتوافق مع `QuoteDetail` و `PurchaseQuoteDetail`.
-*   **صفحة فواتير المبيعات (معدلة):** [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) & [SalesInvoicePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة السطور `InvoiceItemRowControl` مع ترويسة متطابقة، وإدارة إضافة وحذف وتحديث السطور بسلاسة.
-*   **صفحة فواتير المشتريات (معدلة):** [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) & [PurchaseInvoicePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة السطور `InvoiceItemRowControl` ودعم أسعار الشراء والتنقل الفوري بالـ Enter.
-*   **صفحة عروض أسعار المبيعات (معدلة):** [QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml) & [QuotePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة `QuoteItemRowControl` لسعر البيع المقترح والتنقل السريع.
-*   **صفحة عروض أسعار المشتريات (معدلة):** [PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml) & [PurchaseQuotePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml.vb) - إحلال DataGrid بـ ItemsControl وأداة `QuoteItemRowControl` لسعر الشراء المقترح.
-*   **صفحة القيود اليومية وكارت البحث والتصفية المتحرك (معدلة):** [JournalEntryPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml) & [JournalEntryPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml.vb) - إضافة كارت بحث وتصفية متقدم متحرك (Animation) للبحث برقم القيد والبيان وحالة الترحيل ونطاق التاريخ وشريط شارة الفلتر النشط.
-*   **إجراء جلب وتصفية القيود اليومية (معدل):** [38_sp_JournalEntry_GetPaged_Search.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/38_sp_JournalEntry_GetPaged_Search.sql) & [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) - دعم معايير البحث المتقدم والترقيم مع الحفاظ التام على التوافق الرجعي 100% مع الإصدارات السابقة.
-*   **شجرة الحسابات الهرمية التفاعلية (جديدة):** [AccountTreeControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AccountTreeControl.xaml) & [AccountNode.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/AccountNode.vb) - أداة شجرية متقدمة متعددة المستويات (0، 1، 2+) تدعم الفتح والطي السريع والبحث والتظليل الذكي والشارات اللونية وإضافة الحسابات الفرعية التلقائية.
-*   **صفحة وتطبيق تقرير الأرباح والخسائر والتحليل المالي المقارن (معدلة):** [ProfitLossPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProfitLossPage.xaml) & [ProfitLossViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ProfitLossViewModel.vb) - إضافة عمود النسبة من المبيعات (% of Sales)، تبويبات الاختيار بين التقرير التراكمي والمقارنة الشهرية الأفقية، رسم بياني تفاعلي LiveCharts، وتصدير PDF و Excel احترافي مع صفحة الرسوم البيانية المتجهة.
-*   **أداة إدخال سطر مكونات الوصفات (جديدة):** [RecipeItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml) & [RecipeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml.vb) - عنصر تحكم مخصص لحل محل DataGrid في صفحة إدارة الوصفات، يحتوي على الباركود، القائمة الذكية `SearchableDropdown` للمواد الخام، الوحدة، الكمية، سعر تكلفة الوحدة، الإجمالي، وحذف الصف ❌، مع دعم كامل لدورة التنقل بـ Enter ونقل التركيز للأسطر الجديدة.
-*   **تطوير صفحة الوصفات والفلترة القابلة للطي (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) & [RecipePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml.vb) & [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - إضافة كارت فلترة وتصفية بالاسم والباركود قابل للطي مع Animation انسيابي، وجعل اللوحة الجانبية ككل قابلة للطي والفتح مع حركة انسحاب سلسة.
-*   **أداة إدخال سطر التوالف والهوالك (جديدة):** [WastageItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml) & [WastageItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور التوالف والهوالك يحل محل DataGrid، يضم (كود الصنف، اسم الصنف عبر `SearchableDropdown`، الكمية التالفة، الرصيد المتاح، تكلفة الوحدة، الإجمالي، الرصيد بعد الخصم، وحذف الصف 🗑️) مع دورة التنقل بـ Enter.
-*   **تطوير صفحة التوالف وفلترة السجل القابلة للطي (معدلة):** [WastagePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml) & [WastagePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml.vb) & [WastageViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/WastageViewModel.vb) - إضافة كارت فلترة قابل للطي لسجل التوالف بالبحث برقم السند والملاحظات والمستخدم والحالة، مع حركة انسحاب انسيابية.
-*   **أداة إدخال سطر الجرد الآلي (جديدة):** [StockTakeItemRowControl](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml) & [StockTakeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور الجرد الآلي يحل محل DataGrid، يضم (كود الصنف، اسم الصنف عبر `SearchableDropdown`، الكمية الدفترية، الكمية الفعلية، فرق الكمية، تكلفة الوحدة، قيمة الفرق، زر تحديث الرصيد الدفتري 🔄، وحذف الصف ❌) مع دورة التنقل بـ Enter.
-*   **تطوير صفحة الجرد الآلي وترقيم صفحات سجل الجرد والتوالف (معدلة):** [StockTakePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/StockTakePage.xaml) & [WastagePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/WastagePage.xaml) - إضافة كارت فلترة قابل للطي لسجل الجرد الآلي، وتطبيق نظام ترقيم الصفحات (Pagination) بمعدل 10 سجلات في الصفحة لسجل الجرد وسجل التوالف مع أزرار التنقل (السابق / التالي / عداد الصفحات) وتحديث الـ SPs بتوافق رجعي 100%.
-*   **ترقيم صفحات سجل الوصفات المسجلة (معدلة):** [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) & [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) - إضافة ترقيم الصفحات (Pagination) بمعدل 10 وصفات في الصفحة مع أزرار التنقل (السابق / التالي) وتحديث `[Inventory].[sp_Recipe_GetAll]` مع الحفاظ التام على التوافق الرجعي 100%.
+*   **خدمات ومتحكمات ومصممي الطباعة لسطح المكتب والموبايل:**
+    *   [SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb) & [PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb) - التحقق قبل الحفظ `ValidateInvoiceItemsBeforeSave`، والإضافة المباشرة السريعة للسطور `ObservableCollection` وتصدير PDF.
+    *   [QuoteViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/QuoteViewModel.vb) & [PurchaseQuoteViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseQuoteViewModel.vb) - إدارة عروض الأسعار والربط المباشر مع سطور `QuoteItemRowControl`.
+    *   [RecipeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/RecipeViewModel.vb) & [ProductService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ProductService.vb) & [RecipeService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/RecipeService.vb) - ربط المستودع وجلب تكلفة المواد الخام وترقيم الصفحات وتصدير PDF/CSV.
+    *   [WastageViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/WastageViewModel.vb) & [StockTakeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/StockTakeViewModel.vb) - إدارة الجرد والهالك وترقيم الصفحات وطباعة السندات الرسمية.
+    *   [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) - تحسين التعرف على حساب الكاش `1101` ومسميات الصندوق وحصر الكاش الفعلي.
+    *   [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - تصدير الفواتير، الوصفات، تقرير الأرباح والخسائر، وسندات الجرد إلى PDF و Excel باحترافية.
+    *   [AutoUpdateService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AutoUpdateService.vb) & [UpdateService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/update_service.dart) & [update_service.dart](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/services/update_service.dart) - خدمات التحديث التلقائي الشاملة للتطبيقات الثلاثة (WPF, Mobile, LicenseManager).
+    *   [DatabaseHelper.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/DatabaseHelper.vb) - تشفير بيانات الاتصال بـ AES-256 وقراءة اسم قاعدة البيانات من `dbconfig.dat`.
+    *   [BarcodePrintViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/barcode_print_viewmodel.dart) & [BarcodePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/barcode_print_designer.dart) - متحكم ومصمم ملصقات الباركود عالي الدقة (HD Canvas + Bluetooth ESC/POS + Sunmi Native).
+    *   [InvoicePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart) & [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - محركات وتصاميم الطباعة الحرارية والمصورة وطباعة بطاقات الوصفات بجميع المقاسات (58mm و 80mm).
+    *   [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - طباعة أحدث مستند `printLastAddedDocument()` وتكرار النسخ وقصر الإعدادات على الذاكرة المحلية للجهاز.
+    *   [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) & [ShiftProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart) - حفظ واسترجاع `ShiftID` تلقائياً وحساب الخصم والمدفوع والمتبقي.
 
+---
+
+### 3. الإجراءات المخزنة وتعديلات قاعدة البيانات المضافة والمعدلة (Added & Modified SQL, Stored Procedures & Triggers):
+*   **تريجر تحديث حالة الوردية [Sales].[trg_Shifts_StatusChange] في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql):**
+    *   فصل مسار `Open` عن `Closed` كلياً: عند الفتح يتم إلغاء قيود التسوية الوهمية وإلغاء ترحيل الفواتير (`IsPosted = 0`) دون إنشاء قيد تسوية. وعند الإغلاق يتم ترحيل الفواتير وإنشاء قيد عجز/فائض الكاش فقط عند وجود فرق فعلي.
+    *   حصر رصيد الكاش بالمدفوعات النقدية الفعلية لحساب الصندوق `1101%`، واستبعاد مبيعات الشبكة (K-Net/Visa) أو البنوك أو الآجل من رصيد الكاش المتوقع بالدرج.
+*   **إجراءات لوحة المؤشرات والتقارير التنفيذية (Executive Reports Stored Procedures):**
+    *   `[Reports].[sp_DashboardSummary]` - حساب مؤشرات الأداء الحية (المبيعات، الأرباح، الفواتير، الديون) مع الإلغاء الكامل لحقل الضريبة.
+    *   `[Reports].[sp_ExecutivePnLSummary]` - استخراج تقرير قائمة الأرباح والخسائر التنفيذية ومجمل الربح وصافي الدخل والمصروفات.
+    *   `[Settings].[sp_CompanySettings_Get]` - جلب اسم وشعار وإعدادات المنشأة ديناميكياً للـ API وتطبيق الويب.
+*   **إجراءات لوحة التحكم والتراخيص [License Control Procedures]:**
+    *   `[Settings].[sp_CompanySettings_Get_Ctrl]` - قراءة وتصدير تفضيلات النظام وقواعد البيانات.
+    *   `[Settings].[sp_CompanySettings_Save_Ctrl]` - تحديث وتخزين خيارات `EnableHR` و `ProductionMode` وتصاميم الفواتير المخصصة والبيانات العامة بأمان.
+*   **إجراءات ترقيم الصفحات والبحث المتقدم (Pagination & Paged Search Procedures):**
+    *   `[Accounting].[38_sp_JournalEntry_GetPaged_Search.sql]` - ترقيم وبحث وتصفية القيود اليومية مع الحفاظ على التوافق الرجعي 100%.
+    *   `[Inventory].[sp_Recipe_GetAll]` - تطبيق ترقيم صفحات سجل الوصفات بمعدل 10 وصفات/صفحة.
+    *   `[Inventory].[sp_StockTake_GetAll_Paged]` & `[Inventory].[sp_Wastage_GetAll_Paged]` - ترقيم صفحات سجلات الجرد الآلي والتوالف بمعدل 10 سجلات/صفحة.
+*   **إجراءات الورديات وإغلاق الصندوق:**
+    *   `[Sales].[sp_Shift_GetSummary]` & `[Sales].[sp_Shift_Close]` - تثبيت حساب الصندوق الرئيسي على `1101` و `1101%` حصراً، وعزل مبيعات ومشتريات الشبكة والبنوك `1102`.
+*   **إجراءات الوصفات والتصنيع المخزني:**
+    *   `[Inventory].[sp_Product_GetForRecipeIngredients]` - جلب المواد الخام وحساب متوسط التكلفة `AvgCostPrice` حسب المستودع.
+    *   `[Inventory].[sp_Recipe_Save_XML]` & `[Inventory].[sp_Recipe_GetByProduct]` - حفظ واسترجاع تفاصيل ومكونات الوصفة بالربط مع `@WarehouseID`.
+*   **المخطط المتكامل للموارد البشرية [HR] في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql):**
+    *   جداول الموظفين، الحقول المرنة EAV، الإجازات، الحضور والانصراف، مسيرات الرواتب والاعتماد المالي، وتصفية نهاية الخدمة، مع 12 إجراءً مخزناً مخصصاً لمخطط `[HR]`.
+
+---
+
+### 4. دليل وفهرس الأقسام الشامل لوثيقة خطة التطوير (Complete Table of Contents - Sections 1 to 78):
+
+| # | عنوان القسم والمحور التطويري | النطاق والمجال الرئيسي |
+|---|---|---|
+| **01** | [الهيكل المعماري للنظام (System Architecture)](#1-الهيكل-المعماري-system-architecture) | المعمارية العامة والربط بـ FastAPI |
+| **02** | [المسارات التدفقية للمستخدم والمبيعات والمشتريات](#2-المسارات-التدفقية-application-flows) | دورات العمل وتدفق البيانات |
+| **03** | [خطة التنفيذ التقنية والمراحل البرمجية](#3-خطة-التنفيذ-التقنية-implementation-roadmap) | خارطة طريق الـ Backend والـ Frontend |
+| **04** | [المزايا التنافسية ومرونة الواجهات المتجاوبة](#4-المزايا-التنافسية) | Responsive UI & Offline Mode |
+| **05** | [ما تم إنجازه في خادم الـ API (VegtablityApi)](#5-ما-تم-إنجازه-في-الـ-api-vegtablityapi) | بنية الطبقات والتشفير وقواعد البيانات |
+| **06** | [قسم عروض المشتريات (Purchase Quotations)](#6-قسم-عروض-المشتريات-purchase-quotations) | دورة عروض أسعار الموردين |
+| **07** | [التحديثات والتحسينات المنجزة (مايو 2026)](#7-التحديثات-والتحسينات-المنجزة-مايو-2026) | مراجعات وتطويرات النظام الشاملة |
+| **08** | [تحسينات لوحة المفاتيح والتنقل (Keyboard & Navigation)](#8-تحسينات-لوحة-المفاتيح-والتنقل-keyboard--navigation) | اختصارات الإدخال السريع |
+| **09** | [تحديثات نظام عروض المشتريات (المرحلة الثانية)](#9-تحديثات-نظام-عروض-المشتريات-مايو-2026---المرحلة-الثانية) | مطابقة عروض الأسعار مع الفواتير |
+| **10** | [تحديثات وهيكلة تطبيق الموبايل والربط بـ APIs](#10-تحديثات-وهيكلة-تطبيق-الموبايل-والربط-بـ-apis-مايو-2026) | تطبيق Flutter ونقاط الاتصال |
+| **11** | [الميزات البرمجية المتقدمة في تطبيق الموبايل](#11-الميزات-البرمجية-المتقدمة-في-تطبيق-الموبايل-مايو-2026---المرحلة-الثالثة) | الكاميرا والماسح الضوئي وإدارة الحالات |
+| **12** | [نظام ترخيص الأجهزة ومسبق التشغيل](#12-نظام-ترخيص-الأجهزة-ومسبق-التشغيل-مايو-2026---المرحلة-الرابعة) | حماية النسخ وتفعيل التراخيص |
+| **13** | [تكامل وتحديثات خادم الـ APIs الخلفي المنجزة](#13-تكامل-وتحديثات-خادم-الـ-apis-الخلفي-المنجزة-fastapi-backend---مايو-2026) | تحسين استعلامات وسرعة الخادم |
+| **14** | [نظام الترويسة الديناميكية للفواتير وإصلاحات الطباعة](#14-نظام-الترويسة-الديناميكية-للفواتير-وإصلاحات-الطباعة-مايو-2026---المرحلة-الخامسة) | هوية المنشأة وشعار الفواتير |
+| **15** | [المكتبات والحزم المستخدمة في تطبيق الهاتف](#15-المكتبات-والحزم-المستخدمة-في-تطبيق-الهاتف-app-dependencies--packages) | حزم ومكتبات Flutter المعتمدة |
+| **16** | [نظام المزامنة السحابية لإعدادات الطابعات الحرارية](#16-نظام-المزامنة-السحابية-لإعدادات-الطابعات-الحرارية-مايو-2026---المرحلة-السادسة) | إعدادات ومقاسات الطباعة |
+| **17** | [نظام عروض الشركاء وتعدد واجهات الشاشة الرئيسية](#17-نظام-عروض-الشركاء-وتعدد-واجهات-الشاشة-الرئيسية-مايو-2026---المرحلة-السابعة) | العروض والواجهات المتعددة |
+| **18** | [تطوير نظام حماية وتراخيص الأجهزة والاشتراكات](#18-تطوير-نظام-حماية-وتراخيص-الأجهزة-والاشتراكات-مايو-2026---المرحلة-الثامنة) | تشفير UUID وتأمين التراخيص |
+| **19** | [تكامل ودعم حفظ الفواتير بنظام الـ XML](#19-تكامل-ودعم-حفظ-الفواتير-بنظام-الـ-xml-مايو-2026---المرحلة-التاسعة) | معالجة الفواتير عبر XML Procedures |
+| **20** | [شاشة تقرير الفواتير اليومية والمستخدم](#20-شاشة-تقرير-الفواتير-اليومية-والمستخدم-مايو-2026---المرحلة-العاشرة) | استعراض ومطابقة فواتير اليوم |
+| **21** | [تطوير معمارية إدارة الورديات وتسوية القيود النقدية](#١٢-تطوير-معمارية-إدارة-الورديات-وتسوية-القيود-النقدية-shift-architecture--cash-flow-settlement) | الورديات والتدفق النقدي |
+| **22** | [تطوير السندات (Vouchers) والطباعة ومزامنة البيانات](#١٣-تطوير-السندات-vouchers-والطباعة-ومزامنة-البيانات) | سندات القبض والصرف |
+| **23** | [نظام الترجمة المتعددة اللغات وإصلاحات التخطيط](#14-نظام-الترجمة-المتعددة-اللغات-وإصلاحات-التخطيط-مايو-2026---المرحلة-الرابعة-عشرة) | التعريب واللغة الإنجليزية RTL/LTR |
+| **24** | [تنسيق الأرقام والعملات في المطبوعات](#15-تنسيق-الأرقام-في-المطبوعات-مايو-2026---المرحلة-الخامسة-عشرة) | تنسيق الفاصلة والكسور العشرية |
+| **25** | [تحسينات التنقل وواجهة المستخدم في لوحة التحكم](#17-تحسينات-التنقل-وواجهة-المستخدم-في-لوحة-التحكم-يونيو-2026---المرحلة-السابعة-عشرة) | تجربة المستخدم وسلاسة التنقل |
+| **26** | [نظام إدارة الهوالك والتوالف المخزنية](#18-نظام-إدارة-الهوالك-والتوالف-يونيو-2026---wastage-management) | إتلاف الأصناف والتسويات المخزنية |
+| **27** | [نظام الجرد والهالك لتطبيق الموبايل والـ APIs](#19-نظام-الجرد-والهالك-لتطبيق-الموبايل-والـ-apis-fastapi--flutter---يونيو-2026) | الجرد عبر كاميرا الهاتف |
+| **28** | [تحسينات وتعديلات نظام الجرد والهالك وإصلاحات الطباعة](#20-تحسينات-وتعديلات-نظام-الجرد-والهالك-وإصلاحات-الطباعة-يوليو-2026) | ضبط الفروقات وطباعة الجرد |
+| **29** | [دمج الجرد والهلاك في حركة الصنف (Product Card)](#21-دمج-الجرد-والهلاك-في-حركة-الصنف-product-card-وتنسيق-الصفحة-والعملات-يوليو-2026) | سجل حركة الصنف التفصيلي |
+| **30** | [ربط وتعميم المستودعات في الوردية وتطوير الطباعة](#22-ربط-وتعميم-المستودعات-في-الوردية-وتطوير-الطباعة-وواجهة-التقرير-اليومي-بالـ-flutter-يوليو-2026) | مستودع الوردية المعتمد |
+| **31** | [تطوير نظام السداد في الوردية ونموذج الفاتورة المكتبي](#23-تطوير-نظام-السداد-في-الوردية-وبدء-المشتريات-وتفصيل-نموذج-الفاتورة-المكتبي-يوليو-2026) | طرق السداد والفاتورة التفصيلية A4 |
+| **32** | [إضافة خيار تصميم الطباعة المخصص الجديد وأبعاد الفاتورة](#24-إضافة-خيار-تصميم-الطباعة-المخصص-الجديد-وتنسيق-أبعاد-الفاتورة-يوليو-2026) | محاذاة وتفقيط الطباعة المخصصة |
+| **33** | [تعديل واجهة المورد والعميل ورقم الحساب المالي بالـ POS](#25-تعديل-واجهة-المورد-والعميل-ورقم-الحساب-المالي-بالـ-pos-يوليو-2026) | إبراز أرقام الحسابات المالية |
+| **34** | [دمج عروض وسندات الشركاء بالواجهة الكلاسيكية](#26-دمج-عروض-وسندات-الشركاء-بالواجهة-الكلاسيكية-للشاشة-الرئيسية-يوليو-2026) | توحيد شاشة البداية |
+| **35** | [إدارة المبيعات السريعة والمسجلة بنقاط البيع](#27-إدارة-المبيعات-السريعة-والمسجلة-بنقاط-البيع-يوليو-2026) | البيع النقدي المباشر |
+| **36** | [تسريع أداء شاشات نقاط البيع وتخفيض استهلاك الموارد](#28-تسريع-أداء-شاشات-نقاط-البيع-وتخفيض-استهلاك-المعالج-والذاكرة-يوليو-2026) | تحسين الذاكرة والمعالج |
+| **37** | [نقل واجهة إجمالي ودفع الفواتير إلى نافذة منبثقة أسفل الشاشة](#29-نقل-واجهة-إجمالي-ودفع-الفواتير-إلى-نافذة-منبثقة-أسفل-الشاشة-يوليو-2026) | Bottom Sheet للدفع السريع |
+| **38** | [إضافة دعم أحجام الورق الحراري (58 ملم و 80 ملم)](#30-إضافة-دعم-أحجام-الورق-الحراري-58-ملم-و-80-ملم-لطباعة-الفواتير-يوليو-2026) | توافق كافة مقاسات الرول |
+| **39** | [تنفيذ ميزة طلبات الزبائن المؤقتة والتوصيل بالـ POS](#31-تنفيذ-ميزة-طلبات-الزبائن-المؤقتة-والتوصيل-بنقاط-البيع-يوليو-2026) | إدارة التوصيل والدليفري |
+| **40** | [تصميم الفاتورة الجديد وفصل التنسيق ودعم طباعة الشعار](#32-تصميم-الفاتورة-الجديد-وفصل-التنسيق-ودعم-طباعة-الشعار-يوليو-2026) | استقلالية مظهر الفاتورة |
+| **41** | [استقرار بطاقات عروض الأسعار بالوضع الكلاسيكي](#33-إزالة-نمط-عروض-الشركاء-الجديد-والصفحات-التابعة-له-مع-الحفاظ-على-بطاقات-عروض-الأسعار-بالوضع-الكلاسيكي-يوليو-2026) | تبسيط تجربة الشركاء |
+| **42** | [تخصيص معروضات الصفحة الرئيسية في شاشة الإعدادات العامة](#34-إضافة-قسم-لتخصيص-معروضات-الصفحة-الرئيسية-في-شاشة-الإعدادات-العامة-يوليو-2026) | إظهار وإخفاء بطاقات الواجهة |
+| **43** | [إعادة طباعة تفاصيل الزبون المؤقت والشحن بالتقرير اليومي](#35-إعادة-طباعة-تفاصيل-الزبون-المؤقت-والشحن-في-تقرير-الفواتير-اليومية-يوليو-2026) | مراجعة بيانات التوصيل المطبوعة |
+| **44** | [تعميم إدخال موعد وبيانات التوصيل وتكاملها مع عروض المبيعات](#36-تعميم-إدخال-موعد-وبيانات-التوصيل-لجميع-العملاء-وتكاملها-مع-عروض-مبيعات-الشركاء-يوليو-2026) | جدولة مواعيد الشحن |
+| **45** | [إخفاء تفاصيل الزبون المؤقت للعملاء العاديين وتلقائية حفظ الاسم](#37-إخفاء-تفاصيل-الزبون-المؤقت-للعملاء-العاديين-وتلقائية-حفظ-الاسم-يوليو-2026) | مرونة بطاقة العميل المسجل |
+| **46** | [إضافة شاشة الطلبات اليومية وجدولة التوصيل بالقائمة الجانبية](#38-إضافة-شاشة-الطلبات-اليومية-وجدولة-التوصيل-في-القائمة-الجانبية-والصلاحيات-يوليو-2026) | شاشة متابعة الشحنات |
+| **47** | [تحسين الواجهات المتجاوبة للتطبيق على شاشات التابلت](#39-تحسين-الواجهات-المتجاوبة-للتطبيق-على-شاشات-التابلت-والأجهزة-اللوحية-يوليو-2026) | التكيف مع الشاشات اللوحية الكبيرة |
+| **48** | [حل مشكلة ترحيل فواتير المبيعات وتصحيح حسابات الإيرادات](#40-حل-مشكلة-ترحيل-فواتير-المبيعات-بشجرة-الحسابات-وتصحيح-تهيئة-حسابات-الإيرادات-يوليو-2026) | ترحيل قيود الإيرادات 411 و 412 |
+| **49** | [ميزة الفوكس والانتقال التلقائي للكمية بفواتير WPF](#41-ميزة-الفوكس-والانتقال-التلقائي-لخانة-الكمية-عند-اختيار-الصنف-بفاتورتي-المبيعات-والمشتريات-wpf-يوليو-2026) | Focus Management التلقائي |
+| **50** | [حل تعارض التشغيل وتصحيح خطأ 10022 لخادم الـ API](#42-حل-تعارض-خيارات-التشغيل-وتصحيح-خطأ-10022-لخادم-الـ-api-على-نظام-windows-يوليو-2026) | استقرار خادم Uvicorn على Windows |
+| **51** | [نظام الوصفات والتصنيع الشامل ومتعدد المستويات](#43-نظام-الوصفات-والتصنيع-الشامل-ومتعدد-المستويات-multi-level-recipe--manufacturing-system-يوليو-2026) | تصنيع الأصناف وحساب التكاليف |
+| **52** | [التوثيق النهائي لتحسينات شاشة الوصفات وتصنيع المخزون](#44-التوثيق-النهائي-لتطوير-وتحسينات-شاشة-الوصفات-وتصنيع-المخزون-recipe--manufacturing-enhancements-يوليو-2026) | شاشات ومحركات ومستودعات الوصفات |
+| **53** | [نظام الخصومات وحفظ الإجماليات وتطوير الطباعة الحرارية](#45-التوثيق-الشامل-لنظام-الخصومات-وحفظ-الإجماليات-وتطوير-الطباعة-الحرارية-للفواتير-أغسطس-2026) | صافي وإجمالي الخصومات |
+| **54** | [تحديثات شاشة البحث عن الفاتورة ورأس بطاقة الدفع](#46-تحديثات-شاشة-البحث-عن-الفاتورة-وتخصيص-رأس-بطاقة-الدفع-وطباعة-الدليفري-أغسطس-2026) | استعلام وإعادة طباعة الدليفري |
+| **55** | [تحديثات صفحة الورديات بتطبيق WPF وكروت التدفق النقدي](#47-تحديثات-صفحة-الورديات-بتطبيق-wpf-وكروت-التدفق-النقدي-وطرق-الدفع-الأخرى-أغسطس-2026) | ملخص الورديات المكتبي |
+| **56** | [تخصيص أيقونة تطبيق الويندوز وبنائه بنجاح](#48-تخصيص-أيقونة-تطبيق-الويندوز-وبنائه-بنجاح-windows-app-icon--release-build-أغسطس-2026) | Windows Desktop Release Build |
+| **57** | [تقييد صلاحيات الإعدادات والحفظ الذاتي بـ SharedPreferences](#49-تقييد-صلاحيات-الإعدادات-للآدمن-وتحليل-الحفظ-الذاتي-بـ-sharedpreferences-أغسطس-2026) | أمان إعدادات التطبيق |
+| **58** | [التصحيح المالي وتخصيص مبيعات الكاش النقدية الفعلية](#50-التصحيح-المالي-وتخصيص-مبيعات-الكاش-النقدية-الفعلية-بملخص-الوردية-physical-cash-flow-optimization-أغسطس-2026) | ضبط رصيد الكاش بالدرج |
+| **59** | [تحديث وتأمين نظام الورديات وتزامن الـ ShiftID الشامل](#51-تحديث-وتأمين-نظام-الورديات-وتزامن-الـ-shiftid-بين-الجوال-والـ-api-والـ-desktop-أغسطس-2026) | تزامن رقم الوردية مع الفواتير |
+| **60** | [إضافة شاشة طباعة ملصقات الباركود للمنتجات والمحرك المزدوج](#52-إضافة-شاشة-طباعة-ملصقات-الباركود-للمنتجات-مع-تكامل-الإعدادات-العامة-والسايدبار-والمحرك-المزدوج-أغسطس-2026) | ملصقات الباركود الحرارية |
+| **61** | [تطوير منظومة القيود المحاسبية اليدوية وتكامل MVVM](#53-تطوير-وتحديث-منظومة-القيود-المحاسبية-اليدوية-journal-entries-system-وتكامل-الطباعة-والتصدير-والـ-mvvm-أغسطس-2026) | قيود اليومية والطباعة والتصدير |
+| **62** | [تحديثات وتوحيد جرد وتسوية الكاش وتثبيت حساب 1101](#54-تحديثات-وتوحيد-جرد-وتسوية-الكاش-لوردية-وتثبيت-حساب-الصندوق-على-1101-أغسطس-2026) | إغلاق الصندوق والتسوية |
+| **63** | [سكربتات بناء جميع نسخ Flutter دفعة واحدة (APK + EXE)](#55-سكربتات-بناء-جميع-نسخ-flutter-دفعة-واحدة-android-apk--windows-desktop-build-scripts-أغسطس-2026) | أتمتة البناء والتجميع |
+| **64** | [إعداد نظام Product Flavors لشركتي واشا والجوهرة](#56-إعداد-نظام-الـ-product-flavors-لشركتي-واشا-والجوهرة-washa--jawhara-app-variants-أغسطس-2026) | تعدد نكهات وتطبيقات الشركات |
+| **65** | [ديناميكية عنوان السايدبار ورقم الوردية المفتوحة](#57-ديناميكية-عنوان-القائمة-الجانبية-اسم-الشركة--pos-وعرض-رقم-الوردية-المفتوحة-أغسطس-2026) | الهوية الحية بالقائمة الجانبية |
+| **66** | [تفعيل وتخصيص تعديل الفواتير غير المرحلة (مبيعات ومشتريات)](#58-تفعيل-وتخصيص-تعديل-الفواتير-غير-المرحلة-sales--purchases-وإدارتها-في-التطبيق-أغسطس-2026) | تعديل المسودات قبل الترحيل |
+| **67** | [منظومة التحديث التلقائي الشاملة وتشفير الاتصال بـ AES-256](#59-منظومة-التحديث-التلقائي-الشاملة-in-app-auto-update-وتشفير-بيانات-الاتصال-بـ-aes-256-أغسطس-2026) | أمان الاتصال والتحديث المباشر |
+| **68** | [أداة تفاصيل سطور الأصناف الجديدة (InvoiceItemRowControl)](#60-أداة-تفاصيل-سطور-الأصناف-الجديدة-invoiceitemrowcontrol-وإحلالها-في-فواتير-المبيعات-أغسطس-2026) | إحلال DataGrid بـ WPF |
+| **69** | [تعميم أدوات تفاصيل الأصناف على المشتريات وعروض الأسعار](#61-تعميم-أدوات-تفاصيل-الأصناف-المخصصة-على-فواتير-المشتريات-وعروض-الأسعار-أغسطس-2026) | توحيد أدوات السطور |
+| **70** | [كارت البحث والتصفية المتحرك وإجراء القيود اليومية](#62-كارت-البحث-والتصفية-المتحرك-وتطوير-إجراء-القيود-اليومية-أغسطس-2026) | تصفية وبحث القيود اليومية |
+| **71** | [شجرة الحسابات الهرمية التفاعلية وترقيم السندات بالصفحات](#63-شجرة-الحسابات-الهرمية-التفاعلية-وترقيم-السندات-بالصفحات-أغسطس-2026) | الدليل المحاسبي الشجري |
+| **72** | [تطوير تقرير الأرباح والخسائر والتحليل المالي المقارن](#64-تطوير-تقرير-الأرباح-والخسائر-والمقارنة-الشهرية-الأفقية-والرسوم-البيانية-المتقدمة-أغسطس-2026) | القوائم المالية والرسوم المتجهة |
+| **73** | [تطوير إدارة الوصفات وأداة السطور المخصصة والفلترة التفاعلية](#65-تطوير-صفحة-إدارة-الوصفات-ومكونات-المنتجات-وأداة-السطور-المخصصة-والفلترة-التفاعلية-أغسطس-2026) | سطور الوصفات والفلترة المنزلقة |
+| **74** | [تطوير صفحة التوالف وأداة السطور والفلترة القابلة للطي](#66-تطوير-صفحة-إدارة-التوالف-والهوالك-وأداة-السطور-wastageitemrowcontrol-والفلترة-القابلة-للطي) | إدخال وتصفية الهوالك |
+| **75** | [تطوير إدارة الجرد الآلي وترقيم صفحات سجل الجرد والتوالف](#67-تطوير-إدارة-الجرد-الآلي-وترقيم-صفحات-سجل-الجرد-وسجل-التوالف-10-سجلات--صفحة) | ترقيم صفحات الجرد والتوالف |
+| **76** | [تطبيق ترقيم الصفحات (Pagination) في سجل الوصفات](#68-تطبيق-ترقيم-الصفحات-pagination-في-سجل-الوصفات-المسجلة-10-وصفات--صفحة) | ترقيم سجل الوصفات 10/صفحة |
+| **77** | [منظومة الموارد البشرية وشؤون الموظفين والرواتب المتكاملة](#69-منظومة-الموارد-البشرية-وشؤون-الموظفين-والرواتب-المتكاملة-comprehensive-hr--payroll-system) | نظام HR & Payroll المتكامل بـ 7 شاشات |
+| **78** | [تطوير شاشة العملاء والموردين ونظام البطاقات الشبكية](#70-تطوير-شاشة-العملاء-والموردين-ونظام-البطاقات-الشبكية-التفاعلية-partners-cards-grid-ecosystem) | بطاقات الشركاء وعروض الأسعار المصغرة |
+| **79** | [تحسين الأداء وسرعة التنقل بلوحة المفاتيح وفحص المخزون Asynchronous](#71-تحسين-الأداء-وسرعة-التنقل-بلوحة-المفاتيح-في-الفواتير-وعروض-الأسعار-invoice--quote-item-row-performance) | تسريع Enter وفحص الرصيد بـ Task.Run |
+| **80** | [تصحيح وتطوير تريجر تغيير حالة الوردية [trg_Shifts_StatusChange]](#72-تصحيح-وتطوير-تريجر-تغيير-حالة-الوردية-salestrg_shifts_statuschange-shift-status-change-trigger) | دقة الكاش وإلغاء قيود التسوية الوهمية |
+| **81** | [مركز تنبيهات الوثائق وأداة DocumentAlertRowControl وإشعار WhatsApp](#73-مركز-تنبيهات-انتهاء-الوثائق-أداة-العرض-الجديدة-documentalertrowcontrol-ونظام-التنبيهات) | تنبيهات الوثائق وإشعارات واتساب التلقائية |
+| **82** | [توحيد وترقية ترويسة طباعة مستندات ونماذج الموارد البشرية](#74-توحيد-وترقية-ترويسة-طباعة-مستندات-ونماذج-الموارد-البشرية-hrdocumentprinter) | طباعة الشعار والبيانات بنسبة وتناسب ديناميكياً |
+| **83** | [نقل تحكم تفعيل نظام الموارد البشرية (EnableHR) لتطبيق الإدارة](#75-نقل-تحكم-تفعيل-نظام-الموارد-البشرية-enablehr-إلى-تطبيق-الإدارة-licensemanagerapp) | عزل تفعيل HR بتطبيق المشرف |
+| **84** | [إدراج تطبيق إدارة التراخيص في منظومة التحديث التلقائي الشاملة](#76-إدراج-تطبيق-إدارة-التراخيص-licensemanagerapp-في-منظومة-التحديث-التلقائي-الشاملة-auto-update) | Auto-Update لتطبيق LicenseManager |
+| **85** | [إطلاق تطبيق الويب والتقارير التنفيذية [VegtablityManagerApp]](#77-إطلاق-تطبيق-الويب-والتقارير-التنفيذية-vegtablitymanagerapp-وتوجيه-الروابط-المتعددة-multi-tenant-web-system) | لوحة PWA متعددة الشركات + Cloudflare |
+| **86** | [تطوير الداشبورد التفاعلية Clickable واعتماد Pure Stored Procedures وحظر الكاش](#78-تطوير-الداشبورد-التفاعلية-clickable-deep-drill-down-والتوافق-الصارم-مع-الإجراءات-المخزنة-pure-stored-procedures-وحظر-الكاش) | بطاقات تفاعلية، Pure SPs، وحظر الكاش |
+
+---
 
 ## 1. الهيكل المعماري (System Architecture)
 يتم الربط بين تطبيق Flutter وقاعدة البيانات الحالية من خلال API موحد مبني بـ FastAPI، مما يضمن أمان البيانات وتوحيد العمليات الحسابية مع نظام الـ Desktop الحالي.
@@ -3012,3 +3102,85 @@
 
 
 
+
+5. **شاشة تسجيل الدخول WPF - مسار تعديل كلمة المرور بنمط MVVM كامل وإجراء مخزن مخصص:**
+   - **الهدف والتنفيذ:** استبدال رسالة التنبيه القديمة لزر "نسيت كلمة المرور؟" (Forgot Password) بمسار تفاعلي مدمج وسلس لتعديل كلمة المرور داخل نافذة تسجيل الدخول نفسها [LoginWindow.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/LoginWindow.xaml).
+   - **الإجراء المخزن المخصص `[Security].[sp_User_ChangePassword]`:**
+     - تمت إضافته وتوثيقه داخل ملف [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql).
+     - يتحقق بأمان من مطابقة اسم المستخدم وكلمة المرور الحالية (القديمة) المشفرة عبر Hash، ومن كون الحساب نشطاً (`IsActive = 1`).
+     - يقوم بتحديث `PasswordHash` بكلمة المرور الجديدة المشفرة وإرجاع كود الحالة والرسالة التوضيحية (`StatusCode`, `Message`).
+   - **تبويب وثوابت الإجراءات [StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb):**
+     - إضافة الثابت `SP_USER_CHANGE_PASSWORD = "[Security].[sp_User_ChangePassword]"` في تبويب مخطط الأمان `Security Schema - Users`.
+   - **طبقة الخدمات [UserService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/UserService.vb):**
+     - إضافة النموذج `ChangePasswordResult` لتمثيل نتيجة التحقق والتحديث.
+     - إضافة الدالة `ChangePassword(username, oldPassword, newPassword)` التي تشفر كلمات المرور بنظام التشفير القياسي للنظام وتستدعي الـ SP عبر Dapper دون أي جمل SQL نصية مباشرة.
+   - **نموذج العرض [LoginViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/LoginViewModel.vb):**
+     - دعم التبديل التفاعلي بين نموذج الدخول ونموذج تعديل كلمة المرور بواسطة الخاصية `IsChangePasswordMode`.
+     - التحقق الدقيق من صحة كافة المدخلات لكل حقل على حدة (التحقق من الإلزام، الطول، عدم تطابق كلمة المرور الجديدة مع القديمة، وتطابق تأكيد كلمة المرور الجديدة).
+     - تشغيل العملية في خلفية غير متزامنة مع ضبط رسائل التنبيه والنجاح (`ChangeSuccessMessage` / `ChangeErrorMessage`) ومؤشر التشغيل.
+   - **واجهة المستخدم والتكامل [LoginWindow.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/LoginWindow.xaml) و [LoginWindow.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/LoginWindow.xaml.vb):**
+     - تصميم واجهة أنيقة متوافقة مع الهوية البصرية الحالية ومجهزة بشارات إشعار للخطأ والنجاح.
+     - تفريغ حقول كلمات المرور تلقائياً وبأمان فور إتمام التغيير بنجاح أو عند الرجوع إلى واجهة تسجيل الدخول.
+
+6. **نظام الحضور والانصراف ومسير الرواتب - مراعاة الإجازات ومباشرة العمل واحتساب ساعات الدوام والغياب:**
+   - **الهدف والتنفيذ:**
+     - استبعاد الموظفين الذين في إجازات معتمدة وقائمة من كشف تسجيل الحضور والانصراف تلقائياً حتى تاريخ تسجيل "مباشرة العمل" (Resume Duty).
+     - احتساب مسير الرواتب الشهري بدقة تامة اعتماداً على سجل الحضور والانصراف وسجل الإجازات ومباشرة العمل.
+   - **قواعد احتساب الرواتب عند توليد المسير:**
+     1. **الموظف في إجازة طوال الشهر (لم يباشر العمل):** تُحسب أيام العمل المستحقة = 0، والراتب والبدلات = 0، مع تدوين ملاحظة توضيحية.
+     2. **الموظف الذي بدأت إجازته خلال الشهر:** يُدرج ويُحسب له الراتب حتى تاريخ بداية الإجازة (من بداية الشهر حتى اليوم السابق لبدء الإجازة).
+     3. **الموظف الذي باشر العمل خلال الشهر:** يُدرج ويُحسب له الراتب من بداية تاريخ مباشرة العمل حتى نهاية الشهر.
+     4. **احتساب ساعات الدوام والغياب من واقع سجل الحضور:** احتساب ساعات الإضافي، أيام الإضافي، وأيام الغياب وخصوماتها ودقائق التأخير وخصمها من الراتب تلقائياً.
+   - **الإجراءات المخزنة المحدثة في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql):**
+     - `[HR].[sp_Attendance_GetByDate]`: استبعاد الموظفين في إجازات حتى مباشرة العمل.
+     - `[HR].[sp_Attendance_GetOnLeave]`: جلب الموظفين في إجازات حالياً لعرضهم في شريط التنبيه بالواجهة.
+     - `[HR].[sp_Attendance_Save]`: منع تسجيل حضور لموظف في إجازة قبل مباشرة العمل وحفظ التعديلات بأمان.
+     - `[HR].[sp_Payroll_GenerateBatch]`: خوارزمية ذكية لاحتساب وتوليد الرواتب بالتناسب الزمني (Proration) ومراعاة الحضور والغياب والإجازات والمباشرة.
+   - **تبويب الثوابت [StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb):**
+     - إضافة الثابت `SP_HR_ATTENDANCE_GETONLEAVE = "[HR].[sp_Attendance_GetOnLeave]"`.
+   - **طبقة الخدمات [HRService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/HRService.vb):**
+     - إضافة دالة `GetEmployeesOnLeaveByDate(attDate)`.
+   - **واجهة الحضور والرواتب (WPF):**
+     - في [HRAttendancePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/HRAttendancePage.xaml): إضافة شريط تنبيهي ذكي يوضح الموظفين الموجودين في إجازات والمستبعدين من الحضور حتى مباشرة العمل.
+     - في [AttendanceRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AttendanceRowControl.xaml): إضافة زر حفظ وتعديل فوري لكل سطر (`💾`) بجانب أزرار الحفظ الجماعي.
+     - في [PayrollRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/PayrollRowControl.xaml): إضافة شارة توضيحية لبيانات الإجازة ومباشرة العمل المحسوب الراتب بناءً عليها.
+
+7. **معالجة ثبات واسترجاع بيانات الحضور والانصراف (Attendance Data Persistence & SQL Date Normalization):**
+   - **الهدف والتنفيذ:**
+     - حل مشكلة عدم استرجاع أو ظهور التعديلات المحفوظة لسجلات الحضور والانصراف لموظف عند إعادة فتح وعرض اليوم لاحقاً.
+   - **التحليل الفني الجذري والمعالجة:**
+     1. **توحيد ومطابقة التواريخ في SQL Server:**
+        - في الإجراءين `[HR].[sp_Attendance_GetByDate]` و `[HR].[sp_Attendance_Save]` داخل [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql): تم تحويل مقارنة التواريخ والـ `LEFT JOIN` والتحقق من الوجود والتحديث إلى `CAST(AttendanceDate AS DATE) = CAST(@AttendanceDate AS DATE)` منعاً لأي تعارض قد ينشأ من وجود أجزاء وقتية (Time Parts) في حقول أو معاملات قاعدة البيانات.
+     2. **حظر الاستبدال التلقائي للبيانات أثناء دورة حياة أدوات WPF (Virtualization Load Lifecycle):**
+        - في [AttendanceRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/AttendanceRowControl.xaml.vb): كان حدث `CmbStatus_SelectionChanged` ينفذ كود الضبط التلقائي الذكي فور إنشاء السطر وتحميله في `ListBox`، مما كان يعيد ضبط ساعات العمل إلى 8 ساعات وخصم الغياب إلى 0 تلقائياً بمجرد العرض؛ تم تقييد هذا السلوك عبر:
+          ```vb
+          If CmbStatus.IsDropDownOpen OrElse CmbStatus.IsKeyboardFocusWithin Then
+          ```
+          وبذلك لا يتم تعديل قيم السجل إلا عند قيام المستخدم بتغيير الحالة بيده فعلياً، مع إضافة دالة `SyncStatusWithRecord` للمزامنة الآمنة لعنصر القائمة المنسدلة دون تعديل السجل.
+     3. **تحديد نوع المعامل الصريح في طبقة الخدمات:**
+        - في [HRService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/HRService.vb): تم تمرير تاريخ الحضور بصيغة `.Date` وبنوع بيانات صريح `DbType.Date` في دوال `GetAttendanceByDate` و `GetEmployeesOnLeaveByDate` و `SaveAttendanceRecord`.
+
+8. **تطوير وترقية أداة القائمة المنسدلة الذكية `SearchableDropdown` وحل مشكلة تحديد وحذف وتغيير الأسماء:**
+   - **الهدف والتنفيذ:**
+     - حل المشكلة التي كانت تواجه المستخدم عند الرغبة في تحديد اسم تم اختياره مسبقاً لحذفه أو تغييره، وتوفير تجربة مستخدم (UX) فائقة السلاسة والسرعة دون المساس بأي من الوظائف القائمة للأداة.
+   - **التحليل الفني الجذري لأسباب المشكلة القديمة:**
+     1. *إلغاء التحديد التلقائي:* في نظام WPF، عند النقر بالماوس على مربع البحث `SearchBox` وهو غير مركز عليه، كان الحدث `GotFocus` يستدعي `SelectAll()`، ولكن لعدم وضع `e.Handled = True` في `PreviewMouseLeftButtonDown`، كان حدث الماوس الافتراضي الداخلي للـ TextBox يلغي التحديد فوراً ويثبت المؤشر مكان النقرة، فلا يظهر النص مظللاً.
+     2. *اعتراض الـ Popup للمؤشر ومنع السحب (Drag):* كان النقر يفتح القائمة فوراً لوجود نص قديم (`DropPopup.IsOpen = True`)، وبما أن القائمة تعمل بـ `StaysOpen="False"`، فإن أي نقرة أو محاولة سحب بالماوس لتحديد النص كان الـ Popup يبتلعها فوراً ويغلق القائمة، مما يعطل التحديد تماماً بالماوس.
+     3. *غياب زر مسح مباشر ومسار تفريغ نظيف:* لم يكن هناك زر سريع لتفريغ الحقل، كما أن دالة `ClearSelection()` السابقة كانت تتجاهل إطلاق حدث التصفية `SearchChanged` بسبب متغير التعليق `_busy`.
+   - **مزايا وتحديثات الأداة المطورة بالتفصيل (Key Features & Enhancements):**
+     1. **التحديد الكلي التلقائي بنقرة واحدة (Single-Click SelectAll):**
+        - في [SearchableDropdown.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml.vb): بمجرد النقر على الحقل غير النشط، يتم التركيز عليه وتحديد الاسم كاملاً مع تعيين `e.Handled = True` لمنع إلغاء التظليل؛ ويكفي أن يضغط المستخدم زر `Backspace` أو `Delete` أو يبدأ بكتابة اسم جديد ليتم التعديل والاستبدال فوراً وبنقرة زر.
+     2. **دعم النقر المزدوج (Double-Click Select):**
+        - إضافة معالج `SearchBox_MouseDoubleClick` لتحديد كامل النص عند النقر المزدوج حتى في حال كان الحقل يمتلك التركيز بالفعل.
+     3. **زر المسح المباشر السريع ✕ (Clear Button):**
+        - في [SearchableDropdown.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml): زر أنيق مدمج في نهاية الحقل يظهر تلقائياً عند وجود نص أو عنصر محدد، وبضغطة واحدة يمسح النص، يعين `SelectedItem = Nothing`، يطلق حدث `SearchChanged(Me, "")` لإعادة القائمة كاملة، ويعيد التركيز لمربع البحث.
+     4. **زر السهم المنسدل التفاعلي ▼ (Dropdown Toggle Button):**
+        - زر مدمج يتيح فتح وإغلاق قائمة النتائج في أي لحظة لاستعراض كامل العناصر دون إجبار المستخدم على إدخال نص.
+     5. **زر الهروب الذكي (Smart Escape Key):**
+        - الضغط على `Esc` يقوم بإغلاق القائمة إذا كانت مفتوحة، أو بمسح الاسم المحدد وتفريغ الحقل فوراً إذا كانت القائمة مغلقة.
+     6. **هوامش أمان واتساق كامل مع اللغة العربية (RTL Safe Padding):**
+        - تم تزويد الـ TextBox بهامش داخلي أمان (`Padding="10,0,52,0"`) يمنع نهائياً تداخل النصوص الطويلة مع أزرار الإجراء، مع مراعاة اتجاه القراءة من اليمين لليسار.
+     7. **الارتفاع التلقائي المتكيف (Flexible Responsive Height):**
+        - تحويل الارتفاع إلى مرن متكيف (`VerticalAlignment="Stretch"`) ليتناسب تلقائياً مع نماذج الإدخال الكبيرة (ارتفاع 38px مثل شاشة الإجازات وعروض الأسعار) ومع سطور الجداول والفواتير (ارتفاع 32px مثل فواتير المبيعات والمشتريات).
+     8. **الحفاظ التام على المميزات السابقة:**
+        - استمرار عمل ميزة الظهور التلقائي للنتائج بمجرد بدء كتابة النص، استمرار التنقل التتابعي السريع بزر `Enter`، والحفاظ على الربط الثنائي `TwoWay DataBinding` مع نمط MVVM دون أي تعارض.

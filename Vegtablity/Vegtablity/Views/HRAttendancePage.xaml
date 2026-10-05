@@ -10,6 +10,10 @@
              d:DesignHeight="750" d:DesignWidth="1100"
              FlowDirection="RightToLeft">
 
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+
     <UserControl.DataContext>
         <vm:HRAttendanceViewModel/>
     </UserControl.DataContext>
@@ -17,11 +21,12 @@
     <Grid Background="#F8FAFC" Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Top Header & Date Filter Bar -->
-        <Border Grid.Row="0" Background="White" CornerRadius="12" Padding="16,12" Margin="0,0,0,15">
+        <Border Grid.Row="0" Background="White" CornerRadius="12" Padding="16,12" Margin="0,0,0,12">
             <Border.Effect>
                 <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.6"/>
             </Border.Effect>
@@ -58,8 +63,18 @@
             </Grid>
         </Border>
 
+        <!-- Informational Banner for Employees on Leave -->
+        <Border Grid.Row="1" Background="#EFF6FF" BorderBrush="#93C5FD" BorderThickness="1"
+                CornerRadius="10" Padding="14,10" Margin="0,0,0,12"
+                Visibility="{Binding HasEmployeesOnLeave, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="🏖️" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Text="{Binding EmployeesOnLeaveSummary}" Foreground="#1E40AF" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
         <!-- Attendance List Table using AttendanceRowControl -->
-        <Border Grid.Row="1" Background="White" CornerRadius="12" Padding="16">
+        <Border Grid.Row="2" Background="White" CornerRadius="12" Padding="16">
             <Border.Effect>
                 <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
             </Border.Effect>

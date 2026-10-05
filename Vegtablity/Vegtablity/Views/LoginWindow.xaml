@@ -7,7 +7,7 @@
         xmlns:vm="clr-namespace:Vegtablity.ViewModels"
         xmlns:helpers="clr-namespace:Vegtablity.Helpers"
         mc:Ignorable="d"
-        Title="Login" Height="500" Width="800" 
+        Title="Login" Height="540" Width="800" 
         WindowStartupLocation="CenterScreen" 
         ResizeMode="NoResize" 
         WindowStyle="None"
@@ -21,6 +21,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <helpers:StringToVisibilityConverter x:Key="StringToVisConverter"/>
+        <helpers:BooleanToVisibilityConverter x:Key="CustomBoolToVisConverter"/>
         <Storyboard x:Key="FadeInStoryboard">
             <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.8"/>
             <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="20" To="0" Duration="0:0:0.8">
@@ -69,9 +70,14 @@
                 </Grid>
             </Border>
 
-            <!-- Right Side: Login Form -->
-            <Grid Grid.Column="1" Margin="40">
-                <StackPanel VerticalAlignment="Center">
+            <!-- Right Side: Forms Container -->
+            <Grid Grid.Column="1" Margin="35,20,35,20">
+                <!-- Close Button -->
+                <Button Command="{Binding ExitCommand}" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Foreground="#bdc3c7" BorderThickness="0" Content="✕" FontSize="16" Cursor="Hand" Margin="0,-10,-20,0" Panel.ZIndex="10"/>
+
+                <!-- Normal Login Form -->
+                <StackPanel VerticalAlignment="Center"
+                            Visibility="{Binding IsChangePasswordMode, Converter={StaticResource CustomBoolToVisConverter}, ConverterParameter=Inverse}">
                     <TextBlock Text="Welcome Back!" FontSize="28" FontWeight="Bold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,10"/>
                     <TextBlock Text="Please login to your account" FontSize="14" Foreground="#7f8c8d" Margin="0,0,0,30"/>
 
@@ -100,8 +106,59 @@
                     </TextBlock>
                 </StackPanel>
 
-                <!-- Close Button -->
-                <Button Command="{Binding ExitCommand}" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Foreground="#bdc3c7" BorderThickness="0" Content="✕" FontSize="16" Cursor="Hand" Margin="0,-20,-20,0"/>
+                <!-- Change Password Form -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Visibility="{Binding IsChangePasswordMode, Converter={StaticResource CustomBoolToVisConverter}}">
+                    <StackPanel VerticalAlignment="Center" Margin="0,10,0,10">
+                        <TextBlock Text="تعديل كلمة المرور" FontSize="22" FontWeight="Bold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,4"/>
+                        <TextBlock Text="أدخل بيانات حسابك لتعيين كلمة مرور جديدة" FontSize="12" Foreground="#7f8c8d" Margin="0,0,0,12"/>
+
+                        <!-- Success Alert Message -->
+                        <Border Background="#e8f8f5" BorderBrush="#2ecc71" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,10"
+                                Visibility="{Binding ChangeSuccessMessage, Converter={StaticResource StringToVisConverter}}">
+                            <TextBlock Text="{Binding ChangeSuccessMessage}" Foreground="#27ae60" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/>
+                        </Border>
+
+                        <!-- Error Alert Message -->
+                        <Border Background="#fdebd0" BorderBrush="#e74c3c" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,10"
+                                Visibility="{Binding ChangeErrorMessage, Converter={StaticResource StringToVisConverter}}">
+                            <TextBlock Text="{Binding ChangeErrorMessage}" Foreground="#c0392b" FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"/>
+                        </Border>
+
+                        <!-- Username Field -->
+                        <TextBlock Text="اسم المستخدم" FontWeight="SemiBold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,3" FontSize="12"/>
+                        <TextBox Text="{Binding ChangeUsername, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ModernTextBoxStyle}" Height="34" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ChangeUsernameError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,6" TextWrapping="Wrap"
+                                   Visibility="{Binding ChangeUsernameError, Converter={StaticResource StringToVisConverter}}"/>
+
+                        <!-- Old Password Field -->
+                        <TextBlock Text="كلمة المرور الحالية" FontWeight="SemiBold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,3" FontSize="12"/>
+                        <PasswordBox x:Name="txtOldPassword" Style="{StaticResource ModernPasswordBoxStyle}" Height="34" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ChangeOldPasswordError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,6" TextWrapping="Wrap"
+                                   Visibility="{Binding ChangeOldPasswordError, Converter={StaticResource StringToVisConverter}}"/>
+
+                        <!-- New Password Field -->
+                        <TextBlock Text="كلمة المرور الجديدة" FontWeight="SemiBold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,3" FontSize="12"/>
+                        <PasswordBox x:Name="txtNewPassword" Style="{StaticResource ModernPasswordBoxStyle}" Height="34" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ChangeNewPasswordError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,6" TextWrapping="Wrap"
+                                   Visibility="{Binding ChangeNewPasswordError, Converter={StaticResource StringToVisConverter}}"/>
+
+                        <!-- Confirm Password Field -->
+                        <TextBlock Text="تأكيد كلمة المرور الجديدة" FontWeight="SemiBold" Foreground="{StaticResource TextDarkBrush}" Margin="0,0,0,3" FontSize="12"/>
+                        <PasswordBox x:Name="txtConfirmPassword" Style="{StaticResource ModernPasswordBoxStyle}" Height="34" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding ChangeConfirmPasswordError}" Foreground="#e74c3c" FontSize="11" Margin="2,0,0,8" TextWrapping="Wrap"
+                                   Visibility="{Binding ChangeConfirmPasswordError, Converter={StaticResource StringToVisConverter}}"/>
+
+                        <!-- Submit Button -->
+                        <Button x:Name="btnSubmitChangePassword" Content="تحديث كلمة المرور" Click="btnSubmitChangePassword_Click"
+                                IsEnabled="{Binding IsNotProcessing}"
+                                Style="{StaticResource ModernButtonStyle}" Height="38" Margin="0,4,0,10"/>
+
+                        <!-- Back to Login Link -->
+                        <TextBlock Text="← العودة لتسجيل الدخول" HorizontalAlignment="Center" Foreground="#7f8c8d" Cursor="Hand" TextDecorations="Underline" FontSize="12"
+                                   MouseDown="OnBackToLoginClicked"/>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </Border>

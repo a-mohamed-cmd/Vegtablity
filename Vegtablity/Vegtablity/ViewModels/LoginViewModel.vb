@@ -12,6 +12,97 @@ Namespace ViewModels
         Private _usernameError As String
         Private _passwordError As String
         Private _isProcessing As Boolean
+        Private _isChangePasswordMode As Boolean
+        Private _changeUsername As String
+        Private _changeUsernameError As String
+        Private _changeOldPasswordError As String
+        Private _changeNewPasswordError As String
+        Private _changeConfirmPasswordError As String
+        Private _changeErrorMessage As String
+        Private _changeSuccessMessage As String
+
+        Public Property IsChangePasswordMode As Boolean
+            Get
+                Return _isChangePasswordMode
+            End Get
+            Set(value As Boolean)
+                SetProperty(_isChangePasswordMode, value)
+            End Set
+        End Property
+
+        Public Property ChangeUsername As String
+            Get
+                Return _changeUsername
+            End Get
+            Set(value As String)
+                SetProperty(_changeUsername, value)
+                If Not String.IsNullOrEmpty(value) Then ChangeUsernameError = Nothing
+            End Set
+        End Property
+
+        Public Property ChangeUsernameError As String
+            Get
+                Return _changeUsernameError
+            End Get
+            Set(value As String)
+                SetProperty(_changeUsernameError, value)
+            End Set
+        End Property
+
+        Public Property ChangeOldPasswordError As String
+            Get
+                Return _changeOldPasswordError
+            End Get
+            Set(value As String)
+                SetProperty(_changeOldPasswordError, value)
+            End Set
+        End Property
+
+        Public Property ChangeNewPasswordError As String
+            Get
+                Return _changeNewPasswordError
+            End Get
+            Set(value As String)
+                SetProperty(_changeNewPasswordError, value)
+            End Set
+        End Property
+
+        Public Property ChangeConfirmPasswordError As String
+            Get
+                Return _changeConfirmPasswordError
+            End Get
+            Set(value As String)
+                SetProperty(_changeConfirmPasswordError, value)
+            End Set
+        End Property
+
+        Public Property ChangeErrorMessage As String
+            Get
+                Return _changeErrorMessage
+            End Get
+            Set(value As String)
+                SetProperty(_changeErrorMessage, value)
+            End Set
+        End Property
+
+        Public Property ChangeSuccessMessage As String
+            Get
+                Return _changeSuccessMessage
+            End Get
+            Set(value As String)
+                SetProperty(_changeSuccessMessage, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property SwitchToLoginCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(Sub(o)
+                                                    ClearChangePasswordErrors()
+                                                    ClearErrors()
+                                                    IsChangePasswordMode = False
+                                                End Sub)
+            End Get
+        End Property
 
         Public Property Username As String
             Get
@@ -51,13 +142,22 @@ Namespace ViewModels
             End Set
         End Property
 
+        Public Event PasswordChangedSuccessfully As EventHandler
+
         Public Property IsProcessing As Boolean
             Get
                 Return _isProcessing
             End Get
             Set(value As Boolean)
                 SetProperty(_isProcessing, value)
+                OnPropertyChanged(NameOf(IsNotProcessing))
             End Set
+        End Property
+
+        Public ReadOnly Property IsNotProcessing As Boolean
+            Get
+                Return Not _isProcessing
+            End Get
         End Property
 
         Public ReadOnly Property LoginCommand As ICommand
@@ -155,8 +255,97 @@ Namespace ViewModels
                      End Sub)
         End Sub
 
+        Private Sub ClearChangePasswordErrors()
+            ChangeUsernameError = Nothing
+            ChangeOldPasswordError = Nothing
+            ChangeNewPasswordError = Nothing
+            ChangeConfirmPasswordError = Nothing
+            ChangeErrorMessage = Nothing
+            ChangeSuccessMessage = Nothing
+        End Sub
+
         Private Sub ExecuteForgotPassword(obj As Object)
-            MessageBox.Show("يرجى التواصل مع مسؤول النظام لاستعادة كلمة المرور.", "نسيت كلمة المرور", MessageBoxButton.OK, MessageBoxImage.Information)
+            ClearChangePasswordErrors()
+            ClearErrors()
+            ChangeUsername = Username
+            IsChangePasswordMode = True
+        End Sub
+
+        Public Sub ExecuteChangePassword(oldPassword As String, newPassword As String, confirmPassword As String)
+            ClearChangePasswordErrors()
+
+            Dim hasError As Boolean = False
+
+            ' 1. اسم المستخدم
+            Dim userReq As String = Helpers.ValidationHelper.IsRequired(ChangeUsername, "اسم المستخدم")
+            If userReq IsNot Nothing Then
+                ChangeUsernameError = userReq
+                hasError = True
+            Else
+                Dim userMin As String = Helpers.ValidationHelper.MinLength(ChangeUsername, 3, "اسم المستخدم")
+                If userMin IsNot Nothing Then
+                    ChangeUsernameError = userMin
+                    hasError = True
+                End If
+            End If
+
+            ' 2. كلمة المرور القديمة
+            Dim oldReq As String = Helpers.ValidationHelper.IsRequired(oldPassword, "كلمة المرور القديمة")
+            If oldReq IsNot Nothing Then
+                ChangeOldPasswordError = oldReq
+                hasError = True
+            End If
+
+            ' 3. كلمة المرور الجديدة
+            Dim newReq As String = Helpers.ValidationHelper.IsRequired(newPassword, "كلمة المرور الجديدة")
+            If newReq IsNot Nothing Then
+                ChangeNewPasswordError = newReq
+                hasError = True
+            Else
+                Dim newMin As String = Helpers.ValidationHelper.MinLength(newPassword, 3, "كلمة المرور الجديدة")
+                If newMin IsNot Nothing Then
+                    ChangeNewPasswordError = newMin
+                    hasError = True
+                ElseIf newPassword = oldPassword Then
+                    ChangeNewPasswordError = "يجب أن تكون كلمة المرور الجديدة مختلفة عن القديمة."
+                    hasError = True
+                End If
+            End If
+
+            ' 4. تأكيد كلمة المرور الجديدة
+            Dim confReq As String = Helpers.ValidationHelper.IsRequired(confirmPassword, "تأكيد كلمة المرور")
+            If confReq IsNot Nothing Then
+                ChangeConfirmPasswordError = confReq
+                hasError = True
+            ElseIf confirmPassword <> newPassword Then
+                ChangeConfirmPasswordError = "كلمة المرور وتأكيدها غير متطابقين."
+                hasError = True
+            End If
+
+            If hasError Then Return
+
+            IsProcessing = True
+
+            Task.Run(Sub()
+                         Try
+                             Dim res = _userService.ChangePassword(ChangeUsername.Trim(), oldPassword, newPassword)
+
+                             Application.Current.Dispatcher.Invoke(Sub()
+                                                                       IsProcessing = False
+                                                                       If res.Success Then
+                                                                           ChangeSuccessMessage = res.Message
+                                                                           Username = ChangeUsername
+                                                                       Else
+                                                                           ChangeErrorMessage = res.Message
+                                                                       End If
+                                                                   End Sub)
+                         Catch ex As Exception
+                             Application.Current.Dispatcher.Invoke(Sub()
+                                                                       IsProcessing = False
+                                                                       ChangeErrorMessage = "حدث خطأ أثناء تعديل كلمة المرور: " & ex.Message
+                                                                   End Sub)
+                         End Try
+                     End Sub)
         End Sub
 
         Private Sub NavigateToMain()

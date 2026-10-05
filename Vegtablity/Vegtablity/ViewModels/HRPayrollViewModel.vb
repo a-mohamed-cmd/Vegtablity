@@ -69,7 +69,10 @@ Namespace ViewModels
                 Return _selectedMonth
             End Get
             Set(value As Integer)
-                SetProperty(_selectedMonth, value)
+                If SetProperty(_selectedMonth, value) Then
+                    SyncSelectedBatchWithMonthYear()
+                    NotifyBatchStatusChanged()
+                End If
             End Set
         End Property
 
@@ -79,7 +82,10 @@ Namespace ViewModels
                 Return _selectedYear
             End Get
             Set(value As Integer)
-                SetProperty(_selectedYear, value)
+                If SetProperty(_selectedYear, value) Then
+                    SyncSelectedBatchWithMonthYear()
+                    NotifyBatchStatusChanged()
+                End If
             End Set
         End Property
 
@@ -89,6 +95,7 @@ Namespace ViewModels
         ' === Collections & Models ===
         Public Property Batches As ObservableCollection(Of PayrollBatch)
 
+        Private _isSyncing As Boolean = False
         Private _selectedBatch As PayrollBatch
         Public Property SelectedBatch As PayrollBatch
             Get
@@ -97,6 +104,12 @@ Namespace ViewModels
             Set(value As PayrollBatch)
                 If SetProperty(_selectedBatch, value) Then
                     If value IsNot Nothing Then
+                        If Not _isSyncing Then
+                            _selectedMonth = value.Month
+                            OnPropertyChanged(NameOf(SelectedMonth))
+                            _selectedYear = value.Year
+                            OnPropertyChanged(NameOf(SelectedYear))
+                        End If
                         LoadBatchDetails(value.BatchID)
                     End If
                     NotifyBatchStatusChanged()
@@ -214,15 +227,64 @@ Namespace ViewModels
             End If
         End Sub
 
+        Private Sub SyncSelectedBatchWithMonthYear()
+            If _isSyncing Then Return
+            _isSyncing = True
+            Try
+                If Batches IsNot Nothing Then
+                    Dim matching = Batches.FirstOrDefault(Function(b) b.Month = _selectedMonth AndAlso b.Year = _selectedYear)
+                    If matching IsNot Nothing Then
+                        If _selectedBatch IsNot matching Then
+                            SelectedBatch = matching
+                        End If
+                    Else
+                        ' فحص قاعدة البيانات عبر الإجراء المخزن للتأكد إن كان الشهر موجوداً بصفحة أخرى
+                        Dim dbBatch = _hrService.GetPayrollBatchByMonthYear(_selectedMonth, _selectedYear)
+                        If dbBatch IsNot Nothing Then
+                            SelectedBatch = dbBatch
+                        End If
+                    End If
+                End If
+            Catch
+            Finally
+                _isSyncing = False
+            End Try
+        End Sub
+
         Private Sub GenerateBatch(parameter As Object)
             Try
+                ' 1. التحقق أولاً من القائمة المحملة محلياً
+                Dim existingBatch = Batches.FirstOrDefault(Function(b) b.Month = SelectedMonth AndAlso b.Year = SelectedYear)
+
+                ' 2. إذا لم يكن بالقائمة المحملة، استعلام قاعدة البيانات عبر SP للتحقق من حالة الشهر المحدد
+                If existingBatch Is Nothing Then
+                    existingBatch = _hrService.GetPayrollBatchByMonthYear(SelectedMonth, SelectedYear)
+                End If
+
+                ' 3. منع التوليد إذا كان المسير معتمداً ومقفلاً
+                If existingBatch IsNot Nothing AndAlso existingBatch.IsApproved Then
+                    SelectedBatch = existingBatch
+                    RaiseEvent RequestSnackbar($"⚠️ مسير رواتب شهر {SelectedMonth:D2} / {SelectedYear} معتمد ومقفل! يجب إلغاء الاعتماد أولاً.")
+                    MessageBox.Show($"لا يمكن توليد مسير رواتب جديد لشهر {SelectedMonth:D2} / {SelectedYear} قد تم اعتماد مسير الرواتب له!" & vbCrLf & vbCrLf &
+                                    "الاول لازم إلغاء الاعتماد قبل توليد مسير رواتب جديد لنفس الشهر.", 
+                                    "مسير رواتب معتمد ومقفل", MessageBoxButton.OK, MessageBoxImage.Warning)
+                    Return
+                End If
+
                 Dim user = If(Session.CurrentUser?.Username, "Admin")
                 Dim batchID = _hrService.GeneratePayrollBatch(SelectedMonth, SelectedYear, user)
                 LoadBatches()
                 SelectedBatch = Batches.FirstOrDefault(Function(b) b.BatchID = batchID)
-                RaiseEvent RequestSnackbar($"⚡ تم توليد واحتساب مسير رواتب شهر {SelectedMonth:D2} / {SelectedYear} بنجاح!")
+                If SelectedBatch Is Nothing Then
+                    SelectedBatch = _hrService.GetPayrollBatchDetails(batchID)
+                End If
+                RaiseEvent RequestSnackbar($"⚡ تم توليد واحتساب مسير رواتب شهر {SelectedMonth:D2} / {SelectedYear} بمراعاة سجل الحضور والغياب والإجازات ومباشرة العمل بنجاح!")
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء توليد المسير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Dim msg = ex.Message
+                If msg.Contains("لا يمكن توليد مسير رواتب جديد") OrElse msg.Contains("إلغاء الاعتماد") Then
+                    RaiseEvent RequestSnackbar($"⚠️ مسير رواتب شهر {SelectedMonth:D2} / {SelectedYear} معتمد ومقفل! يجب إلغاء الاعتماد أولاً.")
+                End If
+                MessageBox.Show(ex.Message, "مسيرات الرواتب", MessageBoxButton.OK, MessageBoxImage.Warning)
             End Try
         End Sub
 

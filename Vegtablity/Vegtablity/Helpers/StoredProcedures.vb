@@ -17,6 +17,7 @@ Namespace Helpers
         Public Const SP_USER_UPDATE As String = "[Security].[sp_User_Update]"
         Public Const SP_USER_DELETE As String = "[Security].[sp_User_Delete]"
         Public Const SP_USER_RESETPASSWORD As String = "[Security].[sp_User_ResetPassword]"
+        Public Const SP_USER_CHANGE_PASSWORD As String = "[Security].[sp_User_ChangePassword]"
 
         ' =============================================
         ' Security Schema - Roles
@@ -296,6 +297,7 @@ Namespace Helpers
         Public Const SP_HR_LEAVE_GETBALANCE As String = "[HR].[sp_Leave_GetBalance]"
 
         Public Const SP_HR_ATTENDANCE_GETBYDATE As String = "[HR].[sp_Attendance_GetByDate]"
+        Public Const SP_HR_ATTENDANCE_GETONLEAVE As String = "[HR].[sp_Attendance_GetOnLeave]"
         Public Const SP_HR_ATTENDANCE_SAVE As String = "[HR].[sp_Attendance_Save]"
 
         Public Const SP_HR_PAYROLL_GETBATCHES As String = "[HR].[sp_Payroll_GetBatches]"
@@ -304,6 +306,7 @@ Namespace Helpers
         Public Const SP_HR_PAYROLL_SAVEDETAIL As String = "[HR].[sp_Payroll_SaveDetail]"
         Public Const SP_HR_PAYROLL_APPROVEBATCH As String = "[HR].[sp_Payroll_ApproveBatch]"
         Public Const SP_HR_PAYROLL_UNAPPROVEBATCH As String = "[HR].[sp_Payroll_UnapproveBatch]"
+        Public Const SP_HR_PAYROLL_GETBATCHBYMONTHYEAR As String = "[HR].[sp_Payroll_GetBatchByMonthYear]"
 
         Public Const SP_HR_ENDOFSERVICE_GETALL As String = "[HR].[sp_EndOfService_GetAll]"
         Public Const SP_HR_ENDOFSERVICE_SAVE As String = "[HR].[sp_EndOfService_Save]"

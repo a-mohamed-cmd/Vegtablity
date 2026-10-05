@@ -2418,6 +2418,63 @@ END
 GO
 
 -- =============================================
+-- 6.1 sp_User_ChangePassword
+-- Author: Vegtablity Team
+-- Description: التحقق من كلمة المرور القديمة وتحديث كلمة المرور الجديدة بأمان
+-- =============================================
+IF OBJECT_ID('[Security].[sp_User_ChangePassword]', 'P') IS NOT NULL 
+    DROP PROCEDURE [Security].[sp_User_ChangePassword];
+GO
+
+CREATE PROCEDURE [Security].[sp_User_ChangePassword]
+    @Username        NVARCHAR(100),
+    @OldPasswordHash NVARCHAR(256),
+    @NewPasswordHash NVARCHAR(256)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @UserID INT;
+    DECLARE @IsActive BIT;
+
+    -- 1. التحقق من وجود المستخدم ومطابقة كلمة المرور القديمة
+    SELECT 
+        @UserID = UserID, 
+        @IsActive = IsActive
+    FROM [Security].[Users]
+    WHERE Username = @Username AND PasswordHash = @OldPasswordHash;
+
+    -- 2. في حال عدم وجود المستخدم أو عدم تطابق كلمة المرور القديمة
+    IF @UserID IS NULL
+    BEGIN
+        SELECT 
+            0 AS StatusCode, 
+            N'اسم المستخدم أو كلمة المرور القديمة غير صحيحة.' AS Message;
+        RETURN;
+    END
+
+    -- 3. في حال كان الحساب غير نشط
+    IF @IsActive = 0
+    BEGIN
+        SELECT 
+            0 AS StatusCode, 
+            N'هذا الحساب معطل، يرجى مراجعة مسؤول النظام.' AS Message;
+        RETURN;
+    END
+
+    -- 4. التحديث لكلمة المرور الجديدة
+    UPDATE [Security].[Users]
+    SET PasswordHash = @NewPasswordHash
+    WHERE UserID = @UserID;
+
+    -- 5. إرجاع نتيجة النجاح
+    SELECT 
+        1 AS StatusCode, 
+        N'تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.' AS Message;
+END
+GO
+
+-- =============================================
 -- 7. sp_Role_GetAll
 -- =============================================
 IF OBJECT_ID('[Security].[sp_Role_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_Role_GetAll]
@@ -14583,7 +14640,7 @@ BEGIN
 END
 GO
 
--- 4.15. sp_Attendance_GetByDate
+-- 4.15. sp_Attendance_GetByDate (جلب سجل الحضور مع استبعاد من هم في إجازات ولم يباشروا العمل بعد)
 IF OBJECT_ID('[HR].[sp_Attendance_GetByDate]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Attendance_GetByDate];
 GO
 CREATE PROCEDURE [HR].[sp_Attendance_GetByDate]
@@ -14609,9 +14666,58 @@ BEGIN
         ISNULL(a.Status, 'Present') AS Status,
         a.Notes
     FROM [HR].[Employees] e
-    LEFT JOIN [HR].[Attendance] a ON e.EmployeeID = a.EmployeeID AND a.AttendanceDate = @AttendanceDate
+    LEFT JOIN [HR].[Attendance] a ON e.EmployeeID = a.EmployeeID AND CAST(a.AttendanceDate AS DATE) = CAST(@AttendanceDate AS DATE)
     WHERE e.Status <> 'Terminated' AND e.Status <> 'Resigned'
+      AND (e.HireDate IS NULL OR e.HireDate <= @AttendanceDate)
+      -- استبعاد الموظفين الذين في إجازة حالياً ولم تسجل لهم مباشرة عمل بعد
+      AND NOT EXISTS (
+          SELECT 1 
+          FROM [HR].[EmployeeLeaves] l
+          WHERE l.EmployeeID = e.EmployeeID
+            AND l.Status NOT IN ('Rejected', 'Cancelled')
+            AND l.StartDate <= @AttendanceDate
+            AND (
+                l.ResumptionDate IS NULL 
+                OR @AttendanceDate < l.ResumptionDate
+            )
+      )
     ORDER BY e.EmployeeID ASC;
+END
+GO
+
+-- 4.15.b sp_Attendance_GetOnLeave (جلب قائمة الموظفين الذين في إجازات ومستبعدين من الحضور اليوم)
+IF OBJECT_ID('[HR].[sp_Attendance_GetOnLeave]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Attendance_GetOnLeave];
+GO
+CREATE PROCEDURE [HR].[sp_Attendance_GetOnLeave]
+    @AttendanceDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        l.LeaveID,
+        e.EmployeeID,
+        e.EmployeeCode,
+        e.FullName AS EmployeeName,
+        e.Department,
+        e.JobTitle,
+        t.TypeName AS LeaveTypeName,
+        l.StartDate,
+        l.EndDate,
+        l.ExpectedReturnDate,
+        l.DaysCount,
+        l.Status AS LeaveStatus,
+        l.Reason
+    FROM [HR].[EmployeeLeaves] l
+    INNER JOIN [HR].[Employees] e ON l.EmployeeID = e.EmployeeID
+    INNER JOIN [HR].[LeaveTypes] t ON l.LeaveTypeID = t.LeaveTypeID
+    WHERE e.Status <> 'Terminated' AND e.Status <> 'Resigned'
+      AND l.Status NOT IN ('Rejected', 'Cancelled')
+      AND l.StartDate <= @AttendanceDate
+      AND (
+          l.ResumptionDate IS NULL 
+          OR @AttendanceDate < l.ResumptionDate
+      )
+    ORDER BY l.StartDate ASC;
 END
 GO
 
@@ -14633,7 +14739,21 @@ CREATE PROCEDURE [HR].[sp_Attendance_Save]
 AS
 BEGIN
     SET NOCOUNT ON;
-    IF EXISTS (SELECT 1 FROM [HR].[Attendance] WHERE EmployeeID = @EmployeeID AND AttendanceDate = @AttendanceDate)
+
+    -- منع تسجيل أو تعديل حضور لموظف في إجازة قائمة قبل مباشرة العمل
+    IF EXISTS (
+        SELECT 1 
+        FROM [HR].[EmployeeLeaves] l
+        WHERE l.EmployeeID = @EmployeeID
+          AND l.Status NOT IN ('Rejected', 'Cancelled')
+          AND l.StartDate <= @AttendanceDate
+          AND (l.ResumptionDate IS NULL OR @AttendanceDate < l.ResumptionDate)
+    )
+    BEGIN
+        RETURN;
+    END
+
+    IF EXISTS (SELECT 1 FROM [HR].[Attendance] WHERE EmployeeID = @EmployeeID AND CAST(AttendanceDate AS DATE) = CAST(@AttendanceDate AS DATE))
     BEGIN
         UPDATE [HR].[Attendance]
         SET CheckIn = @CheckIn,
@@ -14645,12 +14765,12 @@ BEGIN
             AbsenceDeductionDays = @AbsenceDeductionDays,
             Status = @Status,
             Notes = @Notes
-        WHERE EmployeeID = @EmployeeID AND AttendanceDate = @AttendanceDate;
+        WHERE EmployeeID = @EmployeeID AND CAST(AttendanceDate AS DATE) = CAST(@AttendanceDate AS DATE);
     END
     ELSE
     BEGIN
         INSERT INTO [HR].[Attendance] (EmployeeID, AttendanceDate, CheckIn, CheckOut, WorkHours, OvertimeHours, OvertimeDays, DelayMinutes, AbsenceDeductionDays, Status, Notes)
-        VALUES (@EmployeeID, @AttendanceDate, @CheckIn, @CheckOut, @WorkHours, @OvertimeHours, @OvertimeDays, @DelayMinutes, @AbsenceDeductionDays, @Status, @Notes);
+        VALUES (@EmployeeID, CAST(@AttendanceDate AS DATE), @CheckIn, @CheckOut, @WorkHours, @OvertimeHours, @OvertimeDays, @DelayMinutes, @AbsenceDeductionDays, @Status, @Notes);
     END
 END
 GO
@@ -14700,7 +14820,7 @@ BEGIN
 END
 GO
 
--- 4.19. sp_Payroll_GenerateBatch
+-- 4.19. sp_Payroll_GenerateBatch (توليد مسير الرواتب الشهري مع مراعاة الحضور والغياب والإجازات ومباشرة العمل)
 IF OBJECT_ID('[HR].[sp_Payroll_GenerateBatch]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_GenerateBatch];
 GO
 CREATE PROCEDURE [HR].[sp_Payroll_GenerateBatch]
@@ -14712,8 +14832,23 @@ BEGIN
     SET NOCOUNT ON;
     DECLARE @BatchID INT;
 
-    -- Check if batch exists
-    SELECT @BatchID = BatchID FROM [HR].[PayrollBatches] WHERE Month = @Month AND Year = @Year;
+    -- نطاق تاريخ الشهر محل المسير
+    DECLARE @MonthStart DATE = DATEFROMPARTS(@Year, @Month, 1);
+    DECLARE @MonthEnd DATE = EOMONTH(@MonthStart);
+    DECLARE @DaysInMonth INT = DAY(@MonthEnd);
+
+    -- 1. التأكد من وجود سجل المسير الرئيسي (PayrollBatch) وفحص حالة الاعتماد
+    DECLARE @ExistingStatus NVARCHAR(50);
+    SELECT @BatchID = BatchID, @ExistingStatus = Status 
+    FROM [HR].[PayrollBatches] 
+    WHERE Month = @Month AND Year = @Year;
+
+    -- منع توليد مسير رواتب جديد لشهر قد تم اعتماد مسير الرواتب له
+    IF @BatchID IS NOT NULL AND @ExistingStatus = 'Approved'
+    BEGIN
+        RAISERROR(N'لا يمكن توليد مسير رواتب جديد لشهر قد تم اعتماد مسير الرواتب له! يجب إلغاء الاعتماد أولاً قبل توليد مسير رواتب جديد لنفس الشهر.', 16, 1);
+        RETURN;
+    END
 
     IF @BatchID IS NULL
     BEGIN
@@ -14724,46 +14859,225 @@ BEGIN
     END
     ELSE
     BEGIN
+        -- تفريغ التفاصيل السابقة لإعادة التوليد بدقة
         DELETE FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID;
     END
 
-    -- Populate Details from Employees and Attendance
+    -- 2. جدول مؤقت لتجميع بيانات الحضور والانصراف لكل موظف خلال هذا الشهر
+    IF OBJECT_ID('tempdb..#AttSummary') IS NOT NULL DROP TABLE #AttSummary;
+    SELECT 
+        EmployeeID,
+        ISNULL(SUM(WorkHours), 0) AS TotWorkHours,
+        ISNULL(SUM(OvertimeHours), 0) AS TotOvertimeHours,
+        ISNULL(SUM(OvertimeDays), 0) AS TotOvertimeDays,
+        ISNULL(SUM(DelayMinutes), 0) AS TotDelayMinutes,
+        ISNULL(SUM(AbsenceDeductionDays), 0) AS TotAbsenceDeductionDays,
+        SUM(CASE WHEN Status = 'Absent' THEN 1 ELSE 0 END) AS CountAbsentDays,
+        SUM(CASE WHEN Status IN ('Present', 'Holiday') OR WorkHours > 0 THEN 1 ELSE 0 END) AS CountPresentDays
+    INTO #AttSummary
+    FROM [HR].[Attendance]
+    WHERE AttendanceDate >= @MonthStart AND AttendanceDate <= @MonthEnd
+    GROUP BY EmployeeID;
+
+    -- 3. جدول مؤقت لتحديد وضع الإجازات ومباشرة العمل خلال الشهر لكل موظف
+    IF OBJECT_ID('tempdb..#EmpLeaveState') IS NOT NULL DROP TABLE #EmpLeaveState;
+
+    SELECT 
+        e.EmployeeID,
+        -- حالة الإجازة
+        CASE 
+            -- الحالة 1: إجازة مستمرة طوال الشهر بدون مباشرة عمل في هذا الشهر
+            WHEN EXISTS (
+                SELECT 1 FROM [HR].[EmployeeLeaves] l 
+                WHERE l.EmployeeID = e.EmployeeID 
+                  AND l.Status NOT IN ('Rejected', 'Cancelled')
+                  AND l.StartDate <= @MonthStart 
+                  AND (l.ResumptionDate IS NULL OR l.ResumptionDate > @MonthEnd)
+            ) THEN 'AllMonthOnLeave'
+
+            -- الحالة 2: باشر العمل خلال هذا الشهر (كان في إجازة وباشر العمل)
+            WHEN EXISTS (
+                SELECT 1 FROM [HR].[EmployeeLeaves] l 
+                WHERE l.EmployeeID = e.EmployeeID 
+                  AND l.Status NOT IN ('Rejected', 'Cancelled')
+                  AND l.ResumptionDate >= @MonthStart AND l.ResumptionDate <= @MonthEnd
+            ) THEN 'ResumedInMonth'
+
+            -- الحالة 3: بدأت إجازته خلال هذا الشهر (ولم يباشر في نفس الشهر)
+            WHEN EXISTS (
+                SELECT 1 FROM [HR].[EmployeeLeaves] l 
+                WHERE l.EmployeeID = e.EmployeeID 
+                  AND l.Status NOT IN ('Rejected', 'Cancelled')
+                  AND l.StartDate >= @MonthStart AND l.StartDate <= @MonthEnd
+                  AND (l.ResumptionDate IS NULL OR l.ResumptionDate > @MonthEnd)
+            ) THEN 'StartedLeaveInMonth'
+
+            -- الحالة 4: إجازة بدأت وباشر في نفس الشهر
+            WHEN EXISTS (
+                SELECT 1 FROM [HR].[EmployeeLeaves] l 
+                WHERE l.EmployeeID = e.EmployeeID 
+                  AND l.Status NOT IN ('Rejected', 'Cancelled')
+                  AND l.StartDate >= @MonthStart AND l.StartDate <= @MonthEnd
+                  AND l.ResumptionDate >= @MonthStart AND l.ResumptionDate <= @MonthEnd
+            ) THEN 'BothInMonth'
+
+            ELSE 'Normal'
+        END AS LeaveCase,
+
+        -- تاريخ بداية الإجازة للشهر (إن وجد)
+        (
+            SELECT MIN(l.StartDate) FROM [HR].[EmployeeLeaves] l 
+            WHERE l.EmployeeID = e.EmployeeID 
+              AND l.Status NOT IN ('Rejected', 'Cancelled')
+              AND l.StartDate >= @MonthStart AND l.StartDate <= @MonthEnd
+        ) AS LeaveStartDateInMonth,
+
+        -- تاريخ مباشرة العمل للشهر (إن وجد)
+        (
+            SELECT MAX(l.ResumptionDate) FROM [HR].[EmployeeLeaves] l 
+            WHERE l.EmployeeID = e.EmployeeID 
+              AND l.Status NOT IN ('Rejected', 'Cancelled')
+              AND l.ResumptionDate >= @MonthStart AND l.ResumptionDate <= @MonthEnd
+        ) AS ResumptionDateInMonth
+    INTO #EmpLeaveState
+    FROM [HR].[Employees] e
+    WHERE e.Status NOT IN ('Terminated', 'Resigned') 
+       OR (e.HireDate IS NOT NULL AND e.HireDate <= @MonthEnd);
+
+    -- 4. إدراج تفاصيل الرواتب باحتساب دقيق لأيام الدوام المستحقة والغياب وساعات العمل والإضافي
     INSERT INTO [HR].[PayrollDetails] 
-    (BatchID, EmployeeID, BasicSalary, HousingAllowance, TransportAllowance, OtherAllowances, WorkingDays, AbsentDays, OvertimeHours, OvertimeAmount, OvertimeDays, DeductionDays, DeductionAmount, DelayDeductions, AdvancesDeductions, NetSalary, PaymentStatus)
+    (
+        BatchID, EmployeeID, BasicSalary, HousingAllowance, TransportAllowance, OtherAllowances,
+        WorkingDays, AbsentDays, OvertimeHours, OvertimeAmount, OvertimeDays,
+        DeductionDays, DeductionAmount, DelayDeductions, AdvancesDeductions, NetSalary,
+        PaymentStatus, Notes
+    )
     SELECT 
         @BatchID,
         e.EmployeeID,
-        e.BasicSalary,
-        e.HousingAllowance,
-        e.TransportAllowance,
-        e.OtherAllowances,
-        30,
-        0,
-        ISNULL(att.TotOvertimeHours, 0),
-        ROUND(ISNULL(att.TotOvertimeHours, 0) * (e.BasicSalary / 240.0 * 1.25), 3),
-        ISNULL(att.TotOvertimeDays, 0),
-        ISNULL(att.TotAbsenceDays, 0),
-        ROUND(ISNULL(att.TotAbsenceDays, 0) * (e.BasicSalary / 30.0), 3),
-        0,
-        0,
-        ROUND((e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances) + 
-              (ISNULL(att.TotOvertimeHours, 0) * (e.BasicSalary / 240.0 * 1.25)) - 
-              (ISNULL(att.TotAbsenceDays, 0) * (e.BasicSalary / 30.0)), 3),
-        'Unpaid'
+        Calc.ProratedBasic,
+        Calc.ProratedHousing,
+        Calc.ProratedTransport,
+        Calc.ProratedOther,
+        Calc.EffectiveWorkingDays,
+        Calc.EffectiveAbsentDays,
+        Calc.OvertimeHours,
+        Calc.OvertimeAmount,
+        Calc.OvertimeDays,
+        Calc.DeductionDays,
+        Calc.DeductionAmount,
+        Calc.DelayDeductions,
+        0 AS AdvancesDeductions,
+        Calc.FinalNetSalary,
+        'Unpaid' AS PaymentStatus,
+        Calc.CalculationNotes
     FROM [HR].[Employees] e
-    LEFT JOIN (
+    INNER JOIN #EmpLeaveState els ON e.EmployeeID = els.EmployeeID
+    LEFT JOIN #AttSummary att ON e.EmployeeID = att.EmployeeID
+    CROSS APPLY (
         SELECT 
-            EmployeeID,
-            SUM(OvertimeHours) AS TotOvertimeHours,
-            SUM(OvertimeDays) AS TotOvertimeDays,
-            SUM(AbsenceDeductionDays) AS TotAbsenceDays
-        FROM [HR].[Attendance]
-        WHERE MONTH(AttendanceDate) = @Month AND YEAR(AttendanceDate) = @Year
-        GROUP BY EmployeeID
-    ) att ON e.EmployeeID = att.EmployeeID
-    WHERE e.Status <> 'Terminated' AND e.Status <> 'Resigned';
+            -- تحديد الأيام الاسمية المؤهلة للعمل
+            NominalPayableDays = CASE 
+                WHEN els.LeaveCase = 'AllMonthOnLeave' THEN 0
+                WHEN els.LeaveCase = 'StartedLeaveInMonth' THEN 
+                    CASE 
+                        WHEN DAY(els.LeaveStartDateInMonth) - 1 < 0 THEN 0 
+                        WHEN DAY(els.LeaveStartDateInMonth) - 1 > 30 THEN 30
+                        ELSE DAY(els.LeaveStartDateInMonth) - 1 
+                    END
+                WHEN els.LeaveCase = 'ResumedInMonth' THEN 
+                    CASE 
+                        WHEN DAY(els.ResumptionDateInMonth) > 30 THEN 1 
+                        ELSE (30 - DAY(els.ResumptionDateInMonth) + 1)
+                    END
+                WHEN els.LeaveCase = 'BothInMonth' THEN
+                    -- أيام قبل الإجازة + أيام بعد المباشرة
+                    (CASE WHEN DAY(els.LeaveStartDateInMonth) - 1 < 0 THEN 0 ELSE DAY(els.LeaveStartDateInMonth) - 1 END) +
+                    (CASE WHEN DAY(els.ResumptionDateInMonth) > 30 THEN 1 ELSE (30 - DAY(els.ResumptionDateInMonth) + 1) END)
+                ELSE 30
+            END,
+            
+            -- أيام الغياب من الحضور (سواء الخصم المحدد أو أيام Absent)
+            TotAbsence = CASE 
+                WHEN els.LeaveCase = 'AllMonthOnLeave' THEN 0
+                WHEN ISNULL(att.TotAbsenceDeductionDays, 0) > 0 THEN ISNULL(att.TotAbsenceDeductionDays, 0)
+                ELSE CAST(ISNULL(att.CountAbsentDays, 0) AS DECIMAL(5,2))
+            END,
 
-    -- Update Batch Totals
+            -- ملاحظات توضيحية للمسير
+            LeaveNote = CASE 
+                WHEN els.LeaveCase = 'AllMonthOnLeave' THEN N'في إجازة طوال الشهر (لم يباشر العمل بعد)'
+                WHEN els.LeaveCase = 'StartedLeaveInMonth' THEN N'إجازة بدأت في ' + CONVERT(VARCHAR(10), els.LeaveStartDateInMonth, 120) + N' (الراتب حتى بداية الإجازة)'
+                WHEN els.LeaveCase = 'ResumedInMonth' THEN N'مباشرة عمل في ' + CONVERT(VARCHAR(10), els.ResumptionDateInMonth, 120) + N' (الراتب من تاريخ المباشرة)'
+                WHEN els.LeaveCase = 'BothInMonth' THEN N'إجازة في ' + CONVERT(VARCHAR(10), els.LeaveStartDateInMonth, 120) + N' ومباشرة في ' + CONVERT(VARCHAR(10), els.ResumptionDateInMonth, 120)
+                ELSE NULL
+            END
+    ) Stage1
+    CROSS APPLY (
+        SELECT 
+            -- أيام العمل الفعلية المستحقة
+            EffectiveWorkingDays = CASE 
+                WHEN Stage1.NominalPayableDays <= 0 THEN 0
+                WHEN (Stage1.NominalPayableDays - Stage1.TotAbsence) < 0 THEN 0
+                ELSE CAST(ROUND(Stage1.NominalPayableDays - Stage1.TotAbsence, 0) AS INT)
+            END,
+            EffectiveAbsentDays = CAST(ROUND(Stage1.TotAbsence, 0) AS INT),
+            DeductionDays = Stage1.TotAbsence,
+
+            -- نسبة الاستحقاق من الراتب الأساسي والبدلات على معيار 30 يوماً
+            ProrateRatio = CASE 
+                WHEN Stage1.NominalPayableDays <= 0 THEN 0.0
+                WHEN Stage1.NominalPayableDays >= 30 THEN 1.0
+                ELSE CAST(Stage1.NominalPayableDays AS DECIMAL(18,4)) / 30.0
+            END,
+
+            -- الإضافي والغياب والتأخير
+            OvertimeHours = ISNULL(att.TotOvertimeHours, 0),
+            OvertimeDays = ISNULL(att.TotOvertimeDays, 0),
+            OvertimeAmount = ROUND((ISNULL(att.TotOvertimeHours, 0) * (e.BasicSalary / 240.0 * 1.5)) + (ISNULL(att.TotOvertimeDays, 0) * (e.BasicSalary / 30.0 * 1.5)), 3),
+            DeductionAmount = ROUND(Stage1.TotAbsence * (e.BasicSalary / 30.0), 3),
+            DelayDeductions = ROUND((ISNULL(att.TotDelayMinutes, 0) / 60.0) * (e.BasicSalary / 240.0), 3)
+    ) Stage2
+    CROSS APPLY (
+        SELECT 
+            ProratedBasic = ROUND(e.BasicSalary * Stage2.ProrateRatio, 3),
+            ProratedHousing = ROUND(e.HousingAllowance * Stage2.ProrateRatio, 3),
+            ProratedTransport = ROUND(e.TransportAllowance * Stage2.ProrateRatio, 3),
+            ProratedOther = ROUND(e.OtherAllowances * Stage2.ProrateRatio, 3),
+            EffectiveWorkingDays = Stage2.EffectiveWorkingDays,
+            EffectiveAbsentDays = Stage2.EffectiveAbsentDays,
+            OvertimeHours = Stage2.OvertimeHours,
+            OvertimeAmount = Stage2.OvertimeAmount,
+            OvertimeDays = Stage2.OvertimeDays,
+            DeductionDays = Stage2.DeductionDays,
+            DeductionAmount = Stage2.DeductionAmount,
+            DelayDeductions = Stage2.DelayDeductions,
+            CalculationNotes = Stage1.LeaveNote
+    ) Stage3
+    CROSS APPLY (
+        SELECT 
+            ProratedBasic = Stage3.ProratedBasic,
+            ProratedHousing = Stage3.ProratedHousing,
+            ProratedTransport = Stage3.ProratedTransport,
+            ProratedOther = Stage3.ProratedOther,
+            EffectiveWorkingDays = Stage3.EffectiveWorkingDays,
+            EffectiveAbsentDays = Stage3.EffectiveAbsentDays,
+            OvertimeHours = Stage3.OvertimeHours,
+            OvertimeAmount = Stage3.OvertimeAmount,
+            OvertimeDays = Stage3.OvertimeDays,
+            DeductionDays = Stage3.DeductionDays,
+            DeductionAmount = Stage3.DeductionAmount,
+            DelayDeductions = Stage3.DelayDeductions,
+            CalculationNotes = Stage3.CalculationNotes,
+            FinalNetSalary = CASE 
+                WHEN ((Stage3.ProratedBasic + Stage3.ProratedHousing + Stage3.ProratedTransport + Stage3.ProratedOther + Stage3.OvertimeAmount) - (Stage3.DeductionAmount + Stage3.DelayDeductions)) < 0 THEN 0 
+                ELSE ROUND(((Stage3.ProratedBasic + Stage3.ProratedHousing + Stage3.ProratedTransport + Stage3.ProratedOther + Stage3.OvertimeAmount) - (Stage3.DeductionAmount + Stage3.DelayDeductions)), 3)
+            END
+    ) Calc
+    WHERE e.Status NOT IN ('Terminated', 'Resigned') 
+       OR (e.HireDate IS NOT NULL AND e.HireDate <= @MonthEnd);
+
+    -- 5. تحديث إجماليات مسير الرواتب الرئيسي
     UPDATE [HR].[PayrollBatches]
     SET TotalBasic = (SELECT ISNULL(SUM(BasicSalary), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
         TotalAllowances = (SELECT ISNULL(SUM(HousingAllowance + TransportAllowance + OtherAllowances), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
@@ -14771,6 +15085,10 @@ BEGIN
         TotalDeductions = (SELECT ISNULL(SUM(DeductionAmount + DelayDeductions + AdvancesDeductions), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID),
         TotalNetSalary = (SELECT ISNULL(SUM(NetSalary), 0) FROM [HR].[PayrollDetails] WHERE BatchID = @BatchID)
     WHERE BatchID = @BatchID;
+
+    -- تنظيف الجداول المؤقتة
+    IF OBJECT_ID('tempdb..#AttSummary') IS NOT NULL DROP TABLE #AttSummary;
+    IF OBJECT_ID('tempdb..#EmpLeaveState') IS NOT NULL DROP TABLE #EmpLeaveState;
 
     SELECT @BatchID AS BatchID;
 END
@@ -14839,6 +15157,21 @@ BEGIN
         ApprovedBy = NULL,
         ApprovedAt = NULL
     WHERE BatchID = @BatchID;
+END
+GO
+
+-- 4.21.2. sp_Payroll_GetBatchByMonthYear (التحقق من حالة مسير الرواتب لشهر وسنة محددين)
+IF OBJECT_ID('[HR].[sp_Payroll_GetBatchByMonthYear]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_GetBatchByMonthYear];
+GO
+CREATE PROCEDURE [HR].[sp_Payroll_GetBatchByMonthYear]
+    @Month INT,
+    @Year INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP 1 *
+    FROM [HR].[PayrollBatches]
+    WHERE Month = @Month AND Year = @Year;
 END
 GO
 

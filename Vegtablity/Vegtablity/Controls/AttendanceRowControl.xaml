@@ -134,7 +134,12 @@
                 <Button Content="✗" ToolTip="تعيين غائب (خصم يوم)"
                         Style="{StaticResource QuickActionBtnStyle}"
                         Background="#FEF2F2" BorderBrush="#FECACA" Foreground="#DC2626"
-                        Width="28" Click="SetAbsent_Click"/>
+                        Width="28" Margin="0,0,3,0" Click="SetAbsent_Click"/>
+
+                <Button Content="💾" ToolTip="حفظ/تعديل هذا السجل فوراً"
+                        Style="{StaticResource QuickActionBtnStyle}"
+                        Background="#EEF2FF" BorderBrush="#C7D2FE" Foreground="#4F46E5"
+                        Width="28" Click="SaveRow_Click"/>
             </StackPanel>
         </Grid>
     </Border>
