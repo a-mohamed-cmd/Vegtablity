@@ -27,6 +27,16 @@ Namespace Controls
             Dim item = TryCast(Me.DataContext, HRAlertItem)
             If item Is Nothing OrElse StatusBadge Is Nothing Then Return
 
+            If item.IsTerminated Then
+                StatusStrip.Background = New SolidColorBrush(Color.FromRgb(100, 116, 139)) '#64748B
+                StatusBadge.Background = New SolidColorBrush(Color.FromRgb(241, 245, 249)) '#F1F5F9
+                StatusBadge.BorderBrush = New SolidColorBrush(Color.FromRgb(203, 213, 225)) '#CBD5E1
+                StatusBadge.BorderThickness = New Thickness(1)
+                StatusTextLabel.Foreground = New SolidColorBrush(Color.FromRgb(71, 85, 105)) '#475569
+                StatusIconText.Text = "🛑"
+                Return
+            End If
+
             Select Case item.AlertStatus
                 Case "Expired"
                     StatusStrip.Background = New SolidColorBrush(Color.FromRgb(239, 68, 68)) '#EF4444
@@ -57,6 +67,11 @@ Namespace Controls
         Public Sub BtnWhatsApp_Click(sender As Object, e As RoutedEventArgs)
             Dim item = TryCast(Me.DataContext, HRAlertItem)
             If item Is Nothing Then Return
+
+            If item.IsTerminated Then
+                MessageBox.Show($"الموظف '{item.EmployeeName}' تم إنهاء خدماته؛ ولا يتطلب إرسال إشعار تجديد وثائق له.", "موظف منتهي الخدمة", MessageBoxButton.OK, MessageBoxImage.Information)
+                Return
+            End If
 
             Dim vm = GetParentViewModel()
             If vm IsNot Nothing AndAlso vm.SendReminderCommand IsNot Nothing Then

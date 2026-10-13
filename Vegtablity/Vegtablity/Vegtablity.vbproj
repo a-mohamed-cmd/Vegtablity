@@ -468,6 +468,7 @@
     <Compile Include="Models\HR\PayrollDetail.vb" />
     <Compile Include="Models\HR\EndOfServiceSettlement.vb" />
     <Compile Include="Models\HR\HRAlertItem.vb" />
+    <Compile Include="Models\HR\PayrollSettings.vb" />
     <Compile Include="Services\HRService.vb" />
     <Compile Include="Helpers\HRDocumentPrinter.vb" />
     <Compile Include="ViewModels\HREmployeesViewModel.vb" />

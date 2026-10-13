@@ -15,7 +15,15 @@ Namespace Views
         Private _snackbarTimer As DispatcherTimer
 
         Public Sub New()
+            Me.New(0)
+        End Sub
+
+        Public Sub New(initialTab As Integer)
             InitializeComponent()
+            Dim vm = TryCast(Me.DataContext, HRSettingsViewModel)
+            If vm IsNot Nothing Then
+                vm.SelectedTabIndex = initialTab
+            End If
         End Sub
 
         Private Sub HRSettingsPage_DataContextChanged(sender As Object, e As DependencyPropertyChangedEventArgs) Handles Me.DataContextChanged
@@ -130,6 +138,13 @@ Namespace Views
 
         Private Sub NumberBox_PreviewTextInput(sender As Object, e As TextCompositionEventArgs)
             e.Handled = Not Regex.IsMatch(e.Text, "^\d+$")
+        End Sub
+
+        Private Sub DecimalBox_PreviewTextInput(sender As Object, e As TextCompositionEventArgs)
+            Dim tb = TryCast(sender, TextBox)
+            If tb Is Nothing Then Return
+            Dim fullText = tb.Text.Insert(tb.SelectionStart, e.Text)
+            e.Handled = Not Regex.IsMatch(fullText, "^[0-9]*\.?[0-9]*$")
         End Sub
 
         Private Sub NumberBox_PreviewKeyDown(sender As Object, e As KeyEventArgs)

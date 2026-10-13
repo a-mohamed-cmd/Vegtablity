@@ -307,6 +307,8 @@ Namespace Helpers
         Public Const SP_HR_PAYROLL_APPROVEBATCH As String = "[HR].[sp_Payroll_ApproveBatch]"
         Public Const SP_HR_PAYROLL_UNAPPROVEBATCH As String = "[HR].[sp_Payroll_UnapproveBatch]"
         Public Const SP_HR_PAYROLL_GETBATCHBYMONTHYEAR As String = "[HR].[sp_Payroll_GetBatchByMonthYear]"
+        Public Const SP_HR_PAYROLLSETTINGS_GET As String = "[HR].[sp_PayrollSettings_Get]"
+        Public Const SP_HR_PAYROLLSETTINGS_SAVE As String = "[HR].[sp_PayrollSettings_Save]"
 
         Public Const SP_HR_ENDOFSERVICE_GETALL As String = "[HR].[sp_EndOfService_GetAll]"
         Public Const SP_HR_ENDOFSERVICE_SAVE As String = "[HR].[sp_EndOfService_Save]"

@@ -16,6 +16,49 @@ Namespace ViewModels
         Public Property LeaveTypesList As ObservableCollection(Of LeaveType)
         Public Property FieldTypesList As ObservableCollection(Of String)
 
+        ' === Tab Navigation (0 = Payroll Rules, 1 = Custom Fields) ===
+        Private _selectedTabIndex As Integer = 0
+        Public Property SelectedTabIndex As Integer
+            Get
+                Return _selectedTabIndex
+            End Get
+            Set(value As Integer)
+                If SetProperty(_selectedTabIndex, value) Then
+                    OnPropertyChanged(NameOf(IsPayrollTab))
+                    OnPropertyChanged(NameOf(IsCustomFieldsTab))
+                End If
+            End Set
+        End Property
+
+        Public ReadOnly Property IsPayrollTab As Boolean
+            Get
+                Return SelectedTabIndex = 0
+            End Get
+        End Property
+
+        Public ReadOnly Property IsCustomFieldsTab As Boolean
+            Get
+                Return SelectedTabIndex = 1
+            End Get
+        End Property
+
+        ' === Payroll Rules Settings ===
+        Private _payrollRules As PayrollSettings
+        Public Property PayrollRules As PayrollSettings
+            Get
+                Return _payrollRules
+            End Get
+            Set(value As PayrollSettings)
+                SetProperty(_payrollRules, value)
+            End Set
+        End Property
+
+        Public ReadOnly Property CanEditSettings As Boolean
+            Get
+                Return CurrentPermissions Is Nothing OrElse CurrentPermissions.CanEdit OrElse CurrentPermissions.CanAdd
+            End Get
+        End Property
+
         Private _selectedField As CustomFieldDefinition
         Public Property SelectedField As CustomFieldDefinition
             Get
@@ -52,6 +95,10 @@ Namespace ViewModels
         Public Property NewCustomFieldCommand As ICommand
         Public Property DeleteCustomFieldCommand As ICommand
         Public Property RefreshCommand As ICommand
+        Public Property SelectPayrollTabCommand As ICommand
+        Public Property SelectCustomFieldsTabCommand As ICommand
+        Public Property SavePayrollSettingsCommand As ICommand
+        Public Property ResetPayrollSettingsCommand As ICommand
 
         Public Sub New()
             CustomFields = New ObservableCollection(Of CustomFieldDefinition)()
@@ -62,6 +109,13 @@ Namespace ViewModels
             NewCustomFieldCommand = New RelayCommand(AddressOf NewCustomField)
             DeleteCustomFieldCommand = New RelayCommand(AddressOf DeleteCustomField)
             RefreshCommand = New RelayCommand(Sub() LoadData())
+            SelectPayrollTabCommand = New RelayCommand(Sub() SelectedTabIndex = 0)
+            SelectCustomFieldsTabCommand = New RelayCommand(Sub() SelectedTabIndex = 1)
+            SavePayrollSettingsCommand = New RelayCommand(AddressOf SavePayrollSettings)
+            ResetPayrollSettingsCommand = New RelayCommand(Sub()
+                                                               LoadData()
+                                                               RaiseEvent RequestSnackbar("🔄 تم التراجع واستعادة الضوابط الحالية من قاعدة البيانات")
+                                                           End Sub)
 
             LoadPermissions("HRSettings")
             NewCustomField(Nothing)
@@ -70,6 +124,11 @@ Namespace ViewModels
 
         Private Sub LoadData()
             Try
+                PayrollRules = _hrService.GetPayrollSettings()
+                If PayrollRules Is Nothing Then
+                    PayrollRules = New PayrollSettings()
+                End If
+
                 Dim fields = _hrService.GetCustomFields()
                 CustomFields.Clear()
                 For Each f In fields
@@ -83,6 +142,24 @@ Namespace ViewModels
                 Next
             Catch ex As Exception
                 MessageBox.Show("خطأ أثناء جلب إعدادات الموارد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        Private Sub SavePayrollSettings(parameter As Object)
+            If Not CanEditSettings Then
+                RaiseEvent RequestSnackbar("⚠️ ليس لديك صلاحية تعديل ضوابط الرواتب!")
+                Return
+            End If
+
+            If PayrollRules Is Nothing Then Return
+
+            Try
+                Dim user = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.Username, "System")
+                _hrService.SavePayrollSettings(PayrollRules, user)
+                RaiseEvent RequestSnackbar("💾 تم حفظ واعتماد ضوابط احتساب الرواتب بنجاح!")
+                LoadData()
+            Catch ex As Exception
+                MessageBox.Show("خطأ أثناء حفظ ضوابط الرواتب: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
 

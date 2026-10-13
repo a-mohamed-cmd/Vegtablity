@@ -14004,8 +14004,15 @@ BEGIN
         CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
         CreatedBy NVARCHAR(100) NULL,
         UpdatedAt DATETIME NULL,
-        UpdatedBy NVARCHAR(100) NULL
+        UpdatedBy NVARCHAR(100) NULL,
+        EndDate DATE NULL
     );
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[HR].[Employees]') AND name = 'EndDate')
+BEGIN
+    ALTER TABLE [HR].[Employees] ADD EndDate DATE NULL;
 END
 GO
 
@@ -14200,6 +14207,30 @@ BEGIN
 END
 GO
 
+-- Table: [HR].[PayrollSettings] (ضوابط وإعدادات احتساب الرواتب)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'PayrollSettings' AND schema_id = SCHEMA_ID('HR'))
+BEGIN
+    CREATE TABLE [HR].[PayrollSettings] (
+        SettingID INT PRIMARY KEY DEFAULT 1,
+        StandardMonthlyDays INT NOT NULL DEFAULT 30,
+        DailyWorkHours DECIMAL(4,2) NOT NULL DEFAULT 8.0,
+        OvertimeHourMultiplier DECIMAL(4,2) NOT NULL DEFAULT 1.5,
+        OvertimeDayMultiplier DECIMAL(4,2) NOT NULL DEFAULT 1.5,
+        CalculationBasis NVARCHAR(50) NOT NULL DEFAULT 'BasicOnly', -- BasicOnly, GrossTotal
+        EnableDelayDeduction BIT NOT NULL DEFAULT 1,
+        DelayGracePeriodMinutes INT NOT NULL DEFAULT 0,
+        AbsenceDayMultiplier DECIMAL(4,2) NOT NULL DEFAULT 1.0,
+        Notes NVARCHAR(MAX) NULL,
+        UpdatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        UpdatedBy NVARCHAR(100) NULL,
+        CONSTRAINT CK_PayrollSettings_SingleRow CHECK (SettingID = 1)
+    );
+
+    INSERT INTO [HR].[PayrollSettings] (SettingID, StandardMonthlyDays, DailyWorkHours, OvertimeHourMultiplier, OvertimeDayMultiplier, CalculationBasis, EnableDelayDeduction, DelayGracePeriodMinutes, AbsenceDayMultiplier, Notes, UpdatedBy)
+    VALUES (1, 30, 8.0, 1.5, 1.5, 'BasicOnly', 1, 0, 1.0, N'الإعدادات الافتراضية للرواتب', N'System');
+END
+GO
+
 -- 4. Stored Procedures in [HR]
 
 -- 4.1. sp_Employee_GetAll (مع الترقيم 10 والبحث)
@@ -14294,7 +14325,8 @@ CREATE PROCEDURE [HR].[sp_Employee_Save]
     @IBAN NVARCHAR(100) = NULL,
     @Status NVARCHAR(50) = 'Active',
     @Notes NVARCHAR(MAX) = NULL,
-    @User NVARCHAR(100) = NULL
+    @User NVARCHAR(100) = NULL,
+    @EndDate DATE = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -14321,6 +14353,7 @@ BEGIN
             IBAN = @IBAN,
             Status = @Status,
             Notes = @Notes,
+            EndDate = CASE WHEN @Status IN ('Terminated', 'Resigned') THEN ISNULL(@EndDate, EndDate) ELSE NULL END,
             UpdatedAt = GETDATE(),
             UpdatedBy = @User
         WHERE EmployeeID = @EmployeeID;
@@ -14328,9 +14361,9 @@ BEGIN
     ELSE
     BEGIN
         INSERT INTO [HR].[Employees] 
-        (EmployeeCode, FullName, NationalID, CivilID, PassportNumber, Nationality, Gender, BirthDate, JobTitle, Department, HireDate, ContractType, BasicSalary, HousingAllowance, TransportAllowance, OtherAllowances, BankName, IBAN, Status, Notes, CreatedAt, CreatedBy)
+        (EmployeeCode, FullName, NationalID, CivilID, PassportNumber, Nationality, Gender, BirthDate, JobTitle, Department, HireDate, ContractType, BasicSalary, HousingAllowance, TransportAllowance, OtherAllowances, BankName, IBAN, Status, Notes, EndDate, CreatedAt, CreatedBy)
         VALUES 
-        (@EmployeeCode, @FullName, @NationalID, @CivilID, @PassportNumber, @Nationality, @Gender, @BirthDate, @JobTitle, @Department, @HireDate, @ContractType, @BasicSalary, @HousingAllowance, @TransportAllowance, @OtherAllowances, @BankName, @IBAN, @Status, @Notes, GETDATE(), @User);
+        (@EmployeeCode, @FullName, @NationalID, @CivilID, @PassportNumber, @Nationality, @Gender, @BirthDate, @JobTitle, @Department, @HireDate, @ContractType, @BasicSalary, @HousingAllowance, @TransportAllowance, @OtherAllowances, @BankName, @IBAN, @Status, @Notes, @EndDate, GETDATE(), @User);
 
         SET @EmployeeID = SCOPE_IDENTITY();
     END
@@ -14441,10 +14474,11 @@ BEGIN
 END
 GO
 
--- 4.9. sp_Alerts_GetActive (حساب تنبيهات انتهاء الوثائق)
+-- 4.9. sp_Alerts_GetActive (حساب تنبيهات انتهاء الوثائق والتجديدات مع مراعاة الموظفين المنتهية خدماتهم)
 IF OBJECT_ID('[HR].[sp_Alerts_GetActive]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Alerts_GetActive];
 GO
 CREATE PROCEDURE [HR].[sp_Alerts_GetActive]
+    @IncludeTerminated BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -14456,6 +14490,12 @@ BEGIN
         e.EmployeeCode,
         e.FullName AS EmployeeName,
         e.Department,
+        e.Status AS EmployeeStatus,
+        TermCalc.TerminationDate,
+        CASE 
+            WHEN e.Status IN ('Terminated', 'Resigned') OR (TermCalc.TerminationDate IS NOT NULL AND TermCalc.TerminationDate <= @Today) THEN 1 
+            ELSE 0 
+        END AS IsTerminated,
         d.FieldID,
         d.FieldKey,
         d.FieldNameAr,
@@ -14469,9 +14509,27 @@ BEGIN
     FROM [HR].[EmployeeCustomValues] v
     INNER JOIN [HR].[CustomFieldDefinitions] d ON v.FieldID = d.FieldID
     INNER JOIN [HR].[Employees] e ON v.EmployeeID = e.EmployeeID
+    CROSS APPLY (
+        SELECT TerminationDate = COALESCE(
+            e.EndDate,
+            (SELECT MAX(s.EndDate) 
+             FROM [HR].[EndOfServiceSettlements] s 
+             WHERE s.EmployeeID = e.EmployeeID 
+               AND s.Status NOT IN ('Rejected', 'Cancelled')),
+            CASE WHEN e.Status IN ('Terminated', 'Resigned') THEN CAST(ISNULL(e.UpdatedAt, e.CreatedAt) AS DATE) ELSE NULL END
+        )
+    ) TermCalc
     WHERE d.IsAlertable = 1 
       AND v.DateValue IS NOT NULL
       AND DATEDIFF(DAY, @Today, CAST(v.DateValue AS DATE)) <= d.AlertDaysBefore
+      AND (
+          @IncludeTerminated = 1
+          OR (
+              e.Status NOT IN ('Terminated', 'Resigned')
+              AND (TermCalc.TerminationDate IS NULL OR TermCalc.TerminationDate > @Today)
+              AND (TermCalc.TerminationDate IS NULL OR CAST(v.DateValue AS DATE) <= TermCalc.TerminationDate)
+          )
+      )
     ORDER BY v.DateValue ASC;
 END
 GO
@@ -14820,7 +14878,7 @@ BEGIN
 END
 GO
 
--- 4.19. sp_Payroll_GenerateBatch (توليد مسير الرواتب الشهري مع مراعاة الحضور والغياب والإجازات ومباشرة العمل)
+-- 4.19. sp_Payroll_GenerateBatch (توليد مسير الرواتب الشهري مع مراعاة الحضور والغياب والإجازات ومباشرة العمل والضوابط المعتمدة)
 IF OBJECT_ID('[HR].[sp_Payroll_GenerateBatch]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_Payroll_GenerateBatch];
 GO
 CREATE PROCEDURE [HR].[sp_Payroll_GenerateBatch]
@@ -14831,6 +14889,36 @@ AS
 BEGIN
     SET NOCOUNT ON;
     DECLARE @BatchID INT;
+
+    -- 0. جلب إعدادات وضوابط الرواتب المعتمدة
+    DECLARE @StandardMonthlyDays DECIMAL(5,2) = 30.0;
+    DECLARE @DailyWorkHours DECIMAL(5,2) = 8.0;
+    DECLARE @OvertimeHourMultiplier DECIMAL(5,2) = 1.5;
+    DECLARE @OvertimeDayMultiplier DECIMAL(5,2) = 1.5;
+    DECLARE @CalculationBasis NVARCHAR(50) = 'BasicOnly';
+    DECLARE @EnableDelayDeduction BIT = 1;
+    DECLARE @DelayGracePeriodMinutes INT = 0;
+    DECLARE @AbsenceDayMultiplier DECIMAL(5,2) = 1.0;
+
+    SELECT TOP 1 
+        @StandardMonthlyDays = CAST(ISNULL(StandardMonthlyDays, 30) AS DECIMAL(5,2)),
+        @DailyWorkHours = ISNULL(DailyWorkHours, 8.0),
+        @OvertimeHourMultiplier = ISNULL(OvertimeHourMultiplier, 1.5),
+        @OvertimeDayMultiplier = ISNULL(OvertimeDayMultiplier, 1.5),
+        @CalculationBasis = ISNULL(CalculationBasis, 'BasicOnly'),
+        @EnableDelayDeduction = ISNULL(EnableDelayDeduction, 1),
+        @DelayGracePeriodMinutes = ISNULL(DelayGracePeriodMinutes, 0),
+        @AbsenceDayMultiplier = ISNULL(AbsenceDayMultiplier, 1.0)
+    FROM [HR].[PayrollSettings] WHERE SettingID = 1;
+
+    IF @StandardMonthlyDays <= 0 SET @StandardMonthlyDays = 30.0;
+    IF @DailyWorkHours <= 0 SET @DailyWorkHours = 8.0;
+    IF @AbsenceDayMultiplier <= 0 SET @AbsenceDayMultiplier = 1.0;
+    IF @OvertimeHourMultiplier <= 0 SET @OvertimeHourMultiplier = 1.5;
+    IF @OvertimeDayMultiplier <= 0 SET @OvertimeDayMultiplier = 1.5;
+
+    DECLARE @MonthlyWorkHours DECIMAL(7,2) = @StandardMonthlyDays * @DailyWorkHours;
+    IF @MonthlyWorkHours <= 0 SET @MonthlyWorkHours = 240.0;
 
     -- نطاق تاريخ الشهر محل المسير
     DECLARE @MonthStart DATE = DATEFROMPARTS(@Year, @Month, 1);
@@ -14879,11 +14967,41 @@ BEGIN
     WHERE AttendanceDate >= @MonthStart AND AttendanceDate <= @MonthEnd
     GROUP BY EmployeeID;
 
-    -- 3. جدول مؤقت لتحديد وضع الإجازات ومباشرة العمل خلال الشهر لكل موظف
-    IF OBJECT_ID('tempdb..#EmpLeaveState') IS NOT NULL DROP TABLE #EmpLeaveState;
+    -- 3. جدول مؤقت لتحديد وضع الموظفين (إنهاء الخدمة، الإجازات، المباشرة، التعيين الجديد)
+    IF OBJECT_ID('tempdb..#EmpMonthState') IS NOT NULL DROP TABLE #EmpMonthState;
 
     SELECT 
         e.EmployeeID,
+        
+        -- تحديد تاريخ انتهاء الخدمة (من جدول الموظفين أو أحدث تسوية نهاية خدمة أو تاريخ التحديث عند تغيير الحالة)
+        TermCalc.TerminationDate,
+        
+        -- هل انتهت الخدمة خلال هذا الشهر؟
+        CASE 
+            WHEN TermCalc.TerminationDate >= @MonthStart AND TermCalc.TerminationDate <= @MonthEnd THEN 1 
+            ELSE 0 
+        END AS IsTerminatedInThisMonth,
+
+        -- الأيام غير المشغولة بعد انتهاء الخدمة خلال هذا الشهر
+        CASE 
+            WHEN TermCalc.TerminationDate >= @MonthStart AND TermCalc.TerminationDate <= @MonthEnd THEN 
+                CASE 
+                    WHEN DAY(TermCalc.TerminationDate) >= @StandardMonthlyDays THEN 0.0 
+                    ELSE (@StandardMonthlyDays - DAY(TermCalc.TerminationDate)) 
+                END
+            ELSE 0.0 
+        END AS UnworkedTerminationDays,
+
+        -- الأيام غير المشغولة قبل تاريخ التعيين الجديد إذا عُيّن الموظف خلال هذا الشهر
+        CASE 
+            WHEN e.HireDate > @MonthStart AND e.HireDate <= @MonthEnd THEN 
+                CASE 
+                    WHEN DAY(e.HireDate) - 1 >= @StandardMonthlyDays THEN @StandardMonthlyDays 
+                    ELSE CAST((DAY(e.HireDate) - 1) AS DECIMAL(5,2)) 
+                END
+            ELSE 0.0 
+        END AS UnworkedHireDays,
+
         -- حالة الإجازة
         CASE 
             -- الحالة 1: إجازة مستمرة طوال الشهر بدون مباشرة عمل في هذا الشهر
@@ -14939,12 +15057,31 @@ BEGIN
               AND l.Status NOT IN ('Rejected', 'Cancelled')
               AND l.ResumptionDate >= @MonthStart AND l.ResumptionDate <= @MonthEnd
         ) AS ResumptionDateInMonth
-    INTO #EmpLeaveState
-    FROM [HR].[Employees] e
-    WHERE e.Status NOT IN ('Terminated', 'Resigned') 
-       OR (e.HireDate IS NOT NULL AND e.HireDate <= @MonthEnd);
 
-    -- 4. إدراج تفاصيل الرواتب باحتساب دقيق لأيام الدوام المستحقة والغياب وساعات العمل والإضافي
+    INTO #EmpMonthState
+    FROM [HR].[Employees] e
+    CROSS APPLY (
+        SELECT TerminationDate = COALESCE(
+            e.EndDate,
+            (SELECT MAX(s.EndDate) 
+             FROM [HR].[EndOfServiceSettlements] s 
+             WHERE s.EmployeeID = e.EmployeeID 
+               AND s.Status NOT IN ('Rejected', 'Cancelled')),
+            CASE WHEN e.Status IN ('Terminated', 'Resigned') THEN CAST(ISNULL(e.UpdatedAt, e.CreatedAt) AS DATE) ELSE NULL END
+        )
+    ) TermCalc
+    WHERE 
+        -- 1. الموظف عُيّن في هذا الشهر أو قبله
+        (e.HireDate IS NULL OR e.HireDate <= @MonthEnd)
+        AND
+        -- 2. لم تنتهِ خدماته قبل بداية هذا الشهر
+        (
+            (TermCalc.TerminationDate IS NULL AND e.Status NOT IN ('Terminated', 'Resigned'))
+            OR
+            (TermCalc.TerminationDate IS NOT NULL AND TermCalc.TerminationDate >= @MonthStart)
+        );
+
+    -- 4. إدراج تفاصيل الرواتب: الراتب الأساسي والبدلات ثوابت تماماً، وتسجيل الأيام غير المشغولة والغياب وأيام ما بعد إنهاء الخدمة كأيام مخصومة ومبلغ خصم وفق ضوابط الرواتب
     INSERT INTO [HR].[PayrollDetails] 
     (
         BatchID, EmployeeID, BasicSalary, HousingAllowance, TransportAllowance, OtherAllowances,
@@ -14955,10 +15092,10 @@ BEGIN
     SELECT 
         @BatchID,
         e.EmployeeID,
-        Calc.ProratedBasic,
-        Calc.ProratedHousing,
-        Calc.ProratedTransport,
-        Calc.ProratedOther,
+        Calc.BasicSalary,
+        Calc.HousingAllowance,
+        Calc.TransportAllowance,
+        Calc.OtherAllowances,
         Calc.EffectiveWorkingDays,
         Calc.EffectiveAbsentDays,
         Calc.OvertimeHours,
@@ -14972,78 +15109,129 @@ BEGIN
         'Unpaid' AS PaymentStatus,
         Calc.CalculationNotes
     FROM [HR].[Employees] e
-    INNER JOIN #EmpLeaveState els ON e.EmployeeID = els.EmployeeID
+    INNER JOIN #EmpMonthState ems ON e.EmployeeID = ems.EmployeeID
     LEFT JOIN #AttSummary att ON e.EmployeeID = att.EmployeeID
     CROSS APPLY (
         SELECT 
-            -- تحديد الأيام الاسمية المؤهلة للعمل
-            NominalPayableDays = CASE 
-                WHEN els.LeaveCase = 'AllMonthOnLeave' THEN 0
-                WHEN els.LeaveCase = 'StartedLeaveInMonth' THEN 
+            -- تحديد الأيام غير المشغولة في الشهر بسبب الإجازة أو عدم مباشرة العمل
+            UnworkedLeaveDays = CASE 
+                WHEN ems.LeaveCase = 'AllMonthOnLeave' THEN @StandardMonthlyDays
+                WHEN ems.LeaveCase = 'StartedLeaveInMonth' THEN 
                     CASE 
-                        WHEN DAY(els.LeaveStartDateInMonth) - 1 < 0 THEN 0 
-                        WHEN DAY(els.LeaveStartDateInMonth) - 1 > 30 THEN 30
-                        ELSE DAY(els.LeaveStartDateInMonth) - 1 
+                        WHEN DAY(ems.LeaveStartDateInMonth) > @StandardMonthlyDays THEN 0 
+                        ELSE (@StandardMonthlyDays - DAY(ems.LeaveStartDateInMonth) + 1)
                     END
-                WHEN els.LeaveCase = 'ResumedInMonth' THEN 
+                WHEN ems.LeaveCase = 'ResumedInMonth' THEN 
                     CASE 
-                        WHEN DAY(els.ResumptionDateInMonth) > 30 THEN 1 
-                        ELSE (30 - DAY(els.ResumptionDateInMonth) + 1)
+                        WHEN DAY(ems.ResumptionDateInMonth) - 1 < 0 THEN 0 
+                        WHEN DAY(ems.ResumptionDateInMonth) - 1 > @StandardMonthlyDays THEN @StandardMonthlyDays
+                        ELSE DAY(ems.ResumptionDateInMonth) - 1 
                     END
-                WHEN els.LeaveCase = 'BothInMonth' THEN
-                    -- أيام قبل الإجازة + أيام بعد المباشرة
-                    (CASE WHEN DAY(els.LeaveStartDateInMonth) - 1 < 0 THEN 0 ELSE DAY(els.LeaveStartDateInMonth) - 1 END) +
-                    (CASE WHEN DAY(els.ResumptionDateInMonth) > 30 THEN 1 ELSE (30 - DAY(els.ResumptionDateInMonth) + 1) END)
-                ELSE 30
+                WHEN ems.LeaveCase = 'BothInMonth' THEN
+                    -- أيام بعد الإجازة + أيام قبل المباشرة
+                    (CASE WHEN DAY(ems.LeaveStartDateInMonth) > @StandardMonthlyDays THEN 0 ELSE (@StandardMonthlyDays - DAY(ems.LeaveStartDateInMonth) + 1) END) +
+                    (CASE WHEN DAY(ems.ResumptionDateInMonth) - 1 < 0 THEN 0 WHEN DAY(ems.ResumptionDateInMonth) - 1 > @StandardMonthlyDays THEN @StandardMonthlyDays ELSE DAY(ems.ResumptionDateInMonth) - 1 END)
+                ELSE 0.0
             END,
             
-            -- أيام الغياب من الحضور (سواء الخصم المحدد أو أيام Absent)
+            -- أيام الغياب المسجلة من الحضور والانصراف
             TotAbsence = CASE 
-                WHEN els.LeaveCase = 'AllMonthOnLeave' THEN 0
+                WHEN ems.LeaveCase = 'AllMonthOnLeave' THEN 0
                 WHEN ISNULL(att.TotAbsenceDeductionDays, 0) > 0 THEN ISNULL(att.TotAbsenceDeductionDays, 0)
                 ELSE CAST(ISNULL(att.CountAbsentDays, 0) AS DECIMAL(5,2))
             END,
 
-            -- ملاحظات توضيحية للمسير
+            -- ملاحظات توضيحية لإنهاء الخدمة
+            TermNote = CASE 
+                WHEN ems.IsTerminatedInThisMonth = 1 
+                THEN N'إنهاء خدمة في ' + CONVERT(VARCHAR(10), ems.TerminationDate, 120) + N' (مستحق حتى تاريخ انتهاء الخدمة)'
+                ELSE NULL 
+            END,
+
+            -- ملاحظة التعيين الجديد
+            HireNote = CASE 
+                WHEN e.HireDate > @MonthStart AND e.HireDate <= @MonthEnd 
+                THEN N'تعيين جديد في ' + CONVERT(VARCHAR(10), e.HireDate, 120)
+                ELSE NULL 
+            END,
+
+            -- ملاحظات توضيحية للإجازة
             LeaveNote = CASE 
-                WHEN els.LeaveCase = 'AllMonthOnLeave' THEN N'في إجازة طوال الشهر (لم يباشر العمل بعد)'
-                WHEN els.LeaveCase = 'StartedLeaveInMonth' THEN N'إجازة بدأت في ' + CONVERT(VARCHAR(10), els.LeaveStartDateInMonth, 120) + N' (الراتب حتى بداية الإجازة)'
-                WHEN els.LeaveCase = 'ResumedInMonth' THEN N'مباشرة عمل في ' + CONVERT(VARCHAR(10), els.ResumptionDateInMonth, 120) + N' (الراتب من تاريخ المباشرة)'
-                WHEN els.LeaveCase = 'BothInMonth' THEN N'إجازة في ' + CONVERT(VARCHAR(10), els.LeaveStartDateInMonth, 120) + N' ومباشرة في ' + CONVERT(VARCHAR(10), els.ResumptionDateInMonth, 120)
+                WHEN ems.LeaveCase = 'AllMonthOnLeave' THEN N'في إجازة طوال الشهر (لم يباشر العمل بعد)'
+                WHEN ems.LeaveCase = 'StartedLeaveInMonth' THEN N'إجازة بدأت في ' + CONVERT(VARCHAR(10), ems.LeaveStartDateInMonth, 120)
+                WHEN ems.LeaveCase = 'ResumedInMonth' THEN N'مباشرة عمل في ' + CONVERT(VARCHAR(10), ems.ResumptionDateInMonth, 120)
+                WHEN ems.LeaveCase = 'BothInMonth' THEN N'إجازة في ' + CONVERT(VARCHAR(10), ems.LeaveStartDateInMonth, 120) + N' ومباشرة في ' + CONVERT(VARCHAR(10), ems.ResumptionDateInMonth, 120)
                 ELSE NULL
             END
     ) Stage1
     CROSS APPLY (
         SELECT 
+            -- تحديد وعاء الحساب (الراتب الأساسي فقط أو الأساسي + البدلات)
+            CalculationBaseSalary = CASE 
+                WHEN @CalculationBasis IN ('GrossTotal', 'BasicAndAllowances') THEN (e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances)
+                ELSE e.BasicSalary
+            END,
+            -- إجمالي أيام الخصم (أيام ما بعد إنهاء الخدمة + أيام ما قبل التعيين + أيام الإجازة/عدم المباشرة + أيام الغياب)
+            RawDeductionDays = ems.UnworkedTerminationDays + ems.UnworkedHireDays + Stage1.UnworkedLeaveDays + Stage1.TotAbsence,
+
+            -- دمج الملاحظات
+            CombinedNote = CASE 
+                WHEN Stage1.TermNote IS NOT NULL AND Stage1.LeaveNote IS NOT NULL THEN Stage1.TermNote + N' | ' + Stage1.LeaveNote
+                WHEN Stage1.TermNote IS NOT NULL THEN Stage1.TermNote
+                WHEN Stage1.HireNote IS NOT NULL AND Stage1.LeaveNote IS NOT NULL THEN Stage1.HireNote + N' | ' + Stage1.LeaveNote
+                WHEN Stage1.HireNote IS NOT NULL THEN Stage1.HireNote
+                ELSE Stage1.LeaveNote
+            END
+    ) RateBase
+    CROSS APPLY (
+        SELECT 
+            -- أيام الخصم الفعلية مقيدة بأيام الشهر القياسية
+            TotalDeductionDays = CASE 
+                WHEN RateBase.RawDeductionDays > @StandardMonthlyDays THEN @StandardMonthlyDays 
+                ELSE RateBase.RawDeductionDays 
+            END,
+            DayRate = RateBase.CalculationBaseSalary / @StandardMonthlyDays,
+            HourRate = RateBase.CalculationBaseSalary / @MonthlyWorkHours
+    ) Rates
+    CROSS APPLY (
+        SELECT 
             -- أيام العمل الفعلية المستحقة
             EffectiveWorkingDays = CASE 
-                WHEN Stage1.NominalPayableDays <= 0 THEN 0
-                WHEN (Stage1.NominalPayableDays - Stage1.TotAbsence) < 0 THEN 0
-                ELSE CAST(ROUND(Stage1.NominalPayableDays - Stage1.TotAbsence, 0) AS INT)
+                WHEN (@StandardMonthlyDays - Rates.TotalDeductionDays) < 0 THEN 0
+                ELSE CAST(ROUND(@StandardMonthlyDays - Rates.TotalDeductionDays, 0) AS INT)
             END,
-            EffectiveAbsentDays = CAST(ROUND(Stage1.TotAbsence, 0) AS INT),
-            DeductionDays = Stage1.TotAbsence,
+            EffectiveAbsentDays = CAST(ROUND(Rates.TotalDeductionDays, 0) AS INT),
+            DeductionDays = Rates.TotalDeductionDays,
 
-            -- نسبة الاستحقاق من الراتب الأساسي والبدلات على معيار 30 يوماً
-            ProrateRatio = CASE 
-                WHEN Stage1.NominalPayableDays <= 0 THEN 0.0
-                WHEN Stage1.NominalPayableDays >= 30 THEN 1.0
-                ELSE CAST(Stage1.NominalPayableDays AS DECIMAL(18,4)) / 30.0
-            END,
-
-            -- الإضافي والغياب والتأخير
+            -- الإضافي بناءً على ضوابط الرواتب المعتمدة
             OvertimeHours = ISNULL(att.TotOvertimeHours, 0),
             OvertimeDays = ISNULL(att.TotOvertimeDays, 0),
-            OvertimeAmount = ROUND((ISNULL(att.TotOvertimeHours, 0) * (e.BasicSalary / 240.0 * 1.5)) + (ISNULL(att.TotOvertimeDays, 0) * (e.BasicSalary / 30.0 * 1.5)), 3),
-            DeductionAmount = ROUND(Stage1.TotAbsence * (e.BasicSalary / 30.0), 3),
-            DelayDeductions = ROUND((ISNULL(att.TotDelayMinutes, 0) / 60.0) * (e.BasicSalary / 240.0), 3)
+            OvertimeAmount = ROUND(
+                (ISNULL(att.TotOvertimeHours, 0) * (Rates.HourRate * @OvertimeHourMultiplier)) + 
+                (ISNULL(att.TotOvertimeDays, 0) * (Rates.DayRate * @OvertimeDayMultiplier)), 
+                3
+            ),
+
+            -- مبلغ الخصم بناءً على مضاعف الغياب وضوابط الرواتب
+            DeductionAmount = CASE 
+                WHEN ems.LeaveCase = 'AllMonthOnLeave' OR Rates.TotalDeductionDays >= @StandardMonthlyDays 
+                THEN (e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances) -- خصم كامل المستحقات ليكون الصافي 0
+                ELSE ROUND(Rates.TotalDeductionDays * (Rates.DayRate * @AbsenceDayMultiplier), 3)
+            END,
+
+            -- خصم التأخير الصباحي بناءً على فترة السماح وضوابط الرواتب
+            DelayDeductions = CASE 
+                WHEN @EnableDelayDeduction = 1 AND ISNULL(att.TotDelayMinutes, 0) > @DelayGracePeriodMinutes 
+                THEN ROUND(((ISNULL(att.TotDelayMinutes, 0) - @DelayGracePeriodMinutes) / 60.0) * Rates.HourRate, 3)
+                ELSE 0.0
+            END
     ) Stage2
     CROSS APPLY (
         SELECT 
-            ProratedBasic = ROUND(e.BasicSalary * Stage2.ProrateRatio, 3),
-            ProratedHousing = ROUND(e.HousingAllowance * Stage2.ProrateRatio, 3),
-            ProratedTransport = ROUND(e.TransportAllowance * Stage2.ProrateRatio, 3),
-            ProratedOther = ROUND(e.OtherAllowances * Stage2.ProrateRatio, 3),
+            BasicSalary = e.BasicSalary, -- ثابت دون أي إنقاص كما في ملف الموظف
+            HousingAllowance = e.HousingAllowance, -- ثابت
+            TransportAllowance = e.TransportAllowance, -- ثابت
+            OtherAllowances = e.OtherAllowances, -- ثابت
             EffectiveWorkingDays = Stage2.EffectiveWorkingDays,
             EffectiveAbsentDays = Stage2.EffectiveAbsentDays,
             OvertimeHours = Stage2.OvertimeHours,
@@ -15052,30 +15240,12 @@ BEGIN
             DeductionDays = Stage2.DeductionDays,
             DeductionAmount = Stage2.DeductionAmount,
             DelayDeductions = Stage2.DelayDeductions,
-            CalculationNotes = Stage1.LeaveNote
-    ) Stage3
-    CROSS APPLY (
-        SELECT 
-            ProratedBasic = Stage3.ProratedBasic,
-            ProratedHousing = Stage3.ProratedHousing,
-            ProratedTransport = Stage3.ProratedTransport,
-            ProratedOther = Stage3.ProratedOther,
-            EffectiveWorkingDays = Stage3.EffectiveWorkingDays,
-            EffectiveAbsentDays = Stage3.EffectiveAbsentDays,
-            OvertimeHours = Stage3.OvertimeHours,
-            OvertimeAmount = Stage3.OvertimeAmount,
-            OvertimeDays = Stage3.OvertimeDays,
-            DeductionDays = Stage3.DeductionDays,
-            DeductionAmount = Stage3.DeductionAmount,
-            DelayDeductions = Stage3.DelayDeductions,
-            CalculationNotes = Stage3.CalculationNotes,
+            CalculationNotes = RateBase.CombinedNote,
             FinalNetSalary = CASE 
-                WHEN ((Stage3.ProratedBasic + Stage3.ProratedHousing + Stage3.ProratedTransport + Stage3.ProratedOther + Stage3.OvertimeAmount) - (Stage3.DeductionAmount + Stage3.DelayDeductions)) < 0 THEN 0 
-                ELSE ROUND(((Stage3.ProratedBasic + Stage3.ProratedHousing + Stage3.ProratedTransport + Stage3.ProratedOther + Stage3.OvertimeAmount) - (Stage3.DeductionAmount + Stage3.DelayDeductions)), 3)
+                WHEN ((e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances + Stage2.OvertimeAmount) - (Stage2.DeductionAmount + Stage2.DelayDeductions)) < 0 THEN 0 
+                ELSE ROUND(((e.BasicSalary + e.HousingAllowance + e.TransportAllowance + e.OtherAllowances + Stage2.OvertimeAmount) - (Stage2.DeductionAmount + Stage2.DelayDeductions)), 3)
             END
-    ) Calc
-    WHERE e.Status NOT IN ('Terminated', 'Resigned') 
-       OR (e.HireDate IS NOT NULL AND e.HireDate <= @MonthEnd);
+    ) Calc;
 
     -- 5. تحديث إجماليات مسير الرواتب الرئيسي
     UPDATE [HR].[PayrollBatches]
@@ -15088,7 +15258,7 @@ BEGIN
 
     -- تنظيف الجداول المؤقتة
     IF OBJECT_ID('tempdb..#AttSummary') IS NOT NULL DROP TABLE #AttSummary;
-    IF OBJECT_ID('tempdb..#EmpLeaveState') IS NOT NULL DROP TABLE #EmpLeaveState;
+    IF OBJECT_ID('tempdb..#EmpMonthState') IS NOT NULL DROP TABLE #EmpMonthState;
 
     SELECT @BatchID AS BatchID;
 END
@@ -15101,6 +15271,7 @@ CREATE PROCEDURE [HR].[sp_Payroll_SaveDetail]
     @PayrollDetailID INT,
     @OvertimeHours DECIMAL(5,2),
     @OvertimeAmount DECIMAL(18,3),
+    @DeductionDays DECIMAL(5,2) = 0,
     @DeductionAmount DECIMAL(18,3),
     @AdvancesDeductions DECIMAL(18,3),
     @NetSalary DECIMAL(18,3),
@@ -15111,6 +15282,7 @@ BEGIN
     UPDATE [HR].[PayrollDetails]
     SET OvertimeHours = @OvertimeHours,
         OvertimeAmount = @OvertimeAmount,
+        DeductionDays = @DeductionDays,
         DeductionAmount = @DeductionAmount,
         AdvancesDeductions = @AdvancesDeductions,
         NetSalary = @NetSalary,
@@ -15259,13 +15431,87 @@ BEGIN
         SET @SettlementID = SCOPE_IDENTITY();
     END
 
-    -- Update Employee Status to Resigned or Terminated
+    -- Update Employee Status to Resigned or Terminated and set EndDate
     IF @Status = 'Approved'
     BEGIN
         UPDATE [HR].[Employees] 
-        SET Status = CASE WHEN @DepartureReason = 'Resignation' THEN 'Resigned' ELSE 'Terminated' END 
+        SET Status = CASE WHEN @DepartureReason = 'Resignation' THEN 'Resigned' ELSE 'Terminated' END,
+            EndDate = @EndDate
         WHERE EmployeeID = @EmployeeID;
     END
+END
+GO
+
+-- 4.24. sp_PayrollSettings_Get (جلب إعدادات وضوابط الرواتب الحالية)
+IF OBJECT_ID('[HR].[sp_PayrollSettings_Get]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_PayrollSettings_Get];
+GO
+CREATE PROCEDURE [HR].[sp_PayrollSettings_Get]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM [HR].[PayrollSettings] WHERE SettingID = 1)
+    BEGIN
+        INSERT INTO [HR].[PayrollSettings] (
+            SettingID, StandardMonthlyDays, DailyWorkHours, OvertimeHourMultiplier,
+            OvertimeDayMultiplier, CalculationBasis, EnableDelayDeduction,
+            DelayGracePeriodMinutes, AbsenceDayMultiplier, Notes, UpdatedBy
+        ) VALUES (
+            1, 30, 8.0, 1.5, 1.5, 'BasicOnly', 1, 0, 1.0, N'الإعدادات والضوابط الافتراضية لحساب الرواتب', N'System'
+        );
+    END
+
+    SELECT TOP 1 * FROM [HR].[PayrollSettings] WHERE SettingID = 1;
+END
+GO
+
+-- 4.25. sp_PayrollSettings_Save (حفظ وتحديث إعدادات وضوابط الرواتب)
+IF OBJECT_ID('[HR].[sp_PayrollSettings_Save]', 'P') IS NOT NULL DROP PROCEDURE [HR].[sp_PayrollSettings_Save];
+GO
+CREATE PROCEDURE [HR].[sp_PayrollSettings_Save]
+    @StandardMonthlyDays INT = 30,
+    @DailyWorkHours DECIMAL(4,2) = 8.0,
+    @OvertimeHourMultiplier DECIMAL(4,2) = 1.5,
+    @OvertimeDayMultiplier DECIMAL(4,2) = 1.5,
+    @CalculationBasis NVARCHAR(50) = 'BasicOnly',
+    @EnableDelayDeduction BIT = 1,
+    @DelayGracePeriodMinutes INT = 0,
+    @AbsenceDayMultiplier DECIMAL(4,2) = 1.0,
+    @Notes NVARCHAR(MAX) = NULL,
+    @UpdatedBy NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM [HR].[PayrollSettings] WHERE SettingID = 1)
+    BEGIN
+        UPDATE [HR].[PayrollSettings]
+        SET StandardMonthlyDays = @StandardMonthlyDays,
+            DailyWorkHours = @DailyWorkHours,
+            OvertimeHourMultiplier = @OvertimeHourMultiplier,
+            OvertimeDayMultiplier = @OvertimeDayMultiplier,
+            CalculationBasis = @CalculationBasis,
+            EnableDelayDeduction = @EnableDelayDeduction,
+            DelayGracePeriodMinutes = @DelayGracePeriodMinutes,
+            AbsenceDayMultiplier = @AbsenceDayMultiplier,
+            Notes = @Notes,
+            UpdatedAt = GETDATE(),
+            UpdatedBy = @UpdatedBy
+        WHERE SettingID = 1;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO [HR].[PayrollSettings] (
+            SettingID, StandardMonthlyDays, DailyWorkHours, OvertimeHourMultiplier,
+            OvertimeDayMultiplier, CalculationBasis, EnableDelayDeduction,
+            DelayGracePeriodMinutes, AbsenceDayMultiplier, Notes, UpdatedAt, UpdatedBy
+        ) VALUES (
+            1, @StandardMonthlyDays, @DailyWorkHours, @OvertimeHourMultiplier,
+            @OvertimeDayMultiplier, @CalculationBasis, @EnableDelayDeduction,
+            @DelayGracePeriodMinutes, @AbsenceDayMultiplier, @Notes, GETDATE(), @UpdatedBy
+        );
+    END
+
+    SELECT TOP 1 * FROM [HR].[PayrollSettings] WHERE SettingID = 1;
 END
 GO
 

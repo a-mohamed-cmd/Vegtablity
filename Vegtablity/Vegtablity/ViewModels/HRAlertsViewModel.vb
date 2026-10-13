@@ -30,7 +30,7 @@ Namespace ViewModels
             End Set
         End Property
 
-        Private _selectedFilter As String = "All" ' All, Expired, ExpiringSoon
+        Private _selectedFilter As String = "All" ' All, Expired, ExpiringSoon, Terminated
         Public Property SelectedFilter As String
             Get
                 Return _selectedFilter
@@ -39,6 +39,28 @@ Namespace ViewModels
                 If SetProperty(_selectedFilter, value) Then
                     ApplyFilter()
                 End If
+            End Set
+        End Property
+
+        Private _includeTerminated As Boolean = False
+        Public Property IncludeTerminated As Boolean
+            Get
+                Return _includeTerminated
+            End Get
+            Set(value As Boolean)
+                If SetProperty(_includeTerminated, value) Then
+                    LoadAlerts()
+                End If
+            End Set
+        End Property
+
+        Private _terminatedAlertsCount As Integer = 0
+        Public Property TerminatedAlertsCount As Integer
+            Get
+                Return _terminatedAlertsCount
+            End Get
+            Set(value As Integer)
+                SetProperty(_terminatedAlertsCount, value)
             End Set
         End Property
 
@@ -98,15 +120,16 @@ Namespace ViewModels
 
         Public Sub LoadAlerts()
             Try
-                Dim list = _hrService.GetActiveAlerts()
+                Dim list = _hrService.GetActiveAlerts(IncludeTerminated)
                 _allAlerts.Clear()
                 If list IsNot Nothing Then
                     _allAlerts.AddRange(list)
                 End If
 
-                ExpiredCount = _allAlerts.Where(Function(a) a.AlertStatus = "Expired").Count()
-                ExpiringSoonCount = _allAlerts.Where(Function(a) a.AlertStatus = "ExpiringSoon").Count()
-                TotalAlertsCount = _allAlerts.Count
+                ExpiredCount = _allAlerts.Where(Function(a) Not a.IsTerminated AndAlso a.AlertStatus = "Expired").Count()
+                ExpiringSoonCount = _allAlerts.Where(Function(a) Not a.IsTerminated AndAlso a.AlertStatus = "ExpiringSoon").Count()
+                TerminatedAlertsCount = _allAlerts.Where(Function(a) a.IsTerminated).Count()
+                TotalAlertsCount = If(IncludeTerminated, _allAlerts.Count, _allAlerts.Where(Function(a) Not a.IsTerminated).Count())
 
                 ApplyFilter()
             Catch ex As Exception
@@ -126,9 +149,16 @@ Namespace ViewModels
 
             ' 1. Filter by Status
             If SelectedFilter = "Expired" Then
-                query = query.Where(Function(a) a.AlertStatus = "Expired")
+                query = query.Where(Function(a) Not a.IsTerminated AndAlso a.AlertStatus = "Expired")
             ElseIf SelectedFilter = "ExpiringSoon" Then
-                query = query.Where(Function(a) a.AlertStatus = "ExpiringSoon")
+                query = query.Where(Function(a) Not a.IsTerminated AndAlso a.AlertStatus = "ExpiringSoon")
+            ElseIf SelectedFilter = "Terminated" Then
+                query = query.Where(Function(a) a.IsTerminated)
+            Else
+                ' "All"
+                If Not IncludeTerminated Then
+                    query = query.Where(Function(a) Not a.IsTerminated)
+                End If
             End If
 
             ' 2. Filter by Search Query
@@ -153,6 +183,11 @@ Namespace ViewModels
         Private Sub SendReminder(parameter As Object)
             Dim item = TryCast(parameter, HRAlertItem)
             If item Is Nothing Then Return
+
+            If item.IsTerminated Then
+                MessageBox.Show($"الموظف '{item.EmployeeName}' تم إنهاء خدماته؛ ولا يتطلب إرسال إشعار تجديد وثائق له.", "موظف منتهي الخدمة", MessageBoxButton.OK, MessageBoxImage.Information)
+                Return
+            End If
 
             Dim statusLine As String
             If item.AlertStatus = "Expired" Then

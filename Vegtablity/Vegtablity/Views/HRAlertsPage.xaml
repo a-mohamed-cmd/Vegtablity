@@ -228,6 +228,12 @@
                         </Button>
 
 
+                        <!-- Include Terminated Checkbox -->
+                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,0" Height="34" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <CheckBox Content="تضمين المنتهية خدماتهم" IsChecked="{Binding IncludeTerminated, UpdateSourceTrigger=PropertyChanged}"
+                                      VerticalAlignment="Center" FontSize="11.5" FontWeight="Bold" Foreground="#64748B"/>
+                        </Border>
+
                         <!-- Results Badge -->
                         <Border Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="10,0" Height="34" VerticalAlignment="Center">
                             <TextBlock Text="{Binding FilteredCount, StringFormat={}{0} نتيجة}" FontSize="12" FontWeight="Bold" Foreground="#475569" VerticalAlignment="Center"/>

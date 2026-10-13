@@ -7,6 +7,9 @@ Namespace Models.HR
         Public Property EmployeeCode As String
         Public Property EmployeeName As String
         Public Property Department As String
+        Public Property EmployeeStatus As String
+        Public Property TerminationDate As DateTime?
+        Public Property IsTerminated As Boolean
         Public Property FieldID As Integer
         Public Property FieldKey As String
         Public Property FieldNameAr As String
@@ -16,7 +19,10 @@ Namespace Models.HR
 
         Public ReadOnly Property StatusText As String
             Get
-                If AlertStatus = "Expired" Then
+                If IsTerminated Then
+                    Dim termStr = If(TerminationDate.HasValue, $" ({TerminationDate.Value:yyyy/MM/dd})", "")
+                    Return $"خدمة منتهية{termStr} 🛑"
+                ElseIf AlertStatus = "Expired" Then
                     Return $"منتهية منذ {Math.Abs(DaysRemaining)} يوم ⚠️"
                 ElseIf AlertStatus = "ExpiringSoon" Then
                     Return $"تنتهي خلال {DaysRemaining} يوم"
@@ -28,7 +34,9 @@ Namespace Models.HR
 
         Public ReadOnly Property BadgeColor As String
             Get
-                If AlertStatus = "Expired" Then
+                If IsTerminated Then
+                    Return "#6B7280" ' Gray
+                ElseIf AlertStatus = "Expired" Then
                     Return "#EF4444" ' Red
                 ElseIf AlertStatus = "ExpiringSoon" Then
                     Return "#F59E0B" ' Amber

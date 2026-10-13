@@ -164,6 +164,29 @@ Namespace ViewModels
         Public Property PrintFullBatchCommand As ICommand
         Public Property RefreshCommand As ICommand
 
+        ' === Active Payroll Settings & Rules Permissions ===
+        Private _activePayrollSettings As PayrollSettings
+        Public Property ActivePayrollSettings As PayrollSettings
+            Get
+                Return _activePayrollSettings
+            End Get
+            Set(value As PayrollSettings)
+                If SetProperty(_activePayrollSettings, value) Then
+                    PayrollDetail.CurrentSettings = value
+                End If
+            End Set
+        End Property
+
+        Private _canModifyRules As Boolean = False
+        Public Property CanModifyRules As Boolean
+            Get
+                Return _canModifyRules
+            End Get
+            Set(value As Boolean)
+                SetProperty(_canModifyRules, value)
+            End Set
+        End Property
+
         Public Sub New()
             Batches = New ObservableCollection(Of PayrollBatch)()
             PayrollDetailsList = New ObservableCollection(Of PayrollDetail)()
@@ -178,10 +201,40 @@ Namespace ViewModels
             ApproveBatchCommand = New RelayCommand(AddressOf ApproveBatch)
             PrintPayslipCommand = New RelayCommand(AddressOf PrintPayslip)
             PrintFullBatchCommand = New RelayCommand(AddressOf PrintFullBatch)
-            RefreshCommand = New RelayCommand(Sub() LoadBatches())
+            RefreshCommand = New RelayCommand(Sub()
+                                                  LoadPayrollSettings()
+                                                  LoadBatches()
+                                              End Sub)
 
             LoadPermissions("HRPayroll")
+            CheckRulesPermissions()
+            LoadPayrollSettings()
             LoadBatches()
+        End Sub
+
+        Public Sub CheckRulesPermissions()
+            Try
+                Dim permService As New Services.PermissionService()
+                If Services.Session.CurrentUser IsNot Nothing Then
+                    Dim roleID = Services.Session.CurrentUser.RoleID
+                    Dim canViewSettings = permService.CanViewForm(roleID, "HRSettings")
+                    Dim hrSettingsPerm = permService.GetPermissionsForForm(roleID, "HRSettings")
+                    CanModifyRules = canViewSettings AndAlso (hrSettingsPerm.CanEdit OrElse hrSettingsPerm.CanAdd)
+                Else
+                    CanModifyRules = True
+                End If
+            Catch ex As Exception
+                CanModifyRules = False
+            End Try
+        End Sub
+
+        Public Sub LoadPayrollSettings()
+            Try
+                ActivePayrollSettings = _hrService.GetPayrollSettings()
+            Catch ex As Exception
+                ActivePayrollSettings = New PayrollSettings()
+            End Try
+            PayrollDetail.CurrentSettings = ActivePayrollSettings
         End Sub
 
         Private Sub LoadBatches()

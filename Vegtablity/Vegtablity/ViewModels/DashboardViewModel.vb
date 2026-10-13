@@ -408,7 +408,7 @@ Namespace ViewModels
                 hrChildren.Add(New MenuItem With {.Title = "مسير الرواتب الشهري", .Icon = "💵", .FormName = "HRPayroll", .IsVisible = True})
                 hrChildren.Add(New MenuItem With {.Title = "مكافأة نهاية الخدمة", .Icon = "📜", .FormName = "HREndOfService", .IsVisible = True})
                 hrChildren.Add(New MenuItem With {.Title = "تنبيهات الوثائق والتجديد", .Icon = "🔔", .FormName = "HRAlerts", .IsVisible = True})
-                hrChildren.Add(New MenuItem With {.Title = "إعدادات وتخصيص الحقول", .Icon = "⚙️", .FormName = "HRSettings", .IsVisible = True})
+                hrChildren.Add(New MenuItem With {.Title = "إعدادات الموارد وضوابط الرواتب", .Icon = "⚙️", .FormName = "HRSettings", .IsVisible = True})
 
                 allItems.Add(New MenuItem With {
                     .Title = "الموارد البشرية",

@@ -11,6 +11,60 @@ Namespace Models.HR
             RaiseEvent PropertyChanged(Me, New PropertyChangedEventArgs(propName))
         End Sub
 
+        Public Shared Property CurrentSettings As PayrollSettings
+
+        Private Function GetCalculationBase() As Decimal
+            Dim s = CurrentSettings
+            If s IsNot Nothing AndAlso 
+               (String.Equals(s.CalculationBasis, "GrossTotal", StringComparison.OrdinalIgnoreCase) OrElse 
+                String.Equals(s.CalculationBasis, "BasicAndAllowances", StringComparison.OrdinalIgnoreCase)) Then
+                Return _basicSalary + TotalAllowances
+            End If
+            Return _basicSalary
+        End Function
+
+        Private Function GetStandardMonthlyDays() As Decimal
+            Dim s = CurrentSettings
+            If s IsNot Nothing AndAlso s.StandardMonthlyDays > 0 Then
+                Return CDec(s.StandardMonthlyDays)
+            End If
+            Return 30.0D
+        End Function
+
+        Private Function GetMonthlyWorkHours() As Decimal
+            Dim s = CurrentSettings
+            If s IsNot Nothing Then
+                Dim days = If(s.StandardMonthlyDays > 0, CDec(s.StandardMonthlyDays), 30.0D)
+                Dim dailyHours = If(s.DailyWorkHours > 0, s.DailyWorkHours, 8.0D)
+                Return days * dailyHours
+            End If
+            Return 240.0D
+        End Function
+
+        Private Function GetOvertimeHourMultiplier() As Decimal
+            Dim s = CurrentSettings
+            If s IsNot Nothing AndAlso s.OvertimeHourMultiplier > 0 Then
+                Return s.OvertimeHourMultiplier
+            End If
+            Return 1.5D
+        End Function
+
+        Private Function GetOvertimeDayMultiplier() As Decimal
+            Dim s = CurrentSettings
+            If s IsNot Nothing AndAlso s.OvertimeDayMultiplier > 0 Then
+                Return s.OvertimeDayMultiplier
+            End If
+            Return 1.5D
+        End Function
+
+        Private Function GetAbsenceDayMultiplier() As Decimal
+            Dim s = CurrentSettings
+            If s IsNot Nothing AndAlso s.AbsenceDayMultiplier > 0 Then
+                Return s.AbsenceDayMultiplier
+            End If
+            Return 1.0D
+        End Function
+
         Private _basicSalary As Decimal = 0
         Private _housingAllowance As Decimal = 0
         Private _transportAllowance As Decimal = 0
@@ -44,7 +98,7 @@ Namespace Models.HR
                 If _basicSalary <> value Then
                     _basicSalary = value
                     OnPropertyChanged(NameOf(BasicSalary))
-                    RecalculateSmart(autoDeriveFromBasic:=True)
+                    Recalculate()
                 End If
             End Set
         End Property
@@ -123,11 +177,13 @@ Namespace Models.HR
                 If _overtimeHours <> value Then
                     _overtimeHours = value
                     OnPropertyChanged(NameOf(OvertimeHours))
-                    ' Smart calculate OvertimeAmount: (BasicSalary / 30 / 8) * OvertimeHours * 1.5
-                    If _basicSalary > 0 AndAlso value > 0 Then
-                        Dim hourlyWage = _basicSalary / 240.0D
-                        _overtimeAmount = Math.Round(hourlyWage * value * 1.5D, 3)
-                        OnPropertyChanged(NameOf(OvertimeAmount))
+                    If value > 0 Then
+                        Dim baseSalary = GetCalculationBase()
+                        If baseSalary > 0 Then
+                            Dim hourlyWage = baseSalary / GetMonthlyWorkHours()
+                            _overtimeAmount = Math.Round(hourlyWage * value * GetOvertimeHourMultiplier(), 3)
+                            OnPropertyChanged(NameOf(OvertimeAmount))
+                        End If
                     ElseIf value = 0 Then
                         _overtimeAmount = 0
                         OnPropertyChanged(NameOf(OvertimeAmount))
@@ -158,9 +214,15 @@ Namespace Models.HR
                 If _overtimeDays <> value Then
                     _overtimeDays = value
                     OnPropertyChanged(NameOf(OvertimeDays))
-                    If _basicSalary > 0 AndAlso value > 0 Then
-                        Dim dailyWage = _basicSalary / 30.0D
-                        _overtimeAmount = Math.Round(dailyWage * value * 1.5D, 3)
+                    If value > 0 Then
+                        Dim baseSalary = GetCalculationBase()
+                        If baseSalary > 0 Then
+                            Dim dailyWage = baseSalary / GetStandardMonthlyDays()
+                            _overtimeAmount = Math.Round(dailyWage * value * GetOvertimeDayMultiplier(), 3)
+                            OnPropertyChanged(NameOf(OvertimeAmount))
+                        End If
+                    ElseIf value = 0 Then
+                        _overtimeAmount = 0
                         OnPropertyChanged(NameOf(OvertimeAmount))
                     End If
                     Recalculate()
@@ -176,11 +238,13 @@ Namespace Models.HR
                 If _deductionDays <> value Then
                     _deductionDays = value
                     OnPropertyChanged(NameOf(DeductionDays))
-                    ' Smart calculate DeductionAmount: (BasicSalary / 30) * DeductionDays
-                    If _basicSalary > 0 AndAlso value > 0 Then
-                        Dim dailyWage = _basicSalary / 30.0D
-                        _deductionAmount = Math.Round(dailyWage * value, 3)
-                        OnPropertyChanged(NameOf(DeductionAmount))
+                    If value > 0 Then
+                        Dim baseSalary = GetCalculationBase()
+                        If baseSalary > 0 Then
+                            Dim dailyWage = baseSalary / GetStandardMonthlyDays()
+                            _deductionAmount = Math.Round(dailyWage * value * GetAbsenceDayMultiplier(), 3)
+                            OnPropertyChanged(NameOf(DeductionAmount))
+                        End If
                     ElseIf value = 0 Then
                         _deductionAmount = 0
                         OnPropertyChanged(NameOf(DeductionAmount))
@@ -281,16 +345,19 @@ Namespace Models.HR
         End Property
 
         Public Sub RecalculateSmart(Optional autoDeriveFromBasic As Boolean = False)
-            If autoDeriveFromBasic AndAlso _basicSalary > 0 Then
-                If _overtimeHours > 0 Then
-                    Dim hourlyWage = _basicSalary / 240.0D
-                    _overtimeAmount = Math.Round(hourlyWage * _overtimeHours * 1.5D, 3)
-                    OnPropertyChanged(NameOf(OvertimeAmount))
-                End If
-                If _deductionDays > 0 Then
-                    Dim dailyWage = _basicSalary / 30.0D
-                    _deductionAmount = Math.Round(dailyWage * _deductionDays, 3)
-                    OnPropertyChanged(NameOf(DeductionAmount))
+            If autoDeriveFromBasic Then
+                Dim baseSalary = GetCalculationBase()
+                If baseSalary > 0 Then
+                    If _overtimeHours > 0 Then
+                        Dim hourlyWage = baseSalary / GetMonthlyWorkHours()
+                        _overtimeAmount = Math.Round(hourlyWage * _overtimeHours * GetOvertimeHourMultiplier(), 3)
+                        OnPropertyChanged(NameOf(OvertimeAmount))
+                    End If
+                    If _deductionDays > 0 Then
+                        Dim dailyWage = baseSalary / GetStandardMonthlyDays()
+                        _deductionAmount = Math.Round(dailyWage * _deductionDays * GetAbsenceDayMultiplier(), 3)
+                        OnPropertyChanged(NameOf(DeductionAmount))
+                    End If
                 End If
             End If
 

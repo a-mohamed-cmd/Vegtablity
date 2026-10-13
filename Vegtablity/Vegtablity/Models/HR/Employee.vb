@@ -29,6 +29,7 @@ Namespace Models.HR
         Public Property JobTitle As String
         Public Property Department As String
         Public Property HireDate As DateTime
+        Public Property EndDate As DateTime?
         Public Property ContractType As String
 
         Public Property BasicSalary As Decimal

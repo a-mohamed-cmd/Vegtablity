@@ -7,8 +7,12 @@
              xmlns:controls="clr-namespace:Vegtablity.Controls"
              xmlns:helpers="clr-namespace:Vegtablity.Helpers"
              mc:Ignorable="d" 
-             d:DesignHeight="750" d:DesignWidth="1100"
+             d:DesignHeight="850" d:DesignWidth="1180"
              FlowDirection="RightToLeft">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
 
     <UserControl.DataContext>
         <vm:HRSettingsViewModel/>
@@ -20,139 +24,418 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Header & Actions -->
+        <!-- Top Header & Modern Tab Switcher & Actions -->
         <Border Grid.Row="0" Background="White" CornerRadius="12" Padding="16,12" Margin="0,0,0,15">
             <Border.Effect>
                 <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.6"/>
             </Border.Effect>
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- Left: Title & Subtitle based on active tab -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
                     <TextBlock Text="⚙️" FontSize="26" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <StackPanel>
+                    <StackPanel Visibility="{Binding IsPayrollTab, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="إعدادات وضوابط احتساب الرواتب" FontSize="18" FontWeight="Bold" Foreground="#1E293B"/>
+                        <TextBlock Text="تحديد معايير ساعات وأيام العمل الرسمية، نسب الإضافي، وعاء الاحتساب، وضوابط الخصومات" FontSize="12" Foreground="#64748B"/>
+                    </StackPanel>
+                    <StackPanel Visibility="{Binding IsCustomFieldsTab, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="إعدادات الموارد البشرية وتخصيص الحقول" FontSize="18" FontWeight="Bold" Foreground="#1E293B"/>
                         <TextBlock Text="إضافة حقول بيانات مخصصة للموظفين وتعيين فترات التنبيه المسبق قبل الانتهاء" FontSize="12" Foreground="#64748B"/>
                     </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button x:Name="BtnToggleSidePanel" Content="◀ طي المحرر" Click="ToggleSidePanel_Click"
-                            Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#334155"
-                            Height="38" Padding="12,0" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"/>
-                    <Button Content="➕ حقل جديد" Command="{Binding NewCustomFieldCommand}"
-                            Style="{StaticResource ModernButtonStyle}" Background="#4F46E5" Foreground="White"
-                            Height="38" Padding="14,0" FontSize="13" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"/>
-                    <Button Content="💾 حفظ الحقل" Command="{Binding SaveCustomFieldCommand}"
-                            Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White"
-                            Height="38" Padding="14,0" FontSize="13" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"/>
-                    <Button Content="🗑️ حذف الحقل" Command="{Binding DeleteCustomFieldCommand}"
-                            Style="{StaticResource ModernButtonStyle}" Background="#EF4444" Foreground="White"
-                            Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Cursor="Hand"/>
+                <!-- Center: Modern Tab Switcher -->
+                <Border Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#F1F5F9" CornerRadius="10" Padding="4">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="⚙️ ضوابط وقواعد الرواتب" Command="{Binding SelectPayrollTabCommand}"
+                                Height="36" Padding="14,0" FontSize="12.5" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="#64748B"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPayrollTab}" Value="True">
+                                            <Setter Property="Background" Value="#4F46E5"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                        <Button Content="🧩 حقول الموظفين والتنبيهات" Command="{Binding SelectCustomFieldsTabCommand}"
+                                Height="36" Padding="14,0" FontSize="12.5" FontWeight="Bold" Cursor="Hand" BorderThickness="0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource ModernButtonStyle}">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="#64748B"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsCustomFieldsTab}" Value="True">
+                                            <Setter Property="Background" Value="#4F46E5"/>
+                                            <Setter Property="Foreground" Value="White"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Right: Action Buttons per tab -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Payroll Tab Actions -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsPayrollTab, Converter={StaticResource BoolToVis}}">
+                        <Button Content="🔄 استعادة الإعدادات" Command="{Binding ResetPayrollSettingsCommand}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#334155"
+                                Height="38" Padding="12,0" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"/>
+                        <Button Content="💾 حفظ واعتماد الضوابط" Command="{Binding SavePayrollSettingsCommand}"
+                                IsEnabled="{Binding CanEditSettings}"
+                                ToolTip="حفظ الضوابط واعتمادها فورياً لجميع مسيرات الرواتب الجديدة القادمة"
+                                Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White"
+                                Height="38" Padding="16,0" FontSize="13" FontWeight="Bold" Cursor="Hand"/>
+                    </StackPanel>
+
+                    <!-- Custom Fields Tab Actions -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsCustomFieldsTab, Converter={StaticResource BoolToVis}}">
+                        <Button x:Name="BtnToggleSidePanel" Content="◀ طي المحرر" Click="ToggleSidePanel_Click"
+                                Style="{StaticResource ModernButtonStyle}" Background="#F1F5F9" Foreground="#334155"
+                                Height="38" Padding="12,0" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,8,0" Cursor="Hand"/>
+                        <Button Content="➕ حقل جديد" Command="{Binding NewCustomFieldCommand}"
+                                IsEnabled="{Binding CanEditSettings}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#4F46E5" Foreground="White"
+                                Height="38" Padding="14,0" FontSize="13" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"/>
+                        <Button Content="💾 حفظ الحقل" Command="{Binding SaveCustomFieldCommand}"
+                                IsEnabled="{Binding CanEditSettings}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White"
+                                Height="38" Padding="14,0" FontSize="13" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"/>
+                        <Button Content="🗑️ حذف الحقل" Command="{Binding DeleteCustomFieldCommand}"
+                                IsEnabled="{Binding CanEditSettings}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#EF4444" Foreground="White"
+                                Height="38" Padding="12,0" FontSize="13" FontWeight="SemiBold" Cursor="Hand"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Main Layout -->
+        <!-- Main Content Area -->
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <!-- ════════════════════════════════════════════════════════════════ -->
+            <!-- TAB 0: PAYROLL CALCULATION RULES VIEW                           -->
+            <!-- ════════════════════════════════════════════════════════════════ -->
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Visibility="{Binding IsPayrollTab, Converter={StaticResource BoolToVis}}">
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-            <!-- Left: Custom Field Editor Form with Collapse Animation -->
-            <Border x:Name="SidePanelBorder" Grid.Column="0" Width="400" Background="White" CornerRadius="12" Padding="18" Margin="0,0,15,0" ClipToBounds="True">
-                <Border.Effect>
-                    <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
-                </Border.Effect>
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel DataContext="{Binding EditField}">
-                        <TextBlock Text="🧩 بيانات الحقل المخصص" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,14"/>
-
-                        <TextBlock Text="اسم الحقل بالعربية *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding FieldNameAr, UpdateSourceTrigger=PropertyChanged}" Height="36" FontSize="13" VerticalContentAlignment="Center" Padding="8,0" Margin="0,0,0,12"/>
-
-                        <TextBlock Text="المفتاح البرمجي (Field Key):" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
-                        <TextBox Text="{Binding FieldKey, UpdateSourceTrigger=PropertyChanged}" Height="36" FontSize="12.5" VerticalContentAlignment="Center" Padding="8,0" Margin="0,0,0,12"/>
-
-                        <TextBlock Text="نوع البيانات:" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
-                        <ComboBox ItemsSource="{Binding DataContext.FieldTypesList, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  SelectedItem="{Binding FieldType, UpdateSourceTrigger=PropertyChanged}"
-                                  Height="36" FontSize="13" VerticalContentAlignment="Center" Margin="0,0,0,14"/>
-
-                        <!-- Alert Configuration Box -->
-                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                    <!-- Right Column: Standards & Overtime -->
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                        <!-- Card 1: معايير الشهر وأيام العمل الرسمية -->
+                        <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                            </Border.Effect>
                             <StackPanel>
-                                <CheckBox IsChecked="{Binding IsAlertable, UpdateSourceTrigger=PropertyChanged}" Content="🔔 تفعيل التنبيه المسبق قبل موعد الانتهاء" FontSize="13" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10"/>
-                                
-                                <TextBlock Text="عدد الأيام للتنبيه قبل الانتهاء:" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding AlertDaysBefore, UpdateSourceTrigger=PropertyChanged}" Height="34" FontSize="13" Padding="8,0" Width="120" HorizontalAlignment="Left"
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <Border Background="#EEF2FF" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0">
+                                        <TextBlock Text="📅" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="معايير الشهر وأيام العمل الرسمية" FontSize="15" FontWeight="Bold" Foreground="#1E293B"/>
+                                        <TextBlock Text="تحديد الأساس الشهري لتقسيم الرواتب واحتساب اليوميات وساعات العمل" FontSize="11.5" Foreground="#64748B"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Standard Monthly Days -->
+                                <TextBlock Text="عدد أيام العمل المعيارية للشهر (يوم) *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding PayrollRules.StandardMonthlyDays, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="38" FontSize="14" FontWeight="SemiBold" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,0,4"
                                          GotFocus="NumberBox_GotFocus" PreviewTextInput="NumberBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
+                                <TextBlock Text="💡 معيار نظام العمل المعمول به (30 يوماً). يستخدم لحساب أجر اليوم = (وعاء الراتب ÷ أيام الشهر)." FontSize="11" Foreground="#64748B" Margin="0,0,0,16"/>
+
+                                <!-- Daily Work Hours -->
+                                <TextBlock Text="عدد ساعات العمل الرسمية اليومية (ساعة) *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding PayrollRules.DailyWorkHours, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="38" FontSize="14" FontWeight="SemiBold" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,0,4"
+                                         GotFocus="NumberBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
+                                <TextBlock Text="💡 ساعات الدوام الرسمي لليوم العادي (الافتراضي 8.0 ساعات). يستخدم لحساب أجر الساعة." FontSize="11" Foreground="#64748B" Margin="0,0,0,16"/>
+
+                                <!-- Calculated Monthly Work Hours Badge -->
+                                <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="12,10">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="إجمالي ساعات العمل الرسمية الشهرية (محسوبة):" FontSize="12" FontWeight="SemiBold" Foreground="#166534"/>
+                                            <TextBlock Text="مبنية على (أيام الشهر المعيارية × ساعات العمل اليومية)" FontSize="11" Foreground="#15803D"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Background="#DCFCE7" CornerRadius="6" Padding="10,4" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding PayrollRules.MonthlyWorkHours, StringFormat='\{0\} ساعة / شهر'}" FontSize="13.5" FontWeight="Bold" Foreground="#166534"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
                             </StackPanel>
                         </Border>
 
-                        <Grid Margin="0,0,0,12">
+                        <!-- Card 2: قواعد احتساب العمل الإضافي والعطلات -->
+                        <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <Border Background="#FEF3C7" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0">
+                                        <TextBlock Text="⚡" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="قواعد واحتساب العمل الإضافي" FontSize="15" FontWeight="Bold" Foreground="#1E293B"/>
+                                        <TextBlock Text="مضاعفات أجر الساعات والأيام الإضافية وفق نظام العمل واللوائح المعتمدة" FontSize="11.5" Foreground="#64748B"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Overtime Hour Multiplier -->
+                                <TextBlock Text="مضاعف أجر الساعة الإضافية (ساعات العمل الزائدة) *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding PayrollRules.OvertimeHourMultiplier, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="38" FontSize="14" FontWeight="SemiBold" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,0,4"
+                                         GotFocus="NumberBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
+                                <TextBlock Text="💡 الافتراضي (1.5x) ويعني أجر الساعة العادية مضافاً إليه 50% كبدل عمل إضافي." FontSize="11" Foreground="#64748B" Margin="0,0,0,16"/>
+
+                                <!-- Overtime Day Multiplier -->
+                                <TextBlock Text="مضاعف أجر اليوم الإضافي (العمل بأيام العطلات والراحات) *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding PayrollRules.OvertimeDayMultiplier, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="38" FontSize="14" FontWeight="SemiBold" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,0,4"
+                                         GotFocus="NumberBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
+                                <TextBlock Text="💡 الافتراضي (1.5x) ويحتسب لموظفي الدوام الذين تم تسجيل أيام إضافية أو أيام عطلات رسمية لهم." FontSize="11" Foreground="#64748B" Margin="0,0,0,16"/>
+
+                                <!-- Overtime Explanation Box -->
+                                <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="12">
+                                    <StackPanel>
+                                        <TextBlock Text="📐 معادلة احتساب الإضافي بالمسير:" FontSize="12" FontWeight="Bold" Foreground="#1E40AF" Margin="0,0,0,4"/>
+                                        <TextBlock Text="• بدل ساعات الإضافي = ساعات الإضافي × (وعاء الأجر ÷ ساعات الشهر) × مضاعف الساعة" FontSize="11" Foreground="#1E3A8A" Margin="0,0,0,2"/>
+                                        <TextBlock Text="• بدل أيام الإضافي = أيام الإضافي × (وعاء الأجر ÷ أيام الشهر) × مضاعف اليوم" FontSize="11" Foreground="#1E3A8A"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Left Column: Basis, Deductions, Audit -->
+                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        <!-- Card 3: وعاء الاحتساب وسياسات الخصم والغياب -->
+                        <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,16">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <Border Background="#FEE2E2" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0">
+                                        <TextBlock Text="⚖️" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="وعاء الاحتساب وسياسات الخصم والغياب" FontSize="15" FontWeight="Bold" Foreground="#1E293B"/>
+                                        <TextBlock Text="تحديد وعاء احتساب أجر الساعة واليوم وسياسات خصم الغياب والتأخيرات" FontSize="11.5" Foreground="#64748B"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Calculation Basis -->
+                                <TextBlock Text="وعاء احتساب أجر الساعة واليوم *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,6"/>
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <RadioButton IsChecked="{Binding PayrollRules.IsBasisBasicOnly}"
+                                                     Content="الراتب الأساسي فقط (Basic Salary Only) - موصى به نظاماً"
+                                                     FontSize="12.5" FontWeight="SemiBold" Foreground="#1E293B" Margin="0,0,0,8"/>
+                                        <RadioButton IsChecked="{Binding PayrollRules.IsBasisGrossTotal}"
+                                                     Content="الراتب الإجمالي شاملاً البدلات (Gross Total = الأساسي + البدلات)"
+                                                     FontSize="12.5" FontWeight="SemiBold" Foreground="#1E293B"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Absence Day Multiplier -->
+                                <TextBlock Text="مضاعف خصم يوم الغياب غير المبرر *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding PayrollRules.AbsenceDayMultiplier, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="38" FontSize="14" FontWeight="SemiBold" Padding="10,0" VerticalContentAlignment="Center" Margin="0,0,0,4"
+                                         GotFocus="NumberBox_GotFocus" PreviewTextInput="DecimalBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
+                                <TextBlock Text="💡 الافتراضي (1.0x) ويعني خصم يوم بيوم. يمكن زيادته (مثلاً 1.5x أو 2.0x) وفق لائحة الجزاءات." FontSize="11" Foreground="#64748B" Margin="0,0,0,16"/>
+
+                                <!-- Delay Deduction Policy -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <CheckBox IsChecked="{Binding PayrollRules.EnableDelayDeduction, UpdateSourceTrigger=PropertyChanged}"
+                                                  Content="تفعيل خصم دقائق التأخير من الراتب الشهري"
+                                                  FontSize="13" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10"/>
+
+                                        <TextBlock Text="فترة السماح الإجمالية للتأخير شهرياً (بالدقائق):" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBox Text="{Binding PayrollRules.DelayGracePeriodMinutes, UpdateSourceTrigger=PropertyChanged}"
+                                                     Height="36" FontSize="13.5" FontWeight="Bold" Padding="8,0" Width="100" HorizontalAlignment="Left"
+                                                     GotFocus="NumberBox_GotFocus" PreviewTextInput="NumberBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown" Margin="0,0,8,0"/>
+                                            <TextBlock Text="دقيقة سماح شهرياً بدون خصم" FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <TextBlock Text="💡 إذا تم تحديد 15 دقيقة، فلن يتم الخصم إلا لما تجاوز الـ 15 دقيقة تأخير خلال الشهر." FontSize="11" Foreground="#64748B" Margin="0,6,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card 4: الملاحظات وحالة الاعتماد والتوثيق -->
+                        <Border Background="White" CornerRadius="12" Padding="20">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                            </Border.Effect>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                    <Border Background="#F1F5F9" CornerRadius="8" Width="36" Height="36" Margin="0,0,10,0">
+                                        <TextBlock Text="📝" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="ملاحظات اللائحة وتوثيق التحديث" FontSize="15" FontWeight="Bold" Foreground="#1E293B"/>
+                                        <TextBlock Text="تدوين بنود اللائحة الداخلية وتاريخ آخر اعتماد" FontSize="11.5" Foreground="#64748B"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Text="ملاحظات وتوضيحات سياسة الرواتب:" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding PayrollRules.Notes, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="75" FontSize="12.5" Padding="8" VerticalContentAlignment="Top" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,16"/>
+
+                                <!-- Audit Info -->
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,16">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="آخر تحديث:" FontSize="11" Foreground="#64748B"/>
+                                            <TextBlock Text="{Binding PayrollRules.UpdatedAt, StringFormat='\{0:yyyy/MM/dd HH:mm\}'}" FontSize="12.5" FontWeight="Bold" Foreground="#1E293B"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="بواسطة:" FontSize="11" Foreground="#64748B"/>
+                                            <TextBlock Text="{Binding PayrollRules.UpdatedBy}" FontSize="12.5" FontWeight="Bold" Foreground="#1E293B"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Big Save Action Button -->
+                                <Button Content="💾 حفظ واعتماد ضوابط الرواتب الآن" Command="{Binding SavePayrollSettingsCommand}"
+                                        IsEnabled="{Binding CanEditSettings}"
+                                        ToolTip="حفظ الضوابط واعتمادها فورياً لجميع مسيرات الرواتب الجديدة القادمة"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#10B981" Foreground="White"
+                                        Height="44" Padding="20,0" FontSize="14" FontWeight="Bold" Cursor="Hand" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- ════════════════════════════════════════════════════════════════ -->
+            <!-- TAB 1: CUSTOM FIELDS & ALERTS VIEW                              -->
+            <!-- ════════════════════════════════════════════════════════════════ -->
+            <Grid Visibility="{Binding IsCustomFieldsTab, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Custom Field Editor Form with Collapse Animation -->
+                <Border x:Name="SidePanelBorder" Grid.Column="0" Width="400" Background="White" CornerRadius="12" Padding="18" Margin="0,0,15,0" ClipToBounds="True">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                    </Border.Effect>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel DataContext="{Binding EditField}">
+                            <TextBlock Text="🧩 بيانات الحقل المخصص" FontSize="15" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,14"/>
+
+                            <TextBlock Text="اسم الحقل بالعربية *" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding FieldNameAr, UpdateSourceTrigger=PropertyChanged}" Height="36" FontSize="13" VerticalContentAlignment="Center" Padding="8,0" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="المفتاح البرمجي (Field Key):" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
+                            <TextBox Text="{Binding FieldKey, UpdateSourceTrigger=PropertyChanged}" Height="36" FontSize="12.5" VerticalContentAlignment="Center" Padding="8,0" Margin="0,0,0,12"/>
+
+                            <TextBlock Text="نوع البيانات:" FontWeight="Bold" FontSize="12.5" Foreground="#334155" Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding DataContext.FieldTypesList, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      SelectedItem="{Binding FieldType, UpdateSourceTrigger=PropertyChanged}"
+                                      Height="36" FontSize="13" VerticalContentAlignment="Center" Margin="0,0,0,14"/>
+
+                            <!-- Alert Configuration Box -->
+                            <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <CheckBox IsChecked="{Binding IsAlertable, UpdateSourceTrigger=PropertyChanged}" Content="🔔 تفعيل التنبيه المسبق قبل موعد الانتهاء" FontSize="13" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,10"/>
+                                    
+                                    <TextBlock Text="عدد الأيام للتنبيه قبل الانتهاء:" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding AlertDaysBefore, UpdateSourceTrigger=PropertyChanged}" Height="34" FontSize="13" Padding="8,0" Width="120" HorizontalAlignment="Left"
+                                             GotFocus="NumberBox_GotFocus" PreviewTextInput="NumberBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                    <TextBlock Text="ترتيب الظهور:" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding SortOrder, UpdateSourceTrigger=PropertyChanged}" Height="34" FontSize="13" Padding="8,0"
+                                             GotFocus="NumberBox_GotFocus" PreviewTextInput="NumberBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <CheckBox IsChecked="{Binding IsActive, UpdateSourceTrigger=PropertyChanged}" Content="حقل مفعل" FontSize="12.5" FontWeight="Bold" Margin="0,22,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Right: Custom Fields Grid Cards Layout (تصميم شبكي) -->
+                <Border Grid.Column="1" Background="White" CornerRadius="12" Padding="16">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" Margin="0,0,6,0">
-                                <TextBlock Text="ترتيب الظهور:" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding SortOrder, UpdateSourceTrigger=PropertyChanged}" Height="34" FontSize="13" Padding="8,0"
-                                         GotFocus="NumberBox_GotFocus" PreviewTextInput="NumberBox_PreviewTextInput" PreviewKeyDown="NumberBox_PreviewKeyDown"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1">
-                                <CheckBox IsChecked="{Binding IsActive, UpdateSourceTrigger=PropertyChanged}" Content="حقل مفعل" FontSize="12.5" FontWeight="Bold" Margin="0,22,0,0"/>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="📋 قائمة الحقول المخصصة المعرفة في النظام" FontSize="16" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                <Border Background="#F1F5F9" CornerRadius="12" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CustomFields.Count, StringFormat='\{0\} حقل'}" FontSize="11" FontWeight="Bold" Foreground="#475569"/>
+                                </Border>
                             </StackPanel>
                         </Grid>
-                    </StackPanel>
-                </ScrollViewer>
-            </Border>
 
-            <!-- Right: Custom Fields Grid Cards Layout (تصميم شبكي) -->
-            <Border Grid.Column="1" Background="White" CornerRadius="12" Padding="16">
-                <Border.Effect>
-                    <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
-                </Border.Effect>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0" Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="📋 قائمة الحقول المخصصة المعرفة في النظام" FontSize="16" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
-                            <Border Background="#F1F5F9" CornerRadius="12" Padding="8,2" Margin="10,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding CustomFields.Count, StringFormat='\{0\} حقل'}" FontSize="11" FontWeight="Bold" Foreground="#475569"/>
-                            </Border>
-                        </StackPanel>
+                        <!-- Scrollable Cards WrapPanel Grid -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,2">
+                            <ItemsControl ItemsSource="{Binding CustomFields}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:CustomFieldCardControl/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
                     </Grid>
-
-                    <!-- Scrollable Cards WrapPanel Grid -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,2">
-                        <ItemsControl ItemsSource="{Binding CustomFields}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <controls:CustomFieldCardControl/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
+                </Border>
+            </Grid>
         </Grid>
 
         <!-- Modern Floating Snackbar Notification (Always at bottom of entire page) -->

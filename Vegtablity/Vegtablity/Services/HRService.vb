@@ -68,6 +68,7 @@ Namespace Services
                 p.Add("@Status", emp.Status)
                 p.Add("@Notes", emp.Notes)
                 p.Add("@User", user)
+                p.Add("@EndDate", emp.EndDate)
 
                 conn.Execute(Helpers.StoredProcedures.SP_HR_EMPLOYEE_SAVE, p, commandType:=CommandType.StoredProcedure)
                 Dim savedId = p.Get(Of Integer)("@EmployeeID")
@@ -136,9 +137,11 @@ Namespace Services
             End Using
         End Sub
 
-        Public Function GetActiveAlerts() As List(Of HRAlertItem)
+        Public Function GetActiveAlerts(Optional includeTerminated As Boolean = False) As List(Of HRAlertItem)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Return conn.Query(Of HRAlertItem)(Helpers.StoredProcedures.SP_HR_ALERTS_GETACTIVE, commandType:=CommandType.StoredProcedure).ToList()
+                Dim p As New DynamicParameters()
+                p.Add("@IncludeTerminated", includeTerminated)
+                Return conn.Query(Of HRAlertItem)(Helpers.StoredProcedures.SP_HR_ALERTS_GETACTIVE, p, commandType:=CommandType.StoredProcedure).ToList()
             End Using
         End Function
 
@@ -296,6 +299,7 @@ Namespace Services
                 p.Add("@PayrollDetailID", detail.PayrollDetailID)
                 p.Add("@OvertimeHours", detail.OvertimeHours)
                 p.Add("@OvertimeAmount", detail.OvertimeAmount)
+                p.Add("@DeductionDays", detail.DeductionDays)
                 p.Add("@DeductionAmount", detail.DeductionAmount)
                 p.Add("@AdvancesDeductions", detail.AdvancesDeductions)
                 p.Add("@NetSalary", detail.NetSalary)
@@ -370,6 +374,37 @@ Namespace Services
                 Return p.Get(Of Integer)("@SettlementID")
             End Using
         End Function
+
+        ' ============================================================
+        ' 8. Payroll Settings & Rules
+        ' ============================================================
+        Public Function GetPayrollSettings() As PayrollSettings
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim settings = conn.QueryFirstOrDefault(Of PayrollSettings)(Helpers.StoredProcedures.SP_HR_PAYROLLSETTINGS_GET, commandType:=CommandType.StoredProcedure)
+                If settings Is Nothing Then
+                    settings = New PayrollSettings()
+                End If
+                Return settings
+            End Using
+        End Function
+
+        Public Sub SavePayrollSettings(settings As PayrollSettings, Optional user As String = Nothing)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                Dim p As New DynamicParameters()
+                p.Add("@StandardMonthlyDays", settings.StandardMonthlyDays)
+                p.Add("@DailyWorkHours", settings.DailyWorkHours)
+                p.Add("@OvertimeHourMultiplier", settings.OvertimeHourMultiplier)
+                p.Add("@OvertimeDayMultiplier", settings.OvertimeDayMultiplier)
+                p.Add("@CalculationBasis", settings.CalculationBasis)
+                p.Add("@EnableDelayDeduction", settings.EnableDelayDeduction)
+                p.Add("@DelayGracePeriodMinutes", settings.DelayGracePeriodMinutes)
+                p.Add("@AbsenceDayMultiplier", settings.AbsenceDayMultiplier)
+                p.Add("@Notes", settings.Notes)
+                p.Add("@UpdatedBy", If(user, "System"))
+
+                conn.Execute(Helpers.StoredProcedures.SP_HR_PAYROLLSETTINGS_SAVE, p, commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
 
     End Class
 End Namespace

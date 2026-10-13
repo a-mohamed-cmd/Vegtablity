@@ -33,6 +33,16 @@ Namespace Views
             If vm IsNot Nothing Then
                 RemoveHandler vm.RequestSnackbar, AddressOf ShowSnackbar
                 AddHandler vm.RequestSnackbar, AddressOf ShowSnackbar
+                vm.CheckRulesPermissions()
+                vm.LoadPayrollSettings()
+            End If
+        End Sub
+
+        Private Sub BtnModifyRules_Click(sender As Object, e As RoutedEventArgs)
+            Dim parentWindow = TryCast(Window.GetWindow(Me), DashboardWindow)
+            If parentWindow IsNot Nothing Then
+                Dim settingsPage As New HRSettingsPage(initialTab:=0)
+                parentWindow.NavigateTo(settingsPage, True)
             End If
         End Sub
 

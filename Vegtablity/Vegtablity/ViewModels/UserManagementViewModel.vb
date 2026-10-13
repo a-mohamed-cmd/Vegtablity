@@ -104,7 +104,7 @@ Namespace ViewModels
                 formsMap.Add("HRPayroll", "مسير الرواتب والاعتماد")
                 formsMap.Add("HREndOfService", "مكافأة نهاية الخدمة وتصفية المستحقات")
                 formsMap.Add("HRAlerts", "تنبيهات انتهاء الوثائق")
-                formsMap.Add("HRSettings", "إعدادات الموارد والحقول المخصصة")
+                formsMap.Add("HRSettings", "إعدادات الموارد وضوابط الرواتب")
             End If
 
             AvailableForms = formsMap
