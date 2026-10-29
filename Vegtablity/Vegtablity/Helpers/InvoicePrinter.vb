@@ -20,7 +20,8 @@ Public Class InvoicePrinter
     Private _useDetailedDesign As Boolean = False
 
     ' ─── ثوابت التخطيط (سنتيمتر → مم بضربها × 10) ──
-    Private Const ITEM_START_CM As Single = 7.0F   ' بداية جدول الأصناف
+    Private Const ITEM_START_CM As Single = 7.0F          ' بداية جدول الأصناف (الورقة الأولى - مظبوطة تماماً: على بعد 2 سم من Account No)
+    Private Const ITEM_START_CM_PAGE2 As Single = 5.2F    ' بداية جدول الأصناف (الورقة الثانية: 3.2 سم لـ Account No + 2.0 سم مسافة = 5.2 سم)
     Private Const ITEM_END_CM As Single = 22.0F    ' نهاية جدول الأصناف
     Private Const ROW_H_MM As Single = 5.0F        ' ارتفاع الصف
     Private Const PAGE_W_MM As Single = 210.0F     ' عرض الصفحة (21 سم)
@@ -62,14 +63,29 @@ Public Class InvoicePrinter
         _printFontBold = New Font("Arial", 10, System.Drawing.FontStyle.Bold)
         _printfontname = New Font("Arial", 12, System.Drawing.FontStyle.Bold)
 
+        _totalPages = CalculateTotalPages(reportData.Details.Count)
+
         Dim pd As New PrintDocument()
-        pd.DefaultPageSettings.PaperSize = New PaperSize("Custom", 827, 1102)  ' 21×28 سم
+        Dim customPaperSize As PaperSize = FindMatchingPaperSize(pd.PrinterSettings)
+        pd.DefaultPageSettings.PaperSize = customPaperSize
+        pd.DefaultPageSettings.Margins = New Margins(0, 0, 0, 0)
+        pd.PrinterSettings.DefaultPageSettings.PaperSize = customPaperSize
+        pd.PrinterSettings.DefaultPageSettings.Margins = New Margins(0, 0, 0, 0)
+
+        AddHandler pd.QueryPageSettings, AddressOf OnQueryPageSettings
         AddHandler pd.PrintPage, AddressOf OnPrintPage
 
         Dim dlg As New System.Windows.Forms.PrintDialog()
         dlg.Document = pd
         If dlg.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
             Try
+                ' تأكيد أبعاد الورقة المعتمدة وهوامشها الصفرية لضمان تطابق كافة الصفحات
+                customPaperSize = FindMatchingPaperSize(pd.PrinterSettings)
+                pd.DefaultPageSettings.PaperSize = customPaperSize
+                pd.DefaultPageSettings.Margins = New Margins(0, 0, 0, 0)
+                pd.PrinterSettings.DefaultPageSettings.PaperSize = customPaperSize
+                pd.PrinterSettings.DefaultPageSettings.Margins = New Margins(0, 0, 0, 0)
+
                 pd.Print()
             Catch ex As Exception
                 MessageBox.Show("حدث خطأ أثناء الطباعة: " & ex.Message,
@@ -78,11 +94,59 @@ Public Class InvoicePrinter
         End If
     End Sub
 
+    ''' <summary>
+    ''' الحفاظ التام على أبعاد الورقة المعتمدة (21×28 سم) دون أي تغيير لتفادي التأثير على الورقة الأولى
+    ''' </summary>
+    Private Function FindMatchingPaperSize(settings As PrinterSettings) As PaperSize
+        Dim customPaperSize As New PaperSize("Custom", 827, 1102)
+        If settings Is Nothing OrElse settings.PaperSizes Is Nothing Then
+            Return customPaperSize
+        End If
+
+        For Each ps As PaperSize In settings.PaperSizes
+            If Math.Abs(ps.Width - 827) <= 5 AndAlso Math.Abs(ps.Height - 1102) <= 5 Then
+                Return ps
+            End If
+        Next
+
+        Return customPaperSize
+    End Function
+
+    ''' <summary>
+    ''' حساب إجمالي عدد الصفحات بدقة مع مراعاة بداية الأصناف المتقدمة في الصفحة الثانية
+    ''' </summary>
+    Private Function CalculateTotalPages(itemCount As Integer) As Integer
+        If _useDetailedDesign Then
+            Return Math.Max(1, CInt(Math.Ceiling(itemCount / 26.0)))
+        Else
+            Dim page1Items = CInt(Math.Floor((ITEM_END_CM - ITEM_START_CM) * 10 / ROW_H_MM))
+            If itemCount <= page1Items Then Return 1
+            Dim remainingItems = itemCount - page1Items
+            Dim page2PlusItems = CInt(Math.Floor((ITEM_END_CM - ITEM_START_CM_PAGE2) * 10 / ROW_H_MM))
+            Return 1 + CInt(Math.Ceiling(remainingItems / CDbl(Math.Max(1, page2PlusItems))))
+        End If
+    End Function
+
+    ''' <summary>
+    ''' ضبط أبعاد وهوامش كل ورقة قبل طباعتها لضمان تطابق الورقة الثانية وكافة الصفحات التالية مع الأولى
+    ''' </summary>
+    Private Sub OnQueryPageSettings(sender As Object, e As QueryPageSettingsEventArgs)
+        Dim doc = TryCast(sender, PrintDocument)
+        Dim customPaperSize As PaperSize = If(doc IsNot Nothing, FindMatchingPaperSize(doc.PrinterSettings), New PaperSize("Custom", 827, 1102))
+        e.PageSettings.PaperSize = customPaperSize
+        e.PageSettings.Margins = New Margins(0, 0, 0, 0)
+    End Sub
+
     ' ══════════════════════════════════════════════════════
     '  حدث رسم الصفحة
     ' ══════════════════════════════════════════════════════
     Private Sub OnPrintPage(sender As Object, e As PrintPageEventArgs)
         Try
+            Dim doc = TryCast(sender, PrintDocument)
+            Dim customPaperSize As PaperSize = If(doc IsNot Nothing, FindMatchingPaperSize(doc.PrinterSettings), New PaperSize("Custom", 827, 1102))
+            e.PageSettings.PaperSize = customPaperSize
+            e.PageSettings.Margins = New Margins(0, 0, 0, 0)
+
             e.Graphics.PageUnit = GraphicsUnit.Millimeter
 
             Dim g As Graphics = e.Graphics
@@ -305,9 +369,12 @@ Public Class InvoicePrinter
                     ' ─────────────────────────────────────────────
                     '  التصميم القديم (بدون أي تعديل لتفادي التأثير على الوضع القائم)
                     ' ─────────────────────────────────────────────
-                    DrawHeader(g, brush, fLeft, fRight, gl, gt)
+                    DrawHeader(g, brush, fLeft, fRight, gl, gt, _currentPageNumber)
 
-                    Dim curY As Single = gt(ITEM_START_CM)
+                    ' بداية الأصناف: في الورقة الأولى تبدأ عند ITEM_START_CM (7.0 سم) لأنها مضبوطة تماماً
+                    ' وفي الورقة الثانية تبدأ عند ITEM_START_CM_PAGE2 (5.2 سم - على بعد 2.0 سم من Account No كما في الورقة الأولى)
+                    Dim startY As Single = If(_currentPageNumber = 1, ITEM_START_CM, ITEM_START_CM_PAGE2)
+                    Dim curY As Single = gt(startY)
                     Dim limitY As Single = gt(ITEM_END_CM)
                     Dim hasMore As Boolean = False
 
@@ -355,36 +422,72 @@ Public Class InvoicePrinter
     '  رسم ترويسة الفاتورة
     ' ══════════════════════════════════════════════════════
     Private Sub DrawHeader(g As Graphics, brush As SolidBrush, fLeft As StringFormat, fRight As StringFormat,
-                           gl As Func(Of Single, Single), gt As Func(Of Single, Single))
+                           gl As Func(Of Single, Single), gt As Func(Of Single, Single),
+                           Optional pageNumber As Integer = 1)
 
-        ' اسم العميل (عربي - RTL)
-        Dim rectCust As New RectangleF(gl(2.0F), gt(3.0F), 80.0F, 8.0F)
-        g.DrawString(If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fRight)
+        If pageNumber = 1 Then
+            ' ─── ترويسة الورقة الأولى (الوضع الأصلي المضبوط دون أي تعديل) ───
+            ' اسم العميل (عربي - RTL)
+            Dim rectCust As New RectangleF(gl(2.0F), gt(3.0F), 80.0F, 8.0F)
+            g.DrawString(If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust, fRight)
 
-        ' نوع الفاتورة / Payment Type (في منتصف الصفحة وعلى نفس سطر Invoice No)
-        Dim isCash As Boolean = (_reportData.Header.Remainder <= 0)
-        Dim paymentTypeText As String = If(isCash, "cash", "credit")
-        Dim fCenter As New StringFormat() With {.Alignment = StringAlignment.Center}
-        Dim rectPaymentType As New RectangleF(gl(7.0F), gt(5.0F), 70.0F, 8.0F)
-        g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType, fCenter)
+            ' نوع الفاتورة / Payment Type (في منتصف الصفحة وعلى نفس سطر Invoice No)
+            Dim isCash As Boolean = (_reportData.Header.Remainder <= 0)
+            Dim paymentTypeText As String = If(isCash, "cash", "credit")
+            Dim fCenter As New StringFormat() With {.Alignment = StringAlignment.Center}
+            Dim rectPaymentType As New RectangleF(gl(7.0F), gt(5.0F), 70.0F, 8.0F)
+            g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType, fCenter)
 
-        ' الملاحظات (عربي - RTL) (تحت اسم العميل مباشرة)
-        If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
-            Dim rectNotes As New RectangleF(gl(2.0F), gt(4.0F), 100.0F, 8.0F)
-            g.DrawString("ملاحظات: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes, fRight)
+            ' الملاحظات (عربي - RTL) (تحت اسم العميل مباشرة)
+            If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
+                Dim rectNotes As New RectangleF(gl(2.0F), gt(4.0F), 100.0F, 8.0F)
+                g.DrawString("ملاحظات: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes, fRight)
+            End If
+
+            ' رقم الفاتورة
+            g.DrawString("Invoice No:", _printFontNormal, brush, gl(14.5F), gt(3.0F), fLeft)
+            g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(18.0F), gt(3.0F), fLeft)
+
+            ' التاريخ
+            g.DrawString("Invoice Date:", _printFontNormal, brush, gl(14.0F), gt(4.0F), fLeft)
+            g.DrawString(_reportData.Header.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, gl(18.0F), gt(4.0F), fLeft)
+
+            ' رقم الحساب
+            g.DrawString("Account No:", _printFontNormal, brush, gl(14.0F), gt(5.0F), fLeft)
+            g.DrawString(If(_reportData.Header.AccountCode, ""), _printFontNormal, brush, gl(18.0F), gt(5.0F), fLeft)
+        Else
+            ' ─── ترويسة الورقة الثانية والصفحات التالية (مرفوعة للأعلى مع الحفاظ على كافة الحقول والمسافات البينية كما في الورقة الأولى) ───
+            Dim headerTopY As Single = 1.2F
+
+            ' اسم العميل (عربي - RTL)
+            Dim rectCust2 As New RectangleF(gl(2.0F), gt(headerTopY), 80.0F, 8.0F)
+            g.DrawString(If(_reportData.Header.PartnerName, ""), _printfontname, brush, rectCust2, fRight)
+
+            ' نوع الفاتورة / Payment Type (بنفس المسافة البينية كما في الورقة الأولى)
+            Dim isCash As Boolean = (_reportData.Header.Remainder <= 0)
+            Dim paymentTypeText As String = If(isCash, "cash", "credit")
+            Dim fCenter As New StringFormat() With {.Alignment = StringAlignment.Center}
+            Dim rectPaymentType2 As New RectangleF(gl(7.0F), gt(headerTopY + 2.0F), 70.0F, 8.0F)
+            g.DrawString("نوع الفاتورة / " & paymentTypeText, _printFontBold, brush, rectPaymentType2, fCenter)
+
+            ' الملاحظات (عربي - RTL) (تحت اسم العميل مباشرة)
+            If Not String.IsNullOrWhiteSpace(_reportData.Header.Notes) Then
+                Dim rectNotes2 As New RectangleF(gl(2.0F), gt(headerTopY + 1.0F), 100.0F, 8.0F)
+                g.DrawString("ملاحظات: " & _reportData.Header.Notes, _printFontNormal, brush, rectNotes2, fRight)
+            End If
+
+            ' رقم الفاتورة
+            g.DrawString("Invoice No:", _printFontNormal, brush, gl(14.5F), gt(headerTopY), fLeft)
+            g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(18.0F), gt(headerTopY), fLeft)
+
+            ' التاريخ (على بعد 1.0 سم من رقم الفاتورة كما في الورقة الأولى)
+            g.DrawString("Invoice Date:", _printFontNormal, brush, gl(14.0F), gt(headerTopY + 1.0F), fLeft)
+            g.DrawString(_reportData.Header.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, gl(18.0F), gt(headerTopY + 1.0F), fLeft)
+
+            ' رقم الحساب (على بعد 1.0 سم من التاريخ كما في الورقة الأولى تماماً)
+            g.DrawString("Account No:", _printFontNormal, brush, gl(14.0F), gt(headerTopY + 2.0F), fLeft)
+            g.DrawString(If(_reportData.Header.AccountCode, ""), _printFontNormal, brush, gl(18.0F), gt(headerTopY + 2.0F), fLeft)
         End If
-
-        ' رقم الفاتورة
-        g.DrawString("Invoice No:", _printFontNormal, brush, gl(14.5F), gt(3.0F), fLeft)
-        g.DrawString(_reportData.Header.InvID.ToString(), _printFontBold, brush, gl(18.0F), gt(3.0F), fLeft)
-
-        ' التاريخ
-        g.DrawString("Invoice Date:", _printFontNormal, brush, gl(14.0F), gt(4.0F), fLeft)
-        g.DrawString(_reportData.Header.InvDate.ToString("dd/MM/yyyy"), _printFontNormal, brush, gl(18.0F), gt(4.0F), fLeft)
-
-        ' رقم الحساب
-        g.DrawString("Account No:", _printFontNormal, brush, gl(14.0F), gt(5.0F), fLeft)
-        g.DrawString(If(_reportData.Header.AccountCode, ""), _printFontNormal, brush, gl(18.0F), gt(5.0F), fLeft)
     End Sub
 
     ' ══════════════════════════════════════════════════════

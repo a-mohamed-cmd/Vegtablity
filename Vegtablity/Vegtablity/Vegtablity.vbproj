@@ -506,7 +506,6 @@
       <DependentUpon>DocumentAlertRowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\HREmployeesPage.xaml.vb">
-
       <DependentUpon>HREmployeesPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\HRLeavesPage.xaml.vb">
@@ -714,7 +713,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\HREmployeesPage.xaml">
-
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

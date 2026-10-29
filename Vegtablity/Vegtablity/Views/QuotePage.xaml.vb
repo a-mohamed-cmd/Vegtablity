@@ -17,6 +17,7 @@ Namespace Views
                 AddHandler vm.RequestSnackbar, AddressOf ShowSnackbar
                 AddHandler vm.PropertyChanged, AddressOf OnViewModelPropertyChanged
                 AddHandler vm.InvoiceLoaded, AddressOf OnInvoiceLoaded
+                AddHandler vm.FocusQuoteItemRequested, AddressOf OnFocusQuoteItemRequested
             End If
             ' نضبط الواجهة بعد اكتمال تحميل كل عناصر الـ UI
             AddHandler Me.Loaded, AddressOf Page_Loaded
@@ -200,6 +201,48 @@ Namespace Views
             If ctrl IsNot Nothing Then ctrl.MoveFocus(req)
         End Sub
 
+        ' ══════════════════════════════════════════════════════
+        '  Quick Item Search Dropdown — بحث سريع في أصناف العرض
+        ' ══════════════════════════════════════════════════════
+
+        Private Sub QuoteItemSearchDropdown_SearchChanged(sender As Object, searchText As String)
+            Dim vm = TryCast(Me.DataContext, QuoteViewModel)
+            If vm IsNot Nothing Then vm.ApplyQuoteItemFilter(searchText)
+        End Sub
+
+        Private Sub QuoteItemSearchDropdown_ItemSelected(sender As Object, item As Object)
+            Dim selected = TryCast(item, Models.QuoteDetail)
+            If selected Is Nothing Then Return
+            Dim vm = TryCast(Me.DataContext, QuoteViewModel)
+            If vm IsNot Nothing Then
+                vm.SelectQuoteItemForEdit(selected)
+            End If
+        End Sub
+
+        Private Sub OnFocusQuoteItemRequested(item As Models.QuoteDetail)
+            If item Is Nothing OrElse DetailsItemsControl Is Nothing Then Return
+            Dispatcher.BeginInvoke(New Action(Sub()
+                DetailsItemsControl.UpdateLayout()
+                Dim container = DetailsItemsControl.ItemContainerGenerator.ContainerFromItem(item)
+                If container IsNot Nothing Then
+                    Dim rowCtrl = FindVisualChild(Of Controls.QuoteItemRowControl)(container)
+                    If rowCtrl IsNot Nothing Then
+                        rowCtrl.HighlightAndFocusPrice()
+                        Return
+                    End If
+                End If
+                ' محاولة ثانية بعد اكتمال بناء العناصر المرئية عند الانتقال لصفحة جديدة
+                DetailsItemsControl.Dispatcher.BeginInvoke(New Action(Sub()
+                    DetailsItemsControl.UpdateLayout()
+                    Dim retryContainer = DetailsItemsControl.ItemContainerGenerator.ContainerFromItem(item)
+                    If retryContainer IsNot Nothing Then
+                        Dim retryCtrl = FindVisualChild(Of Controls.QuoteItemRowControl)(retryContainer)
+                        If retryCtrl IsNot Nothing Then retryCtrl.HighlightAndFocusPrice()
+                    End If
+                End Sub), System.Windows.Threading.DispatcherPriority.ContextIdle)
+            End Sub), System.Windows.Threading.DispatcherPriority.Loaded)
+        End Sub
+
         ''' <summary>
         ''' يُستدعى تلقائياً بعد تحميل عرض سعر موجود أو إنشاء جديد.
         ''' يضبط حقل التاريخ واسم الشريك في الأداة.
@@ -231,6 +274,7 @@ Namespace Views
                 Else
                     PartnerDropdown.ClearSelection()
                 End If
+                If QuoteItemSearchDropdown IsNot Nothing Then QuoteItemSearchDropdown.ClearSelection()
             End Sub), System.Windows.Threading.DispatcherPriority.Loaded)
         End Sub
 

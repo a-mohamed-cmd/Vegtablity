@@ -4,7 +4,7 @@
              xmlns:controls="clr-namespace:Vegtablity.Controls"
              FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
 
-    <Border Background="White" BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="4,4" MinHeight="46">
+    <Border x:Name="RowBorder" Background="White" BorderBrush="#F1F5F9" BorderThickness="0,0,0,1" Padding="4,4" MinHeight="46">
         <Grid VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <!-- 0: Barcode -->

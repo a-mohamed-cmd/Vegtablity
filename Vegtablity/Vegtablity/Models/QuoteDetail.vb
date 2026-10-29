@@ -45,6 +45,7 @@ Namespace Models
             Set(value As Decimal)
                 _quotedPrice = value
                 OnPropertyChanged(NameOf(QuotedPrice))
+                OnPropertyChanged(NameOf(SearchText))
             End Set
         End Property
 
@@ -68,6 +69,7 @@ Namespace Models
             Set(value As String)
                 _productName = value
                 OnPropertyChanged(NameOf(ProductName))
+                OnPropertyChanged(NameOf(SearchText))
             End Set
         End Property
 
@@ -79,6 +81,7 @@ Namespace Models
             Set(value As String)
                 _barcode = value
                 OnPropertyChanged(NameOf(Barcode))
+                OnPropertyChanged(NameOf(SearchText))
             End Set
         End Property
 
@@ -91,6 +94,15 @@ Namespace Models
                 _unitName = value
                 OnPropertyChanged(NameOf(UnitName))
             End Set
+        End Property
+
+        ''' <summary>نص العرض والبحث السريع داخل أداة SearchableDropdown لأصناف عرض السعر</summary>
+        Public ReadOnly Property SearchText As String
+            Get
+                Dim namePart = If(Not String.IsNullOrWhiteSpace(_productName), _productName, "صنف غير محدد")
+                Dim codePart = If(Not String.IsNullOrWhiteSpace(_barcode), $" [{_barcode}]", "")
+                Return $"{namePart}{codePart} — ({_quotedPrice:0.###})"
+            End Get
         End Property
 
 

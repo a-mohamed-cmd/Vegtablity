@@ -221,15 +221,37 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-                            <TextBlock Text="الأصناف المدرجة والأسعار" FontSize="18" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding DetailsTotalCount, StringFormat='(إجمالي الأصناف: {0})'}" FontSize="14" Foreground="#94A3B8" Margin="10,0,0,0" VerticalAlignment="Center"/>
-                            
-                            <Button Content="➕ إضافة صنف" Command="{Binding AddItemCommand}" Click="AddItemButton_Click"
-                                    Style="{DynamicResource ModernButtonStyle}"
-                                    Background="#EEF2FF" Foreground="#4F46E5" BorderBrush="#4F46E5" 
-                                    Margin="20,0,0,0" Padding="15,5"/>
-                        </StackPanel>
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="الأصناف المدرجة والأسعار" FontSize="18" FontWeight="SemiBold" Foreground="#334155" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding DetailsTotalCount, StringFormat='(إجمالي الأصناف: {0})'}" FontSize="14" Foreground="#94A3B8" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                
+                                <Button Content="➕ إضافة صنف" Command="{Binding AddItemCommand}" Click="AddItemButton_Click"
+                                        Style="{DynamicResource ModernButtonStyle}"
+                                        Background="#EEF2FF" Foreground="#4F46E5" BorderBrush="#4F46E5" 
+                                        Margin="20,0,0,0" Padding="15,5"/>
+                            </StackPanel>
+
+                            <!-- أداة البحث السريع في أصناف عرض السعر للتحديد والتعديل الفوري -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔍 بحث سريع في العرض:" Foreground="#475569" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <controls:SearchableDropdown
+                                    x:Name="QuoteItemSearchDropdown"
+                                    ItemsSource="{Binding FilteredQuoteItems}"
+                                    DisplayMemberPath="SearchText"
+                                    Watermark="ابحث باسم الصنف أو الباركود لتعديله..."
+                                    Width="330"
+                                    Height="38"
+                                    SearchChanged="QuoteItemSearchDropdown_SearchChanged"
+                                    ItemSelected="QuoteItemSearchDropdown_ItemSelected"/>
+                            </StackPanel>
+                        </Grid>
 
                         <!-- Table Column Headers -->
                         <Border Grid.Row="1" Background="#F1F5F9" CornerRadius="8,8,0,0" Padding="8,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">

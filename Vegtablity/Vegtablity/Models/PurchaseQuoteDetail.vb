@@ -121,11 +121,23 @@ Namespace Models
             End Get
         End Property
 
+        ''' <summary>نص العرض والبحث السريع داخل أداة SearchableDropdown لأصناف عرض المشتريات</summary>
+        Public ReadOnly Property SearchText As String
+            Get
+                Dim namePart = If(Not String.IsNullOrWhiteSpace(_productName), _productName, "صنف غير محدد")
+                Dim codePart = If(Not String.IsNullOrWhiteSpace(_barcode), $" [{_barcode}]", "")
+                Return $"{namePart}{codePart} — ({_unitPrice:0.###})"
+            End Get
+        End Property
+
         ' Trigger Total update when Qty or Price changes
         Protected Overrides Sub OnPropertyChanged(<System.Runtime.CompilerServices.CallerMemberName> Optional propertyName As String = Nothing)
             MyBase.OnPropertyChanged(propertyName)
             If propertyName = NameOf(Quantity) OrElse propertyName = NameOf(UnitPrice) Then
                 OnPropertyChanged(NameOf(Total))
+            End If
+            If propertyName = NameOf(ProductName) OrElse propertyName = NameOf(Barcode) OrElse propertyName = NameOf(UnitPrice) Then
+                MyBase.OnPropertyChanged(NameOf(SearchText))
             End If
         End Sub
     End Class

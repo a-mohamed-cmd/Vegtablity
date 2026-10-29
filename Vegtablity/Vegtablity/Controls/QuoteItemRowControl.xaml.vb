@@ -42,6 +42,7 @@ Namespace Controls
             InitializeComponent()
             AddHandler DataContextChanged, AddressOf OnDataContextChangedHandler
             AddHandler Loaded, AddressOf OnLoadedHandler
+            AddHandler QuotedPriceBox.TextChanged, AddressOf QuotedPriceBox_TextChanged
         End Sub
 
         Private Sub OnLoadedHandler(sender As Object, e As RoutedEventArgs)
@@ -181,6 +182,23 @@ Namespace Controls
         '  Quoted Price Handling & Navigation
         ' ══════════════════════════════════════════════════════
 
+        Private Sub QuotedPriceBox_TextChanged(sender As Object, e As TextChangedEventArgs)
+            Dim tb = TryCast(sender, TextBox)
+            If tb Is Nothing OrElse Not tb.IsKeyboardFocusWithin Then Return
+            Dim val As Decimal = 0
+            Dim txt = tb.Text.Trim().Replace(",", ".")
+            If Decimal.TryParse(txt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, val) Then
+                Dim qDetail = TryCast(Me.DataContext, QuoteDetail)
+                If qDetail IsNot Nothing AndAlso qDetail.QuotedPrice <> val Then
+                    qDetail.QuotedPrice = val
+                End If
+                Dim pqDetail = TryCast(Me.DataContext, PurchaseQuoteDetail)
+                If pqDetail IsNot Nothing AndAlso pqDetail.UnitPrice <> val Then
+                    pqDetail.UnitPrice = val
+                End If
+            End If
+        End Sub
+
         Private Sub QuotedPriceBox_LostFocus(sender As Object, e As RoutedEventArgs)
             Dim tb = TryCast(sender, TextBox)
             If tb Is Nothing Then Return
@@ -287,6 +305,34 @@ Namespace Controls
 
         Public Sub FocusQuotedPrice()
             Dispatcher.BeginInvoke(New Action(Sub()
+                QuotedPriceBox.Focus()
+                QuotedPriceBox.SelectAll()
+            End Sub), Windows.Threading.DispatcherPriority.Input)
+        End Sub
+
+        ''' <summary>
+        ''' تحديد وتمييز السطر بصرياً والتمرير إليه والتركيز مباشرة على خانة السعر للتعديل السريع
+        ''' </summary>
+        Public Sub HighlightAndFocusPrice()
+            Dispatcher.BeginInvoke(New Action(Sub()
+                Me.BringIntoView()
+                If RowBorder IsNot Nothing Then
+                    RowBorder.Background = New System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(&HDB, &HEA, &HFE)) ' #DBEAFE
+                    RowBorder.BorderBrush = New System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(&H3B, &H82, &HF6)) ' #3B82F6
+                    RowBorder.BorderThickness = New Thickness(1.5)
+
+                    Dim highlightTimer As New System.Windows.Threading.DispatcherTimer()
+                    highlightTimer.Interval = TimeSpan.FromSeconds(2.5)
+                    AddHandler highlightTimer.Tick, Sub(s, ev)
+                                                        highlightTimer.Stop()
+                                                        If RowBorder IsNot Nothing Then
+                                                            RowBorder.Background = System.Windows.Media.Brushes.White
+                                                            RowBorder.BorderBrush = New System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(&HF1, &HF5, &HF9))
+                                                            RowBorder.BorderThickness = New Thickness(0, 0, 0, 1)
+                                                        End If
+                                                    End Sub
+                    highlightTimer.Start()
+                End If
                 QuotedPriceBox.Focus()
                 QuotedPriceBox.SelectAll()
             End Sub), Windows.Threading.DispatcherPriority.Input)

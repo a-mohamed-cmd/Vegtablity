@@ -125,6 +125,7 @@
     *   [WastageViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/WastageViewModel.vb) & [StockTakeViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/StockTakeViewModel.vb) - إدارة الجرد والهالك وترقيم الصفحات وطباعة السندات الرسمية.
     *   [ShiftsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ShiftsViewModel.vb) - تحسين التعرف على حساب الكاش `1101` ومسميات الصندوق وحصر الكاش الفعلي.
     *   [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) - تصدير الفواتير، الوصفات، تقرير الأرباح والخسائر، وسندات الجرد إلى PDF و Excel باحترافية.
+    *   [InvoicePrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) - محرك طباعة فواتير المبيعات المكتبي (التصميم التلقائي والتفصيلي)، مع تخصيص نقطة بداية مستقلة للورقة الثانية `ITEM_START_CM_PAGE2 = 5.2F` (على بعد 2.0 سم من `Account No:`) لتقليص المسافة الفارغة بعد نهاية الورقة الأولى دون المساس إطلاقاً بتخطيط وأبعاد الورقة الأولى.
     *   [AutoUpdateService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AutoUpdateService.vb) & [UpdateService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/update_service.dart) & [update_service.dart](file:///d:/VB.NET/backup/Vegtablity/LicenseManagerApp/lib/services/update_service.dart) - خدمات التحديث التلقائي الشاملة للتطبيقات الثلاثة (WPF, Mobile, LicenseManager).
     *   [DatabaseHelper.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/DatabaseHelper.vb) - تشفير بيانات الاتصال بـ AES-256 وقراءة اسم قاعدة البيانات من `dbconfig.dat`.
     *   [BarcodePrintViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/barcode_print_viewmodel.dart) & [BarcodePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/barcode_print_designer.dart) - متحكم ومصمم ملصقات الباركود عالي الدقة (HD Canvas + Bluetooth ESC/POS + Sunmi Native).
@@ -159,7 +160,7 @@
 
 ---
 
-### 4. دليل وفهرس الأقسام الشامل لوثيقة خطة التطوير (Complete Table of Contents - Sections 1 to 78):
+### 4. دليل وفهرس الأقسام الشامل لوثيقة خطة التطوير (Complete Table of Contents - Sections 1 to 79):
 
 | # | عنوان القسم والمحور التطويري | النطاق والمجال الرئيسي |
 |---|---|---|
@@ -249,6 +250,7 @@
 | **84** | [إدراج تطبيق إدارة التراخيص في منظومة التحديث التلقائي الشاملة](#76-إدراج-تطبيق-إدارة-التراخيص-licensemanagerapp-في-منظومة-التحديث-التلقائي-الشاملة-auto-update) | Auto-Update لتطبيق LicenseManager |
 | **85** | [إطلاق تطبيق الويب والتقارير التنفيذية [VegtablityManagerApp]](#77-إطلاق-تطبيق-الويب-والتقارير-التنفيذية-vegtablitymanagerapp-وتوجيه-الروابط-المتعددة-multi-tenant-web-system) | لوحة PWA متعددة الشركات + Cloudflare |
 | **86** | [تطوير الداشبورد التفاعلية Clickable واعتماد Pure Stored Procedures وحظر الكاش](#78-تطوير-الداشبورد-التفاعلية-clickable-deep-drill-down-والتوافق-الصارم-مع-الإجراءات-المخزنة-pure-stored-procedures-وحظر-الكاش) | بطاقات تفاعلية، Pure SPs، وحظر الكاش |
+| **87** | [تحسين الطباعة في الوضع التلقائي وتقليص المسافة للورقة الثانية [InvoicePrinter]](#79-تحسين-الطباعة-في-الوضع-التلقائي-وتقليص-المسافة-للورقة-الثانية-مع-حماية-الورقة-الأولى-invoiceprinter) | تقليص مسافة الورقة الثانية دون المساس بالأولى |
 
 ---
 
@@ -3290,3 +3292,41 @@
          - عرض شارة بارزة `🛑 منتهي الخدمة` بجانب اسم وقسم الموظف وتعديل التنسيق البصري للسطر.
 
 
+---
+
+## 79. تحسين الطباعة في الوضع التلقائي وتقليص المسافة للورقة الثانية مع حماية الورقة الأولى [InvoicePrinter]
+
+### أ- تحديد الكود المنفذ فعلياً في تصميم الفاتورة التلقائي:
+عند الطباعة في الوضع التلقائي (حيث يكون خيار `UseDetailedInvoiceDesign = False` وخيار `UseCustomInvoiceDesign = False`)، يتوجه أمر الطباعة إلى الكلاس [InvoicePrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb).
+
+الكود الذي يتم تنفيذه فعلياً على الطابعة هو فرع **`Else`** داخل حدث الرسم `OnPrintPage`:
+1. **`DrawHeader`**: يرسم ترويسة الفاتورة (اسم العميل، نوع الفاتورة `cash`/`credit`، رقم الفاتورة، التاريخ، رقم الحساب، والملاحظات).
+2. **`DrawItemRow` (داخل حلقة `While`)**: يرسم أسطر الأصناف سطراً بسطر (التسلسل، الاسم الإنجليزي، الاسم العربي، الوحدة، الكمية، السعر، الإجمالي) بارتفاع 5 مم لكل صف (`ROW_H_MM = 5.0F`).
+3. **إجمالي الفاتورة والتفقيط (`footerY = gt(22.5F)`)**: يُطبع في نهاية الصفحة الأخيرة فقط عند انتهاء جميع الأصناف (`If Not hasMore Then`).
+4. **تذييل الصفحة (`gt(24.7F)`)**: يطبع رقم الفاتورة وترقيم الصفحات (`صفحة X من Y`).
+
+---
+
+### ب- تحليل المشكلة (لماذا الورقة الأولى مظبوطة والورقة الثانية متباعدة؟):
+* **الورقة الأولى:** تبدأ الأصناف عند `ITEM_START_CM = 7.0F` (7.0 سم) وتنتهي عند `ITEM_END_CM = 22.0F` (22.0 سم)، والورقة ارتفاعها 28.0 سم، فيتبقى في ذيل الورقة الأولى فراغ قدره **6.5 سم**.
+* **الورقة الثانية (سابقاً):** كان الكود يطبق نفس بداية الورقة الأولى (`7.0 سم`) على الورقة الثانية أيضاً، فتصبح المسافة الفارغة الإجمالية بين آخر سطر في الورقة الأولى وأول سطر في الورقة الثانية = **13.5 سم** (6.5 سم في نهاية الأولى + 7.0 سم في بداية الثانية)، مما يسبب تباعداً كبيراً ونزول أسطر الورقة الثانية للأسفل.
+
+---
+
+### ج- التعديلات المنفذة (مع حماية الورقة الأولى 100%):
+1. **عزل وحماية الورقة الأولى بالكامل (`_currentPageNumber = 1`):**
+   * بقيت بداية جدول الأصناف في الورقة الأولى عند `ITEM_START_CM = 7.0F` (7.0 سم) دون أي تغيير.
+   * بقيت إحداثيات الترويسة في الورقة الأولى كما هي تماماً (`gt(3.0F)`, `gt(4.0F)`, `gt(5.0F)`).
+   * بقيت نهاية الجدول `ITEM_END_CM = 22.0F` وأبعاد الورقة المعتمدة (21×28 سم) ثابتة تماماً.
+2. **تقليص المسافة في الورقة الثانية وما بعدها (`_currentPageNumber > 1`):**
+   * إضافة ثابت مستقل لبداية الأصناف في الورقة الثانية:
+     ```vb
+     Private Const ITEM_START_CM As Single = 7.0F          ' بداية جدول الأصناف (الورقة الأولى - مظبوطة تماماً)
+     Private Const ITEM_START_CM_PAGE2 As Single = 5.2F    ' بداية جدول الأصناف (الورقة الثانية: 3.2 سم لـ Account No + 2.0 سم مسافة = 5.2 سم)
+     ```
+   * تقليص نقطة بداية أول سطر في الورقة الثانية من **7.0 سم** إلى **5.2 سم** (بفارق **2.0 سم** بعد `Account No:` الواقع عند `3.2 سم`، وهو نفس الفارق البالغ 2.0 سم في الورقة الأولى بين `Account No:` عند 5.0 سم وأول صنف عند 7.0 سم).
+   * رفع ترويسة الورقة الثانية بالكامل لتبدأ من `headerTopY = 1.2F` مع الحفاظ على كافة الحقول (`PartnerName`، `Invoice No:`، `Invoice Date:`، `Account No:`، `Payment Type`، `Notes`) وبنفس المسافات البينية الرأسية والأفقية المعتمدة في الورقة الأولى (`+ 1.0F` سم بين رقم الفاتورة والتاريخ، و`+ 1.0F` سم بين التاريخ ورقم الحساب).
+   * تحديث دالة `CalculateTotalPages` لحساب إجمالي عدد الصفحات بدقة وفق السعة الجديدة للورقة الثانية.
+
+> [!TIP]
+> إذا رغبت مستقبلاً في زيادة أو تقليل مسافة أول سطر في الورقة الثانية ببضعة مليمترات، يمكنك تعديل القيمة `ITEM_START_CM_PAGE2` في السطر 24 من [InvoicePrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) (مثلاً جعلها `3.0F` أو `4.0F`) دون أي خشية من التأثير على الورقة الأولى المحمية تماماً.

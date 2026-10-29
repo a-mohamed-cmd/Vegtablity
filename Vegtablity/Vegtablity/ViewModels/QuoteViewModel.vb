@@ -30,8 +30,20 @@ Namespace ViewModels
         Public Property Products As ObservableCollection(Of Product)
         Public Property QuotesHistory As ObservableCollection(Of QuoteHeader)
 
+        Private _filteredQuoteItems As New ObservableCollection(Of QuoteDetail)()
+        ''' <summary>قائمة الأصناف الموجودة حالياً داخل عرض السعر للبحث السريع والتنقل الفوري دون التأثير على القائمة الأصلية</summary>
+        Public Property FilteredQuoteItems As ObservableCollection(Of QuoteDetail)
+            Get
+                Return _filteredQuoteItems
+            End Get
+            Set(value As ObservableCollection(Of QuoteDetail))
+                SetProperty(_filteredQuoteItems, value)
+            End Set
+        End Property
+
         Public Event RequestSnackbar As Action(Of String)
         Public Event InvoiceLoaded(partnerID As Integer?, partnerName As String)
+        Public Event FocusQuoteItemRequested(item As QuoteDetail)
 
         Private _currentQuote As QuoteHeader
         Public Property CurrentQuote As QuoteHeader
@@ -472,7 +484,46 @@ Namespace ViewModels
             }
             SyncDateText()
             _allQuoteDetails.Clear()
+            ApplyQuoteItemFilter("")
             RaiseEvent InvoiceLoaded(Nothing, Nothing)
+        End Sub
+
+        ''' <summary>
+        ''' تصفية أصناف عرض السعر الحالية في الذاكرة لأداة البحث السريع دون المساس بـ _allQuoteDetails
+        ''' </summary>
+        Public Sub ApplyQuoteItemFilter(Optional searchText As String = "")
+            If _allQuoteDetails Is Nothing Then Return
+            Dim validItems = _allQuoteDetails.Where(Function(d) d.ProductID > 0 OrElse Not String.IsNullOrWhiteSpace(d.ProductName) OrElse Not String.IsNullOrWhiteSpace(d.Barcode))
+            If Not String.IsNullOrWhiteSpace(searchText) Then
+                Dim lower = searchText.Trim().ToLower()
+                validItems = validItems.Where(Function(d) (d.ProductName IsNot Nothing AndAlso d.ProductName.ToLower().Contains(lower)) OrElse
+                                                          (d.Barcode IsNot Nothing AndAlso d.Barcode.ToLower().Contains(lower)))
+            End If
+            FilteredQuoteItems = New ObservableCollection(Of QuoteDetail)(validItems.ToList())
+            OnPropertyChanged(NameOf(FilteredQuoteItems))
+        End Sub
+
+        ''' <summary>
+        ''' الانتقال الفوري لصفحة الصنف المحدد من أداة البحث السريع وتحديده للتعديل مع الحفاظ الكامل على جميع الأصناف
+        ''' </summary>
+        Public Sub SelectQuoteItemForEdit(item As QuoteDetail)
+            If item Is Nothing OrElse _allQuoteDetails Is Nothing Then Return
+            Dim idx = _allQuoteDetails.IndexOf(item)
+            If idx < 0 AndAlso item.ProductID > 0 Then
+                Dim fallback = _allQuoteDetails.FirstOrDefault(Function(d) d.ProductID = item.ProductID)
+                If fallback IsNot Nothing Then
+                    item = fallback
+                    idx = _allQuoteDetails.IndexOf(fallback)
+                End If
+            End If
+            If idx < 0 Then Return
+
+            Dim targetPage = idx \ PAGE_SIZE
+            If DetailsPage <> targetPage Then
+                DetailsPage = targetPage
+            End If
+
+            RaiseEvent FocusQuoteItemRequested(item)
         End Sub
 
         Private Sub UpdateDetailsPagination()
@@ -534,6 +585,7 @@ Namespace ViewModels
                     CurrentQuote = q
                     SyncDateText()
                     UpdateDetailsPagination()
+                    ApplyQuoteItemFilter("")
                     
                     OnPropertyChanged(NameOf(DetailsPage))
                     OnPropertyChanged(NameOf(DetailsPageLabel))
@@ -649,6 +701,7 @@ Namespace ViewModels
             Next
 
             DetailsPage = Math.Max(0, DetailsTotalPages - 1)
+            ApplyQuoteItemFilter("")
 
             Dim matchedCount As Integer = imported.Count - unmatchedCount
             Dim msg As String = $"✅ تم استيراد {imported.Count} صنف من ملف Excel." & vbCrLf &
@@ -701,12 +754,14 @@ Namespace ViewModels
                     
                     Dim newItem As New QuoteDetail() With {
                         .ProductID = found.ProductID,
+                        .ProductName = found.ProductName,
                         .Barcode = found.Barcode,
                         .UnitName = found.UnitName,
                         .QuotedPrice = found.SalePrice
                     }
                     AddHandler newItem.PropertyChanged, AddressOf OnDetailPropertyChanged
                     _allQuoteDetails.Add(newItem)
+                    ApplyQuoteItemFilter("")
                     
                     Dim newPage = Math.Max(0, DetailsTotalPages - 1)
                     If DetailsPage <> newPage Then
@@ -733,6 +788,7 @@ Namespace ViewModels
             If item IsNot Nothing Then
                 RemoveHandler item.PropertyChanged, AddressOf OnDetailPropertyChanged
                 _allQuoteDetails.Remove(item)
+                ApplyQuoteItemFilter("")
                 
                 If DetailsPage >= DetailsTotalPages AndAlso DetailsPage > 0 Then
                     DetailsPage -= 1
@@ -766,6 +822,10 @@ Namespace ViewModels
                 End If
             End If
             
+            If e.PropertyName = NameOf(QuoteDetail.ProductID) OrElse e.PropertyName = NameOf(QuoteDetail.ProductName) Then
+                ApplyQuoteItemFilter("")
+            End If
+
             System.Windows.Input.CommandManager.InvalidateRequerySuggested()
         End Sub
 
