@@ -82,6 +82,8 @@ class PosProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> reloadOfflineQueueFromPrefs() => _loadOfflineInvoices();
+
   Future<void> _loadOfflineInvoices() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -387,6 +389,8 @@ class PosProvider extends ChangeNotifier {
       final double price = (item['price'] as num).toDouble();
       return {
         'ProductID': item['ProductID'] ?? 1,
+        'ProductName': item['name'] ?? item['ProductName'] ?? '',
+        'UnitName': item['UnitName'] ?? item['unit_name'] ?? '',
         'UnitPrice': price,
         'Quantity': qty,
         'TotalPrice': price * qty,
@@ -437,7 +441,27 @@ class PosProvider extends ChangeNotifier {
             ? 'تم تعديل الفاتورة بنجاح!'
             : 'تم حفظ الفاتورة بنجاح!';
         final dynamic respData = response.data;
-        final int newInvId = (respData is Map ? (respData['InvID'] ?? respData['id']) : null) ?? existingInvId ?? 0;
+        Map<String, dynamic>? respMap;
+        if (respData is Map) {
+          respMap = Map<String, dynamic>.from(respData);
+        } else if (respData is String && respData.trim().isNotEmpty) {
+          try {
+            final decoded = json.decode(respData);
+            if (decoded is Map) {
+              respMap = Map<String, dynamic>.from(decoded);
+            }
+          } catch (_) {}
+        }
+        final dynamic rawSavedId = respMap != null
+            ? (respMap['InvID'] ?? respMap['id'] ?? respMap['InvoiceID'] ?? respMap['inv_id'])
+            : null;
+        final int newInvId = (rawSavedId is int
+                ? rawSavedId
+                : (rawSavedId is num
+                    ? rawSavedId.toInt()
+                    : int.tryParse(rawSavedId?.toString() ?? ''))) ??
+            existingInvId ??
+            0;
         _invoiceItems.clear();
         _extraDiscountAmount = 0.0;
         _isLoading = false;

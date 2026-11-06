@@ -1,186 +1,306 @@
-﻿Imports System.Windows
+Imports System.Windows
 Imports System.Windows.Controls
+Imports System.Windows.Input
+Imports System.Windows.Media
 Imports System.Windows.Media.Animation
+Imports System.Text.RegularExpressions
+Imports System.Globalization
+Imports System.Linq
+Imports Vegtablity.Helpers
+Imports Vegtablity.ViewModels
+Imports Vegtablity.Models
 
 Namespace Views
-    Public Class ReportsPage
+    Partial Public Class ReportsPage
         Inherits UserControl
+
+        Private _isSidebarCollapsed As Boolean = False
 
         Public Sub New()
             InitializeComponent()
-            AddHandler Me.Loaded, AddressOf OnPageLoaded
+            AddHandler Me.Loaded, AddressOf ReportsPage_Loaded
         End Sub
 
-        Private Sub OnPageLoaded(sender As Object, e As RoutedEventArgs)
-            Dim vm = TryCast(Me.DataContext, ViewModels.ReportsViewModel)
+        Private Sub ReportsPage_Loaded(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
             If vm IsNot Nothing Then
-                ' Ensure we only subscribe once
                 RemoveHandler vm.ReportLoaded, AddressOf OnReportLoaded
                 AddHandler vm.ReportLoaded, AddressOf OnReportLoaded
             End If
-            PlayFadeAnimation()
+            SyncDropdownSelectionsFromViewModel()
+            RebuildTableHeaders()
         End Sub
 
         Private Sub OnReportLoaded(sender As Object, e As EventArgs)
-            PlayFadeAnimation()
-        End Sub
-
-        Private Sub PlayFadeAnimation()
-            Dim sb As Storyboard = CType(Me.FindResource("FadeInStoryboard"), Storyboard)
-            If sb IsNot Nothing AndAlso ReportGridContainer IsNot Nothing Then
-                ' Dispatcher ensures UI is updated before animation starts
-                Dispatcher.BeginInvoke(New Action(Sub()
-                                                      sb.Begin(ReportGridContainer)
-                                                  End Sub), System.Windows.Threading.DispatcherPriority.Background)
+            SyncDropdownSelectionsFromViewModel()
+            RebuildTableHeaders()
+            If ReportScrollViewer IsNot Nothing Then
+                ReportScrollViewer.ScrollToTop()
             End If
         End Sub
 
-        Private Sub ContentGrid_Loaded(sender As Object, e As RoutedEventArgs)
-            ' Handled by OnPageLoaded and OnReportLoaded now
-        End Sub
+        ' =======================================================
+        ' Dynamic Proportional Table Header Builder (Matches ReportRowControl)
+        ' =======================================================
+        Private Sub RebuildTableHeaders()
+            If ReportHeadersGrid Is Nothing Then Return
+            ReportHeadersGrid.Children.Clear()
+            ReportHeadersGrid.ColumnDefinitions.Clear()
 
-        Private Sub ExportPdf_Click(sender As Object, e As RoutedEventArgs)
-            Dim vm As ViewModels.ReportsViewModel = TryCast(Me.DataContext, ViewModels.ReportsViewModel)
-            If vm Is Nothing Then Return
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            If vm Is Nothing OrElse vm.CurrentReportHeaders Is Nothing Then Return
 
-            Dim currentTabName = CType(CType(Me.FindName("TabControl"), TabControl)?.SelectedItem, TabItem)?.Header?.ToString()
-            Dim activeGrid = GetActiveDataGrid(vm.SelectedReportTab)
-            If activeGrid IsNot Nothing Then
-                Helpers.ReportExporter.ExportDataGridToPdf(activeGrid, currentTabName)
-                ShowSnackbar("تم تصدير ملف PDF بنجاح")
-            Else
-                MessageBox.Show("لم يتم العثور على جدول التقرير ليتم تصديره.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
-            End If
-        End Sub
-
-        Private Sub ExportExcel_Click(sender As Object, e As RoutedEventArgs)
-            Dim vm As ViewModels.ReportsViewModel = TryCast(Me.DataContext, ViewModels.ReportsViewModel)
-            If vm Is Nothing Then Return
-
-            Dim currentTabName = CType(CType(Me.FindName("TabControl"), TabControl)?.SelectedItem, TabItem)?.Header?.ToString()
-            Dim activeGrid = GetActiveDataGrid(vm.SelectedReportTab)
-            If activeGrid IsNot Nothing Then
-                Helpers.ReportExporter.ExportDataGridToCsv(activeGrid, currentTabName)
-                ShowSnackbar("تم تصدير ملف CSV بنجاح")
-            Else
-                MessageBox.Show("لم يتم العلمور على جدول التقرير ليتم تصديره.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning)
-            End If
-        End Sub
-
-        Private Async Sub ShowSnackbar(message As String)
-            SnackbarText.Text = message
-            SnackbarBorder.Visibility = Visibility.Visible
-            
-            Dim fadeIn As New DoubleAnimation With {
-                .From = 0,
-                .To = 1,
-                .Duration = TimeSpan.FromSeconds(0.3)
+            ' Column 0: Sequence Number (#) - Fixed 48px matching ReportRowControl
+            ReportHeadersGrid.ColumnDefinitions.Add(New ColumnDefinition() With {.Width = New GridLength(48, GridUnitType.Pixel)})
+            Dim seqHeader As New TextBlock() With {
+                .Text = "#",
+                .FontSize = 12,
+                .FontWeight = FontWeights.Bold,
+                .Foreground = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#64748B"), Color)),
+                .HorizontalAlignment = HorizontalAlignment.Center,
+                .VerticalAlignment = VerticalAlignment.Center
             }
-            
-            SnackbarBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn)
-            
-            Await System.Threading.Tasks.Task.Delay(3000)
-            
-            Dim fadeOut As New DoubleAnimation With {
-                .From = 1,
-                .To = 0,
-                .Duration = TimeSpan.FromSeconds(0.5)
-            }
-            
-            SnackbarBorder.BeginAnimation(UIElement.OpacityProperty, fadeOut)
-            Await System.Threading.Tasks.Task.Delay(500)
-            SnackbarBorder.Visibility = Visibility.Collapsed
-        End Sub
+            Grid.SetColumn(seqHeader, 0)
+            ReportHeadersGrid.Children.Add(seqHeader)
 
-        Private Function GetActiveDataGrid(tabIndex As Integer) As DataGrid
-            ' The Grids are the children of the Border/Grid named ReportGridContainer
-            ' We can find them based on the tabIndex if they are directly inside
-            ' To be safe, we iterate the VisualTree to find the visible DataGrid
-            Return FindVisibleDataGrid(ReportGridContainer)
-        End Function
+            For i As Integer = 0 To vm.CurrentReportHeaders.Count - 1
+                Dim h = vm.CurrentReportHeaders(i)
+                Dim colIdx As Integer = i + 1
+                Dim weight As Double = If(h.WidthWeight > 0, h.WidthWeight, 1.0)
+                ReportHeadersGrid.ColumnDefinitions.Add(New ColumnDefinition() With {.Width = New GridLength(weight, GridUnitType.Star)})
 
-        Private Function FindVisibleDataGrid(parent As DependencyObject) As DataGrid
-            If parent Is Nothing Then Return Nothing
-            For i As Integer = 0 To VisualTreeHelper.GetChildrenCount(parent) - 1
-                Dim child = VisualTreeHelper.GetChild(parent, i)
-                Dim dg = TryCast(child, DataGrid)
-                If dg IsNot Nothing AndAlso dg.IsVisible Then
-                    Return dg
-                End If
-                Dim result = FindVisibleDataGrid(child)
-                If result IsNot Nothing Then Return result
+                Dim fgHex As String = If(h.IsHighlight AndAlso Not String.IsNullOrEmpty(h.AccentColor), h.AccentColor, "#334155")
+                Dim fgBrush As New SolidColorBrush(CType(ColorConverter.ConvertFromString(fgHex), Color))
+
+                Dim tb As New TextBlock() With {
+                    .Text = h.Title,
+                    .FontSize = 12.5,
+                    .FontWeight = FontWeights.Bold,
+                    .Foreground = fgBrush,
+                    .Margin = New Thickness(6, 0, 6, 0),
+                    .VerticalAlignment = VerticalAlignment.Center,
+                    .TextTrimming = TextTrimming.CharacterEllipsis
+                }
+                Grid.SetColumn(tb, colIdx)
+                ReportHeadersGrid.Children.Add(tb)
             Next
-            Return Nothing
-        End Function
-
-        Private Function ParseDateInput(raw As String, ByRef parsed As DateTime) As Boolean
-            raw = raw.Trim().Replace("-", "/").Replace(".", "/")
-            If raw.Length = 8 AndAlso Not raw.Contains("/") Then
-                raw = raw.Substring(0, 2) & "/" & raw.Substring(2, 2) & "/" & raw.Substring(4, 4)
-            End If
-            Return DateTime.TryParseExact(raw, {"dd/MM/yyyy", "d/M/yyyy", "dd/MM/yy"},
-                                      System.Globalization.CultureInfo.InvariantCulture,
-                                      System.Globalization.DateTimeStyles.None, parsed)
-        End Function
-
-        Private Sub Date_GotFocus(sender As Object, e As RoutedEventArgs)
-            Dim tb = TryCast(sender, TextBox)
-            If tb IsNot Nothing Then tb.SelectAll()
         End Sub
 
-        Private Sub StartDate_LostFocus(sender As Object, e As RoutedEventArgs)
-            Dim tb = TryCast(sender, TextBox)
-            If tb Is Nothing Then Return
+        ' =======================================================
+        ' Collapsible Sidebar with Smooth Animation
+        ' =======================================================
+        Private Sub BtnToggleSidebar_Click(sender As Object, e As RoutedEventArgs)
+            _isSidebarCollapsed = Not _isSidebarCollapsed
+            Dim duration As New Duration(TimeSpan.FromMilliseconds(260))
+            Dim ease As New CubicEase() With {.EasingMode = EasingMode.EaseInOut}
 
-            Dim vm = TryCast(Me.DataContext, ViewModels.ReportsViewModel)
+            If _isSidebarCollapsed Then
+                Dim widthAnim As New DoubleAnimation(255, 0, duration) With {.EasingFunction = ease}
+                Dim opacityAnim As New DoubleAnimation(1, 0, duration) With {.EasingFunction = ease}
+                AddHandler widthAnim.Completed, Sub(s, args)
+                                                    SidebarBorder.Visibility = Visibility.Collapsed
+                                                End Sub
+                SidebarBorder.BeginAnimation(FrameworkElement.MaxWidthProperty, widthAnim)
+                SidebarBorder.BeginAnimation(UIElement.OpacityProperty, opacityAnim)
+                SidebarBorder.Margin = New Thickness(0)
+                If TxtToggleLabel IsNot Nothing Then TxtToggleLabel.Text = "إظهار التقارير"
+                If TxtToggleIcon IsNot Nothing Then TxtToggleIcon.Text = "☰"
+            Else
+                SidebarBorder.Visibility = Visibility.Visible
+                SidebarBorder.Margin = New Thickness(0, 0, 12, 0)
+                Dim widthAnim As New DoubleAnimation(0, 255, duration) With {.EasingFunction = ease}
+                Dim opacityAnim As New DoubleAnimation(0, 1, duration) With {.EasingFunction = ease}
+                SidebarBorder.BeginAnimation(FrameworkElement.MaxWidthProperty, widthAnim)
+                SidebarBorder.BeginAnimation(UIElement.OpacityProperty, opacityAnim)
+                If TxtToggleLabel IsNot Nothing Then TxtToggleLabel.Text = "طي القائمة"
+                If TxtToggleIcon IsNot Nothing Then TxtToggleIcon.Text = "❯"
+            End If
+        End Sub
+
+        ' =======================================================
+        ' SearchableDropdown Synchronization & Event Handlers
+        ' =======================================================
+        Private Sub SyncDropdownSelectionsFromViewModel()
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
             If vm Is Nothing Then Return
 
-            Dim raw = tb.Text
-            If String.IsNullOrWhiteSpace(raw) Then Return
+            Dim selectedPartner = vm.Partners.FirstOrDefault(Function(p) p.PartnerID = vm.SelectedPartnerID)
+            If PartnerFilterDropdown IsNot Nothing Then
+                PartnerFilterDropdown.SelectedItem = selectedPartner
+            End If
 
-            Dim parsed As DateTime
-            If ParseDateInput(raw, parsed) Then
-                vm.SelectedStartDate = parsed
-                tb.Text = parsed.ToString("dd/MM/yyyy")
-                tb.Foreground = System.Windows.Media.Brushes.Black
-                tb.ToolTip = "أدخل التاريخ: dd/MM/yyyy"
-            Else
-                tb.Foreground = System.Windows.Media.Brushes.Red
-                tb.ToolTip = "صيغة تاريخ غير صحيحة — استخدم: dd/MM/yyyy"
+            Dim selectedWarehouse = vm.Warehouses.FirstOrDefault(Function(w) w.WarehouseID = vm.SelectedWarehouseID)
+            If WarehouseFilterDropdown IsNot Nothing Then
+                WarehouseFilterDropdown.SelectedItem = selectedWarehouse
+            End If
+
+            Dim selectedProduct = vm.Products.FirstOrDefault(Function(p) p.ProductID = vm.SelectedProductID)
+            If ProductFilterDropdown IsNot Nothing Then
+                ProductFilterDropdown.SelectedItem = selectedProduct
             End If
         End Sub
 
-        Private Sub EndDate_LostFocus(sender As Object, e As RoutedEventArgs)
-            Dim tb = TryCast(sender, TextBox)
-            If tb Is Nothing Then Return
+        Private Sub PartnerDropdown_SearchChanged(sender As Object, searchText As String)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            If vm IsNot Nothing Then
+                vm.ApplyPartnerFilter(searchText)
+            End If
+        End Sub
 
-            Dim vm = TryCast(Me.DataContext, ViewModels.ReportsViewModel)
+        Private Sub PartnerDropdown_ItemSelected(sender As Object, selectedItem As Object)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            Dim partner = TryCast(selectedItem, Partner)
+            If vm IsNot Nothing AndAlso partner IsNot Nothing Then
+                vm.SelectedPartnerID = partner.PartnerID
+                vm.ApplyPartnerFilter("")
+                If PartnerFilterDropdown IsNot Nothing Then PartnerFilterDropdown.SelectedItem = partner
+                vm.LoadReportCommand.Execute(Nothing)
+            End If
+        End Sub
+
+        Private Sub WarehouseDropdown_SearchChanged(sender As Object, searchText As String)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            If vm IsNot Nothing Then
+                vm.ApplyWarehouseFilter(searchText)
+            End If
+        End Sub
+
+        Private Sub WarehouseDropdown_ItemSelected(sender As Object, selectedItem As Object)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            Dim wh = TryCast(selectedItem, Warehouse)
+            If vm IsNot Nothing AndAlso wh IsNot Nothing Then
+                vm.SelectedWarehouseID = wh.WarehouseID
+                vm.ApplyWarehouseFilter("")
+                If WarehouseFilterDropdown IsNot Nothing Then WarehouseFilterDropdown.SelectedItem = wh
+                vm.LoadReportCommand.Execute(Nothing)
+            End If
+        End Sub
+
+        Private Sub ProductDropdown_SearchChanged(sender As Object, searchText As String)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            If vm IsNot Nothing Then
+                vm.ApplyProductFilter(searchText)
+            End If
+        End Sub
+
+        Private Sub ProductDropdown_ItemSelected(sender As Object, selectedItem As Object)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            Dim prod = TryCast(selectedItem, Product)
+            If vm IsNot Nothing AndAlso prod IsNot Nothing Then
+                vm.SelectedProductID = prod.ProductID
+                vm.ApplyProductFilter("")
+                If ProductFilterDropdown IsNot Nothing Then ProductFilterDropdown.SelectedItem = prod
+                vm.LoadReportCommand.Execute(Nothing)
+            End If
+        End Sub
+
+        ' ===================================================
+        ' Export Logic (CSV & PDF) using Custom UserControl Rows & Summary Bar
+        ' ===================================================
+        Private Sub BtnExportCsv_Click(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
             If vm Is Nothing Then Return
-
-            Dim raw = tb.Text
-            If String.IsNullOrWhiteSpace(raw) Then Return
-
-            Dim parsed As DateTime
-            If ParseDateInput(raw, parsed) Then
-                vm.SelectedEndDate = parsed
-                tb.Text = parsed.ToString("dd/MM/yyyy")
-                tb.Foreground = System.Windows.Media.Brushes.Black
-                tb.ToolTip = "أدخل التاريخ: dd/MM/yyyy"
-            Else
-                tb.Foreground = System.Windows.Media.Brushes.Red
-                tb.ToolTip = "صيغة تاريخ غير صحيحة — استخدم: dd/MM/yyyy"
-            End If
+            ReportExporter.ExportReportRowsToCsv(vm.CurrentReportTitle, vm.CurrentReportHeaders, vm.AllFilteredRowsForExport, vm.SummaryMetrics)
         End Sub
-    
-        Private Sub Date_PreviewKeyDown(sender As Object, e As System.Windows.Input.KeyEventArgs)
-            If e.Key = System.Windows.Input.Key.Enter Then
-                e.Handled = True
-                Dim tb = TryCast(sender, System.Windows.Controls.TextBox)
-                If tb IsNot Nothing Then
-                    Dim request As New System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next)
-                    tb.MoveFocus(request)
+
+        Private Sub BtnExportPdf_Click(sender As Object, e As RoutedEventArgs)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            If vm Is Nothing Then Return
+            ReportExporter.ExportReportRowsToPdf(vm.CurrentReportTitle, vm.CurrentReportHeaders, vm.AllFilteredRowsForExport, vm.SummaryMetrics)
+        End Sub
+
+        ' ===================================================
+        ' Smart Date Input Logic
+        ' ===================================================
+        Private _isFormattingDate As Boolean = False
+
+        Private Sub DateTextBox_PreviewTextInput(sender As Object, e As TextCompositionEventArgs)
+            Dim regex As New Regex("[^0-9/]+")
+            e.Handled = regex.IsMatch(e.Text)
+        End Sub
+
+        Private Sub FormatDateTextBox(tb As TextBox)
+            If _isFormattingDate OrElse tb Is Nothing Then Return
+            _isFormattingDate = True
+
+            Try
+                Dim digitsOnly As String = Regex.Replace(tb.Text, "[^\d]", "")
+                If digitsOnly.Length > 8 Then digitsOnly = digitsOnly.Substring(0, 8)
+
+                Dim formatted As String = ""
+                If digitsOnly.Length > 0 Then
+                    formatted = digitsOnly.Substring(0, Math.Min(2, digitsOnly.Length))
+                    If digitsOnly.Length >= 2 Then
+                        Dim dayVal As Integer = Integer.Parse(formatted)
+                        If dayVal > 31 Then formatted = "31"
+                        If dayVal = 0 AndAlso digitsOnly.Length > 2 Then formatted = "01"
+                    End If
+                End If
+
+                If digitsOnly.Length > 2 Then
+                    Dim monthPart As String = digitsOnly.Substring(2, Math.Min(2, digitsOnly.Length - 2))
+                    If monthPart.Length = 2 Then
+                        Dim monthVal As Integer = Integer.Parse(monthPart)
+                        If monthVal > 12 Then monthPart = "12"
+                        If monthVal = 0 Then monthPart = "01"
+                    End If
+                    formatted &= "/" & monthPart
+                End If
+
+                If digitsOnly.Length > 4 Then
+                    Dim yearPart As String = digitsOnly.Substring(4, digitsOnly.Length - 4)
+                    formatted &= "/" & yearPart
+                End If
+
+                If tb.Text <> formatted Then
+                    tb.Text = formatted
+                    tb.CaretIndex = formatted.Length
+                End If
+            Finally
+                _isFormattingDate = False
+            End Try
+        End Sub
+
+        Private Sub ParseAndCommitDate(tb As TextBox, isStartDate As Boolean)
+            Dim vm = TryCast(Me.DataContext, ReportsViewModel)
+            If vm Is Nothing OrElse tb Is Nothing Then Return
+
+            Dim raw As String = tb.Text.Trim()
+            Dim parsedDate As DateTime
+            Dim formats As String() = {"d/M/yyyy", "dd/MM/yyyy", "d/M/yy", "dd/MM/yy", "yyyy/MM/dd", "d-M-yyyy", "dd-MM-yyyy"}
+
+            If DateTime.TryParseExact(raw, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, parsedDate) Then
+                If isStartDate Then
+                    vm.SelectedStartDate = parsedDate
+                    vm.SelectedStartDateText = parsedDate.ToString("dd/MM/yyyy")
+                Else
+                    vm.SelectedEndDate = parsedDate
+                    vm.SelectedEndDateText = parsedDate.ToString("dd/MM/yyyy")
+                End If
+            Else
+                If isStartDate Then
+                    tb.Text = vm.SelectedStartDate.ToString("dd/MM/yyyy")
+                Else
+                    tb.Text = vm.SelectedEndDate.ToString("dd/MM/yyyy")
                 End If
             End If
         End Sub
-End Class
+
+        Private Sub StartDateTextBox_TextChanged(sender As Object, e As TextChangedEventArgs)
+            FormatDateTextBox(TryCast(sender, TextBox))
+        End Sub
+
+        Private Sub StartDateTextBox_LostFocus(sender As Object, e As RoutedEventArgs)
+            ParseAndCommitDate(TryCast(sender, TextBox), True)
+        End Sub
+
+        Private Sub EndDateTextBox_TextChanged(sender As Object, e As TextChangedEventArgs)
+            FormatDateTextBox(TryCast(sender, TextBox))
+        End Sub
+
+        Private Sub EndDateTextBox_LostFocus(sender As Object, e As RoutedEventArgs)
+            ParseAndCommitDate(TryCast(sender, TextBox), False)
+        End Sub
+
+    End Class
 End Namespace

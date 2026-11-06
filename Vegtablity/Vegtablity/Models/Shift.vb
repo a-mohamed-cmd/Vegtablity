@@ -1,5 +1,7 @@
 Namespace Models
     Public Class Shift
+        Inherits ViewModels.BaseViewModel
+
         Public Property ShiftID As Integer
         Public Property UserID As Integer
         Public Property UserName As String
@@ -7,7 +9,16 @@ Namespace Models
         Public Property EndTime As DateTime?
         Public Property StartingCash As Decimal
         Public Property EndingCash As Decimal?
+
+        Private _status As String
         Public Property Status As String
+            Get
+                Return _status
+            End Get
+            Set(value As String)
+                SetProperty(_status, value)
+            End Set
+        End Property
 
         ' Summary properties from sp_Shift_GetSummary
         Public Property TotalSales As Decimal

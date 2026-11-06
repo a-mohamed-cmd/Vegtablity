@@ -28,6 +28,7 @@ Namespace ViewModels
         Private _totalNonCashAmount As Decimal
 
         Public Sub New()
+            LoadPermissions("Shifts")
             Shifts = New ObservableCollection(Of Shift)()
             SalesInvoices = New ObservableCollection(Of InvoiceHeader)()
             PurchaseInvoices = New ObservableCollection(Of InvoiceHeader)()
@@ -35,6 +36,49 @@ Namespace ViewModels
             PaymentVouchers = New ObservableCollection(Of Voucher)()
             NonCashPaymentSummaries = New ObservableCollection(Of PaymentMethodSummary)()
             LoadShifts()
+        End Sub
+
+        Public ReadOnly Property CanEditShiftStatus As Boolean
+            Get
+                Return CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanEdit
+            End Get
+        End Property
+
+        Public ReadOnly Property ToggleShiftStatusCommand As ICommand
+            Get
+                Return New Helpers.RelayCommand(AddressOf ExecuteToggleShiftStatus)
+            End Get
+        End Property
+
+        Private Async Sub ExecuteToggleShiftStatus(obj As Object)
+            Dim targetShift = TryCast(obj, Shift)
+            If targetShift Is Nothing Then Return
+
+            If Not CanEditShiftStatus Then
+                System.Windows.MessageBox.Show("ليس لديك صلاحية تعديل حالة الوردية.", "تنبيه الصلاحيات", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
+                Return
+            End If
+
+            Dim currentStatus As String = If(targetShift.Status, "").Trim()
+            Dim newStatus As String = If(String.Equals(currentStatus, "Open", StringComparison.OrdinalIgnoreCase), "Closed", "Open")
+            Dim actionAr As String = If(newStatus = "Closed", "إغلاق (Closed)", "فتح (Open)")
+
+            If System.Windows.MessageBox.Show($"هل أنت متأكد من تغيير حالة الوردية رقم ({targetShift.ShiftID}) من [{currentStatus}] إلى [{actionAr}]؟",
+                                              "تأكيد تغيير حالة الوردية",
+                                              System.Windows.MessageBoxButton.YesNo,
+                                              System.Windows.MessageBoxImage.Question) <> System.Windows.MessageBoxResult.Yes Then
+                Return
+            End If
+
+            Dim success As Boolean = Await System.Threading.Tasks.Task.Run(Function() _shiftService.UpdateShiftStatus(targetShift.ShiftID, newStatus))
+            If success Then
+                targetShift.Status = newStatus
+                If SelectedShift IsNot Nothing AndAlso SelectedShift.ShiftID = targetShift.ShiftID Then
+                    LoadShiftDetails(targetShift.ShiftID)
+                End If
+            Else
+                System.Windows.MessageBox.Show("تعذر تحديث حالة الوردية في قاعدة البيانات.", "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+            End If
         End Sub
 
         Public Property Shifts As ObservableCollection(Of Shift)

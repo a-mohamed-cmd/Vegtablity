@@ -52,6 +52,17 @@ async def get_daily_orders(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/by-phone", response_model=dict)
+async def search_invoices_by_phone(
+    phone: str,
+    user_id: int = Depends(get_current_user_id)
+):
+    service = InvoiceService()
+    try:
+        return service.search_invoices_by_phone(phone)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/{inv_id}", response_model=dict)
 async def get_invoice(
     inv_id: int,
@@ -84,8 +95,13 @@ async def create_invoice(
 ):
     service = InvoiceService()
     try:
-        inv_id = service.save_invoice(invoice, user_id)
-        return {"InvID": inv_id, "message": "Invoice saved successfully"}
+        inv_id = int(service.save_invoice(invoice, user_id))
+        return {
+            "InvID": inv_id,
+            "id": inv_id,
+            "InvoiceID": inv_id,
+            "message": "Invoice saved successfully"
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -59,7 +59,7 @@
 
 *   **أدوات إدخال السطور وعناصر التحكم لسطح المكتب (Desktop Controls & Custom Row Controls):**
     *   [InvoiceItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml) & [InvoiceItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/InvoiceItemRowControl.xaml.vb) - عنصر تحكم مخصص لحل محل DataGrid في فواتير المبيعات والمشتريات، يدعم البحث بالباركود وبالقائمة الذكية `SearchableDropdown`، فحص عروض الأسعار، الحماية من تكرار الفاصلة العشرية، فحص رصيد المخزون بشكل غير متزامن `Task.Run`، وتسريع دورة التنقل بـ Enter دون تجميد الواجهة.
-    *   [QuoteItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml) & [QuoteItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور عروض الأسعار (مبيعات ومشتريات) مع التنقل السريع وتحديث الموديل الحسابي المباشر.
+    *   [QuoteItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml) & [QuoteItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور عروض الأسعار (مبيعات ومشتريات) مع التنقل السريع، التحديث اللحظي للسعر في الذاكرة أثناء الكتابة، ودالة التمييز البصري والتركيز الفوري `HighlightAndFocusPrice()`.
     *   [RecipeItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml) & [RecipeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/RecipeItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور مكونات الوصفات والمواد الخام بالبحث الذكي وحساب تكلفة الوحدة والتنقل بـ Enter.
     *   [WastageItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml) & [WastageItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/WastageItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور التوالف والهوالك وعرض الرصيد بعد الخصم وحذف الصف.
     *   [StockTakeItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml) & [StockTakeItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/StockTakeItemRowControl.xaml.vb) - عنصر تحكم مخصص لسطور الجرد الآلي وحساب الفروقات وزر تحديث الرصيد الدفتري 🔄.
@@ -68,7 +68,7 @@
 
 *   **شاشات سطح المكتب المطورة (WPF Desktop Pages):**
     *   [SalesInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/SalesInvoicePage.xaml) & [PurchaseInvoicePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseInvoicePage.xaml) - فواتير المبيعات والمشتريات المطورة بالـ ItemsControl وسطور `InvoiceItemRowControl` وسرعة الإضافة المباشرة للسطور والفوكس التلقائي على الكمية وتصدير PDF.
-    *   [QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml) & [PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml) - شاشات عروض الأسعار مع سطور `QuoteItemRowControl` المتجاوبة السريعة.
+    *   [QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml) & [PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml) - شاشات عروض أسعار العملاء والموردين مع سطور `QuoteItemRowControl` المتجاوبة وأداة البحث السريع في أصناف العرض (`QuoteItemSearchDropdown` باستخدام `SearchableDropdown`) للانتقال الفوري لصفحة الصنف وتحديده للتعديل دون التأثير على باقي الأصناف عند الحفظ.
     *   [JournalEntryPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/JournalEntryPage.xaml) - كارت البحث والتصفية المتقدم المتحرك (Animation) للبحث برقم القيد والحالة ونطاق التاريخ.
     *   [ProfitLossPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ProfitLossPage.xaml) - تقرير الأرباح والخسائر والمقارنة الشهرية الأفقية ورسوم LiveCharts والنسبة من المبيعات.
     *   [RecipePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/RecipePage.xaml) - إدارة الوصفات مع كارت الفلترة المنزلق وترقيم الصفحات 10/صفحة واللوحة الجانبية القابلة للطي.
@@ -76,6 +76,8 @@
     *   [ShiftsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ShiftsPage.xaml) - ضبط وتوحيد رؤوس أقسام التدفق النقدي الفعلي بالدرج وتثبيت حساب الصندوق الرئيسي على 1101.
     *   [CompanySettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/CompanySettingsPage.xaml) - قصر الشاشة على البيانات التجارية الأساسية، وإزالة كروت التفضيلات ليتم التحكم بها من تطبيق الإدارة وقواعد البيانات.
     *   [UpdateAvailableDialog.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/UpdateAvailableDialog.xaml) - نافذة حوار التحديث التلقائي لسطح المكتب مع شريط تقدم التنزيل الفوري.
+    *   [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml) & [ReportsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ReportsViewModel.vb) & [ReportRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/ReportRowControl.xaml) - التطوير الشامل لشاشة التقارير (15 تقريراً بما فيها تقرير مبيعات الفروع والمخازن `WarehouseID`، شريط الإجماليات العلوي لكل تقرير، استبدال `DataGrid` بأداة `ReportRowControl` المخصصة، طي القائمة الجانبية بـ Animation انسيابي، الفلاتر السياقية بـ `SearchableDropdown`، والبحث الفوري داخل النتائج).
+    *   [AccountStatementPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/AccountStatementPage.xaml) & [AccountingService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb) & [ReportModels.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb) - عرض أرقام كشف الحساب بـ 3 أرقام عشرية مطابقة لقاعدة البيانات بدون أي تقريب (`TruncateTo3Decimals` / `ROUND(..., 3, 1)`) في الشاشة وتصدير PDF و CSV.
 
 *   **شاشات وتحديثات تطبيق الموبايل [Vegtablity_App]:**
     *   [BarcodePrintScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/barcode_print_screen.dart) - شاشة طباعة ملصقات الباركود للمنتجات (عادية/تصنيع/وسيط) وتحديد النسخ والمعاينة والطباعة الحرارية المباشرة.
@@ -86,6 +88,7 @@
     *   [TemporaryOrderScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/temp_order_screen.dart) - إدخال تفاصيل ومواعيد شحن وتوصيل الطلبات للعملاء وإخفاء تفاصيل الزبون المؤقت للعملاء المسجلين.
     *   [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - خيار نمط طباعة الشبكة (Direct Text vs HD Canvas Raster) وعدد النسخ وحفظ الإعدادات محلياً في SharedPreferences.
     *   [UpdateDialog](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/update_dialog.dart) - نافذة حوار التحديث التلقائي للموبايل لتنزيل الـ APK وتثبيته بـ `open_filex`.
+    *   [SyncCenterScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/sync_center_screen.dart) & [SyncViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/sync_viewmodel.dart) & [OfflineSyncService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/offline_sync_service.dart) - منظومة مركز المزامنة المستقلة بنمط MVVM لإدارة ومزامنة العمليات المحفوظة بدون إنترنت (فواتير، سندات، هالك، جرد مخزني) بشكل جماعي أو منفرد لكل عملية مع شريط مؤشر تقدم مباشر وتقرير تفصيلي لما تم مزامنته.
 
 ---
 
@@ -251,6 +254,10 @@
 | **85** | [إطلاق تطبيق الويب والتقارير التنفيذية [VegtablityManagerApp]](#77-إطلاق-تطبيق-الويب-والتقارير-التنفيذية-vegtablitymanagerapp-وتوجيه-الروابط-المتعددة-multi-tenant-web-system) | لوحة PWA متعددة الشركات + Cloudflare |
 | **86** | [تطوير الداشبورد التفاعلية Clickable واعتماد Pure Stored Procedures وحظر الكاش](#78-تطوير-الداشبورد-التفاعلية-clickable-deep-drill-down-والتوافق-الصارم-مع-الإجراءات-المخزنة-pure-stored-procedures-وحظر-الكاش) | بطاقات تفاعلية، Pure SPs، وحظر الكاش |
 | **87** | [تحسين الطباعة في الوضع التلقائي وتقليص المسافة للورقة الثانية [InvoicePrinter]](#79-تحسين-الطباعة-في-الوضع-التلقائي-وتقليص-المسافة-للورقة-الثانية-مع-حماية-الورقة-الأولى-invoiceprinter) | تقليص مسافة الورقة الثانية دون المساس بالأولى |
+| **88** | [أداة البحث السريع في أصناف عروض الأسعار للعملاء والموردين [QuotePage & PurchaseQuotePage]](#80-أداة-البحث-السريع-في-أصناف-عروض-الأسعار-للعملاء-والموردين-وتحديد-البند-للتعديل-الفوري-مع-حماية-الحفظ) | بحث فوري بأصناف العرض وتعديل السعر بأمان |
+| **89** | [استبدال ComboBox بأداة SearchableDropdown في صفحة التقارير [ReportsPage]](#81-استبدال-combobox-بأداة-searchabledropdown-في-صفحة-التقارير-reportspage-بنفس-المنطق-دون-التأثير-على-أداء-التقرير) | بحث وتصفية فورية بالعملاء والأصناف والمستودعات |
+| **90** | [التطوير الشامل لصفحة التقارير: تقرير مبيعات الفروع، شريط الإجماليات، وأداة ReportRowControl](#82-التطوير-الشامل-لصفحة-التقارير-تقرير-مبيعات-الفروع-والمخازن-شريط-الإجماليات-وأداة-reportrowcontrol-وطي-القائمة-الجانبية) | تقرير مبيعات الفروع + شريط الإجماليات + إحلال DataGrid |
+| **91** | [عرض الأرقام في صفحة كشف الحساب بـ 3 أرقام عشرية بدون تقريب كما في قاعدة البيانات](#83-عرض-الأرقام-في-صفحة-كشف-الحساب-بـ-3-أرقام-عشرية-بدون-تقريب-كما-في-قاعدة-البيانات-accountstatementpage) | دقة 3 خانات عشرية بدون تقريب في الشاشة و PDF و CSV و SQL |
 
 ---
 
@@ -3302,7 +3309,7 @@
 الكود الذي يتم تنفيذه فعلياً على الطابعة هو فرع **`Else`** داخل حدث الرسم `OnPrintPage`:
 1. **`DrawHeader`**: يرسم ترويسة الفاتورة (اسم العميل، نوع الفاتورة `cash`/`credit`، رقم الفاتورة، التاريخ، رقم الحساب، والملاحظات).
 2. **`DrawItemRow` (داخل حلقة `While`)**: يرسم أسطر الأصناف سطراً بسطر (التسلسل، الاسم الإنجليزي، الاسم العربي، الوحدة، الكمية، السعر، الإجمالي) بارتفاع 5 مم لكل صف (`ROW_H_MM = 5.0F`).
-3. **إجمالي الفاتورة والتفقيط (`footerY = gt(22.5F)`)**: يُطبع في نهاية الصفحة الأخيرة فقط عند انتهاء جميع الأصناف (`If Not hasMore Then`).
+3. **إجمالي الفاتورة والتفقيط (`FOOTER_TOTAL_CM = 22.5F` للورقة الأولى، و`FOOTER_TOTAL_CM_PAGE2 = 20.7F` للورقة الأخيرة)**: يُطبع في نهاية الصفحة الأخيرة فقط عند انتهاء جميع الأصناف (`If Not hasMore Then`)، مع الحفاظ على موضع الورقة الأولى كما هو في حالة الطباعة على ورقة واحدة (`22.5 سم`)، ورفعه للأعلى في الورقة الأخيرة (`20.7 سم`) بنفس مقدار رفع بداية جدول الأصناف (`5.2 + 15.5 = 20.7 سم`).
 4. **تذييل الصفحة (`gt(24.7F)`)**: يطبع رقم الفاتورة وترقيم الصفحات (`صفحة X من Y`).
 
 ---
@@ -3327,6 +3334,274 @@
    * تقليص نقطة بداية أول سطر في الورقة الثانية من **7.0 سم** إلى **5.2 سم** (بفارق **2.0 سم** بعد `Account No:` الواقع عند `3.2 سم`، وهو نفس الفارق البالغ 2.0 سم في الورقة الأولى بين `Account No:` عند 5.0 سم وأول صنف عند 7.0 سم).
    * رفع ترويسة الورقة الثانية بالكامل لتبدأ من `headerTopY = 1.2F` مع الحفاظ على كافة الحقول (`PartnerName`، `Invoice No:`، `Invoice Date:`، `Account No:`، `Payment Type`، `Notes`) وبنفس المسافات البينية الرأسية والأفقية المعتمدة في الورقة الأولى (`+ 1.0F` سم بين رقم الفاتورة والتاريخ، و`+ 1.0F` سم بين التاريخ ورقم الحساب).
    * تحديث دالة `CalculateTotalPages` لحساب إجمالي عدد الصفحات بدقة وفق السعة الجديدة للورقة الثانية.
+3. **ضبط نهاية جدول الأصناف وموضع سطر الإجمالي والتفقيط في الورقة الأخيرة (`_currentPageNumber > 1`) بنفس معادلة الورقة الأولى:**
+   * **في الورقة الأولى (عند الطباعة على ورقة واحدة `_currentPageNumber = 1`):**
+     * يبدأ جدول الأصناف عند `ITEM_START_CM = 7.0F` سم وينتهي عند `ITEM_END_CM = 22.0F` سم (طول الجدول = **15.0 سم**).
+     * يقع سطر الإجمالي والتفقيط عند `FOOTER_TOTAL_CM = 22.5F` سم (أي بعد نهاية الجدول بـ **0.5 سم**، وعلى بُعد **15.5 سم** من بداية جدول الأصناف `7.0 سم`)، ولم يتم المساس به إطلاقاً.
+   * **في الورقة الأخيرة (الثانية وما بعدها `_currentPageNumber > 1`):**
+     * لما كانت بداية جدول الأصناف في الورقة الثانية قد رُفعت للأعلى لتصبح `ITEM_START_CM_PAGE2 = 5.2F` سم (بفارق `-1.8 سم` عن الورقة الأولى)، فقد تم ضبط نهاية الجدول وموضع الإجمالي والتفقيط بنفس النسبة تماماً:
+       * نهاية جدول الأصناف في الورقة الثانية: `ITEM_END_CM_PAGE2 = 5.2 + 15.0 = 20.2F` سم.
+       * إزاحة سطر الإجمالي والتفقيط للأعلى في آخر جدول الأصناف: `FOOTER_TOTAL_CM_PAGE2 = 5.2 + 15.5 = 20.7F` سم (أي بعد نهاية جدول الورقة الثانية `20.2 سم` بـ **0.5 سم** تماماً كما في الورقة الأولى).
+       * توحيد النقطة والمحاذاة الأفقية لسطر الإجمالي والتفقيط في الورقة الأخيرة لتطابق الورقة الفردية تماماً (`gl(18.0F)` للإجمالي و`gl(2.5F)` للتفقيط).
 
 > [!TIP]
 > إذا رغبت مستقبلاً في زيادة أو تقليل مسافة أول سطر في الورقة الثانية ببضعة مليمترات، يمكنك تعديل القيمة `ITEM_START_CM_PAGE2` في السطر 24 من [InvoicePrinter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/InvoicePrinter.vb) (مثلاً جعلها `3.0F` أو `4.0F`) دون أي خشية من التأثير على الورقة الأولى المحمية تماماً.
+
+---
+
+## 80. أداة البحث السريع في أصناف عروض الأسعار للعملاء والموردين وتحديد البند للتعديل الفوري مع حماية الحفظ
+
+### أ- الهدف من التعديل:
+في شاشات عروض أسعار العملاء ([QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml)) وعروض أسعار الموردين ([PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml))، قد يحتوي عرض السعر الواحد على مئات الأصناف الموزعة على عدة صفحات (`PAGE_SIZE = 20`). تم توفير أداة بحث سريعة باستخدام نفس أداة النظام القياسية [SearchableDropdown.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml.vb) لتحميل أسماء الأصناف الموجودة فعلياً داخل عرض السعر، وعند اختيار أي صنف منها يتم الانتقال فوراً إلى صفحته وتحديد السطر الخاص به وتظليله ووضع المؤشر داخل خانة السعر لتعديله مباشرة، **مع ضمان عدم تأثر أو ضياع أي صنف آخر غير معدل عند الحفظ**.
+
+---
+
+### ب- المعمارية الآمنة (لماذا لا تتأثر باقي الأصناف عند الحفظ؟):
+1. **عدم المساس بالقائمة الرئيسية للحفظ (`_allQuoteDetails` و `_allDetails`):**
+   * يحتفظ كل من [QuoteViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/QuoteViewModel.vb) و [PurchaseQuoteViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseQuoteViewModel.vb) بجميع أصناف العرض في القائمة الرئيسية بالذاكرة (`_allQuoteDetails` / `_allDetails`).
+   * عند تنفيذ عملية الحفظ (`ExecuteSave`)، يتم حفظ كافة الأصناف من هذه القائمة الرئيسية مباشرة.
+   * لذلك تم إنشاء قائمة مستقلة تماماً مخصصة للبحث فقط باسم `FilteredQuoteItems` تغذي أداة `SearchableDropdown` عبر الدالة `ApplyQuoteItemFilter(searchText)` دون حذف أو تصفية أي عنصر من `_allQuoteDetails` أو `_allDetails`.
+2. **الانتقال الذكي لصفحة الصنف وتحديده (`SelectQuoteItemForEdit`):**
+   * عند اختيار الصنف من القائمة المنسدلة، تحسب الدالة `SelectQuoteItemForEdit` موقع الصنف في القائمة الرئيسية وتنتقل تلقائياً إلى الصفحة التي تحتوي عليه (`targetPage = idx \ PAGE_SIZE`).
+   * تطلق الحدث `FocusQuoteItemRequested(item)` الذي تستقبله الواجهة للعثور على السطر المقابل [QuoteItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb) واستدعاء `HighlightAndFocusPrice()`.
+3. **التحديث اللحظي للسعر والتمييز البصري (`HighlightAndFocusPrice` & `QuotedPriceBox_TextChanged`):**
+   * يقوم السطر بالتمرير التلقائي (`BringIntoView`)، وتلوين خلفية السطر باللون الأزرق الفاتح (`#DBEAFE`) وإطار أزرق بارز (`#3B82F6`) لمدة 2.5 ثانية، مع وضع المؤشر وتحديد النص بالكامل داخل خانة السعر `QuotedPriceBox`.
+   * تمت إضافة معالج `QuotedPriceBox_TextChanged` ليقوم بتحديث قيمة `QuotedPrice` / `UnitPrice` داخل الكائن الأصلي في الذاكرة لحظياً بمجرد كتابة السعر الجديد، مما يضمن حفظ التعديل حتى لو ضغط المستخدم على زر **"💾 حفظ واعتماد"** مباشرة دون الضغط على `Enter` أو `Tab`.
+
+---
+
+### ج- ملخص الملفات المعدلة:
+* **النماذج (Models):**
+  * [QuoteDetail.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/QuoteDetail.vb) و [PurchaseQuoteDetail.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/PurchaseQuoteDetail.vb): إضافة الخاصية النصية `SearchText` لعرض `اسم الصنف [الباركود] — (السعر)` في أداة البحث السريع وتحديثها تلقائياً عند تغير الاسم أو الباركود أو السعر.
+* **نماذج العرض (ViewModels):**
+  * [QuoteViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/QuoteViewModel.vb) و [PurchaseQuoteViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseQuoteViewModel.vb): إضافة `FilteredQuoteItems`، `ApplyQuoteItemFilter`، `SelectQuoteItemForEdit`، والحدث `FocusQuoteItemRequested`.
+* **أدوات التحكم والواجهات (Controls & Views):**
+  * [QuoteItemRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml) و [QuoteItemRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/QuoteItemRowControl.xaml.vb): تسمية إطار السطر `RowBorder`، وإضافة `QuotedPriceBox_TextChanged` و `HighlightAndFocusPrice()`.
+  * [QuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml) و [QuotePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/QuotePage.xaml.vb): إضافة أداة `QuoteItemSearchDropdown` في شريط جدول الأصناف وربط أحداث البحث والاختيار والتركيز.
+  * [PurchaseQuotePage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml) و [PurchaseQuotePage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/PurchaseQuotePage.xaml.vb): إضافة أداة `QuoteItemSearchDropdown` في شريط جدول أصناف المشتريات وربط أحداثها.
+
+> [!TIP]
+> للبحث عن أي صنف داخل عرض سعر كبير وتعديل سعره بسرعة: اكتب جزءاً من اسم الصنف أو الباركود في خانة **"🔍 بحث سريع في العرض"** أعلى جدول الأصناف ثم اضغط `Enter` لاختياره؛ سينتقل الجدول تلقائياً لصفحة الصنف ويظلل السطر باللون الأزرق ويحدد خانة السعر لتكتب السعر الجديد فوراً، وعند الضغط على **"💾 حفظ واعتماد"** يتم حفظ السعر الجديد مع بقاء كافة الأصناف الأخرى في جميع الصفحات محفوظة بالكامل دون أي تغيير.
+
+---
+
+## 81. استبدال ComboBox بأداة SearchableDropdown في صفحة التقارير [ReportsPage] بنفس المنطق دون التأثير على أداء التقرير
+
+### أ- الهدف من التعديل:
+استبدال جميع عناصر `ComboBox` التقليدية في شاشة التقارير الشاملة ([ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml)) بأداة القائمة المنسدلة الذكية القابلة للبحث ([SearchableDropdown.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/SearchableDropdown.xaml)) بنفس المنطق تماماً، لتسهيل البحث الفوري عن العملاء والموردين والأصناف والمستودعات دون المساس بأداء تحميل أو استخراج أي من التقارير الـ 14.
+
+---
+
+### ب- القوائم التي تم استبدالها في [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml):
+1. **فلتر العميل العام (`PartnerFilterDropdown`):**
+   * لتصفية التقارير حسب العميل/المورد مع دعم البحث بالاسم أو رقم الهاتف أو كود الحساب، والعودة التلقائية لخيار `"الكل (جميع العملاء والموردين)"` (`SelectedPartnerID = 0`) عند مسح الحقل بزر `✕`.
+2. **فلتر المستودع في تقرير جرد وتقييم المخزون - تبويب 5 (`WarehouseFilterDropdown5`):**
+   * لتصفية الجرد حسب المستودع أو `"الكل"` (`SelectedWarehouseID = 0`).
+3. **فلتر الصنف والمستودع في تقرير حركة صنف في مستودع - تبويب 7 (`ProductFilterDropdown7` & `WarehouseFilterDropdown7`):**
+   * البحث اللحظي في الأصناف بالاسم العربي أو الإنجليزي أو الباركود (`DisplayMemberPath="SearchText"`).
+   * اختيار المستودع مع المزامنة التلقائية بين قوائم المستودعات في التبويبات المختلفة.
+4. **فلتر المستودع في تقرير الهالك والتوالف - تبويب 13 (`WarehouseFilterDropdown13`):**
+   * لتصفية تقرير الهالك حسب المستودع أو `"الكل"`.
+
+---
+
+### ج- الحفاظ على سرعة وأداء التقارير في [ReportsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ReportsViewModel.vb):
+* يتم جلب قوائم العملاء (`_allPartners`) والأصناف (`_allProducts`) والمستودعات (`_allWarehouses`) **مرة واحدة فقط** عند فتح الصفحة وحفظها في الذاكرة.
+* تعمل دوال التصفية `ApplyPartnerFilter` و `ApplyProductFilter` و `ApplyWarehouseFilter` في الذاكرة (`In-Memory LINQ`) بسرعة فورية دون أي استدعاء إضافي لقاعدة البيانات ودون إعادة تشغيل استعلام التقرير إلا عند طلب المستخدم ("تحديث البيانات" / "بحث") أو تبديل التبويب.
+
+> [!TIP]
+> عند الرغبة في إلغاء تصفية العميل أو المستودع والعودة لعرض **"الكل"** في صفحة التقارير، يكفي الضغط على زر المسح `✕` داخل أداة `SearchableDropdown` وسيتم تلقائياً إعادة ضبط الفلتر إلى `0` (الكل).
+
+
+---
+
+## 82. التطوير الشامل لصفحة التقارير: تقرير مبيعات الفروع والمخازن، شريط الإجماليات، وأداة ReportRowControl وطي القائمة الجانبية
+
+### أ- إضافة تقرير مبيعات الفروع والمخازن (`🏬 مبيعات الفروع والمخازن` - تبويب 14):
+1. **قاعدة البيانات والإجراء المخزن ([SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) & [StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb)):**
+   * إنشاء الإجراء المخزن `[Reports].[sp_Report_WarehouseSales]` (`SP_REPORT_WAREHOUSESALES`) الذي يربط جدول رؤوس الفواتير `[Sales].[InvoiceHeader]` بجدول المستودعات والفروع `[Settings].[Warehouses]` عبر العمود `WarehouseID` مع احتساب تكلفة البضاعة المباعة من تفاصيل الفواتير.
+   * يعرض التقرير لكل فرع/مخزن:
+     - اسم وكود الفرع/المخزن (`WarehouseName`, `WarehouseID`)
+     - عدد فواتير المبيعات (`InvoiceCount`)
+     - إجمالي المبيعات قبل الخصم (`TotalGrossSales`) والخصومات (`TotalDiscounts`)
+     - صافي المبيعات (`TotalNetSales`)
+     - إجمالي المحصل المدفوع (`TotalPaid`) والآجل المتبقي (`TotalRemainder`)
+     - إجمالي التكلفة (`TotalCost`) وصافي الربح (`NetProfit`) وهامش الربح (`ProfitMarginPercent`)
+     - حصة الفرع المئوية من إجمالي المبيعات العامة (`SalesSharePercent %`)
+2. **طبقة الخدمة والنموذج ([ReportService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ReportService.vb) & [ReportModels.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb)):**
+   * إضافة الكلاس `ReportWarehouseSales` والدالة `GetWarehouseSales(startDate, endDate, warehouseID)` مع دعم الاستعلام الاحتياطي التلقائي لضمان عمل التقرير فوراً حتى قبل إعادة تشغيل ملف الـ SQL يدوياً.
+   * تحديث دوال التقارير في [ReportService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/ReportService.vb#L76-L214) (`GetQuotationsStatus`, `GetSlowMovingStock`, `GetInventoryValuation`, `GetStockMovement`, `GetExpensesAnalysis`, `GetUnpaidInvoicesAging`) لحساب `ItemsCount` الفعلي لعروض الأسعار من جدول `[Sales].[QuotationDetails]`، وتفادي تعارض باراميتر `@MonthsInactive` مع `@ThresholdDays` في تقرير الأصناف الراكدة وتقييم المخزون، وحساب الرصيد التراكمي لحركة الصنف.
+
+---
+
+### ب- شريط الإجماليات العلوي أعلى كل تقرير (`SummaryMetrics`):
+* تم تزويد جميع التقارير الـ 15 (من التبويب `0` إلى `14`) بشريط بطاقات إجماليات ديناميكي (`SummaryMetrics As ObservableCollection(Of ReportSummaryMetric)`) يظهر أعلى جدول النتائج مباشرة في [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml).
+* يعرض الشريط أهم 3 إلى 4 مؤشرات إجمالية مخصصة لكل تقرير (مثل: عدد السجلات/الفواتير، صافي المبيعات، إجمالي التكلفة، صافي الربح وهامشه، إجمالي المحصل والآجل، تقييم المخزون، أو تكلفة الهالك) مع أيقونات وألوان دلالية واضحة.
+* **تحديث لحظي مع البحث والتصدير:** تتحدث قيم شريط الإجماليات تلقائياً عند إجراء بحث فوري داخل نتائج التقرير، كما يتم تضمين ملخص الإجماليات تلقائياً في ترويسة ملفات التصدير `PDF` و `CSV / Excel`.
+
+---
+
+### ج- استبدال `DataGrid` بأداة العرض المخصصة [ReportRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/ReportRowControl.xaml):
+* تم الاستغناء بالكامل عن جداول `DataGrid` الـ 14 الثقيلة في [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml) واستبدالها بأداة `UserControl` مخصصة وخفيفة [ReportRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/ReportRowControl.xaml) و [ReportRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/ReportRowControl.vb) داخل `ItemsControl` مفعل به `VirtualizingStackPanel` (`VirtualizationMode="Recycling"`).
+* **مزايا الأداة الجديدة:**
+  - ترويسة أعمدة ديناميكية متزامنة (`ReportHeadersGrid`) تتطابق بنسبة `Star (*)` مع خلايا كل صف (`ReportRowItem` و `ReportCellInfo`).
+  - شارة رقم تسلسلي `#` لكل سطر، وتناوب لوني مريح للصفوف الزوجية والفردية (`IsEvenRow`) مع تأثير إضاءة انسيابي عند مرور الفأرة (`MouseEnter`/`MouseLeave`).
+  - شارات ملونة (`Badges`) للأرباح والخسائر، ونسب المساهمة، وحالات الترحيل، والفئات العمرية للديون.
+  - دعم كامل لتصدير كافة صفوف التقرير المفلترة إلى `PDF` و `Excel (CSV)` عبر الدالتين الجديدتين `ExportReportRowsToPdf` و `ExportReportRowsToCsv` في [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb).
+
+---
+
+### د- طي القائمة الجانبية بـ Animation انسيابي وتطويرات إضافية لتجربة المستخدم:
+1. **طي وفتح القائمة الجانبية (`SidebarBorder`):**
+   * إضافة زر طي القائمة `❯` داخل ترويسة القائمة الجانبية وزر تبديل `☰ طي القائمة / إظهار التقارير` في الشريط العلوي، مع حركة انسيابية ناعمة (`DoubleAnimation` على `MaxWidth` و `Opacity` باستخدام `CubicEase` خلال `260ms`) لمنح جدول التقرير مساحة عرض كاملة عند الحاجة.
+2. **أزرار الفترات الزمنية السريعة (Quick Date Range Presets):**
+   * إضافة أزرار اختصار فورية (`اليوم`، `هذا الأسبوع`، `هذا الشهر`، `هذا العام`) تضبط تاريخي البداية والنهاية وتحدث التقرير بضغطة واحدة.
+3. **الفلاتر السياقية الذكية (`Contextual SearchableDropdowns`):**
+   * إظهار فلتر الفرع/المخزن أو العميل أو الصنف تلقائياً في شريط الفلاتر العلوي بحسب التقرير النشط (`ShowWarehouseFilter`, `ShowPartnerFilter`, `ShowProductFilter`) مع إعادة تحميل التقرير تلقائياً فور اختيار العنصر.
+4. **البحث الفوري داخل نتائج التقرير (`ReportQuickSearch`):**
+   * إضافة حقل `🔍 بحث فوري داخل نتائج التقرير...` لتصفية السطور المعروضة وإعادة احتساب شريط الإجماليات لحظياً في الذاكرة دون الحاجة لإعادة الاستعلام من قاعدة البيانات.
+
+
+---
+
+## 83. عرض الأرقام في صفحة كشف الحساب بـ 3 أرقام عشرية بدون تقريب كما في قاعدة البيانات (`AccountStatementPage`)
+
+* **معالجة سبب التقريب في قاعدة البيانات والاستعلام (`AccountingService.vb` & `SQLVegtablity.sql`):**
+  - كان المتغير `@OpeningBalance` في الإجراء المخزن `[Accounting].[sp_Report_AccountStatement]` بملف [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) معرّفاً كـ `DECIMAL(18, 2)` مما يؤدي إلى تقريب الرصيد الافتتاحي والرصيد التراكمي لكل حركة إلى رقمين عشريين.
+  - تم تحديث `[Accounting].[sp_Report_AccountStatement]` في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) وكذلك دالة [`GetAccountStatement`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb#L82-L112) في [AccountingService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb) لاستخدام `DECIMAL(18, 3)` مع دالة القطع دون تقريب `ROUND(..., 3, 1)` في SQL ودالة `AccountStatementReport.TruncateTo3Decimals` في VB.NET لضمان جلب وحساب الأرقام بـ 3 أرقام عشرية مطابقة تماماً لقاعدة البيانات دون أي تقريب.
+
+* **دوال القطع والتنسيق النصي الصارم بدون تقريب (`ReportModels.vb`):**
+  - إضافة الدالتين المشتركتين [`TruncateTo3Decimals`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L283-L285) (`Math.Truncate(val * 1000D) / 1000D`) و [`FormatExact3Decimals`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L287-L290) في الكلاس [`AccountStatementReport`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L277-L355) والكلاس [`AccountStatementItem`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L357-L413).
+  - توفير خصائص العرض النصية الجاهزة بدون تقريب: `DebitAmountText`, `CreditAmountText`, `BalanceText`, `OpeningBalanceText`, `TotalDebitText`, `TotalCreditText`, و `EndingBalanceText`.
+
+* **تحديث واجهة كشف الحساب وتصدير PDF / CSV (`AccountStatementPage.xaml` & `ReportExporter.vb`):**
+  - تحديث أعمدة الجدول (`مدين`، `دائن`، `الرصيد`) وشريط الإجماليات السفلي (`الرصيد الافتتاحي`، `إجمالي المدين`، `إجمالي الدائن`، `الرصيد الختامي`) في [AccountStatementPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/AccountStatementPage.xaml#L171-L243) للربط المباشر بخصائص العرض النصية ذات الـ 3 خانات عشرية بدون تقريب بدلاً من `StringFormat=N3`.
+  - تحديث دوال تصدير كشف الحساب [`ExportToCsv`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb#L472-L533) و [`ExportToPdf`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb#L538-L685) في [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb) لعرض جميع القيم بـ 3 أرقام عشرية بدون تقريب (بدلاً من `N2` التي كانت تقرب لأقرب رقمين عشريين في ملف الـ PDF).
+
+
+---
+
+## 84. فصل وتطوير منظومة المزامنة الشاملة (Offline Sync Center) في تطبيق الفلاتر [Vegtablity_App] بنمط MVVM مع دعم المزامنة المنفردة والجماعية ومؤشر التقدم المباشر
+
+### أ- المعمارية المستقلة بنمط MVVM (فصل كامل عن كود الأونلاين والـ ShiftProvider):
+حرصاً على عدم التأثير مطلقاً على منطق العمليات الحالية أثناء الاتصال بالإنترنت أو منطق إدارة الوردية (`ShiftProvider` / `active_shift_id`)، تم فصل كامل كود ومنطق المزامنة في ملفات مستقلة تتبع معمارية **MVVM**:
+1. **طبقة النماذج (`Models`) — [sync_models.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/models/sync_models.dart):**
+   * `SyncCategoryType`: تصنيف العمليات المعلقة (`invoice`, `voucher`, `wastage`, `stocktake`).
+   * `SyncQueueItemModel`: نموذج موحد لأي عملية محفوظة محلياً في الانتظار (العنوان، الوصف/الشريك، المبلغ، التاريخ، عدد البنود، البيانات الخام `rawPayload`، وآخر رسالة خطأ إن وُجدت).
+   * `SyncItemResultModel` و `SyncBatchReportModel`: نماذج نتائج المزامنة لكل عملية على حدة وللتقرير الختامي الشامل بعد انتهاء المزامنة.
+2. **طبقة الخدمة والتخزين (`Service / Repository`) — [offline_sync_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/offline_sync_service.dart):**
+   * قراءة وتحديث طوابير التخزين المحلي في `SharedPreferences` لجميع العمليات الأربع (`unsynced_invoices`, `unsynced_vouchers`, `unsynced_wastages`, `unsynced_stocktakes`).
+   * معالجة مشكلة توقف الطابور بالكامل (`Poison Pill`) عند فشل عنصر واحد؛ حيث يتم حذف كل عنصر ينجح فوراً من التخزين المحلي وإكمال مزامنة بقية العناصر السليمة مع تسجيل السبب الدقيق لأي عنصر يتعذر حفظه.
+   * دوال مساعدة ثابتة `EnqueueOfflineInvoiceStatic` و `EnqueueOfflineGeneralVoucherStatic` لدعم حفظ فواتير عروض الأسعار ([partner_billing_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/partner_billing_screen.dart)) وسندات القبض والصرف المباشرة ([general_receipt_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_receipt_voucher_screen.dart) و [general_payment_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_payment_voucher_screen.dart)) عند انقطاع الإنترنت.
+3. **طبقة نموذج العرض (`ViewModel`) — [sync_viewmodel.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/sync_viewmodel.dart):**
+   * إدارة حالة الطوابير الأربعة ومؤشرات التقدم الحية لحظياً (`isSyncing`, `syncedCount`, `remainingCount`, `totalToSyncCount`, `progressFraction`, `currentStatusText`).
+   * توفير أوامر المزامنة الثلاثة:
+     - `syncSingleItem(item)`: مزامنة عملية واحدة منفردة على حدة.
+     - `syncCategory(category)`: مزامنة قسم محدد بالكامل (مثلاً الفواتير فقط أو السندات فقط).
+     - `syncAll()`: مزامنة جماعية شاملة بالترتيب المحاسبي السليم (الفواتير $\leftarrow$ السندات $\leftarrow$ الهالك $\leftarrow$ الجرد المخزني).
+4. **طبقة الواجهات وعناصر العرض (`Views & Widgets`):**
+   * [sync_center_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/sync_center_screen.dart): شاشة **مركز المزامنة والعمليات المعلقة** التي تعرض إحصائيات كل قسم، وتتيح فلترة العمليات، استعراض بنود أي عملية، حذف عملية معلقة، أو **مزامنة كل عملية على حدة** بجانب زر **مزامنة الكل**.
+   * [sync_progress_widgets.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/sync_progress_widgets.dart):
+     - `LiveSyncProgressBarCard`: شريط مؤشر تحميل مباشر يعمل لحظياً أثناء المزامنة ويعرض النسبة المئوية وعدد العمليات التي تمت مزامنتها والمتبقية والإجمالي واسم العملية الجارية.
+     - `SyncResultSummaryDialog`: نافذة التقرير الختامي بعد انتهاء المزامنة لعرض كافة العمليات التي تم حفظها في قاعدة البيانات مع أرقامها المرجعية (`#InvID` / `#VoucherID` / `#WastageID` / `#StockTakeID`) وأي عمليات متبقية مع سبب تعذرها.
+     - `HomeSyncBannerWidget`: شريط التنبيه الذكي في الشاشة الرئيسية ([home_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/home_screen.dart)).
+   * [settings_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/settings_screen.dart): إضافة قسم **إدارة المزامنة والعمليات المعلقة (Offline Sync)** داخل شاشة الإعدادات لفتح مركز المزامنة أو تشغيل المزامنة الفورية.
+
+### ب- تحسينات الأمان في الواجهة الخلفية [VegtablityApi]:
+* تحديث [invoice_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/invoice_service.py) و [inventory_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/inventory_service.py) لتخطي رسائل `NOCOUNT` / `Triggers` عبر `while cursor.description is None: cursor.nextset()` والتحقق الآمن من وجود `PartnerID` و `WarehouseID`.
+* تحديث [vouchers.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/vouchers.py) لعدم رفض السندات المرسلة في المزامنة إذا كان `ShiftID` غير مرسل واستنتاج الوردية النشطة تلقائياً إن وُجدت.
+
+### ج- استعراض التفاصيل الكاملة للعمليات المعلقة، الحذف المباشر، والطباعة الحرارية بعلامة "وثيقة غير معتمدة / لم تتم مزامنتها":
+1. **عرض تفاصيل كل عملية بنفس تصميم شاشة الفواتير والسندات اليومية ([offline_operation_details_sheet.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/offline_operation_details_sheet.dart)):**
+   * عند الضغط على أي عملية معلقة أو زر **عرض التفاصيل** في [sync_center_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/sync_center_screen.dart)، تفتح نافذة `OfflineOperationDetailsSheet` المصممة بنفس طابع `_InvoiceDetailsBottomSheet` في `DailyInvoicesScreen`:
+     - **الفواتير (مبيعات / مشتريات / عروض أسعار):** تعرض حالة الفاتورة، اسم العميل/المورد، طريقة الدفع، المستودع، الوردية، بيانات التوصيل والشحن إن وُجدت، جدول الأصناف الكامل (`الصنف | السعر | الكمية | الإجمالي`)، تفاصيل الدفع المتعدد (`PaymentSplits`)، والملخص المالي الكامل (`الإجمالي قبل الخصم، الخصم، الصافي الكلي، المدفوع، المتبقي آجل`).
+     - **السندات المالية (قبض عميل / صرف مورد / قبض وصرف مباشر عام):** تعرض نوع السند، العميل/المورد أو الحساب المستهدف، حساب الخزينة/الدفع، البيان، جدول الفواتير المسددة بالسند (`Allocations`)، وإجمالي مبلغ السند.
+     - **عمليات الهالك والجرد المخزني:** تعرض المستودع، الملاحظات، جدول الأصناف الكامل (الكمية والتكلفة للهالك، أو الرصيد الدفتري والفعلي والفرق للجرد)، وإجمالي القيمة.
+2. **زر مستقل لحذف كل عملية معلقة:**
+   * إضافة زر واضح ومباشر **حذف العملية** باللون الأحمر في بطاقة كل عملية داخل [sync_center_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/sync_center_screen.dart) وكذلك داخل نافذة التفاصيل [offline_operation_details_sheet.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/offline_operation_details_sheet.dart) مع رسالة تأكيد قبل الحذف النهائي من الطابور المحلي.
+3. **طباعة العمليات المعلقة بكامل تفاصيلها مع ترويسة وعلامة مميزة (غير معتمدة / لم تتم مزامنتها):**
+   * إضافة الدالة `printOfflineQueueItem` في [offline_sync_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/offline_sync_service.dart) والدالة `printQueueItem` في [sync_viewmodel.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/sync_viewmodel.dart).
+   * تحديث مصممات الطباعة الثلاثة ([invoice_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart)، [voucher_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/voucher_print_designer.dart)، و [inventory_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/inventory_print_designer.dart)) في جميع أنماط الطباعة (`Sunmi`، `Direct Text ESC/POS`، و `Canvas Raster`) لإضافة لافتة تحذيرية بارزة في أعلى وأسفل الإيصال عند طباعة عملية أوفلاين (`is_offline_unapproved == true`):
+     - `*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***`
+     - `⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️`
+     - ورقم الوثيقة يظهر كـ `غير معتمدة (لم تُزامن)` مع طباعة كافة الأصناف والأسعار والخصومات وطرق الدفع بالكامل.
+
+
+---
+
+## 85. البحث عن الفواتير برقم الهاتف + ملخص الفواتير السابقة للعميل في مبيعات نقدي عام (Phone Invoice Lookup & Customer History Summary Card)
+
+### أ. قاعدة البيانات (`Vegtablity\SQL\SQLVegtablity.sql`)
+- **`[Sales].[sp_Invoice_SearchByPhone]`**: إجراء مخزن جديد يبحث عن فواتير المبيعات المعتمدة وغير الملغاة المرتبطة برقم هاتف العميل (سواء في جدول `[Sales].[TempOrderInfo]` لطلبات نقدي عام أو في جدول `[Sales].[Partners]` للعملاء المسجلين)، ويرجع قائمة الفواتير مرتبة من الأحدث إلى الأقدم (`ORDER BY h.InvDate DESC, h.InvID DESC`) شاملاً اسم العميل، العنوان، رقم الهاتف، إجمالي الفاتورة، المدفوع، المتبقي، وعدد الأصناف (`ItemsCount`).
+
+### ب. الواجهة البرمجية الخلفية (`VegtablityApi`)
+- **`app/core/db_procedures.py`**: إضافة ثابت `INVOICE_SEARCH_BY_PHONE`.
+- **`app/services/invoice_service.py`**: إضافة دالة `search_invoices_by_phone(phone)` التي تجلب قائمة الفواتير مرتبة من الأحدث إلى الأقدم، وتستخرج تلقائياً اسم العميل (`customer_name`) والعنوان (`customer_address`) من أحدث فاتورة، وتحسب إجمالي عدد الفواتير (`total_count`) وإجمالي قيمتها المالية (`total_amount`)، مع دعم استعلام SQL مباشر احتياطي (Fallback) لضمان العمل الفوري.
+- **`app/routes/invoices.py`**: إضافة نقطة النهاية `GET /api/v1/invoices/by-phone?phone=...` قبل مسار `/{inv_id}`.
+
+### ج. تطبيق نقاط البيع (`Vegtablity_App`)
+1. **`lib/services/api_service.dart`**:
+   - إضافة دالة `searchInvoicesByPhone(String phone)` للاتصال بنقطة النهاية `/invoices/by-phone`.
+2. **صفحة البحث عن فاتورة (`lib/viewmodels/invoice_lookup_viewmodel.dart` & `lib/screens/invoice_lookup_screen.dart`)**:
+   - إضافة خيار التبديل بين **بحث برقم الفاتورة** و **بحث برقم الهاتف**.
+   - عند البحث برقم الهاتف، يتم عرض بيانات العميل وملخص (عدد الفواتير + إجمالي الفواتير) متبوعاً بقائمة الفواتير مرتبة من أحدث فاتورة إلى الأقدم، مع إمكانية النقر على أي فاتورة لعرض تفاصيلها الكاملة والعودة للقائمة.
+   - إضافة خاصية `readOnlyPrintOnly` لعرض تفاصيل الفاتورة مع السماح **فقط بطباعة الفاتورة** وإخفاء زر التعديل وشريط البحث عند فتحها من شاشة مبيعات نقدي عام.
+3. **صفحة بيانات العميل — مبيعات نقدي عام (`lib/screens/temp_order_screen.dart`)**:
+   - مراقبة إدخال رقم الهاتف (`_onPhoneChanged`) بحيث يبدأ البحث تلقائياً وبشكل غير متزامن فور الوصول إلى **الرقم الثامن** (`cleanPhone.length >= 8`) دون أي تعطيل أو ثقل أثناء الكتابة.
+   - تعبئة حقلي **اسم الزبون** و **العنوان** تلقائياً من بيانات العميل المسترجعة.
+   - إضافة كارت جديد **ملخص الفواتير السابقة للعميل** يعرض إجمالي عدد الفواتير وإجمالي قيمتها المالية، وبداخله كروت مصغرة لكل فاتورة مرتبة حسب التاريخ من الأحدث إلى الأقدم، وعند الضغط على أي كارت فاتورة يتم فتح شاشة عرض الفاتورة (`readOnlyPrintOnly: true`) للمعاينة والطباعة فقط دون السماح بالتعديل.
+
+
+---
+
+## 86. زر تغيير حالة الوردية في WPF وصلاحية التعديل + تحليل سبب تكرار قيد عجز الوردية
+
+### أ. قاعدة البيانات (`Vegtablity\SQL\SQLVegtablity.sql` & `36_Shifts.sql`)
+- **`[Sales].[sp_Shift_UpdateStatus]`**: إجراء مخزن مخصص يقوم بتعديل عمود `[Status]` فقط في جدول `[Sales].[Shifts]` (`UPDATE [Sales].[Shifts] SET [Status] = @Status WHERE [ShiftID] = @ShiftID`) دون أي تغييرات إضافية.
+
+### ب. تطبيق سطح المكتب WPF (`Vegtablity`)
+- **`Helpers/StoredProcedures.vb`**: إضافة الثابت `SP_SHIFT_UPDATESTATUS = "[Sales].[sp_Shift_UpdateStatus]"`.
+- **`Services/ShiftService.vb`**: إضافة دالة `UpdateShiftStatus(shiftID, newStatus)` لاستدعاء الإجراء المخزن.
+- **`Models/Shift.vb`**: تحويل `Status` إلى خاصية تدعم `INotifyPropertyChanged` لتحديث الواجهة فوراً عند التغيير.
+- **`ViewModels/ShiftsViewModel.vb`**:
+  - ربط صلاحيات شاشة الورديات عبر `LoadPermissions("Shifts")` بنفس الطريقة المتبعة في النظام (`CanEditShiftStatus` يعتمد على `CurrentPermissions.CanEdit`).
+  - إضافة أمر `ToggleShiftStatusCommand` لتبديل حالة الوردية بين `Open` و `Closed` بعد التأكيد.
+- **`Views/ShiftsPage.xaml`**: تحويل شارة حالة الوردية (`Status`) إلى زر تفاعلي قابل للضغط يغير الحالة بين `Open` و `Closed` مع احترام صلاحية التعديل.
+
+
+---
+
+## 87. تقرير فواتير المشتريات في شاشة التقارير الشاملة (WPF Purchase Invoices Report)
+
+### أ. قاعدة البيانات (`Vegtablity\SQL\SQLVegtablity.sql`)
+- **`[Reports].[sp_Report_PurchaseInvoices]`**: إجراء مخزن لجلب فواتير المشتريات (`InvType = 'Purchase'`) خلال فترة زمنية محددة (`@StartDate` إلى `@EndDate`) مع دعم الفلترة بمورد معين (`@PartnerID`) وفرع/مخزن معين (`@WarehouseID`)، شاملاً بيانات الفاتورة، اسم المورد، الهاتف، المخزن، عدد الأصناف (`ItemsCount`)، الإجمالي، الخصم، الصافي، المدفوع، المتبقي، وحالة الترحيل.
+
+### ب. تطبيق سطح المكتب WPF (`Vegtablity`)
+- **`Helpers/StoredProcedures.vb`**: إضافة الثابت `SP_REPORT_PURCHASEINVOICES = "[Reports].[sp_Report_PurchaseInvoices]"`.
+- **`Models/ReportModels.vb`**: إضافة الكلاس `ReportPurchaseInvoice`.
+- **`Services/ReportService.vb`**: إضافة دالة `GetPurchaseInvoicesReport(startDate, endDate, partnerID, warehouseID)` مع استعلام SQL احتياطي مباشر (Fallback) يعمل تلقائياً في حال عدم تنفيذ ملف الـ SQL بعد.
+- **`ViewModels/ReportsViewModel.vb` & `Views/ReportsPage.xaml`**:
+  - إضافة التبويب رقم 15 (**`📥 تقرير فواتير المشتريات`**) في القائمة الجانبية للتقارير.
+  - تفعيل فلتر الموردين (`ShowPartnerFilter`) مع تخصيص عنوانه تلقائياً ليصبح **`المورد:`** وتخصيص قائمة البحث لتعرض الموردين، بجانب فلتر الفرع/المخزن وفلاتر الفترة الزمنية والبحث الفوري وتصدير PDF / Excel.
+  - إضافة شريط الإجماليات العلوي (عدد فواتير المشتريات وعدد الموردين، صافي قيمة المشتريات والخصومات المكتسبة، إجمالي المدفوع للموردين، وإجمالي المتبقي للموردين).
+
+
+---
+
+## 88. منع تعارض رقم الفاتورة (InvID) بين الأجهزة المفتوحة على نفس الوردية أثناء الحفظ والطباعة المباشرة
+
+### أ. قاعدة البيانات (`Vegtablity\SQL\SQLVegtablity.sql`)
+- **`[Sales].[sp_Invoice_Save_XML]`**:
+  - تحديث آلية إدراج رأس الفاتورة الجديد (`@InvID IS NULL OR @InvID = 0`) لاستخدام `OUTPUT INSERTED.InvID INTO @InsertedHeader(InvID)` المرتبط ذرياً بعملية الإدراج الفعلية لتلك الجلسة مع الاحتفاظ بـ `SCOPE_IDENTITY()` كاحتياطي، لضمان عزل كامل 100% لرقم الفاتورة المولد لكل جهاز حتى عند الحفظ المتزامن في نفس اللحظة على نفس الوردية (`ShiftID`).
+  - إرجاع رقم الفاتورة الفعلي المحفوظ عبر `@InvID OUTPUT` و `SELECT CAST(@InvID AS INT) AS InvID;` بعد إتمام `COMMIT TRANSACTION`.
+
+### ب. الواجهة البرمجية الخلفية (`VegtablityApi`)
+- **`app/core/db_procedures.py`**: إضافة `SET NOCOUNT ON;` في بداية دفعة `INVOICE_SAVE_XML` وإرجاع `SELECT CAST(@InvID AS INT) AS InvID;`.
+- **`app/services/invoice_service.py`**: تحديث `save_invoice` لقراءة وتفريغ جميع مجموعات النتائج (`cursor.nextset()`) واستخلاص رقم الفاتورة الفعلي (`inv_id`) المحفوظ في قاعدة البيانات قبل حفظ `PaymentSplits` وإتمام `conn.commit()`.
+- **`app/schemas/invoices.py` & `app/routes/invoices.py`**: إرجاع رقم الفاتورة الفعلي المعتمد في جميع مفاتيح الاستجابة (`InvID`, `id`, `InvoiceID`) بعد نجاح الحفظ.
+
+### ج. تطبيق نقاط البيع (`Vegtablity_App`)
+- **`lib/providers/pos_provider.dart`**: تحديث `saveInvoice` لقراءة وتحويل رقم الفاتورة الفعلي الراجع من الـ API (`InvID` / `id` / `InvoiceID`) بدقة وإرجاعه لدالة الطباعة.
+- **`lib/screens/pos_screen.dart` & `lib/screens/partner_billing_screen.dart`**: انتظار انتهاء حفظ الفاتورة واستلام `newInvId` الفعلي من الخادم ثم تمريره في كافة مفاتيح الفاتورة المرسلة للطباعة (`InvID`, `id`, `InvoiceID`, `invoice_id`) قبل استدعاء `printerService.printReceipt(...)`.
+- **`lib/services/printing/invoice_print_designer.dart`**: إعطاء الأولوية القصوى لحقل `invoice['InvID']` عند قراءة رقم الفاتورة المطبوع على الإيصال.
+

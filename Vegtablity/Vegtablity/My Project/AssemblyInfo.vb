@@ -15,7 +15,7 @@ Imports System.Windows
 <Assembly: AssemblyDescription("")>
 <Assembly: AssemblyCompany("")>
 <Assembly: AssemblyProduct("Vegtablity")>
-<Assembly: AssemblyCopyright("Copyright ©  2026")>
+<Assembly: AssemblyCopyright("mohamed ragab©  2026")>
 <Assembly: AssemblyTrademark("")>
 <Assembly: ComVisible(false)>
 
@@ -52,5 +52,5 @@ Imports System.Windows
 '      Revision
 '
 
-<Assembly: AssemblyVersion("2.1.8.0")>
-<Assembly: AssemblyFileVersion("2.1.8.0")>
+<Assembly: AssemblyVersion("2.2.3.0")>
+<Assembly: AssemblyFileVersion("2.2.3.0")>

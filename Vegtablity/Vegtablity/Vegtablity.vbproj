@@ -168,6 +168,14 @@
       <DependentUpon>StockTakeItemRowControl.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Controls\ReportRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\ReportRowControl.xaml.vb">
+      <DependentUpon>ReportRowControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

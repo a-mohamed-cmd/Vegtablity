@@ -8,7 +8,13 @@ import 'pos_screen.dart';
 
 class InvoiceLookupScreen extends StatelessWidget {
   final int? initialInvId;
-  const InvoiceLookupScreen({super.key, this.initialInvId});
+  final bool readOnlyPrintOnly;
+
+  const InvoiceLookupScreen({
+    super.key,
+    this.initialInvId,
+    this.readOnlyPrintOnly = false,
+  });
 
   static double _parseDouble(dynamic val, [double fallback = 0.0]) {
     if (val == null) return fallback;
@@ -42,21 +48,21 @@ class InvoiceLookupScreen extends StatelessWidget {
     }
   }
 
-  static String _resolvePaymentAccountName(Map<String, dynamic> inv, BuildContext context) {
-    final List splits = (inv['PaymentSplits'] ?? inv['payment_splits'] ?? []) as List;
-    final double paidAmount = _parseDouble(inv['PaidAmount'] ?? inv['paid_amount']);
+  static String _resolvePaymentAccountName(
+      Map<String, dynamic> inv, BuildContext context) {
+    final List splits =
+        (inv['PaymentSplits'] ?? inv['payment_splits'] ?? []) as List;
+    final double paidAmount =
+        _parseDouble(inv['PaidAmount'] ?? inv['paid_amount']);
 
-    // Case 1: Multiple payment splits recorded -> Return "مدفوع" / "Paid" (splits breakdown is in card below)
     if (splits.isNotEmpty) {
       return context.tr('inv_lookup_paid_status');
     }
 
-    // Case 2: Unpaid / Credit -> Return "آجل" / "Credit"
     if (paidAmount <= 0.0001) {
       return context.tr('inv_lookup_credit');
     }
 
-    // Case 3: Paid amount > 0 -> Return "مدفوع" / "Paid"
     return context.tr('inv_lookup_paid_status');
   }
 
@@ -76,7 +82,9 @@ class InvoiceLookupScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            context.tr('inv_lookup_title'),
+            readOnlyPrintOnly
+                ? 'عرض الفاتورة #${initialInvId ?? ''}'
+                : context.tr('inv_lookup_title'),
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.teal,
@@ -90,8 +98,10 @@ class InvoiceLookupScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildSearchCard(context, vm),
-                  const SizedBox(height: 16),
+                  if (!readOnlyPrintOnly) ...[
+                    _buildSearchCard(context, vm),
+                    const SizedBox(height: 16),
+                  ],
                   if (vm.isLoading) ...[
                     const SizedBox(height: 40),
                     Center(
@@ -101,7 +111,9 @@ class InvoiceLookupScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           Text(
                             context.tr('inv_lookup_loading'),
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black54),
                           ),
                         ],
                       ),
@@ -109,18 +121,54 @@ class InvoiceLookupScreen extends StatelessWidget {
                   ] else if (vm.errorMessage != null) ...[
                     _buildErrorMessageCard(vm.errorMessage!),
                   ] else if (vm.invoiceData != null) ...[
+                    if (!readOnlyPrintOnly && vm.hasPhoneResults) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: OutlinedButton.icon(
+                          onPressed: () => vm.returnToPhoneInvoicesList(),
+                          icon: const Icon(Icons.arrow_back_rounded,
+                              color: Colors.teal),
+                          label: Text(
+                            'العودة إلى قائمة فواتير العميل (${vm.phoneTotalCount} فاتورة)',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                                color: Colors.teal, width: 1.4),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     _buildInvoiceViewCard(context, vm),
+                  ] else if (vm.hasPhoneResults) ...[
+                    _buildPhoneInvoicesListCard(context, vm),
                   ] else ...[
                     const SizedBox(height: 40),
                     Center(
                       child: Column(
                         children: [
-                          Icon(Icons.receipt_long_outlined, size: 72, color: Colors.grey.shade400),
+                          Icon(
+                            vm.searchByPhoneMode
+                                ? Icons.phone_android_rounded
+                                : Icons.receipt_long_outlined,
+                            size: 72,
+                            color: Colors.grey.shade400,
+                          ),
                           const SizedBox(height: 16),
                           Text(
-                            context.tr('inv_lookup_empty_hint'),
+                            vm.searchByPhoneMode
+                                ? 'أدخل رقم هاتف العميل واضغط بحث لعرض جميع فواتيره من الأحدث إلى الأقدم'
+                                : context.tr('inv_lookup_empty_hint'),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 14, color: Colors.black54),
+                            style: const TextStyle(
+                                fontSize: 14, color: Colors.black54),
                           ),
                         ],
                       ),
@@ -136,6 +184,8 @@ class InvoiceLookupScreen extends StatelessWidget {
   }
 
   Widget _buildSearchCard(BuildContext context, InvoiceLookupViewModel vm) {
+    final bool byPhone = vm.searchByPhoneMode;
+
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -144,9 +194,58 @@ class InvoiceLookupScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Search Mode Toggle (By Invoice ID vs By Customer Phone)
+            Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.tag_rounded, size: 17),
+                        SizedBox(width: 6),
+                        Text(
+                          'بحث برقم الفاتورة',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    selected: !byPhone,
+                    selectedColor: Colors.teal.shade100,
+                    onSelected: (_) => vm.setSearchByPhoneMode(false),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.phone_rounded, size: 17),
+                        SizedBox(width: 6),
+                        Text(
+                          'بحث برقم الهاتف',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    selected: byPhone,
+                    selectedColor: Colors.teal.shade100,
+                    onSelected: (_) => vm.setSearchByPhoneMode(true),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Text(
-              context.tr('inv_lookup_by_id'),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+              byPhone
+                  ? 'البحث برقم هاتف العميل (يعرض جميع فواتير العميل من الأحدث إلى الأقدم)'
+                  : context.tr('inv_lookup_by_id'),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
             ),
             const SizedBox(height: 10),
             Row(
@@ -154,33 +253,48 @@ class InvoiceLookupScreen extends StatelessWidget {
                 Expanded(
                   child: TextField(
                     controller: vm.searchController,
-                    keyboardType: TextInputType.number,
+                    keyboardType:
+                        byPhone ? TextInputType.phone : TextInputType.number,
                     textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => vm.searchInvoice(),
+                    onSubmitted: (_) => vm.performSearch(),
                     decoration: InputDecoration(
-                      hintText: context.tr('inv_lookup_hint'),
-                      prefixIcon: const Icon(Icons.search, color: Colors.teal),
+                      hintText: byPhone
+                          ? 'أدخل رقم هاتف العميل (مثال: 55381505)...'
+                          : context.tr('inv_lookup_hint'),
+                      prefixIcon: Icon(
+                        byPhone ? Icons.phone_rounded : Icons.search,
+                        color: Colors.teal,
+                      ),
                       suffixIcon: vm.searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.grey),
+                              icon:
+                                  const Icon(Icons.clear, color: Colors.grey),
                               onPressed: () => vm.clearSearch(),
                             )
                           : null,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton.icon(
-                  onPressed: () => vm.searchInvoice(),
+                  onPressed: () => vm.performSearch(),
                   icon: const Icon(Icons.search, color: Colors.white),
-                  label: Text(context.tr('inv_lookup_search_btn'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  label: Text(
+                    context.tr('inv_lookup_search_btn'),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.teal,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],
@@ -191,9 +305,313 @@ class InvoiceLookupScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildPhoneInvoicesListCard(
+      BuildContext context, InvoiceLookupViewModel vm) {
+    final invoices = vm.phoneInvoicesList;
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Customer & Summary Header
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.teal.shade700, Colors.green.shade700],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.person_pin_rounded,
+                          color: Colors.white, size: 24),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          vm.phoneCustomerName.isNotEmpty
+                              ? 'العميل: ${vm.phoneCustomerName}'
+                              : 'سجل فواتير الهاتف: ${vm.searchedPhone}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'هاتف: ${vm.searchedPhone}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (vm.phoneCustomerAddress.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined,
+                            color: Colors.white70, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'العنوان: ${vm.phoneCustomerAddress}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const Divider(color: Colors.white24, height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'عدد الفواتير',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 11),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${vm.phoneTotalCount} فاتورة',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'إجمالي الفواتير',
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 11),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${vm.phoneTotalAmount.toStringAsFixed(3)} KWD',
+                                style: const TextStyle(
+                                  color: Colors.amberAccent,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'قائمة الفواتير (مرتبة من الأحدث إلى الأقدم - اضغط على أي فاتورة لعرضها):',
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: invoices.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, idx) {
+                final inv = invoices[idx];
+                final int invId = _parseInt(inv['InvID']);
+                final String dateStr =
+                    _formatDateTime(inv['InvDate']?.toString() ?? '');
+                final double netAmt = _parseDouble(inv['NetAmount']);
+                final double paidAmt = _parseDouble(inv['PaidAmount']);
+                final double remAmt = _parseDouble(inv['Remainder']);
+                final int itemsCount = _parseInt(inv['ItemsCount']);
+                final String custName = inv['TempCustomerName']
+                            ?.toString()
+                            .trim()
+                            .isNotEmpty ==
+                        true
+                    ? inv['TempCustomerName'].toString()
+                    : (inv['PartnerName']?.toString() ?? 'نقدي عام');
+                final bool isPaid = paidAmt > 0 && remAmt <= 0.001;
+
+                return InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () =>
+                      vm.searchInvoice(invId: invId, keepPhoneList: true),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: idx == 0
+                          ? Colors.teal.shade50.withValues(alpha: 0.6)
+                          : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: idx == 0
+                            ? Colors.teal.shade300
+                            : Colors.grey.shade300,
+                        width: idx == 0 ? 1.4 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade700,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '#$invId',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              if (idx == 0)
+                                const Text(
+                                  'الأحدث',
+                                  style: TextStyle(
+                                    color: Colors.amberAccent,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                custName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'التاريخ: $dateStr  •  الأصناف: $itemsCount',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${netAmt.toStringAsFixed(3)} KWD',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14.5,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isPaid
+                                    ? Colors.green.shade100
+                                    : Colors.orange.shade100,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                isPaid ? 'مدفوع' : 'آجل',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPaid
+                                      ? Colors.green.shade900
+                                      : Colors.orange.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: Colors.teal),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildErrorMessageCard(String errorMsg) {
-    bool isNetworkErr = errorMsg.contains('الاتصال') || errorMsg.contains('الشبكة') || errorMsg.contains('connection');
-    bool isNotFound = errorMsg.contains('غير موجودة') || errorMsg.contains('not found');
+    bool isNetworkErr = errorMsg.contains('الاتصال') ||
+        errorMsg.contains('الشبكة') ||
+        errorMsg.contains('connection');
+    bool isNotFound = errorMsg.contains('غير موجودة') ||
+        errorMsg.contains('لا توجد') ||
+        errorMsg.contains('not found');
 
     Color bgColor = isNetworkErr
         ? Colors.red.shade50
@@ -236,28 +654,36 @@ class InvoiceLookupScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInvoiceViewCard(BuildContext context, InvoiceLookupViewModel vm) {
+  Widget _buildInvoiceViewCard(
+      BuildContext context, InvoiceLookupViewModel vm) {
     final inv = vm.invoiceData!;
     final String invType = inv['InvType']?.toString() ?? 'Sales';
     final bool isSales = (invType == 'Sales');
-    final String partnerLabel = isSales ? context.tr('inv_lookup_partner_cust') : context.tr('inv_lookup_partner_supp');
+    final String partnerLabel = isSales
+        ? context.tr('inv_lookup_partner_cust')
+        : context.tr('inv_lookup_partner_supp');
 
     final int invId = _parseInt(inv['InvID']);
     final String rawInvDate = inv['InvDate']?.toString() ?? '';
     final String invDate = _formatDateTime(rawInvDate);
 
-    final String partnerName = inv['PartnerName']?.toString() ?? context.tr('inv_lookup_general_cash');
+    final String partnerName =
+        inv['PartnerName']?.toString() ?? context.tr('inv_lookup_general_cash');
     final String warehouseName = inv['WarehouseName']?.toString() ?? '-';
     final String userName = inv['UserName']?.toString() ?? '-';
     final String paymentAccName = _resolvePaymentAccountName(inv, context);
 
-    final double grossTotal = _parseDouble(inv['TotalAmount'] ?? inv['original_total']);
-    final double discount = _parseDouble(inv['Discount'] ?? inv['discount_amount']);
-    final double netTotal = _parseDouble(inv['NetAmount'] ?? inv['total_amount'] ?? (grossTotal - discount));
+    final double grossTotal =
+        _parseDouble(inv['TotalAmount'] ?? inv['original_total']);
+    final double discount =
+        _parseDouble(inv['Discount'] ?? inv['discount_amount']);
+    final double netTotal = _parseDouble(
+        inv['NetAmount'] ?? inv['total_amount'] ?? (grossTotal - discount));
     final double paidAmount = _parseDouble(inv['PaidAmount']);
     final double remainder = _parseDouble(inv['Remainder']);
 
-    final List splits = (inv['PaymentSplits'] ?? inv['payment_splits'] ?? []) as List;
+    final List splits =
+        (inv['PaymentSplits'] ?? inv['payment_splits'] ?? []) as List;
 
     // TempOrderInfo Delivery fields check
     final String? tempName = inv['TempCustomerName']?.toString();
@@ -289,24 +715,33 @@ class InvoiceLookupScreen extends StatelessWidget {
           children: [
             // Top Header Bar Badge
             Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSales ? Colors.green.shade100 : Colors.orange.shade100,
+                    color: isSales
+                        ? Colors.green.shade100
+                        : Colors.orange.shade100,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSales ? Colors.green.shade700 : Colors.orange.shade800,
+                      color: isSales
+                          ? Colors.green.shade700
+                          : Colors.orange.shade800,
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isSales ? Icons.shopping_bag_outlined : Icons.inventory_2_outlined,
+                        isSales
+                            ? Icons.shopping_bag_outlined
+                            : Icons.inventory_2_outlined,
                         size: 18,
-                        color: isSales ? Colors.green.shade800 : Colors.orange.shade900,
+                        color: isSales
+                            ? Colors.green.shade800
+                            : Colors.orange.shade900,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -314,24 +749,49 @@ class InvoiceLookupScreen extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: isSales ? Colors.green.shade900 : Colors.orange.shade900,
+                          color: isSales
+                              ? Colors.green.shade900
+                              : Colors.orange.shade900,
                         ),
                       ),
                     ],
                   ),
                 ),
+                if (readOnlyPrintOnly)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blueGrey.shade200),
+                    ),
+                    child: const Text(
+                      'عرض وطباعة فقط',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                  ),
               ],
             ),
             const Divider(height: 24),
 
             // Metadata Grid
             _buildMetaRow(partnerLabel, partnerName, Icons.person_outline),
-            _buildMetaRow(context.tr('inv_lookup_inv_date'), invDate, Icons.calendar_today_outlined),
-            _buildMetaRow(context.tr('inv_lookup_warehouse'), warehouseName, Icons.storefront_outlined),
-            _buildMetaRow(context.tr('inv_lookup_cashier'), userName, Icons.account_circle_outlined),
-            _buildMetaRow(context.tr('inv_lookup_payment_acc'), paymentAccName, Icons.account_balance_wallet_outlined),
+            _buildMetaRow(context.tr('inv_lookup_inv_date'), invDate,
+                Icons.calendar_today_outlined),
+            _buildMetaRow(context.tr('inv_lookup_warehouse'), warehouseName,
+                Icons.storefront_outlined),
+            _buildMetaRow(context.tr('inv_lookup_cashier'), userName,
+                Icons.account_circle_outlined),
+            _buildMetaRow(context.tr('inv_lookup_payment_acc'), paymentAccName,
+                Icons.account_balance_wallet_outlined),
             if (generalNotes != null && generalNotes.trim().isNotEmpty)
-              _buildMetaRow(context.tr('inv_lookup_notes'), generalNotes, Icons.note_outlined),
+              _buildMetaRow(context.tr('inv_lookup_notes'), generalNotes,
+                  Icons.note_outlined),
 
             // Payment Splits Section (If Multiple Payment Methods Used)
             if (splits.isNotEmpty) ...[
@@ -348,19 +808,28 @@ class InvoiceLookupScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.credit_card_outlined, color: Colors.teal, size: 20),
+                        const Icon(Icons.credit_card_outlined,
+                            color: Colors.teal, size: 20),
                         const SizedBox(width: 6),
                         Text(
                           context.tr('inv_lookup_split_payments_card'),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.teal),
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal),
                         ),
                       ],
                     ),
                     const Divider(height: 12),
                     ...splits.map((s) {
                       if (s is! Map) return const SizedBox.shrink();
-                      final Map<String, dynamic> sMap = Map<String, dynamic>.from(s);
-                      final String accName = sMap['PaymentMethodName']?.toString() ?? sMap['AccountName']?.toString() ?? sMap['PaymentAccountName']?.toString() ?? context.tr('inv_lookup_cash');
+                      final Map<String, dynamic> sMap =
+                          Map<String, dynamic>.from(s);
+                      final String accName =
+                          sMap['PaymentMethodName']?.toString() ??
+                              sMap['AccountName']?.toString() ??
+                              sMap['PaymentAccountName']?.toString() ??
+                              context.tr('inv_lookup_cash');
                       final double amt = _parseDouble(sMap['Amount']);
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3.0),
@@ -369,16 +838,22 @@ class InvoiceLookupScreen extends StatelessWidget {
                           children: [
                             Text(
                               '• $accName',
-                              style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w600),
                             ),
                             Text(
                               '${amt.toStringAsFixed(3)} KWD',
-                              style: TextStyle(fontSize: 13, color: Colors.teal.shade800, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.teal.shade800,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),
@@ -399,25 +874,36 @@ class InvoiceLookupScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.local_shipping_outlined, color: Colors.blue, size: 20),
+                        const Icon(Icons.local_shipping_outlined,
+                            color: Colors.blue, size: 20),
                         const SizedBox(width: 6),
                         Text(
                           context.tr('inv_lookup_delivery_title'),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue),
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue),
                         ),
                       ],
                     ),
                     const Divider(height: 12),
                     if (tempName != null && tempName.trim().isNotEmpty)
-                      _buildDeliveryField(context.tr('temp_order_cust_name_label'), tempName),
+                      _buildDeliveryField(
+                          context.tr('temp_order_cust_name_label'), tempName),
                     if (tempPhone != null && tempPhone.trim().isNotEmpty)
-                      _buildDeliveryField(context.tr('temp_order_phone_label'), tempPhone),
+                      _buildDeliveryField(
+                          context.tr('temp_order_phone_label'), tempPhone),
                     if (tempAddress != null && tempAddress.trim().isNotEmpty)
-                      _buildDeliveryField(context.tr('temp_order_address_label'), tempAddress),
-                    if ((tempDate != null && tempDate.trim().isNotEmpty) || (tempTime != null && tempTime.trim().isNotEmpty))
-                      _buildDeliveryField(context.tr('inv_lookup_delivery_schedule'), '${tempDate ?? ""}  ${tempTime ?? ""}'),
+                      _buildDeliveryField(
+                          context.tr('temp_order_address_label'), tempAddress),
+                    if ((tempDate != null && tempDate.trim().isNotEmpty) ||
+                        (tempTime != null && tempTime.trim().isNotEmpty))
+                      _buildDeliveryField(
+                          context.tr('inv_lookup_delivery_schedule'),
+                          '${tempDate ?? ""}  ${tempTime ?? ""}'),
                     if (tempNotes != null && tempNotes.trim().isNotEmpty)
-                      _buildDeliveryField(context.tr('inv_lookup_notes'), tempNotes),
+                      _buildDeliveryField(
+                          context.tr('inv_lookup_notes'), tempNotes),
                   ],
                 ),
               ),
@@ -426,7 +912,10 @@ class InvoiceLookupScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               context.tr('inv_lookup_items_title'),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
             const SizedBox(height: 8),
 
@@ -439,14 +928,38 @@ class InvoiceLookupScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     color: Colors.grey.shade200,
                     child: Row(
                       children: [
-                        Expanded(flex: 3, child: Text(context.tr('inv_lookup_col_item'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                        Expanded(flex: 2, child: Text(context.tr('inv_lookup_col_qty'), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                        Expanded(flex: 2, child: Text(context.tr('inv_lookup_col_price'), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                        Expanded(flex: 2, child: Text(context.tr('inv_lookup_col_total'), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                        Expanded(
+                            flex: 3,
+                            child: Text(context.tr('inv_lookup_col_item'),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13))),
+                        Expanded(
+                            flex: 2,
+                            child: Text(context.tr('inv_lookup_col_qty'),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13))),
+                        Expanded(
+                            flex: 2,
+                            child: Text(context.tr('inv_lookup_col_price'),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13))),
+                        Expanded(
+                            flex: 2,
+                            child: Text(context.tr('inv_lookup_col_total'),
+                                textAlign: TextAlign.end,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13))),
                       ],
                     ),
                   ),
@@ -456,22 +969,29 @@ class InvoiceLookupScreen extends StatelessWidget {
                     itemCount: details.length,
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
-                      final item = Map<String, dynamic>.from(details[index] as Map);
-                      final String pName = item['ProductName']?.toString() ?? context.tr('inv_lookup_unknown_item');
+                      final item =
+                          Map<String, dynamic>.from(details[index] as Map);
+                      final String pName = item['ProductName']?.toString() ??
+                          context.tr('inv_lookup_unknown_item');
                       final String unit = item['UnitName']?.toString() ?? '';
-                      final double q = _parseDouble(item['quantity'] ?? item['Quantity'], 1.0);
-                      final double p = _parseDouble(item['price'] ?? item['UnitPrice'], 0.0);
-                      final double t = _parseDouble(item['total'] ?? item['TotalPrice'], q * p);
+                      final double q = _parseDouble(
+                          item['quantity'] ?? item['Quantity'], 1.0);
+                      final double p =
+                          _parseDouble(item['price'] ?? item['UnitPrice'], 0.0);
+                      final double t = _parseDouble(
+                          item['total'] ?? item['TotalPrice'], q * p);
 
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         child: Row(
                           children: [
                             Expanded(
                               flex: 3,
                               child: Text(
                                 pName,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600),
                               ),
                             ),
                             Expanded(
@@ -479,7 +999,8 @@ class InvoiceLookupScreen extends StatelessWidget {
                               child: Text(
                                 '${q.toStringAsFixed(2)} $unit',
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black87),
                               ),
                             ),
                             Expanded(
@@ -487,7 +1008,8 @@ class InvoiceLookupScreen extends StatelessWidget {
                               child: Text(
                                 p.toStringAsFixed(3),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.black87),
                               ),
                             ),
                             Expanded(
@@ -495,7 +1017,10 @@ class InvoiceLookupScreen extends StatelessWidget {
                               child: Text(
                                 t.toStringAsFixed(3),
                                 textAlign: TextAlign.end,
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.teal),
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal),
                               ),
                             ),
                           ],
@@ -519,30 +1044,46 @@ class InvoiceLookupScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _buildFinancialRow(context.tr('inv_lookup_gross_total'), '${grossTotal.toStringAsFixed(3)} KWD', Colors.black87),
+                  _buildFinancialRow(context.tr('inv_lookup_gross_total'),
+                      '${grossTotal.toStringAsFixed(3)} KWD', Colors.black87),
                   if (discount > 0)
-                    _buildFinancialRow(context.tr('inv_lookup_discount'), '- ${discount.toStringAsFixed(3)} KWD', Colors.redAccent),
+                    _buildFinancialRow(context.tr('inv_lookup_discount'),
+                        '- ${discount.toStringAsFixed(3)} KWD', Colors.redAccent),
                   const Divider(height: 16),
-                  _buildFinancialRow(context.tr('inv_lookup_net_total'), '${netTotal.toStringAsFixed(3)} KWD', Colors.green.shade800, isBold: true, fontSize: 16),
+                  _buildFinancialRow(
+                      context.tr('inv_lookup_net_total'),
+                      '${netTotal.toStringAsFixed(3)} KWD',
+                      Colors.green.shade800,
+                      isBold: true,
+                      fontSize: 16),
                   const SizedBox(height: 4),
-                  _buildFinancialRow(context.tr('inv_lookup_paid_amount'), '${paidAmount.toStringAsFixed(3)} KWD', Colors.black54),
+                  _buildFinancialRow(context.tr('inv_lookup_paid_amount'),
+                      '${paidAmount.toStringAsFixed(3)} KWD', Colors.black54),
                   if (remainder > 0)
-                    _buildFinancialRow(context.tr('inv_lookup_remainder'), '${remainder.toStringAsFixed(3)} KWD', Colors.orange.shade800, isBold: true),
+                    _buildFinancialRow(
+                        context.tr('inv_lookup_remainder'),
+                        '${remainder.toStringAsFixed(3)} KWD',
+                        Colors.orange.shade800,
+                        isBold: true),
                 ],
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Edit Invoice Button (Shown if enabled in settings and invoice is unposted)
-            if (vm.allowEditUnposted && (inv['IsPosted'] != true)) ...[
+            // Edit Invoice Button (Disabled when readOnlyPrintOnly is true)
+            if (!readOnlyPrintOnly &&
+                vm.allowEditUnposted &&
+                (inv['IsPosted'] != true)) ...[
               ElevatedButton.icon(
                 onPressed: () async {
                   final result = await Navigator.push<bool>(
                     context,
                     MaterialPageRoute(
                       builder: (context) => PosScreen(
-                        type: inv['InvType']?.toString() == 'Purchase' ? 'Purchase' : 'Sales',
+                        type: inv['InvType']?.toString() == 'Purchase'
+                            ? 'Purchase'
+                            : 'Sales',
                         editingInvoice: inv,
                       ),
                     ),
@@ -550,35 +1091,41 @@ class InvoiceLookupScreen extends StatelessWidget {
                   if (result == true) {
                     final invId = _parseInt(inv['InvID']);
                     if (invId > 0) {
-                      vm.searchInvoice(invId: invId);
+                      vm.searchInvoice(
+                          invId: invId, keepPhoneList: vm.hasPhoneResults);
                     }
                   }
                 },
                 icon: const Icon(Icons.edit_note, color: Colors.white),
                 label: Text(
                   context.tr('inv_lookup_edit_btn'),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange[800],
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 12),
             ],
 
-            // Bottom Re-print Button
+            // Bottom Re-print Button (Always available)
             ElevatedButton.icon(
               onPressed: () async {
-                final printerService = Provider.of<PrinterService>(context, listen: false);
+                final printerService =
+                    Provider.of<PrinterService>(context, listen: false);
                 final success = await vm.printInvoice(printerService);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        success ? context.tr('inv_lookup_reprint_success') : context.tr('inv_lookup_reprint_failed'),
+                        success
+                            ? context.tr('inv_lookup_reprint_success')
+                            : context.tr('inv_lookup_reprint_failed'),
                         textAlign: TextAlign.right,
                       ),
                       backgroundColor: success ? Colors.green : Colors.red,
@@ -589,13 +1136,15 @@ class InvoiceLookupScreen extends StatelessWidget {
               icon: const Icon(Icons.print, color: Colors.white),
               label: Text(
                 context.tr('inv_lookup_reprint_full'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.teal,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -611,13 +1160,17 @@ class InvoiceLookupScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: Colors.grey.shade600),
           const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+          Text(label,
+              style: const TextStyle(fontSize: 13, color: Colors.black54)),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
           ),
         ],
@@ -630,13 +1183,20 @@ class InvoiceLookupScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2.0),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.blueGrey, fontWeight: FontWeight.w600)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.blueGrey,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               val,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87),
             ),
           ),
         ],
@@ -644,7 +1204,8 @@ class InvoiceLookupScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFinancialRow(String label, String val, Color color, {bool isBold = false, double fontSize = 13}) {
+  Widget _buildFinancialRow(String label, String val, Color color,
+      {bool isBold = false, double fontSize = 13}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0),
       child: Row(
@@ -653,13 +1214,19 @@ class InvoiceLookupScreen extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: TextStyle(fontSize: fontSize, color: Colors.black87, fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
+              style: TextStyle(
+                  fontSize: fontSize,
+                  color: Colors.black87,
+                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
             ),
           ),
           const SizedBox(width: 8),
           Text(
             val,
-            style: TextStyle(fontSize: fontSize, color: color, fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
+            style: TextStyle(
+                fontSize: fontSize,
+                color: color,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal),
           ),
         ],
       ),

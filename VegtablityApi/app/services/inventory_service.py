@@ -37,8 +37,12 @@ class InventoryService:
                 wastage.Notes,
                 details_xml
             ))
-            
-            row = cursor.fetchone()
+
+            while cursor.description is None:
+                if not cursor.nextset():
+                    break
+
+            row = cursor.fetchone() if cursor.description is not None else None
             if not row:
                 raise Exception("Failed to save wastage draft")
             
@@ -77,8 +81,12 @@ class InventoryService:
                 stocktake.Notes,
                 details_xml
             ))
-            
-            row = cursor.fetchone()
+
+            while cursor.description is None:
+                if not cursor.nextset():
+                    break
+
+            row = cursor.fetchone() if cursor.description is not None else None
             if not row:
                 raise Exception("Failed to save stocktake draft")
             

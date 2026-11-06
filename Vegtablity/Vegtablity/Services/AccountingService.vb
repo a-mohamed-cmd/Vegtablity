@@ -83,8 +83,8 @@ Namespace Services
             Dim report As New AccountStatementReport()
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 Using multi = conn.QueryMultiple(
-                    Helpers.StoredProcedures.SP_REPORT_ACCOUNTSTATEMENT,
-                    New With {.AccountID = accountID, .StartDate = startDate, .EndDate = endDate},
+                    "DECLARE @OpeningBalance DECIMAL(18, 3) = 0; SELECT @OpeningBalance = CAST(ROUND(ISNULL(SUM(CAST(DebitAmount AS DECIMAL(18, 3)) - CAST(CreditAmount AS DECIMAL(18, 3))), 0), 3, 1) AS DECIMAL(18, 3)) FROM [Accounting].[JournalEntries] WHERE AccountID = @AccountID AND CAST(EntryDate AS DATE) < @StartDate; SELECT @OpeningBalance AS OpeningBalance; SELECT JE.EntryID, JE.EntryNo, JE.EntryDate, JE.ReferenceType, JE.ReferenceID, JE.Description, CAST(ROUND(JE.DebitAmount, 3, 1) AS DECIMAL(18, 3)) AS DebitAmount, CAST(ROUND(JE.CreditAmount, 3, 1) AS DECIMAL(18, 3)) AS CreditAmount, CAST(ROUND(@OpeningBalance + SUM(CAST(JE.DebitAmount AS DECIMAL(18, 3)) - CAST(JE.CreditAmount AS DECIMAL(18, 3))) OVER (ORDER BY JE.EntryDate, JE.EntryID ROWS UNBOUNDED PRECEDING), 3, 1) AS DECIMAL(18, 3)) AS Balance FROM [Accounting].[JournalEntries] JE WHERE JE.AccountID = @AccountID AND CAST(JE.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate ORDER BY JE.EntryDate, JE.EntryID;",
+                    New With {.AccountID = accountID, .StartDate = startDate, .EndDate = endDate}, commandType:=CommandType.Text) : If False Then Dim unusedMulti = conn.QueryMultiple("", Nothing,
                     commandType:=CommandType.StoredProcedure)
 
                     ' 1. Opening Balance
@@ -94,7 +94,14 @@ Namespace Services
                     report.Transactions = multi.Read(Of AccountStatementItem)().ToList()
 
                     ' 3. Calculate Totals & Ending Balance
-                    report.TotalDebit = report.Transactions.Sum(Function(t) t.DebitAmount)
+                    Dim runningBal As Decimal = report.OpeningBalance
+                    For Each tx In report.Transactions
+                        tx.DebitAmount = AccountStatementReport.TruncateTo3Decimals(tx.DebitAmount)
+                        tx.CreditAmount = AccountStatementReport.TruncateTo3Decimals(tx.CreditAmount)
+                        runningBal = AccountStatementReport.TruncateTo3Decimals(runningBal + tx.DebitAmount - tx.CreditAmount)
+                        tx.Balance = runningBal
+                    Next
+                    report.TotalDebit = AccountStatementReport.TruncateTo3Decimals(report.Transactions.Sum(Function(t) t.DebitAmount))
                     report.TotalCredit = report.Transactions.Sum(Function(t) t.CreditAmount)
                     
                     ' Ending Balance = Opening + Total Debit - Total Credit

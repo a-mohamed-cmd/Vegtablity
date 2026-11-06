@@ -11278,16 +11278,22 @@ BEGIN
         -- └─────────────────────────────────────────────────────────┘
 
         -- حفظ أو تحديث رأس الفاتورة
-        IF @InvID = 0
+        IF @InvID IS NULL OR @InvID = 0
         BEGIN
+            -- التقاط InvID الفعلي الذري مباشرة من صف الإدراج لمنع أي تعارض بين الأجهزة المفتوحة على نفس الوردية
+            DECLARE @InsertedHeader TABLE (InvID INT);
+
             INSERT INTO [Sales].[InvoiceHeader]
                 (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount,
                  PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID, ShiftID)
+            OUTPUT INSERTED.InvID INTO @InsertedHeader(InvID)
             VALUES
                 (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount,
                  @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID, @ShiftID);
 
-            SET @InvID = CAST(SCOPE_IDENTITY() AS INT);
+            SELECT TOP 1 @InvID = InvID FROM @InsertedHeader;
+            IF @InvID IS NULL OR @InvID = 0
+                SET @InvID = CAST(SCOPE_IDENTITY() AS INT);
 
             -- التحقق من نجاح الإدراج
             IF @InvID IS NULL OR @InvID = 0
@@ -16403,4 +16409,488 @@ BEGIN
 END
 GO
 
-PRINT N'✅ تم إنشاء سكريبت جداول وإجراءات التقارير [Reports] الموسعة بنجاح';
+PRINT N'✅ تم إنشاء سكريبت جداول وإجراءات التقارير [Reports] الموسعة بنجاح';
+
+
+-- 19. تقرير مبيعات الفروع والمخازن (Warehouse / Branch Sales Analytics)
+IF OBJECT_ID('[Reports].[sp_Report_WarehouseSales]', 'P') IS NOT NULL DROP PROCEDURE [Reports].[sp_Report_WarehouseSales];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_WarehouseSales]
+    @StartDate DATE,
+    @EndDate DATE,
+    @WarehouseID INT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    ;WITH InvoiceCosts AS (
+        SELECT 
+            d.InvID,
+            ISNULL(SUM(ISNULL(d.Quantity, 1) * ISNULL(d.CostPrice, ISNULL(p.PurchasePrice, 0))), 0) AS InvoiceCost
+        FROM [Sales].[InvoiceDetails] d
+        LEFT JOIN [Inventory].[Products] p ON d.ProductID = p.ProductID
+        GROUP BY d.InvID
+    ),
+    FilteredInvoices AS (
+        SELECT 
+            ISNULL(i.WarehouseID, 0) AS WarehouseID,
+            i.InvID,
+            ISNULL(i.TotalAmount, 0) AS TotalAmount,
+            ISNULL(i.Discount, 0) AS Discount,
+            ISNULL(i.NetAmount, 0) AS NetAmount,
+            ISNULL(i.PaidAmount, 0) AS PaidAmount,
+            ISNULL(i.Remainder, 0) AS Remainder,
+            ISNULL(ic.InvoiceCost, 0) AS InvoiceCost
+        FROM [Sales].[InvoiceHeader] i
+        LEFT JOIN InvoiceCosts ic ON i.InvID = ic.InvID
+        WHERE CAST(i.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+          AND (i.InvType = 'Sales' OR i.InvType = 'Sale' OR i.InvType IS NULL OR i.InvType = '' OR i.InvType = N'مبيعات' OR i.InvType NOT LIKE '%Purchase%')
+          AND (@WarehouseID = 0 OR @WarehouseID IS NULL OR i.WarehouseID = @WarehouseID)
+    ),
+    WarehouseAgg AS (
+        SELECT 
+            ISNULL(w.WarehouseID, fi.WarehouseID) AS WarehouseID,
+            ISNULL(w.WarehouseName, N'المخزن / الفرع الرئيسي') AS WarehouseName,
+            COUNT(fi.InvID) AS InvoiceCount,
+            ISNULL(SUM(fi.TotalAmount), 0) AS TotalGrossSales,
+            ISNULL(SUM(fi.Discount), 0) AS TotalDiscounts,
+            ISNULL(SUM(fi.NetAmount), 0) AS TotalNetSales,
+            ISNULL(SUM(fi.PaidAmount), 0) AS TotalPaid,
+            ISNULL(SUM(fi.Remainder), 0) AS TotalRemainder,
+            ISNULL(SUM(fi.InvoiceCost), 0) AS TotalCost
+        FROM [Settings].[Warehouses] w
+        FULL OUTER JOIN FilteredInvoices fi ON w.WarehouseID = fi.WarehouseID
+        WHERE (@WarehouseID = 0 OR @WarehouseID IS NULL OR ISNULL(w.WarehouseID, fi.WarehouseID) = @WarehouseID)
+          AND (w.WarehouseID IS NOT NULL OR fi.InvID IS NOT NULL)
+        GROUP BY ISNULL(w.WarehouseID, fi.WarehouseID), ISNULL(w.WarehouseName, N'المخزن / الفرع الرئيسي')
+    ),
+    GrandTotal AS (
+        SELECT ISNULL(SUM(TotalNetSales), 0) AS AllWarehousesNetSales
+        FROM WarehouseAgg
+    )
+    SELECT 
+        wa.WarehouseID,
+        wa.WarehouseName,
+        wa.InvoiceCount,
+        wa.TotalGrossSales,
+        wa.TotalDiscounts,
+        wa.TotalNetSales,
+        wa.TotalPaid,
+        wa.TotalRemainder,
+        wa.TotalCost,
+        (wa.TotalNetSales - wa.TotalCost) AS NetProfit,
+        CASE WHEN wa.TotalNetSales > 0 
+             THEN ((wa.TotalNetSales - wa.TotalCost) / wa.TotalNetSales) * 100 
+             ELSE 0 END AS ProfitMarginPercent,
+        CASE WHEN gt.AllWarehousesNetSales > 0 
+             THEN (wa.TotalNetSales / gt.AllWarehousesNetSales) * 100 
+             ELSE 0 END AS SalesSharePercent
+    FROM WarehouseAgg wa
+    CROSS JOIN GrandTotal gt
+    ORDER BY wa.TotalNetSales DESC, wa.InvoiceCount DESC, wa.WarehouseID ASC;
+END
+GO
+
+
+-- =============================================
+-- 33. Update sp_Report_AccountStatement to use exact 3 decimals (DECIMAL(18, 3)) without rounding
+-- =============================================
+IF OBJECT_ID('[Accounting].[sp_Report_AccountStatement]', 'P') IS NOT NULL
+    DROP PROCEDURE [Accounting].[sp_Report_AccountStatement];
+GO
+
+CREATE PROCEDURE [Accounting].[sp_Report_AccountStatement]
+    @AccountID INT,
+    @StartDate DATE,
+    @EndDate DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- 1. حساب الرصيد الافتتاحي بـ 3 أرقام عشرية بدون تقريب
+    DECLARE @OpeningBalance DECIMAL(18, 3) = 0;
+
+    SELECT @OpeningBalance = CAST(ROUND(ISNULL(SUM(CAST(DebitAmount AS DECIMAL(18, 3)) - CAST(CreditAmount AS DECIMAL(18, 3))), 0), 3, 1) AS DECIMAL(18, 3))
+    FROM [Accounting].[JournalEntries]
+    WHERE AccountID = @AccountID
+      AND CAST(EntryDate AS DATE) < @StartDate;
+
+    -- النتيجة 1: الرصيد الافتتاحي
+    SELECT @OpeningBalance AS OpeningBalance;
+
+    -- النتيجة 2: الحركات والرصيد التراكمي بـ 3 أرقام عشرية بدون تقريب
+    SELECT 
+        JE.EntryID,
+        JE.EntryNo,
+        JE.EntryDate,
+        JE.ReferenceType,
+        JE.ReferenceID,
+        JE.Description,
+        CAST(ROUND(JE.DebitAmount, 3, 1) AS DECIMAL(18, 3)) AS DebitAmount,
+        CAST(ROUND(JE.CreditAmount, 3, 1) AS DECIMAL(18, 3)) AS CreditAmount,
+        CAST(ROUND(@OpeningBalance + SUM(CAST(JE.DebitAmount AS DECIMAL(18, 3)) - CAST(JE.CreditAmount AS DECIMAL(18, 3))) OVER (ORDER BY JE.EntryDate, JE.EntryID ROWS UNBOUNDED PRECEDING), 3, 1) AS DECIMAL(18, 3)) AS Balance
+    FROM [Accounting].[JournalEntries] JE
+    WHERE JE.AccountID = @AccountID
+      AND CAST(JE.EntryDate AS DATE) BETWEEN @StartDate AND @EndDate
+    ORDER BY JE.EntryDate, JE.EntryID;
+END
+GO
+
+
+-- =============================================
+-- 34. Update sp_Report_InventoryValuation, sp_Report_SlowMovingStock, and sp_Report_QuotationsStatus
+--     for full compatibility with both WPF Desktop and Web Manager App
+-- =============================================
+IF OBJECT_ID('[Reports].[sp_Report_InventoryValuation]', 'P') IS NOT NULL
+    DROP PROCEDURE [Reports].[sp_Report_InventoryValuation];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_InventoryValuation]
+    @WarehouseID INT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        ISNULL(w.WarehouseName, N'المخزن الرئيسي') AS WarehouseName,
+        p.ProductID,
+        ISNULL(p.Barcode, '') AS Barcode,
+        ISNULL(p.ProductName, N'صنف غير معرف') AS ProductName,
+        ISNULL(c.CatName, N'عام') AS CategoryName,
+        ISNULL(u.UnitName, N'حبة') AS UnitName,
+        ISNULL(s.CurrentQty, 0) AS CurrentQty,
+        ISNULL(s.CurrentQty, 0) AS CurrentStock,
+        ISNULL(s.AvgCostPrice, ISNULL(p.PurchasePrice, 0)) AS UnitCost,
+        ISNULL(p.SalePrice, 0) AS UnitSellingPrice,
+        ISNULL(s.CurrentQty * ISNULL(s.AvgCostPrice, ISNULL(p.PurchasePrice, 0)), 0) AS TotalCostValue,
+        ISNULL(s.CurrentQty * ISNULL(p.SalePrice, 0), 0) AS TotalRetailValue
+    FROM [Inventory].[ProductStock] s
+    INNER JOIN [Inventory].[Products] p ON s.ProductID = p.ProductID
+    LEFT JOIN [Settings].[Warehouses] w ON s.WarehouseID = w.WarehouseID
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    WHERE (@WarehouseID = 0 OR @WarehouseID IS NULL OR s.WarehouseID = @WarehouseID)
+      AND ISNULL(s.CurrentQty, 0) > 0
+    ORDER BY TotalCostValue DESC, p.ProductName ASC;
+END
+GO
+
+IF OBJECT_ID('[Reports].[sp_Report_SlowMovingStock]', 'P') IS NOT NULL
+    DROP PROCEDURE [Reports].[sp_Report_SlowMovingStock];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_SlowMovingStock]
+    @MonthsInactive INT = NULL,
+    @ThresholdDays INT = 30
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @EffectiveDays INT = CASE WHEN @MonthsInactive IS NOT NULL THEN @MonthsInactive * 30 ELSE ISNULL(@ThresholdDays, 30) END;
+
+    SELECT 
+        p.ProductID,
+        ISNULL(p.Barcode, '') AS Barcode,
+        ISNULL(p.ProductName, N'صنف غير معرف') AS ProductName,
+        ISNULL(c.CatName, N'عام') AS CatName,
+        ISNULL(u.UnitName, N'حبة') AS UnitName,
+        ISNULL(SUM(s.CurrentQty), 0) AS CurrentTotalStock,
+        ISNULL(p.PurchasePrice, 0) AS PurchasePrice,
+        ISNULL(SUM(s.CurrentQty * ISNULL(p.PurchasePrice, 0)), 0) AS TotalCostValue,
+        MAX(i.InvDate) AS LastSoldDate,
+        ISNULL(DATEDIFF(DAY, MAX(i.InvDate), GETDATE()), 999) AS DaysSinceLastSale
+    FROM [Inventory].[Products] p
+    LEFT JOIN [Settings].[Categories] c ON p.CategoryID = c.CatID
+    LEFT JOIN [Settings].[Units] u ON p.UnitID = u.UnitID
+    LEFT JOIN [Inventory].[ProductStock] s ON p.ProductID = s.ProductID
+    LEFT JOIN [Sales].[InvoiceDetails] d ON p.ProductID = d.ProductID
+    LEFT JOIN [Sales].[InvoiceHeader] i ON d.InvID = i.InvID
+    GROUP BY p.ProductID, p.Barcode, p.ProductName, c.CatName, u.UnitName, p.PurchasePrice
+    HAVING ISNULL(SUM(s.CurrentQty), 0) > 0 
+       AND (MAX(i.InvDate) IS NULL OR DATEDIFF(DAY, MAX(i.InvDate), GETDATE()) >= @EffectiveDays)
+    ORDER BY DaysSinceLastSale DESC, TotalCostValue DESC;
+END
+GO
+
+IF OBJECT_ID('[Reports].[sp_Report_QuotationsStatus]', 'P') IS NOT NULL
+    DROP PROCEDURE [Reports].[sp_Report_QuotationsStatus];
+GO
+CREATE PROCEDURE [Reports].[sp_Report_QuotationsStatus]
+    @Status NVARCHAR(20) = 'All'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        q.QuoteID,
+        p.PartnerName AS CustomerName,
+        q.QuoteDate,
+        q.ExpiryDate,
+        q.IsActive,
+        ISNULL((SELECT COUNT(*) FROM [Sales].[QuotationDetails] WHERE QuoteID = q.QuoteID), 0) AS ItemsCount,
+        ISNULL((SELECT SUM(QuotedPrice) FROM [Sales].[QuotationDetails] WHERE QuoteID = q.QuoteID), 0) AS QuoteTotalValue,
+        CASE 
+            WHEN q.IsActive = 0 THEN N'مغلق'
+            WHEN q.ExpiryDate IS NOT NULL AND CAST(q.ExpiryDate AS DATE) < CAST(GETDATE() AS DATE) THEN N'منتهي الصلاحية'
+            ELSE N'فعال (قيد الانتظار)'
+        END AS QuoteStatus
+    FROM [Sales].[Quotations] q
+    INNER JOIN [Sales].[Partners] p ON q.PartnerID = p.PartnerID
+    WHERE (@Status = 'All')
+       OR (@Status = 'Active' AND q.IsActive = 1 AND (q.ExpiryDate IS NULL OR CAST(q.ExpiryDate AS DATE) >= CAST(GETDATE() AS DATE)))
+       OR (@Status = 'Expired' AND (q.IsActive = 0 OR CAST(q.ExpiryDate AS DATE) < CAST(GETDATE() AS DATE)))
+    ORDER BY q.QuoteDate DESC;
+END
+GO
+
+
+-- =============================================
+-- 35. [Sales].[sp_Invoice_SearchByPhone]
+--     البحث عن فواتير العميل باستخدام رقم الهاتف (من الأحدث إلى الأقدم)
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Invoice_SearchByPhone]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Invoice_SearchByPhone];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_SearchByPhone]
+    @Phone NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @CleanPhone NVARCHAR(50) = REPLACE(REPLACE(REPLACE(LTRIM(RTRIM(ISNULL(@Phone, ''))), ' ', ''), '-', ''), '+', '');
+
+    SELECT 
+        h.InvID,
+        h.InvType,
+        h.InvDate,
+        h.PartnerID,
+        h.WarehouseID,
+        h.TotalAmount,
+        h.Discount,
+        h.NetAmount,
+        h.PaidAmount,
+        h.Remainder,
+        h.UserID,
+        h.Notes,
+        h.IsPosted,
+        h.ReferenceNo,
+        h.PaymentAccountID,
+        h.ShiftID,
+        p.PartnerName,
+        p.Phone AS PartnerPhone,
+        p.Address AS PartnerAddress,
+        w.WarehouseName,
+        u.FullName AS UserName,
+        acc.AccountName AS PaymentAccountName,
+        acc.AccountCode AS PaymentAccountCode,
+        temp.CustomerName AS TempCustomerName,
+        temp.Phone AS TempPhone,
+        temp.Address AS TempAddress,
+        temp.DeliveryDate AS TempDeliveryDate,
+        temp.DeliveryTime AS TempDeliveryTime,
+        ISNULL((SELECT COUNT(*) FROM [Sales].[InvoiceDetails] d WHERE d.InvID = h.InvID), 0) AS ItemsCount
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+    LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
+    LEFT JOIN [Accounting].[ChartOfAccounts] acc ON h.PaymentAccountID = acc.AccountID
+    LEFT JOIN [Sales].[TempOrderInfo] temp ON h.InvID = temp.InvID
+    WHERE @CleanPhone <> ''
+      AND (
+          REPLACE(REPLACE(REPLACE(ISNULL(temp.Phone, ''), ' ', ''), '-', ''), '+', '') LIKE '%' + @CleanPhone + '%'
+          OR REPLACE(REPLACE(REPLACE(ISNULL(p.Phone, ''), ' ', ''), '-', ''), '+', '') LIKE '%' + @CleanPhone + '%'
+      )
+    ORDER BY h.InvDate DESC, h.InvID DESC;
+END
+GO
+
+
+-- =============================================
+-- 36. [Sales].[sp_Shift_UpdateStatus]
+--     تعديل حالة الوردية فقط (Open / Closed) دون أي تغييرات أخرى
+-- =============================================
+IF OBJECT_ID('[Sales].[sp_Shift_UpdateStatus]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Shift_UpdateStatus];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Shift_UpdateStatus]
+    @ShiftID INT,
+    @Status  NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE [Sales].[Shifts]
+    SET [Status] = @Status
+    WHERE [ShiftID] = @ShiftID;
+END
+GO
+
+
+-- =============================================
+-- 37. [Reports].[sp_Report_PurchaseInvoices]
+--     تقرير فواتير المشتريات مع الفلترة بالمورد والفترة الزمنية والمخزن
+-- =============================================
+IF OBJECT_ID('[Reports].[sp_Report_PurchaseInvoices]', 'P') IS NOT NULL
+    DROP PROCEDURE [Reports].[sp_Report_PurchaseInvoices];
+GO
+
+CREATE PROCEDURE [Reports].[sp_Report_PurchaseInvoices]
+    @StartDate   DATE,
+    @EndDate     DATE,
+    @PartnerID   INT = 0,
+    @WarehouseID INT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        h.InvID,
+        h.InvDate,
+        ISNULL(h.ReferenceNo, N'-') AS ReferenceNo,
+        ISNULL(h.PartnerID, 0) AS PartnerID,
+        ISNULL(p.PartnerName, N'مورد نقدي') AS SupplierName,
+        ISNULL(p.Phone, N'-') AS SupplierPhone,
+        ISNULL(w.WarehouseName, N'المخزن الرئيسي') AS WarehouseName,
+        ISNULL(u.FullName, ISNULL(u.Username, N'-')) AS UserName,
+        ISNULL((SELECT COUNT(*) FROM [Sales].[InvoiceDetails] d WHERE d.InvID = h.InvID), 0) AS ItemsCount,
+        ISNULL(h.TotalAmount, 0) AS TotalAmount,
+        ISNULL(h.Discount, 0) AS Discount,
+        ISNULL(h.NetAmount, 0) AS NetAmount,
+        ISNULL(h.PaidAmount, 0) AS PaidAmount,
+        ISNULL(h.Remainder, 0) AS Remainder,
+        ISNULL(h.IsPosted, 0) AS IsPosted,
+        ISNULL(h.Notes, N'') AS Notes
+    FROM [Sales].[InvoiceHeader] h
+    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+    LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+    LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
+    WHERE CAST(h.InvDate AS DATE) BETWEEN @StartDate AND @EndDate
+      AND (h.InvType = 'Purchase' OR h.InvType = N'مشتريات')
+      AND (@PartnerID = 0 OR @PartnerID IS NULL OR h.PartnerID = @PartnerID)
+      AND (@WarehouseID = 0 OR @WarehouseID IS NULL OR h.WarehouseID = @WarehouseID)
+    ORDER BY h.InvDate DESC, h.InvID DESC;
+END
+GO
+
+-- =================================================================================
+-- 88. تحديث إجراء حفظ الفاتورة [Sales].[sp_Invoice_Save_XML]
+-- ضمان التقاط وإرجاع رقم الفاتورة الفعلي (InvID) الذري بعد إتمام الحفظ لمنع تعارض الأجهزة على نفس الوردية
+-- =================================================================================
+IF OBJECT_ID('[Sales].[sp_Invoice_Save_XML]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Invoice_Save_XML];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_Save_XML]
+    @InvID            INT OUTPUT,
+    @InvType          NVARCHAR(20),
+    @InvDate          DATETIME,
+    @PartnerID        INT,
+    @WarehouseID      INT,
+    @TotalAmount      DECIMAL(18, 3),
+    @Discount         DECIMAL(18, 3),
+    @NetAmount        DECIMAL(18, 3),
+    @PaidAmount       DECIMAL(18, 3),
+    @Remainder        DECIMAL(18, 3),
+    @UserID           INT,
+    @Notes            NVARCHAR(255),
+    @IsPosted         BIT           = 0,
+    @ReferenceNo      NVARCHAR(50)  = NULL,
+    @PaymentAccountID INT           = NULL,
+    @ShiftID          INT           = NULL,
+    @DetailsXml       XML,
+    @TempCustomerName NVARCHAR(150) = NULL,
+    @TempPhone        VARCHAR(20)   = NULL,
+    @TempAddress      NVARCHAR(255) = NULL,
+    @TempDeliveryDate DATE          = NULL,
+    @TempDeliveryTime VARCHAR(50)   = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- حفظ أو تحديث رأس الفاتورة
+        IF @InvID IS NULL OR @InvID = 0
+        BEGIN
+            -- التقاط InvID الفعلي الذري مباشرة من صف الإدراج عبر OUTPUT INSERTED.InvID
+            DECLARE @InsertedHeader TABLE (InvID INT);
+
+            INSERT INTO [Sales].[InvoiceHeader]
+                (InvType, InvDate, PartnerID, WarehouseID, TotalAmount, Discount, NetAmount,
+                 PaidAmount, Remainder, UserID, Notes, IsPosted, ReferenceNo, PaymentAccountID, ShiftID)
+            OUTPUT INSERTED.InvID INTO @InsertedHeader(InvID)
+            VALUES
+                (@InvType, @InvDate, @PartnerID, @WarehouseID, @TotalAmount, @Discount, @NetAmount,
+                 @PaidAmount, @Remainder, @UserID, @Notes, @IsPosted, @ReferenceNo, @PaymentAccountID, @ShiftID);
+
+            SELECT TOP 1 @InvID = InvID FROM @InsertedHeader;
+            IF @InvID IS NULL OR @InvID = 0
+                SET @InvID = CAST(SCOPE_IDENTITY() AS INT);
+
+            -- التحقق من نجاح الإدراج
+            IF @InvID IS NULL OR @InvID = 0
+                THROW 50001, N'فشل حفظ رأس الفاتورة الجديدة — لم يتم إرجاع InvID صالح.', 1;
+        END
+        ELSE
+        BEGIN
+            UPDATE [Sales].[InvoiceHeader]
+            SET InvType           = @InvType,
+                InvDate           = @InvDate,
+                PartnerID         = @PartnerID,
+                WarehouseID       = @WarehouseID,
+                TotalAmount       = @TotalAmount,
+                Discount          = @Discount,
+                NetAmount         = @NetAmount,
+                PaidAmount        = @PaidAmount,
+                Remainder         = @Remainder,
+                UserID            = @UserID,
+                Notes             = @Notes,
+                IsPosted          = @IsPosted,
+                ReferenceNo       = @ReferenceNo,
+                PaymentAccountID  = @PaymentAccountID,
+                ShiftID           = ISNULL(ShiftID, @ShiftID)
+            WHERE InvID = @InvID;
+
+            IF @@ROWCOUNT = 0
+                THROW 50002, N'فشل تحديث الفاتورة — لم يُعثر على InvID المطلوب في InvoiceHeader.', 1;
+
+            DELETE FROM [Sales].[InvoiceDetails] WHERE InvID = @InvID;
+            DELETE FROM [Sales].[InvoicePaymentSplits] WHERE InvID = @InvID;
+        END
+
+        -- حفظ تفاصيل أصناف الفاتورة
+        INSERT INTO [Sales].[InvoiceDetails]
+            (InvID, ProductID, UnitPrice, Quantity, TotalPrice, CostPrice)
+        SELECT
+            @InvID,
+            T.Item.value('@ProductID', 'INT'),
+            T.Item.value('@UnitPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@Quantity', 'DECIMAL(18,3)'),
+            T.Item.value('@TotalPrice', 'DECIMAL(18,3)'),
+            T.Item.value('@CostPrice', 'DECIMAL(18,3)')
+        FROM @DetailsXml.nodes('//Item') AS T(Item);
+
+        -- حفظ بيانات الزبون المؤقت إن وُجدت
+        IF @TempCustomerName IS NOT NULL
+           OR @TempPhone      IS NOT NULL
+           OR @TempAddress    IS NOT NULL
+        BEGIN
+            DELETE FROM [Sales].[TempOrderInfo] WHERE InvID = @InvID;
+
+            INSERT INTO [Sales].[TempOrderInfo]
+                (InvID, CustomerName, Phone, Address, DeliveryDate, DeliveryTime)
+            VALUES
+                (@InvID, @TempCustomerName, @TempPhone, @TempAddress,
+                 @TempDeliveryDate, @TempDeliveryTime);
+        END
+
+        -- إتمام الـ Transaction وإرجاع رقم الفاتورة الفعلي المحفوظ
+        COMMIT TRANSACTION;
+        SELECT CAST(@InvID AS INT) AS InvID;
+
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE() <> 0
+            ROLLBACK TRANSACTION;
+
+        THROW;
+    END CATCH
+END
+GO

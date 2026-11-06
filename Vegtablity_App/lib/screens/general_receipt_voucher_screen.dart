@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/account_provider.dart';
 import '../providers/voucher_provider.dart';
 import '../services/api_service.dart';
+import '../services/offline_sync_service.dart';
+import '../viewmodels/sync_viewmodel.dart';
 import '../providers/shift_provider.dart';
 import '../services/printer_service.dart';
 import '../core/localization/app_localizations.dart';
@@ -238,9 +240,27 @@ class _GeneralReceiptVoucherScreenState
             backgroundColor: Colors.red));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${context.tr('gpv_cannot_save')}$e'),
-          backgroundColor: Colors.red));
+      await OfflineSyncService.EnqueueOfflineGeneralVoucherStatic({
+        'VoucherType': 'Receipt',
+        'TotalAmount': amount,
+        'AccountID': _selectedTargetAccount!['AccountID'],
+        'TargetAccountName': _selectedTargetAccount!['AccountName'] ?? '',
+        'Description': _descCtrl.text.trim(),
+        'PaymentMethod': _selectedCashAccountId.toString(),
+        'ShiftID': shiftProv.shiftId,
+        'VoucherDate': DateTime.now().toIso8601String(),
+      });
+      if (mounted) {
+        await Provider.of<SyncViewModel>(context, listen: false).loadAllQueues();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('تم حفظ السند محلياً بنجاح (وضع عدم الاتصال) وسيتم مزامنته عند توفر الإنترنت'),
+            backgroundColor: Colors.orange));
+        setState(() {
+          _selectedTargetAccount = null;
+          _amountCtrl.clear();
+          _descCtrl.clear();
+        });
+      }
     } finally {
       setState(() => _isLoading = false);
     }

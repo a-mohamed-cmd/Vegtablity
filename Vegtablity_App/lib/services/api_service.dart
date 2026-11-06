@@ -269,6 +269,10 @@ class ApiService {
     return await _dio.get('/invoices/$invId');
   }
 
+  Future<Response> searchInvoicesByPhone(String phone) async {
+    return await _dio.get('/invoices/by-phone', queryParameters: {'phone': phone});
+  }
+
   Future<Response> payInvoice(int invId, double amount,
       {int? accountId}) async {
     return await _dio.post('/invoices/$invId/pay', data: {

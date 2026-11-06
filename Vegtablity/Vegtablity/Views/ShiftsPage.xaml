@@ -103,20 +103,41 @@
                         <DataGridTextColumn Header="رقم" Binding="{Binding ShiftID}" Width="50" />
                         <DataGridTextColumn Header="المستخدم" Binding="{Binding UserName}" Width="*" />
                         <DataGridTextColumn Header="وقت الفتح" Binding="{Binding StartTime, StringFormat=dd/MM hh:mm tt}" Width="100"/>
-                        <DataGridTemplateColumn Header="الحالة" Width="70">
+                        <DataGridTemplateColumn Header="الحالة" Width="85">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border CornerRadius="6" Padding="6,3" HorizontalAlignment="Center" VerticalAlignment="Center" Name="StatusBorder" Background="#6c757d">
-                                        <TextBlock Text="{Binding Status}" Foreground="White" FontSize="11" FontWeight="Bold"/>
-                                    </Border>
-                                    <DataTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding Status}" Value="Open">
-                                            <Setter TargetName="StatusBorder" Property="Background" Value="#28a745"/>
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding Status}" Value="Closed">
-                                            <Setter TargetName="StatusBorder" Property="Background" Value="#dc3545"/>
-                                        </DataTrigger>
-                                    </DataTemplate.Triggers>
+                                    <Button Command="{Binding DataContext.ToggleShiftStatusCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            IsEnabled="{Binding DataContext.CanEditShiftStatus, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            Cursor="Hand"
+                                            ToolTip="اضغط لتغيير حالة الوردية (Open / Closed)"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            BorderThickness="0"
+                                            Background="Transparent"
+                                            Padding="0">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="StatusBorder" CornerRadius="6" Padding="8,4" Background="#6c757d">
+                                                    <TextBlock Text="{Binding Status}" Foreground="White" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Open">
+                                                        <Setter TargetName="StatusBorder" Property="Background" Value="#28a745"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Closed">
+                                                        <Setter TargetName="StatusBorder" Property="Background" Value="#dc3545"/>
+                                                    </DataTrigger>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="StatusBorder" Property="Opacity" Value="0.85"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter TargetName="StatusBorder" Property="Opacity" Value="0.65"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

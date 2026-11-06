@@ -45,12 +45,16 @@ class VoucherProvider extends ChangeNotifier {
       if (encoded != null) {
         final List<dynamic> decoded = json.decode(encoded);
         _offlineVouchers = List<Map<String, dynamic>>.from(decoded);
-        notifyListeners();
+      } else {
+        _offlineVouchers = [];
       }
+      notifyListeners();
     } catch (e) {
       // Ignore
     }
   }
+
+  Future<void> reloadOfflineQueueFromPrefs() => _loadOfflineVouchers();
 
   Future<void> _saveOfflineVouchers() async {
     try {

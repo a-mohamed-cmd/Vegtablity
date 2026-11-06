@@ -103,6 +103,135 @@ class InvoiceService:
         finally:
             conn.close()
 
+    def search_invoices_by_phone(self, phone: str) -> dict:
+        clean_phone = (phone or "").strip().replace(" ", "").replace("-", "").replace("+", "")
+        if not clean_phone:
+            return {
+                "phone": "",
+                "customer_name": "",
+                "customer_address": "",
+                "total_count": 0,
+                "total_amount": 0.0,
+                "invoices": [],
+            }
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            try:
+                cursor.execute(SP.INVOICE_SEARCH_BY_PHONE, (clean_phone,))
+            except Exception:
+                # Fallback direct SQL query if the stored procedure was not created yet
+                cursor.execute("""
+                    SELECT 
+                        h.InvID,
+                        h.InvType,
+                        h.InvDate,
+                        h.PartnerID,
+                        h.WarehouseID,
+                        h.TotalAmount,
+                        h.Discount,
+                        h.NetAmount,
+                        h.PaidAmount,
+                        h.Remainder,
+                        h.UserID,
+                        h.Notes,
+                        h.IsPosted,
+                        h.ReferenceNo,
+                        h.PaymentAccountID,
+                        h.ShiftID,
+                        p.PartnerName,
+                        p.Phone AS PartnerPhone,
+                        p.Address AS PartnerAddress,
+                        w.WarehouseName,
+                        u.FullName AS UserName,
+                        acc.AccountName AS PaymentAccountName,
+                        acc.AccountCode AS PaymentAccountCode,
+                        temp.CustomerName AS TempCustomerName,
+                        temp.Phone AS TempPhone,
+                        temp.Address AS TempAddress,
+                        temp.DeliveryDate AS TempDeliveryDate,
+                        temp.DeliveryTime AS TempDeliveryTime,
+                        ISNULL((SELECT COUNT(*) FROM [Sales].[InvoiceDetails] d WHERE d.InvID = h.InvID), 0) AS ItemsCount
+                    FROM [Sales].[InvoiceHeader] h
+                    LEFT JOIN [Sales].[Partners] p ON h.PartnerID = p.PartnerID
+                    LEFT JOIN [Settings].[Warehouses] w ON h.WarehouseID = w.WarehouseID
+                    LEFT JOIN [Security].[Users] u ON h.UserID = u.UserID
+                    LEFT JOIN [Accounting].[ChartOfAccounts] acc ON h.PaymentAccountID = acc.AccountID
+                    LEFT JOIN [Sales].[TempOrderInfo] temp ON h.InvID = temp.InvID
+                    WHERE REPLACE(REPLACE(REPLACE(ISNULL(temp.Phone, ''), ' ', ''), '-', ''), '+', '') LIKE '%' + ? + '%'
+                       OR REPLACE(REPLACE(REPLACE(ISNULL(p.Phone, ''), ' ', ''), '-', ''), '+', '') LIKE '%' + ? + '%'
+                    ORDER BY h.InvDate DESC, h.InvID DESC
+                """, (clean_phone, clean_phone))
+
+            while cursor.description is None:
+                if not cursor.nextset():
+                    break
+
+            invoices = []
+            if cursor.description is not None:
+                columns = [column[0] for column in cursor.description]
+                for row in cursor.fetchall():
+                    invoices.append(dict(zip(columns, row)))
+
+            customer_name = ""
+            customer_address = ""
+
+            # Extract latest non-empty customer name & address from invoices (already ordered newest first)
+            for inv in invoices:
+                t_name = str(inv.get("TempCustomerName") or "").strip()
+                p_name = str(inv.get("PartnerName") or "").strip()
+                t_addr = str(inv.get("TempAddress") or "").strip()
+                p_addr = str(inv.get("PartnerAddress") or "").strip()
+
+                if not customer_name:
+                    if t_name:
+                        customer_name = t_name
+                    elif p_name and p_name not in ("نقدي عام", "سند مباشر", "General Cash"):
+                        customer_name = p_name
+
+                if not customer_address:
+                    if t_addr:
+                        customer_address = t_addr
+                    elif p_addr:
+                        customer_address = p_addr
+
+                if customer_name and customer_address:
+                    break
+
+            # If still missing name/address, check Partners table directly by phone
+            if not customer_name or not customer_address:
+                try:
+                    cursor.execute("""
+                        SELECT TOP 1 PartnerName, Address
+                        FROM [Sales].[Partners]
+                        WHERE REPLACE(REPLACE(REPLACE(ISNULL(Phone, ''), ' ', ''), '-', ''), '+', '') LIKE '%' + ? + '%'
+                        ORDER BY PartnerID DESC
+                    """, (clean_phone,))
+                    p_row = cursor.fetchone()
+                    if p_row:
+                        if not customer_name and p_row[0]:
+                            p_n = str(p_row[0]).strip()
+                            if p_n not in ("نقدي عام", "سند مباشر", "General Cash"):
+                                customer_name = p_n
+                        if not customer_address and p_row[1]:
+                            customer_address = str(p_row[1]).strip()
+                except Exception:
+                    pass
+
+            total_amount = round(sum(float(inv.get("NetAmount") or 0.0) for inv in invoices), 3)
+
+            return {
+                "phone": clean_phone,
+                "customer_name": customer_name,
+                "customer_address": customer_address,
+                "total_count": len(invoices),
+                "total_amount": total_amount,
+                "invoices": invoices,
+            }
+        finally:
+            conn.close()
+
     def get_payment_splits(self, inv_id: int) -> list:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -179,13 +308,30 @@ class InvoiceService:
         # ✨ استخدام ShiftID القادم من الجوال/التطبيق مباشرة دون استعلامات إضافية
         active_shift_id = invoice.ShiftID or _shift_service.get_active_shift_id(user_id)
 
+        # التحقق الآمن من وجود PartnerID و WarehouseID (حماية لعمليات المزامنة الأوفلاين)
+        resolved_partner_id = invoice.PartnerID
+        cursor.execute("SELECT 1 FROM [Sales].[Partners] WHERE PartnerID = ?", (resolved_partner_id,))
+        if not cursor.fetchone():
+            cursor.execute("SELECT TOP 1 PartnerID FROM [Sales].[Partners] ORDER BY PartnerID ASC")
+            fb_partner = cursor.fetchone()
+            if fb_partner:
+                resolved_partner_id = fb_partner[0]
+
+        resolved_warehouse_id = invoice.WarehouseID
+        cursor.execute("SELECT 1 FROM [Settings].[Warehouses] WHERE WarehouseID = ?", (resolved_warehouse_id,))
+        if not cursor.fetchone():
+            cursor.execute("SELECT TOP 1 WarehouseID FROM [Settings].[Warehouses] ORDER BY WarehouseID ASC")
+            fb_wh = cursor.fetchone()
+            if fb_wh:
+                resolved_warehouse_id = fb_wh[0]
+
         try:
             cursor.execute(SP.INVOICE_SAVE_XML, (
                 invoice.InvID or 0,
                 invoice.InvType,
                 invoice.InvDate,
-                invoice.PartnerID,
-                invoice.WarehouseID,
+                resolved_partner_id,
+                resolved_warehouse_id,
                 invoice.TotalAmount,
                 invoice.Discount,
                 invoice.NetAmount,
@@ -204,12 +350,23 @@ class InvoiceService:
                 invoice.TempDeliveryDate,
                 invoice.TempDeliveryTime,
             ))
-            
-            row = cursor.fetchone()
-            if not row:
-                raise Exception("Failed to save invoice")
-            
-            inv_id = row[0]
+
+            inv_id = None
+            while True:
+                if cursor.description is not None:
+                    row = cursor.fetchone()
+                    if row and row[0] is not None:
+                        try:
+                            candidate_id = int(row[0])
+                            if candidate_id > 0:
+                                inv_id = candidate_id
+                        except (ValueError, TypeError):
+                            pass
+                if not cursor.nextset():
+                    break
+
+            if not inv_id or inv_id <= 0:
+                raise Exception("Failed to save invoice — no valid InvID returned from database")
 
             # ✅ حفظ تقسيم طرق الدفع (PaymentSplits) إذا وُجدت
             if invoice.PaymentSplits is not None:
@@ -219,7 +376,7 @@ class InvoiceService:
                     cursor.execute(SP.INVOICE_SPLITS_SAVE, (inv_id, split.PaymentAccountID, split.Amount))
 
             conn.commit()
-            return inv_id
+            return int(inv_id)
         except Exception as e:
             conn.rollback()
             raise e

@@ -77,3 +77,20 @@ BEGIN
     ORDER BY ShiftID DESC, StartTime DESC;
 END
 GO
+
+
+-- 4. Update Shift Status Only
+IF OBJECT_ID('[Sales].[sp_Shift_UpdateStatus]', 'P') IS NOT NULL DROP PROCEDURE [Sales].[sp_Shift_UpdateStatus];
+GO
+CREATE PROCEDURE [Sales].[sp_Shift_UpdateStatus]
+    @ShiftID INT,
+    @Status  NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE [Sales].[Shifts]
+    SET [Status] = @Status
+    WHERE [ShiftID] = @ShiftID;
+END
+GO

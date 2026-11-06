@@ -40,4 +40,6 @@ class InvoiceCreate(BaseModel):
 
 class InvoiceResponse(BaseModel):
     InvID: int
+    id: Optional[int] = None
+    InvoiceID: Optional[int] = None
     message: str

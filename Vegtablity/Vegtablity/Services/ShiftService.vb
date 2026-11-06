@@ -73,5 +73,19 @@ Namespace Services
                 Return New List(Of PaymentMethodSummary)()
             End Try
         End Function
+
+        Public Function UpdateShiftStatus(shiftID As Integer, newStatus As String) As Boolean
+            Try
+                Using conn As IDbConnection = _dbHelper.GetConnection()
+                    conn.Execute(
+                        Helpers.StoredProcedures.SP_SHIFT_UPDATESTATUS,
+                        New With {.ShiftID = shiftID, .Status = newStatus},
+                        commandType:=CommandType.StoredProcedure)
+                    Return True
+                End Using
+            Catch ex As Exception
+                Return False
+            End Try
+        End Function
     End Class
 End Namespace

@@ -259,6 +259,204 @@ Namespace Helpers
                 MessageBox.Show("حدث خطأ أثناء تصدير ملف PDF: " & vbCrLf & ex.Message, "خطأ في التصدير", MessageBoxButton.OK, MessageBoxImage.Error)
             End Try
         End Sub
+        ' ===================================================
+        ' Export Custom ReportRowControl Rows & Summary Bar to CSV
+        ' ===================================================
+        Public Shared Sub ExportReportRowsToCsv(reportTitle As String,
+                                                headers As IList(Of Models.ReportColumnHeader),
+                                                rows As IList(Of Models.ReportRowItem),
+                                                Optional summaryMetrics As IList(Of Models.ReportSummaryMetric) = Nothing)
+            Try
+                If rows Is Nothing OrElse rows.Count = 0 OrElse headers Is Nothing OrElse headers.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات ليتم تصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير إلى CSV (Excel)"
+                dlg.Filter = "ملفات CSV (*.csv)|*.csv"
+
+                Dim safeName As String = reportTitle.Replace(" ", "_")
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = safeName & "_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() = True Then
+                    Using sw As New Global.System.IO.StreamWriter(dlg.FileName, False, New UTF8Encoding(True))
+                        sw.WriteLine("التقرير: " & reportTitle)
+                        sw.WriteLine("تاريخ الاستخراج: " & DateTime.Now.ToString("yyyy/MM/dd HH:mm"))
+                        If summaryMetrics IsNot Nothing AndAlso summaryMetrics.Count > 0 Then
+                            Dim summaryLine = String.Join(" | ", summaryMetrics.Select(Function(m) m.Title & ": " & m.ValueText))
+                            sw.WriteLine("ملخص الإجماليات: " & summaryLine)
+                        End If
+                        sw.WriteLine()
+
+                        Dim headerList As New List(Of String) From {"#"}
+                        headerList.AddRange(headers.Select(Function(h) If(h.Title, "")))
+                        sw.WriteLine(String.Join(",", headerList))
+
+                        For Each row In rows
+                            If row Is Nothing OrElse row.Cells Is Nothing Then Continue For
+                            Dim rowValues As New List(Of String) From {row.RowNumber.ToString()}
+                            For Each cell In row.Cells
+                                Dim text As String = If(cell?.Text, "")
+                                If Not String.IsNullOrEmpty(cell?.SubText) Then
+                                    text &= " (" & cell.SubText & ")"
+                                End If
+                                If text.Contains(",") OrElse text.Contains("""") OrElse text.Contains(vbCr) OrElse text.Contains(vbLf) Then
+                                    text = """" & text.Replace("""", """""") & """"
+                                End If
+                                rowValues.Add(text)
+                            Next
+                            sw.WriteLine(String.Join(",", rowValues))
+                        Next
+                    End Using
+
+                    If Global.System.IO.File.Exists(dlg.FileName) Then
+                        System.Diagnostics.Process.Start(New System.Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                    End If
+                End If
+            Catch ex As Exception
+                MessageBox.Show("حدث خطأ أثناء تصدير ملف CSV: " & vbCrLf & ex.Message, "خطأ في التصدير", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
+        ' ===================================================
+        ' Export Custom ReportRowControl Rows & Summary Bar to PDF
+        ' ===================================================
+        Public Shared Sub ExportReportRowsToPdf(reportTitle As String,
+                                                headers As IList(Of Models.ReportColumnHeader),
+                                                rows As IList(Of Models.ReportRowItem),
+                                                Optional summaryMetrics As IList(Of Models.ReportSummaryMetric) = Nothing)
+            Try
+                If rows Is Nothing OrElse rows.Count = 0 OrElse headers Is Nothing OrElse headers.Count = 0 Then
+                    MessageBox.Show("لا توجد بيانات ليتم تصديرها.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Information)
+                    Return
+                End If
+
+                Dim dlg As New SaveFileDialog()
+                dlg.Title = "تصدير إلى PDF"
+                dlg.Filter = "ملفات PDF (*.pdf)|*.pdf"
+                Dim safeName As String = reportTitle.Replace(" ", "_")
+                For Each c In Global.System.IO.Path.GetInvalidFileNameChars()
+                    safeName = safeName.Replace(c, "_"c)
+                Next
+                dlg.FileName = safeName & "_" & DateTime.Now.ToString("yyyyMMdd_HHmm")
+
+                If dlg.ShowDialog() = True Then
+                    Dim document As New PdfDocument()
+                    document.Info.Title = reportTitle
+
+                    Dim settingsSvc As New SettingsService()
+                    Dim company = settingsSvc.GetCompanyInfo()
+                    Dim pageIndex = 0
+                    Dim margin As Double = 25
+
+                    Dim createPageWithHeader = Function() As XGraphics
+                        Dim newPage = document.AddPage()
+                        newPage.Orientation = PageOrientation.Landscape
+                        Dim g = XGraphics.FromPdfPage(newPage)
+                        pageIndex += 1
+
+                        Dim currentH As Double = 30
+                        Dim pWidth = newPage.Width.Point - margin * 2
+                        DrawReportHeader(g, company, newPage, currentH, margin, pWidth, pageIndex)
+                        Return g
+                    End Function
+
+                    Dim gfx = createPageWithHeader()
+                    Dim page = document.Pages(pageIndex - 1)
+                    Dim currentY As Double = 105
+                    Dim pageWidth As Double = page.Width.Point - margin * 2
+
+                    ' Title centered below header
+                    gfx.DrawString(ArabicTextHelper.Fix(reportTitle), _fontTitle, XBrushes.DarkBlue, New XRect(margin, currentY, pageWidth, 26), XStringFormats.TopCenter)
+                    currentY += 28
+
+                    ' Summary Bar on First Page
+                    If summaryMetrics IsNot Nothing AndAlso summaryMetrics.Count > 0 Then
+                        Dim summaryBg As New XSolidBrush(XColor.FromArgb(239, 246, 255))
+                        Dim summaryBorder As New XPen(XColor.FromArgb(191, 219, 254), 1)
+                        Dim cardW As Double = pageWidth / summaryMetrics.Count
+                        Dim sX As Double = page.Width.Point - margin
+                        For Each m In summaryMetrics
+                            Dim sRect As New XRect(sX - cardW + 2, currentY, cardW - 4, 28)
+                            gfx.DrawRectangle(summaryBorder, summaryBg, sRect)
+                            Dim lblTxt = ArabicTextHelper.Fix(m.Title & ": " & m.ValueText)
+                            gfx.DrawString(lblTxt, headerFont, XBrushes.MidnightBlue, sRect, XStringFormats.Center)
+                            sX -= cardW
+                        Next
+                        currentY += 34
+                    End If
+
+                    Dim totalWeight As Double = headers.Sum(Function(h) If(h.WidthWeight > 0, h.WidthWeight, 1.0)) + 0.45
+                    Dim seqColWidth As Double = pageWidth * (0.45 / totalWeight)
+                    Dim colWidths As List(Of Double) = headers.Select(Function(h) pageWidth * (If(h.WidthWeight > 0, h.WidthWeight, 1.0) / totalWeight)).ToList()
+
+                    Dim headerBgBrush As New XSolidBrush(XColor.FromArgb(241, 245, 249))
+
+                    Dim drawTableHeaders = Sub()
+                        Dim cx As Double = page.Width.Point - margin
+                        Dim seqRect As New XRect(cx - seqColWidth, currentY, seqColWidth, 24)
+                        gfx.DrawRectangle(XPens.DarkGray, headerBgBrush, seqRect)
+                        gfx.DrawString("#", headerFont, XBrushes.Black, seqRect, XStringFormats.Center)
+                        cx -= seqColWidth
+
+                        For i As Integer = 0 To headers.Count - 1
+                            Dim cw = colWidths(i)
+                            Dim text = ArabicTextHelper.Fix(If(headers(i).Title, ""))
+                            Dim rect As New XRect(cx - cw, currentY, cw, 24)
+                            gfx.DrawRectangle(XPens.DarkGray, headerBgBrush, rect)
+                            gfx.DrawString(text, headerFont, XBrushes.Black, rect, XStringFormats.Center)
+                            cx -= cw
+                        Next
+                        currentY += 24
+                    End Sub
+
+                    drawTableHeaders()
+
+                    For Each row In rows
+                        If row Is Nothing OrElse row.Cells Is Nothing Then Continue For
+
+                        If currentY > page.Height.Point - 55 Then
+                            gfx = createPageWithHeader()
+                            page = document.Pages(pageIndex - 1)
+                            currentY = 110
+                            drawTableHeaders()
+                        End If
+
+                        Dim cx As Double = page.Width.Point - margin
+                        Dim seqRect As New XRect(cx - seqColWidth, currentY, seqColWidth, 20)
+                        gfx.DrawRectangle(XPens.LightGray, seqRect)
+                        gfx.DrawString(row.RowNumber.ToString(), fontReg, XBrushes.DimGray, seqRect, XStringFormats.Center)
+                        cx -= seqColWidth
+
+                        Dim count As Integer = Math.Min(headers.Count, row.Cells.Count)
+                        For i As Integer = 0 To count - 1
+                            Dim cw = colWidths(i)
+                            Dim cellText As String = If(row.Cells(i)?.Text, "")
+                            cellText = ArabicTextHelper.Fix(cellText)
+
+                            Dim rect As New XRect(cx - cw, currentY, cw, 20)
+                            gfx.DrawRectangle(XPens.LightGray, rect)
+                            gfx.DrawString(cellText, fontReg, XBrushes.Black, rect, XStringFormats.Center)
+                            cx -= cw
+                        Next
+                        currentY += 20
+                    Next
+
+                    document.Save(dlg.FileName)
+
+                    If Global.System.IO.File.Exists(dlg.FileName) Then
+                        System.Diagnostics.Process.Start(New System.Diagnostics.ProcessStartInfo(dlg.FileName) With {.UseShellExecute = True})
+                    End If
+                End If
+            Catch ex As Exception
+                MessageBox.Show("حدث خطأ أثناء تصدير ملف PDF: " & vbCrLf & ex.Message, "خطأ في التصدير", MessageBoxButton.OK, MessageBoxImage.Error)
+            End Try
+        End Sub
+
         ' Helper to format financial amounts (parentheses for negative)
         Private Shared Function FormatAmount(amt As Decimal) As String
             If amt < 0 Then
@@ -295,7 +493,7 @@ Namespace Helpers
 
                     sw.WriteLine("كشف حساب: " & accountName)
                     sw.WriteLine("الفترة: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd"))
-                    sw.WriteLine("الرصيد الافتتاحي: " & report.OpeningBalance.ToString("F3"))
+                    sw.WriteLine("الرصيد الافتتاحي: " & AccountStatementReport.TruncateTo3Decimals(report.OpeningBalance).ToString("0.000", Global.System.Globalization.CultureInfo.InvariantCulture))
                     sw.WriteLine()
 
                     ' --- Table Headers ---
@@ -309,16 +507,16 @@ Namespace Helpers
                             item.EntryDate.ToString("yyyy/MM/dd"),
                             """" & If(item.ReferenceType, "").Replace("""", """""") & """",
                             """" & If(item.Description, "").Replace("""", """""") & """",
-                            item.DebitAmount.ToString("F3"),
-                            item.CreditAmount.ToString("F3"),
-                            item.Balance.ToString("F3")
+                            AccountStatementReport.TruncateTo3Decimals(item.DebitAmount).ToString("0.000", Global.System.Globalization.CultureInfo.InvariantCulture),
+                            AccountStatementReport.TruncateTo3Decimals(item.CreditAmount).ToString("0.000", Global.System.Globalization.CultureInfo.InvariantCulture),
+                            AccountStatementReport.TruncateTo3Decimals(item.Balance).ToString("0.000", Global.System.Globalization.CultureInfo.InvariantCulture)
                         }
                         sw.WriteLine(String.Join(",", row))
                     Next
 
                     ' --- Totals ---
                     sw.WriteLine()
-                    Dim totals = {"", "", "", "الإجمالي", report.TotalDebit.ToString("F3"), report.TotalCredit.ToString("F3"), report.EndingBalance.ToString("F3")}
+                    Dim totals = {"", "", "", "الإجمالي", AccountStatementReport.TruncateTo3Decimals(report.TotalDebit).ToString("0.000", Global.System.Globalization.CultureInfo.InvariantCulture), AccountStatementReport.TruncateTo3Decimals(report.TotalCredit).ToString("0.000", Global.System.Globalization.CultureInfo.InvariantCulture), AccountStatementReport.TruncateTo3Decimals(report.EndingBalance).ToString("0.000", Global.System.Globalization.CultureInfo.InvariantCulture)}
                     sw.WriteLine(String.Join(",", totals))
                 End Using
 
@@ -393,7 +591,7 @@ Namespace Helpers
                 gfx.DrawString(ArabicTextHelper.Fix("Period: " & startDate.ToString("yyyy/MM/dd") & " - " & endDate.ToString("yyyy/MM/dd")),
                                fontReg, XBrushes.DarkGray, margin, y)
                 y += 16
-                gfx.DrawString(ArabicTextHelper.Fix("Opening Balance: " & report.OpeningBalance.ToString("N2")),
+                gfx.DrawString(ArabicTextHelper.Fix("Opening Balance: " & report.OpeningBalanceText),
                                fontBold, XBrushes.Black, margin, y)
                 y += 20
 
@@ -443,9 +641,9 @@ Namespace Helpers
                         item.EntryDate.ToString("yyyy/MM/dd"),
                         If(item.ReferenceType, ""),
                         If(desc.Length > 35, desc.Substring(0, 35) & "...", desc),
-                        item.DebitAmount.ToString("N2"),
-                        item.CreditAmount.ToString("N2"),
-                        item.Balance.ToString("N3")
+                        item.DebitAmountText,
+                        item.CreditAmountText,
+                        item.BalanceText
                     }
 
                     For i = 0 To rowData.Length - 1
@@ -475,7 +673,7 @@ Namespace Helpers
                 Dim totalBrush As New XSolidBrush(XColor.FromArgb(44, 62, 80))
                 gfx.DrawRectangle(totalBrush, margin, y, pageWidth, 20)
                 x = margin
-                Dim totals() As String = {"", "", "", "TOTAL", report.TotalDebit.ToString("N2"), report.TotalCredit.ToString("N2"), report.EndingBalance.ToString("N3")}
+                Dim totals() As String = {"", "", "", "TOTAL", report.TotalDebitText, report.TotalCreditText, report.EndingBalanceText}
                 For i = 0 To totals.Length - 1
                     gfx.DrawString(ArabicTextHelper.Fix(totals(i)), fontBold, XBrushes.White, New XRect(x + 2, y + 3, cols(i) - 4, 16), XStringFormats.TopLeft)
                     x += cols(i)

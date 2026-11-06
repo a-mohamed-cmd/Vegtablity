@@ -7,6 +7,11 @@ import '../providers/auth_provider.dart';
 import '../core/localization/app_localizations.dart';
 import '../models/language_model.dart';
 import '../widgets/update_dialog.dart';
+import '../viewmodels/sync_viewmodel.dart';
+import '../widgets/sync_progress_widgets.dart';
+import '../providers/pos_provider.dart';
+import '../providers/voucher_provider.dart';
+import 'sync_center_screen.dart';
 
 class GeneralSettingsScreen extends StatefulWidget {
   const GeneralSettingsScreen({super.key});
@@ -325,6 +330,153 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                     onTap: () => UpdateDialog.showIfAvailable(context, showNoUpdateToast: true),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'إدارة المزامنة والعمليات المعلقة (Offline Sync)',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Consumer<SyncViewModel>(
+                    builder: (context, syncVm, _) {
+                      final int total = syncVm.totalPendingCount;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (syncVm.isSyncing)
+                            LiveSyncProgressBarCard(syncVm: syncVm),
+                          Card(
+                            elevation: 1,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: total > 0
+                                    ? Colors.orange.shade300
+                                    : Colors.teal.shade200,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: (total > 0
+                                              ? Colors.orange
+                                              : Colors.teal)
+                                          .withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      total > 0
+                                          ? Icons.cloud_upload_rounded
+                                          : Icons.cloud_done_rounded,
+                                      color: total > 0
+                                          ? Colors.orange.shade800
+                                          : Colors.teal,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    total > 0
+                                        ? 'مركز المزامنة ($total عملية معلقة)'
+                                        : 'مركز المزامنة (جميع العمليات متزامنة)',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Text(
+                                    total > 0
+                                        ? 'الفواتير: ${syncVm.invoicesCount} | السندات: ${syncVm.vouchersCount} | الهالك: ${syncVm.wastagesCount} | الجرد: ${syncVm.stockTakesCount}'
+                                        : 'استعراض حالة المزامنة وتقارير العمليات المحفوظة بدون إنترنت',
+                                    style: const TextStyle(
+                                        fontSize: 12, color: Colors.grey),
+                                  ),
+                                  trailing: const Icon(Icons.arrow_forward_ios,
+                                      size: 16, color: Colors.grey),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const SyncCenterScreen(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                if (total > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 0, 16, 12),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    const SyncCenterScreen(),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(
+                                              Icons.list_alt_rounded,
+                                              size: 18),
+                                          label: const Text(
+                                              'عرض ومزامنة منفردة'),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.teal,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          onPressed: syncVm.isSyncing
+                                              ? null
+                                              : () async {
+                                                  final posProv =
+                                                      Provider.of<PosProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  final voucherProv = Provider
+                                                      .of<VoucherProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  final report =
+                                                      await syncVm.syncAll(
+                                                    onQueuesUpdated: () async {
+                                                      await posProv
+                                                          .reloadOfflineQueueFromPrefs();
+                                                      await voucherProv
+                                                          .reloadOfflineQueueFromPrefs();
+                                                    },
+                                                  );
+                                                  if (context.mounted) {
+                                                    await SyncResultSummaryDialog
+                                                        .show(context, report);
+                                                  }
+                                                },
+                                          icon: const Icon(Icons.sync_rounded,
+                                              size: 18),
+                                          label: const Text('مزامنة الكل الآن'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  if (false) ListTile(onTap: () {},
                   ),
                 ],
               ),

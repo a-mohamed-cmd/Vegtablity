@@ -27,6 +27,9 @@ import 'recipe_management_screen.dart';
 import 'invoice_lookup_screen.dart';
 import 'barcode_print_screen.dart';
 import '../widgets/update_dialog.dart';
+import '../viewmodels/sync_viewmodel.dart';
+import '../widgets/sync_progress_widgets.dart';
+import 'sync_center_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Provider.of<AccountProvider>(context, listen: false).fetchGeneralPartnerId();
       Provider.of<SettingsProvider>(context, listen: false).fetchSettings();
       Provider.of<ShiftProvider>(context, listen: false).checkActiveShiftStatus();
+      Provider.of<SyncViewModel>(context, listen: false).loadAllQueues();
 
       // Silent Auto-Update Check on Startup
       Future.delayed(const Duration(seconds: 2), () {
@@ -416,6 +420,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             const Divider(),
             ListTile(
+              leading: const Icon(Icons.cloud_sync_rounded, color: Colors.teal),
+              title: const Text('مركز المزامنة والعمليات المعلقة', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('استعراض ومزامنة الفواتير والسندات والهالك والجرد', style: TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SyncCenterScreen()),
+                );
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.exit_to_app, color: Colors.redAccent),
               title: Text(context.tr('home_logout')),
               onTap: () async {
@@ -439,7 +455,12 @@ class _HomeScreenState extends State<HomeScreen> {
           : Column(
               children: [
                 // Banner for offline pending invoices
-                if (unsyncedCount > 0)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: HomeSyncBannerWidget(),
+                ),
+                // Banner for offline pending invoices
+                if (false && unsyncedCount > 0)
                   Container(
                     color: Colors.orange[100],
                     padding: const EdgeInsets.symmetric(
@@ -498,7 +519,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 // Banner for offline pending vouchers
-                if (unsyncedVouchers > 0)
+                if (false && unsyncedVouchers > 0)
                   Container(
                     color: Colors.blue[100],
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

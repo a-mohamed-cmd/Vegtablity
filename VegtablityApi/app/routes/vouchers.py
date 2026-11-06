@@ -66,10 +66,10 @@ async def bulk_pay(
     # جلب ShiftID من الكاش إذا لم يُرسل صراحةً
     shift_id = payload.get("ShiftID") or _shift_service.get_active_shift_id(user_id)
 
-    if not all([partner_id, voucher_type, total_amount, account_id, shift_id]):
+    if not all([partner_id, voucher_type, total_amount, account_id]):
         raise HTTPException(
             status_code=400,
-            detail="البيانات المطلوبة ناقصة: PartnerID, VoucherType, TotalAmount, AccountID, ShiftID"
+            detail="البيانات المطلوبة ناقصة: PartnerID, VoucherType, TotalAmount, AccountID"
         )
 
     if voucher_type not in ("Receipt", "Payment"):
@@ -123,7 +123,7 @@ async def save_general_voucher(
     account_id     = payload.get("AccountID")       # حساب الإيراد/المصروف
     description    = payload.get("Description", "")
     payment_method = str(payload.get("PaymentMethod", ""))  # AccountID لحساب الصندوق
-    shift_id       = payload.get("ShiftID")         # رقم الوردية
+    shift_id       = payload.get("ShiftID") or _shift_service.get_active_shift_id(user_id)  # رقم الوردية
 
     if not all([voucher_type, total_amount, account_id, payment_method]):
         raise HTTPException(

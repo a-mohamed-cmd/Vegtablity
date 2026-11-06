@@ -65,7 +65,7 @@ class InvoicePrintDesigner {
           ? (isArabic ? 'مبيعات' : 'Sales')
           : (isArabic ? 'مشتريات' : 'Purchases');
 
-      final dynamic invId = invoice['id'] ?? invoice['InvoiceID'] ?? invoice['InvID'] ?? invoice['invoice_id'];
+      final dynamic invId = invoice['InvID'] ?? invoice['id'] ?? invoice['InvoiceID'] ?? invoice['invoice_id'];
       final String invIdStr = invId != null && invId != 0 ? '#$invId' : (isArabic ? 'جديدة' : 'New');
       
       final String rawPartner = (invoice['PartnerName'] ?? invoice['partner_name'] ?? '').toString().trim();
@@ -94,6 +94,11 @@ class InvoicePrintDesigner {
       final String shortDate = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
       final String timeStr = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}:${printDateTime.second.toString().padLeft(2, '0')}';
 
+      if (invoice['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
       await SunmiPrinter.printText(isArabic ? 'فاتورة $typeName جديدة' : 'New $typeName Invoice', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
       if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
         await SunmiPrinter.printText(isArabic ? 'المستودع: $openWarehouseName' : 'Warehouse: $openWarehouseName', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
@@ -197,6 +202,10 @@ class InvoicePrintDesigner {
         await SunmiPrinter.printText(isArabic ? 'المتبقي آجل: ${PrinterBase.formatCurrency(remainder)} $cSymbol' : 'Balance Due: ${PrinterBase.formatCurrency(remainder)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
       }
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      if (invoice['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
       await SunmiPrinter.printText(isArabic ? 'شكراً لزيارتكم! طُبعت عبر نظام POS' : 'Thank you for your visit! Printed via POS System', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -239,7 +248,7 @@ class InvoicePrintDesigner {
         ? (isArabic ? 'مبيعات' : 'Sales')
         : (isArabic ? 'مشتريات' : 'Purchases');
 
-    final dynamic invId = invoice['id'] ?? invoice['InvoiceID'] ?? invoice['InvID'] ?? invoice['invoice_id'];
+    final dynamic invId = invoice['InvID'] ?? invoice['id'] ?? invoice['InvoiceID'] ?? invoice['invoice_id'];
     final String invIdStr = invId != null && invId != 0 ? '#$invId' : (isArabic ? 'جديدة' : 'New');
 
     final String rawPartner = (invoice['PartnerName'] ?? invoice['partner_name'] ?? '').toString().trim();
@@ -267,6 +276,11 @@ class InvoicePrintDesigner {
     final String shortDate = '${printDateTime.year}-${printDateTime.month.toString().padLeft(2, '0')}-${printDateTime.day.toString().padLeft(2, '0')}';
     final String timeStr = '${printDateTime.hour.toString().padLeft(2, '0')}:${printDateTime.minute.toString().padLeft(2, '0')}:${printDateTime.second.toString().padLeft(2, '0')}';
 
+    if (invoice['is_offline_unapproved'] == true) {
+      bytes.addAll((isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***\n' : '*** [ UNAPPROVED / UNSYNCED DRAFT ] ***\n').codeUnits);
+      bytes.addAll((isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️\n' : '⚠️ Saved locally offline - Not synced yet ⚠️\n').codeUnits);
+      bytes.addAll('$sep\n'.codeUnits);
+    }
     bytes.addAll(isArabic ? '  فاتورة $typeName جديدة\n'.codeUnits : '  New $typeName Invoice\n'.codeUnits);
     if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
       bytes.addAll(isArabic ? 'المستودع: $openWarehouseName\n'.codeUnits : 'Warehouse: $openWarehouseName\n'.codeUnits);
@@ -479,7 +493,7 @@ class InvoicePrintDesigner {
         ? (isArabic ? 'مبيعات' : 'Sales')
         : (isArabic ? 'مشتريات' : 'Purchases');
 
-    final dynamic invId = invoice['id'] ?? invoice['InvoiceID'] ?? invoice['InvID'] ?? invoice['invoice_id'];
+    final dynamic invId = invoice['InvID'] ?? invoice['id'] ?? invoice['InvoiceID'] ?? invoice['invoice_id'];
     final String invIdStr = invId != null && invId != 0 ? '#$invId' : (isArabic ? 'جديدة' : 'New');
     
     final String rawPartner = (invoice['PartnerName'] ?? invoice['partner_name'] ?? '').toString().trim();
@@ -512,6 +526,11 @@ class InvoicePrintDesigner {
         : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     final String dayName = days[printDateTime.weekday - 1];
 
+    if (invoice['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DRAFT ] ***', bold: true, fontSize: headerSize, align: ui.TextAlign.center);
+      addText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ Saved locally offline - Not synced yet ⚠️', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+      addDivider();
+    }
     addText(isArabic ? 'فاتورة $typeName جديدة' : 'New $typeName Invoice', bold: true, fontSize: headerSize);
     if (openWarehouseName != null && openWarehouseName.isNotEmpty) {
       addText(isArabic ? 'المستودع: $openWarehouseName' : 'Warehouse: $openWarehouseName', fontSize: bodySize);
@@ -623,6 +642,10 @@ class InvoicePrintDesigner {
     addDivider();
 
     // Footer
+    if (invoice['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** تنبيه: هذه الفاتورة غير معتمدة ولم تتم مزامنتها بعد ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DRAFT ***', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+      addDivider();
+    }
     addText(isArabic ? 'شكراً لزيارتكم! طُبعت عبر نظام POS' : 'Thank you for your visit! Printed via POS System', fontSize: bodySize, align: ui.TextAlign.center);
     addDivider();
     currentY += 15.0;

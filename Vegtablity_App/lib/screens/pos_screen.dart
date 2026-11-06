@@ -1151,8 +1151,14 @@ class _PosScreenState extends State<PosScreen> {
     );
 
     if (newInvId != null) {
-      // Add database-generated or local InvID to print invoice
+      // اعتماد رقم الفاتورة الفعلي (InvID) الراجع من الخادم بعد إتمام الحفظ قبل الطباعة
       invoiceToPrint['InvID'] = newInvId;
+      invoiceToPrint['id'] = newInvId;
+      invoiceToPrint['InvoiceID'] = newInvId;
+      invoiceToPrint['invoice_id'] = newInvId;
+      if (newInvId == 0) {
+        invoiceToPrint['is_offline_unapproved'] = true;
+      }
 
       final warnMsg = warnMsgTpl.replaceAll('{id}', newInvId.toString());
       final okMsg = okMsgTpl.replaceAll('{id}', newInvId.toString());

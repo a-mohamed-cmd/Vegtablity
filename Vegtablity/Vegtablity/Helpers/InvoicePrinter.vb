@@ -21,10 +21,14 @@ Public Class InvoicePrinter
 
     ' ─── ثوابت التخطيط (سنتيمتر → مم بضربها × 10) ──
     Private Const ITEM_START_CM As Single = 7.0F          ' بداية جدول الأصناف (الورقة الأولى - مظبوطة تماماً: على بعد 2 سم من Account No)
+    Private Const ITEM_END_CM As Single = 22.0F           ' نهاية جدول الأصناف في الورقة الأولى (طول الجدول = 15.0 سم)
+    Private Const FOOTER_TOTAL_CM As Single = 22.5F       ' موضع سطر الإجمالي والتفقيط في الورقة الأولى (على بعد 15.5 سم من بداية الأصناف و0.5 سم بعد نهاية الجدول)
+
     Private Const ITEM_START_CM_PAGE2 As Single = 5.2F    ' بداية جدول الأصناف (الورقة الثانية: 3.2 سم لـ Account No + 2.0 سم مسافة = 5.2 سم)
-    Private Const ITEM_END_CM As Single = 22.0F    ' نهاية جدول الأصناف
-    Private Const ROW_H_MM As Single = 5.0F        ' ارتفاع الصف
-    Private Const PAGE_W_MM As Single = 210.0F     ' عرض الصفحة (21 سم)
+    Private Const ITEM_END_CM_PAGE2 As Single = 20.2F     ' نهاية جدول الأصناف في الورقة الثانية (5.2 سم + 15.0 سم طول الجدول = 20.2 سم)
+    Private Const FOOTER_TOTAL_CM_PAGE2 As Single = 20.7F ' موضع سطر الإجمالي والتفقيط في الورقة الأخيرة (5.2 سم + 15.5 سم = 20.7 سم، مرفوع للأعلى بنفس مقدار رفع الجدول)
+    Private Const ROW_H_MM As Single = 5.0F               ' ارتفاع الصف
+    Private Const PAGE_W_MM As Single = 210.0F            ' عرض الصفحة (21 سم)
 
     ' عدد الأصناف في الصفحة
     Private Shared ReadOnly ITEMS_PER_PAGE As Integer = CInt(Math.Floor((ITEM_END_CM - ITEM_START_CM) * 10 / ROW_H_MM))
@@ -122,7 +126,7 @@ Public Class InvoicePrinter
             Dim page1Items = CInt(Math.Floor((ITEM_END_CM - ITEM_START_CM) * 10 / ROW_H_MM))
             If itemCount <= page1Items Then Return 1
             Dim remainingItems = itemCount - page1Items
-            Dim page2PlusItems = CInt(Math.Floor((ITEM_END_CM - ITEM_START_CM_PAGE2) * 10 / ROW_H_MM))
+            Dim page2PlusItems = CInt(Math.Floor((ITEM_END_CM_PAGE2 - ITEM_START_CM_PAGE2) * 10 / ROW_H_MM))
             Return 1 + CInt(Math.Ceiling(remainingItems / CDbl(Math.Max(1, page2PlusItems))))
         End If
     End Function
@@ -371,11 +375,13 @@ Public Class InvoicePrinter
                     ' ─────────────────────────────────────────────
                     DrawHeader(g, brush, fLeft, fRight, gl, gt, _currentPageNumber)
 
-                    ' بداية الأصناف: في الورقة الأولى تبدأ عند ITEM_START_CM (7.0 سم) لأنها مضبوطة تماماً
-                    ' وفي الورقة الثانية تبدأ عند ITEM_START_CM_PAGE2 (5.2 سم - على بعد 2.0 سم من Account No كما في الورقة الأولى)
+                    ' بداية ونهاية الأصناف:
+                    ' في الورقة الأولى: تبدأ عند 7.0 سم وتنتهي عند 22.0 سم (طول الجدول 15.0 سم) والإجمالي عند 22.5 سم (على بعد 15.5 سم من البداية)
+                    ' في الورقة الثانية/الأخيرة: تبدأ عند 5.2 سم وتنتهي عند 20.2 سم (بنفس طول الجدول 15.0 سم) والإجمالي يرتفع للأعلى إلى 20.7 سم (5.2 + 15.5 سم)
                     Dim startY As Single = If(_currentPageNumber = 1, ITEM_START_CM, ITEM_START_CM_PAGE2)
+                    Dim endY As Single = If(_currentPageNumber = 1, ITEM_END_CM, ITEM_END_CM_PAGE2)
                     Dim curY As Single = gt(startY)
-                    Dim limitY As Single = gt(ITEM_END_CM)
+                    Dim limitY As Single = gt(endY)
                     Dim hasMore As Boolean = False
 
                     While _currentItemIndex < _reportData.Details.Count
@@ -389,8 +395,12 @@ Public Class InvoicePrinter
                         _currentItemIndex += 1
                     End While
 
-                    Dim footerY As Single = gt(22.5F)
                     If Not hasMore Then
+                        ' موضع سطر الإجمالي والتفقيط:
+                        ' في الورقة الأولى (الفردية): عند 22.5 سم (FOOTER_TOTAL_CM)
+                        ' في الورقة الأخيرة (الثانية وما بعدها): عند 20.7 سم (FOOTER_TOTAL_CM_PAGE2)
+                        ' وبنفس النقطة والمحاذاة الأفقية تماماً في الحالتين (gl(18.0F) للإجمالي و gl(2.5F) للتفقيط)
+                        Dim footerY As Single = gt(If(_currentPageNumber = 1, FOOTER_TOTAL_CM, FOOTER_TOTAL_CM_PAGE2))
                         g.DrawString(_reportData.Header.TotalAmount.ToString("N3"),
                                      _printFontBold, brush, gl(18.0F), footerY, fLeft)
                         Dim tafqeet As String = CurrencyToLetters.Convert(
@@ -399,8 +409,9 @@ Public Class InvoicePrinter
                         g.DrawString(tafqeet, _printFontBold, brush, rectTafq, fRight)
                     End If
 
+                    Dim pageFooterCm As Single = If(_currentPageNumber = 1, 24.7F, 22.9F)
                     Dim pageText As String = $"Invoice No: {_reportData.Header.InvID}    |    صفحة {_currentPageNumber} من {_totalPages}"
-                    Dim pageRect As New RectangleF(0, gt(24.7F), PAGE_W_MM, 8.0F)
+                    Dim pageRect As New RectangleF(0, gt(pageFooterCm), PAGE_W_MM, 8.0F)
                     g.DrawString(pageText, _printFontNormal, brush, pageRect, fCtr)
 
                     If hasMore Then

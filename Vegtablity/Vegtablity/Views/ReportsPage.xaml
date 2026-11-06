@@ -1,550 +1,633 @@
 <UserControl x:Class="Views.ReportsPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:Vegtablity"
-             xmlns:viewmodels="clr-namespace:Vegtablity.ViewModels"
-             xmlns:helpers="clr-namespace:Vegtablity.Helpers"
-             mc:Ignorable="d" 
-             d:DesignHeight="800" d:DesignWidth="1200"
-             FlowDirection="RightToLeft">
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:vm="clr-namespace:Vegtablity.ViewModels"
+      xmlns:helpers="clr-namespace:Vegtablity.Helpers"
+      xmlns:controls="clr-namespace:Vegtablity.Controls"
+      mc:Ignorable="d" 
+      d:DesignHeight="820" d:DesignWidth="1320"
+      FlowDirection="RightToLeft"
+      FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo"
+      Background="#F1F5F9">
 
     <UserControl.DataContext>
-        <viewmodels:ReportsViewModel/>
+        <vm:ReportsViewModel />
     </UserControl.DataContext>
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        <helpers:ProfitColorConverter x:Key="ProfitColorConverter"/>
 
-        <!-- Fade in animation for contents -->
-        <Storyboard x:Key="FadeInStoryboard">
-            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.4" EasingFunction="{StaticResource SmoothEaseInOut}"/>
-            <ThicknessAnimation Storyboard.TargetProperty="Margin" From="0,20,0,0" To="0,0,0,0" Duration="0:0:0.4" EasingFunction="{StaticResource SmoothEaseInOut}"/>
-        </Storyboard>
-        
-        <Style TargetType="TabItem" x:Key="SideTabItemStyle">
+        <!-- Modern Card Style -->
+        <Style x:Key="CardBorder" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect Color="#0F172A" Direction="270" ShadowDepth="2" BlurRadius="10" Opacity="0.04"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary Action Button -->
+        <Style x:Key="PrimaryBtn" TargetType="Button">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="TabItem">
-                        <Border x:Name="Border" Padding="15,12" Background="Transparent" CornerRadius="8" Margin="0,2,0,2">
-                            <ContentPresenter x:Name="ContentSite" VerticalAlignment="Center" HorizontalAlignment="Left" ContentSource="Header" Margin="5,0"/>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#EEF2FF"/>
-                                <Setter Property="Foreground" Value="#4F46E5"/>
-                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#F8FAFC"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
                             </Trigger>
-                            <MultiTrigger>
-                                <MultiTrigger.Conditions>
-                                    <Condition Property="IsMouseOver" Value="True"/>
-                                    <Condition Property="IsSelected" Value="True"/>
-                                </MultiTrigger.Conditions>
-                                <Setter TargetName="Border" Property="Background" Value="#EEF2FF"/>
-                            </MultiTrigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Setter Property="Foreground" Value="#64748B"/>
-            <Setter Property="FontSize" Value="15"/>
+        </Style>
+
+        <!-- Quick Preset Pill Button -->
+        <Style x:Key="PresetBtn" TargetType="Button">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="Margin" Value="0,0,5,0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PillBd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PillBd" Property="Background" Value="#EFF6FF"/>
+                                <Setter TargetName="PillBd" Property="BorderBrush" Value="#93C5FD"/>
+                                <Setter Property="Foreground" Value="#1D4ED8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Sidebar Navigation ListBoxItem Style -->
+        <Style x:Key="NavListItem" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="12,9"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#475569"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="8" Padding="{TemplateBinding Padding}" BorderThickness="1" BorderBrush="Transparent">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="4"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="Indicator" Grid.Column="0" Width="3" CornerRadius="2" Background="Transparent" Margin="0,2,8,2"/>
+                                <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Foreground" Value="#1E293B"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#EFF6FF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#BFDBFE"/>
+                                <Setter TargetName="Indicator" Property="Background" Value="#2563EB"/>
+                                <Setter Property="Foreground" Value="#1D4ED8"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="#F5F7FA">
+    <Grid Margin="14">
         <Grid.ColumnDefinitions>
-            <!-- Sidebar for Report Selection -->
-            <ColumnDefinition Width="280"/>
-            <!-- Report Content -->
+            <!-- Collapsible Sidebar Column (Auto width animated via SidebarBorder.MaxWidth) -->
+            <ColumnDefinition Width="Auto"/>
+            <!-- Main Report Workspace -->
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Sidebar Navigation -->
-        <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Padding="15">
+        <!-- ======================================================= -->
+        <!-- 1. COLLAPSIBLE SIDEBAR (القائمة الجانبية - التقارير الشاملة) -->
+        <!-- ======================================================= -->
+        <Border x:Name="SidebarBorder"
+                Grid.Column="0"
+                Width="255"
+                MaxWidth="255"
+                Margin="0,0,12,0"
+                ClipToBounds="True"
+                Style="{StaticResource CardBorder}"
+                Padding="10,12">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                
-                <TextBlock Text="التقارير الشاملة" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="10,10,0,20"/>
 
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <TabControl x:Name="TabControl" TabStripPlacement="Left" Background="Transparent" BorderThickness="0" 
-                                SelectedIndex="{Binding SelectedReportTab, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                        
-                        <TabControl.Resources>
-                            <!-- Hide default content area background -->
-                            <Style TargetType="{x:Type TabPanel}">
-                                <Setter Property="HorizontalAlignment" Value="Stretch"/>
-                            </Style>
-                        </TabControl.Resources>
-
-                        <!-- Sales Tab Group -->
-                        <TabItem Header="📊 أرباح الأصناف" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="🧾 أرباح الفواتير" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="📅 المبيعات اليومية/الشهرية" Style="{StaticResource SideTabItemStyle}"/>
-                        
-                        <!-- Partners Tab Group -->
-                        <TabItem Header="👤 مبيعات العملاء (أقوى شركاء)" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="⏳ أعمار الديون (فواتير متأخرة)" Style="{StaticResource SideTabItemStyle}"/>
-                        
-                        <!-- Inventory Tab Group -->
-                        <TabItem Header="📦 جرد وتقييم المخزون" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="💤 الأصناف الراكدة" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="🔄 حركة صنف في مستودع" Style="{StaticResource SideTabItemStyle}"/>
-                        
-                        <!-- Finance & Quota Tab Group -->
-                        <TabItem Header="💸 تحليل المصروفات" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="📝 عروض الأسعار" Style="{StaticResource SideTabItemStyle}"/>
-
-                        <!-- Customer Profitability Tab Group -->
-                        <TabItem Header="👥 ملخص ربحية العملاء" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="📄 تفاصيل أرباح فواتير العميل" Style="{StaticResource SideTabItemStyle}"/>
-                        <TabItem Header="🍎 ربحية أصناف العميل" Style="{StaticResource SideTabItemStyle}"/>
-
-                        <!-- Inventory Loss Tab Group -->
-                        <TabItem Header="🗑️ تقرير الهالك والتوالف" Style="{StaticResource SideTabItemStyle}"/>
-
-                    </TabControl>
-                </ScrollViewer>
-            </Grid>
-        </Border>
-
-        <!-- Main Content Area -->
-        <Grid Grid.Column="1" Margin="20" x:Name="ContentGrid" Loaded="ContentGrid_Loaded">
-            
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Global Summary & Filters -->
-                <RowDefinition Height="*"/>    <!-- DataGrid Container -->
-            </Grid.RowDefinitions>
-
-            <!-- Filters Header -->
-            <Border Grid.Row="0" Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,20">
-                <Border.Effect>
-                    <DropShadowEffect Color="#000000" Opacity="0.04" BlurRadius="10" ShadowDepth="2"/>
-                </Border.Effect>
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/> <!-- Dates & Refresh -->
-                        <RowDefinition Height="10"/>   <!-- Spacer -->
-                        <RowDefinition Height="Auto"/> <!-- Customer Filter -->
-                        <RowDefinition Height="15"/>   <!-- Spacer -->
-                        <RowDefinition Height="Auto"/> <!-- Pagination -->
-                    </Grid.RowDefinitions>
-                    
+                <!-- Sidebar Header + Collapse Button -->
+                <Grid Grid.Row="0" Margin="4,0,4,10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-
-                    <!-- Row 0: Date Filters & Main Actions -->
-                    <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,20,0">
-                        <TextBlock Text="من تاريخ" Foreground="#64748B" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding SelectedStartDateText, UpdateSourceTrigger=PropertyChanged}" 
-                                 Width="140"
-                                 LostFocus="StartDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
-                                 GotFocus="Date_GotFocus"
-                                 Style="{DynamicResource ModernTextBoxStyle}"
-                                 helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="#EFF6FF" CornerRadius="8" Width="32" Height="32" Margin="0,0,8,0">
+                            <TextBlock Text="📊" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="التقارير الشاملة" FontSize="15" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="16 تقرير تحليلي متكامل" FontSize="10.5" Foreground="#64748B"/>
+                        </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,20,0">
-                        <TextBlock Text="إلى تاريخ" Foreground="#64748B" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding SelectedEndDateText, UpdateSourceTrigger=PropertyChanged}" 
-                                 Width="140"
-                                 LostFocus="EndDate_LostFocus" PreviewKeyDown="Date_PreviewKeyDown"
-                                 GotFocus="Date_GotFocus"
-                                 Style="{DynamicResource ModernTextBoxStyle}"
-                                 helpers:WatermarkHelper.Watermark="يوم/شهر/سنة"/>
-                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Click="BtnToggleSidebar_Click"
+                            ToolTip="طي القائمة الجانبية"
+                            Background="#F1F5F9"
+                            Foreground="#475569"
+                            BorderBrush="#E2E8F0"
+                            BorderThickness="1"
+                            Width="30" Height="30"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="BtnBd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="7">
+                                    <TextBlock Text="❯" FontSize="12" FontWeight="Bold" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="BtnBd" Property="Background" Value="#E2E8F0"/>
+                                        <Setter Property="Foreground" Value="#0F172A"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
 
-                    <Button Grid.Row="0" Grid.Column="2" HorizontalAlignment="Left" Content="تحديث البيانات 🔄" Command="{Binding LoadReportCommand}"
-                            Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" VerticalAlignment="Bottom" Height="36"/>
+                <Separator Grid.Row="1" Background="#F1F5F9" Margin="0,0,0,8"/>
 
-                    <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom">
-                        <Button Content="تصدير PDF 📄" Style="{DynamicResource ModernButtonStyle}" Background="#EF4444" Margin="0,0,10,0" Height="36" Click="ExportPdf_Click"/>
-                        <Button Content="تصدير CSV 📊" Style="{DynamicResource ModernButtonStyle}" Background="#10B981" Height="36" Click="ExportExcel_Click"/>
-                    </StackPanel>
+                <!-- Report Navigation ListBox (Indices 0..14 preserved 100%) -->
+                <ListBox Grid.Row="2"
+                         x:Name="ReportListBox"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         SelectedIndex="{Binding SelectedReportTab, Mode=TwoWay}"
+                         ItemContainerStyle="{StaticResource NavListItem}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <!-- 0 -->
+                    <ListBoxItem Content="📦 أرباح الأصناف والمنتجات"/>
+                    <!-- 1 -->
+                    <ListBoxItem Content="🧾 أرباح الفواتير التفصيلي"/>
+                    <!-- 2 -->
+                    <ListBoxItem Content="📅 المبيعات اليومية / الشهرية"/>
+                    <!-- 3 -->
+                    <ListBoxItem Content="🏆 مبيعات العملاء - أقوى شركاء"/>
+                    <!-- 4 -->
+                    <ListBoxItem Content="⏳ أعمار الديون - فواتير متأخرة"/>
+                    <!-- 5 -->
+                    <ListBoxItem Content="🏢 جرد وتقييم المخزون"/>
+                    <!-- 6 -->
+                    <ListBoxItem Content="🕸️ الأصناف الراكدة"/>
+                    <!-- 7 -->
+                    <ListBoxItem Content="🔄 حركة صنف في مستودع"/>
+                    <!-- 8 -->
+                    <ListBoxItem Content="💸 تحليل المصروفات"/>
+                    <!-- 9 -->
+                    <ListBoxItem Content="📜 عروض الأسعار"/>
+                    <!-- 10 -->
+                    <ListBoxItem Content="📊 ملخص ربحية العملاء"/>
+                    <!-- 11 -->
+                    <ListBoxItem Content="📑 تفاصيل أرباح فواتير العميل"/>
+                    <!-- 12 -->
+                    <ListBoxItem Content="🛒 ربحية أصناف العميل"/>
+                    <!-- 13 -->
+                    <ListBoxItem Content="🗑️ تقرير الهالك والتوالف"/>
+                    <!-- 14 -->
+                    <ListBoxItem Content="🏬 مبيعات الفروع والمخازن"/>
+                    <!-- 15 (NEW) -->
+                    <ListBoxItem Content="📥 تقرير فواتير المشتريات"/>
+                </ListBox>
+            </Grid>
+        </Border>
 
-                    <!-- Row 2: Customer Filter (Moved here) -->
-                    <StackPanel Grid.Row="2" Grid.ColumnSpan="4">
-                        <TextBlock Text="تصفية حسب العميل" Foreground="#64748B" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                        <ComboBox ItemsSource="{Binding Partners}" SelectedValue="{Binding SelectedPartnerID}" 
-                                  SelectedValuePath="PartnerID" DisplayMemberPath="PartnerName" Width="300"
-                                  HorizontalAlignment="Left"
-                                  Style="{DynamicResource ModernComboBoxStyle}" IsEditable="True"/>
-                    </StackPanel>
-                    
-                    <!-- Row 4: Pagination Controls -->
-                    <Border Grid.Row="4" Grid.ColumnSpan="4" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="15,6">
+        <!-- ======================================================= -->
+        <!-- 2. MAIN REPORT WORKSPACE (الفلاتر + شريط الإجماليات + جدول UserControl) -->
+        <!-- ======================================================= -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <!-- Row 0: Top Filter & Actions Card -->
+                <RowDefinition Height="Auto"/>
+                <!-- Row 1: Top Summary Bar (شريط الإجماليات أعلى كل تقرير) -->
+                <RowDefinition Height="Auto"/>
+                <!-- Row 2: Custom UserControl Report Table -->
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- ─────────────────────────────────────────────────────── -->
+            <!-- ROW 0: TOP FILTER BAR & QUICK PRESETS & EXPORT ACTIONS  -->
+            <!-- ─────────────────────────────────────────────────────── -->
+            <Border Grid.Row="0" Style="{StaticResource CardBorder}" Margin="0,0,0,10" Padding="14,10">
+                <StackPanel>
+                    <!-- Top Line: Expand Sidebar Button + Active Report Title + Quick Date Presets + Export Buttons -->
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Expand / Toggle Sidebar Button -->
+                        <Button x:Name="BtnExpandSidebar"
+                                Grid.Column="0"
+                                Click="BtnToggleSidebar_Click"
+                                ToolTip="إظهار / طي القائمة الجانبية للتقارير"
+                                Style="{StaticResource PresetBtn}"
+                                Padding="10,6"
+                                Margin="0,0,10,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="TxtToggleIcon" Text="☰" FontSize="13" FontWeight="Bold" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtToggleLabel" Text="طي القائمة" FontSize="11.5" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Active Report Title & Subtitle -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding CurrentReportTitle}" FontSize="16" FontWeight="Bold" Foreground="#0F172A"/>
+                            <TextBlock Text="{Binding CurrentReportSubtitle}" FontSize="11" Foreground="#64748B" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Quick Date Range Presets -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0">
+                            <TextBlock Text="فترة سريعة:" VerticalAlignment="Center" FontSize="11.5" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,6,0"/>
+                            <Button Content="اليوم" Command="{Binding SetTodayRangeCommand}" Style="{StaticResource PresetBtn}"/>
+                            <Button Content="هذا الأسبوع" Command="{Binding SetWeekRangeCommand}" Style="{StaticResource PresetBtn}"/>
+                            <Button Content="هذا الشهر" Command="{Binding SetMonthRangeCommand}" Style="{StaticResource PresetBtn}"/>
+                            <Button Content="هذا العام" Command="{Binding SetYearRangeCommand}" Style="{StaticResource PresetBtn}"/>
+                        </StackPanel>
+
+                        <!-- Export Actions -->
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="📄 تصدير PDF" Style="{StaticResource PrimaryBtn}" Background="#E11D48" Margin="0,0,6,0" Click="BtnExportPdf_Click"/>
+                            <Button Content="📊 تصدير Excel" Style="{StaticResource PrimaryBtn}" Background="#10B981" Click="BtnExportCsv_Click"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Separator Background="#F1F5F9" Margin="0,0,0,10"/>
+
+                    <!-- Bottom Line: Date Range Inputs + Contextual SearchableDropdowns + In-Report Search + Update Button -->
+                    <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Start Date -->
+                        <StackPanel Orientation="Horizontal" Margin="0,2,12,2" VerticalAlignment="Center">
+                            <TextBlock Text="من:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" FontSize="12" Foreground="#475569"/>
+                            <TextBox x:Name="txtStartDate"
+                                     Text="{Binding SelectedStartDateText, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="105" Height="34" Padding="8,0"
+                                     FontSize="12.5" FontWeight="SemiBold"
+                                     VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                     PreviewTextInput="DateTextBox_PreviewTextInput"
+                                     TextChanged="StartDateTextBox_TextChanged"
+                                     LostFocus="StartDateTextBox_LostFocus">
+                                <TextBox.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="7"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
+                        </StackPanel>
+
+                        <!-- End Date -->
+                        <StackPanel Orientation="Horizontal" Margin="0,2,12,2" VerticalAlignment="Center">
+                            <TextBlock Text="إلى:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" FontSize="12" Foreground="#475569"/>
+                            <TextBox x:Name="txtEndDate"
+                                     Text="{Binding SelectedEndDateText, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="105" Height="34" Padding="8,0"
+                                     FontSize="12.5" FontWeight="SemiBold"
+                                     VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                     PreviewTextInput="DateTextBox_PreviewTextInput"
+                                     TextChanged="EndDateTextBox_TextChanged"
+                                     LostFocus="EndDateTextBox_LostFocus">
+                                <TextBox.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="7"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
+                        </StackPanel>
+
+                        <!-- Contextual Warehouse / Branch SearchableDropdown (Tabs 5, 7, 13, 14) -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,2,12,2"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding ShowWarehouseFilter, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="الفرع / المخزن:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="Bold" FontSize="12" Foreground="#1E40AF"/>
+                            <controls:SearchableDropdown x:Name="WarehouseFilterDropdown"
+                                                         Width="205" Height="34"
+                                                         ItemsSource="{Binding Warehouses}"
+                                                         DisplayMemberPath="WarehouseName"
+                                                         Watermark="ابحث عن الفرع أو المخزن..."
+                                                         SearchChanged="WarehouseDropdown_SearchChanged"
+                                                         ItemSelected="WarehouseDropdown_ItemSelected"/>
+                        </StackPanel>
+
+                        <!-- Contextual Partner / Customer / Supplier SearchableDropdown (Tabs 4, 10, 11, 12, 15) -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,2,12,2"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding ShowPartnerFilter, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding PartnerFilterLabel}" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="Bold" FontSize="12" Foreground="#1E40AF"/>
+                            <controls:SearchableDropdown x:Name="PartnerFilterDropdown"
+                                                         Width="225" Height="34"
+                                                         ItemsSource="{Binding Partners}"
+                                                         DisplayMemberPath="PartnerName"
+                                                         Watermark="{Binding PartnerFilterWatermark}"
+                                                         SearchChanged="PartnerDropdown_SearchChanged"
+                                                         ItemSelected="PartnerDropdown_ItemSelected"/>
+                        </StackPanel>
+
+                        <!-- Contextual Product SearchableDropdown (Tab 7) -->
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,2,12,2"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding ShowProductFilter, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="الصنف:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="Bold" FontSize="12" Foreground="#1E40AF"/>
+                            <controls:SearchableDropdown x:Name="ProductFilterDropdown"
+                                                         Width="220" Height="34"
+                                                         ItemsSource="{Binding Products}"
+                                                         DisplayMemberPath="ProductName"
+                                                         Watermark="ابحث عن الصنف..."
+                                                         SearchChanged="ProductDropdown_SearchChanged"
+                                                         ItemSelected="ProductDropdown_ItemSelected"/>
+                        </StackPanel>
+
+                        <!-- Refresh / Load Report Button -->
+                        <Button Content="🔄 تحديث التقرير"
+                                Command="{Binding LoadReportCommand}"
+                                Style="{StaticResource PrimaryBtn}"
+                                Height="34"
+                                Margin="0,2,14,2"/>
+
+                        <!-- Instant In-Report Filter Box -->
+                        <Border Background="#F8FAFC"
+                                BorderBrush="#CBD5E1"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Height="34"
+                                Padding="8,0"
+                                Margin="0,2,0,2">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔍" FontSize="12" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <Grid Width="210">
+                                    <TextBox x:Name="TxtQuickSearch"
+                                             Text="{Binding ReportQuickSearch, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             FontSize="12"
+                                             FontWeight="SemiBold"
+                                             Foreground="#0F172A"
+                                             VerticalContentAlignment="Center"/>
+                                    <TextBlock Text="بحث فوري داخل نتائج التقرير..."
+                                               FontSize="11.5"
+                                               Foreground="#94A3B8"
+                                               VerticalAlignment="Center"
+                                               IsHitTestVisible="False">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text, ElementName=TxtQuickSearch}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                                <Button Content="✕"
+                                        Command="{Binding ClearQuickSearchCommand}"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="#64748B"
+                                        FontWeight="Bold"
+                                        Cursor="Hand"
+                                        Padding="4,0"
+                                        ToolTip="مسح البحث"/>
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ─────────────────────────────────────────────────────── -->
+            <!-- ROW 1: TOP SUMMARY BAR ABOVE EVERY REPORT (شريط الإجمالي) -->
+            <!-- ─────────────────────────────────────────────────────── -->
+            <ItemsControl Grid.Row="1"
+                          ItemsSource="{Binding SummaryMetrics}"
+                          Margin="0,0,0,10">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Rows="1"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{Binding BgColor}"
+                                BorderBrush="{Binding BorderColor}"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="14,10"
+                                Margin="4,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Metric Icon Badge -->
+                                <Border Grid.Column="0"
+                                        Background="White"
+                                        BorderBrush="{Binding BorderColor}"
+                                        BorderThickness="1"
+                                        CornerRadius="9"
+                                        Width="40" Height="40"
+                                        Margin="0,0,12,0"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Icon}"
+                                               FontSize="18"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+
+                                <!-- Metric Title, Total Value & Subtext -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}"
+                                               FontSize="11.5"
+                                               FontWeight="Bold"
+                                               Foreground="#475569"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding ValueText}"
+                                               FontSize="18"
+                                               FontWeight="ExtraBold"
+                                               Foreground="{Binding AccentColor}"
+                                               Margin="0,1,0,1"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding SubText}"
+                                               FontSize="10.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="#64748B"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- ─────────────────────────────────────────────────────── -->
+            <!-- ROW 2: CUSTOM USERCONTROL REPORT TABLE + PAGINATION BAR -->
+            <!-- ─────────────────────────────────────────────────────── -->
+            <Border Grid.Row="2" Style="{StaticResource CardBorder}" Padding="0" ClipToBounds="True">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <!-- Table Header Bar -->
+                        <RowDefinition Height="Auto"/>
+                        <!-- Virtualized ReportRowControl Rows -->
+                        <RowDefinition Height="*"/>
+                        <!-- Pagination Footer Bar -->
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 1. Dynamic Proportional Table Header Bar -->
+                    <Border Grid.Row="0"
+                            Background="#F8FAFC"
+                            BorderBrush="#E2E8F0"
+                            BorderThickness="0,0,0,2"
+                            Padding="10,10">
+                        <Grid x:Name="ReportHeadersGrid" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- 2. Custom UserControl Rows (ReportRowControl) -->
+                    <ScrollViewer x:Name="ReportScrollViewer"
+                                  Grid.Row="1"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  PanningMode="VerticalOnly">
+                        <Grid>
+                            <ItemsControl ItemsSource="{Binding CurrentReportRows}"
+                                          VirtualizingPanel.IsVirtualizing="True"
+                                          VirtualizingPanel.VirtualizationMode="Recycling"
+                                          ScrollViewer.CanContentScroll="True">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <VirtualizingStackPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <controls:ReportRowControl />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Empty State when no records match -->
+                            <StackPanel VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        Margin="0,60">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasReportRows}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="40" Width="68" Height="68" HorizontalAlignment="Center" Margin="0,0,0,12">
+                                    <TextBlock Text="📭" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock Text="لا توجد بيانات مطابقة لعرضها في هذا التقرير"
+                                           FontSize="15" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Center"/>
+                                <TextBlock Text="جرّب تغيير الفترة الزمنية أو الفلاتر المحددة ثم اضغط على (تحديث التقرير)"
+                                           FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- 3. Pagination Footer Bar -->
+                    <Border Grid.Row="2"
+                            Background="#F8FAFC"
+                            BorderBrush="#E2E8F0"
+                            BorderThickness="0,1,0,0"
+                            Padding="14,8">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Content="→ الصفحة السابقة" Command="{Binding PrevReportPageCommand}" IsEnabled="{Binding CanGoPrevReport}"
-                                    Style="{StaticResource ModernButtonStyle}" Background="#94A3B8" Padding="15,5"/>
-                            <TextBlock Grid.Column="1" Text="{Binding ReportPageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="#475569"/>
-                            <Button Grid.Column="2" Content="الصفحة التالية ←" Command="{Binding NextReportPageCommand}" IsEnabled="{Binding CanGoNextReport}"
-                                    Style="{StaticResource ModernButtonStyle}" Background="#3B82F6" Padding="15,5"/>
+
+                            <Button Grid.Column="0"
+                                    Content="▶ الصفحة السابقة"
+                                    Command="{Binding PrevReportPageCommand}"
+                                    IsEnabled="{Binding CanGoPrevReport}"
+                                    Style="{StaticResource PrimaryBtn}"
+                                    Padding="12,5"
+                                    FontSize="12"/>
+
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ReportPageLabel}"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="#334155"
+                                       FontSize="12.5"
+                                       FontWeight="Bold"/>
+
+                            <Button Grid.Column="2"
+                                    Content="الصفحة التالية ◀"
+                                    Command="{Binding NextReportPageCommand}"
+                                    IsEnabled="{Binding CanGoNextReport}"
+                                    Style="{StaticResource PrimaryBtn}"
+                                    Padding="12,5"
+                                    FontSize="12"/>
                         </Grid>
                     </Border>
                 </Grid>
             </Border>
-
-            <!-- Dynamic Datagrid Content container. We bind Visibilities based on SelectedReportTab -->
-            <Border Grid.Row="1" Background="White" CornerRadius="12" Padding="20">
-                <Border.Effect>
-                    <DropShadowEffect Color="#000000" Opacity="0.04" BlurRadius="10" ShadowDepth="2"/>
-                </Border.Effect>
-
-                <Grid x:Name="ReportGridContainer">
-                    <!-- ============================================== -->
-                    <!-- REPORT 0: أرباح الأصناف -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding ProductProfits}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=0}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="الباركود" Binding="{Binding Barcode}" Width="1*"/>
-                            <DataGridTextColumn Header="اسم الصنف" Binding="{Binding ProductName}" Width="2*"/>
-                            <DataGridTextColumn Header="الوحدة" Binding="{Binding UnitName}" Width="1*"/>
-                            <DataGridTextColumn Header="الكمية المباعة" Binding="{Binding TotalQtySold, StringFormat={}{0:N2}}" Width="1*"/>
-                            <DataGridTextColumn Header="الإيرادات" Binding="{Binding TotalRevenue, StringFormat={}{0:N2}}" Width="1*"/>
-                            <DataGridTextColumn Header="التكلفة" Binding="{Binding TotalCost, StringFormat={}{0:N2}}" Width="1*"/>
-                            <DataGridTextColumn Header="صافي الربح" Binding="{Binding NetProfit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{Binding NetProfit, Converter={StaticResource ProfitColorConverter}}"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="هامش الربح %" Binding="{Binding ProfitMarginPercent, StringFormat={}{0:N2}%}" Width="1*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 1: أرباح الفواتير -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding InvoiceProfits}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=1}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="م. الفاتورة" Binding="{Binding InvID}" Width="0.8*"/>
-                            <DataGridTextColumn Header="التاريخ" Binding="{Binding InvDate, StringFormat=dd/MM/yyyy}" Width="1.2*"/>
-                            <DataGridTextColumn Header="العميل" Binding="{Binding CustomerName}" Width="2*"/>
-                            <DataGridTextColumn Header="إجمالي الفاتورة" Binding="{Binding GrossTotal, StringFormat={}{0:N2}}" Width="1.2*"/>
-                            <DataGridTextColumn Header="الخصم" Binding="{Binding Discount, StringFormat={}{0:N2}}" Width="1*"/>
-                            <DataGridTextColumn Header="الصافي المطلوب" Binding="{Binding NetAmount, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="تكلفة المخزون" Binding="{Binding TotalCost, StringFormat={}{0:N2}}" Width="1.5*"/>
-                            <DataGridTextColumn Header="ربح الفاتورة" Binding="{Binding NetProfit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{Binding NetProfit, Converter={StaticResource ProfitColorConverter}}"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 2: المبيعات التجميعية اليومية/الشهرية -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding SalesSummary}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=2}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="الفترة (يوم/شهر)" Binding="{Binding PeriodString}" Width="1.5*"/>
-                            <DataGridTextColumn Header="عدد الفواتير" Binding="{Binding InvoiceCount}" Width="1*"/>
-                            <DataGridTextColumn Header="إجمالي البيع" Binding="{Binding TotalGrossAmount, StringFormat={}{0:N2}}" Width="1.5*"/>
-                            <DataGridTextColumn Header="إجمالي الخصم" Binding="{Binding TotalDiscount, StringFormat={}{0:N2}}" Width="1.5*"/>
-                            <DataGridTextColumn Header="صافي المبيعات" Binding="{Binding TotalNetAmount, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold" Foreground="#3B82F6"/>
-                            <DataGridTextColumn Header="المدفوع" Binding="{Binding TotalPaid, StringFormat={}{0:N2}}" Width="1.5*" Foreground="#10B981"/>
-                            <DataGridTextColumn Header="الآجل (الديون)" Binding="{Binding TotalCredit, StringFormat={}{0:N2}}" Width="1.5*" Foreground="#EF4444"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 3: العملاء (Top Customers) -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding TopCustomers}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=3}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="م. العميل" Binding="{Binding PartnerID}" Width="1*"/>
-                            <DataGridTextColumn Header="اسم العميل" Binding="{Binding PartnerName}" Width="2.5*"/>
-                            <DataGridTextColumn Header="رقم التواصل" Binding="{Binding Phone}" Width="1.5*"/>
-                            <DataGridTextColumn Header="الفواتير" Binding="{Binding TotalInvoices}" Width="1*"/>
-                            <DataGridTextColumn Header="إجمالي المشتريات" Binding="{Binding TotalPurchases, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold" Foreground="#3B82F6"/>
-                            <DataGridTextColumn Header="المدفوعات" Binding="{Binding TotalPaid, StringFormat={}{0:N2}}" Width="1.5*"/>
-                            <DataGridTextColumn Header="الرصيد المتبقي (عليه)" Binding="{Binding TotalCreditBalance, StringFormat={}{0:N2}}" Width="1.5*" Foreground="#EF4444"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 4: أعمار الديون (Unpaid Invoices) -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding UnpaidInvoices}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=4}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="الفاتورة" Binding="{Binding InvID}" Width="1*"/>
-                            <DataGridTextColumn Header="التاريخ" Binding="{Binding InvDate, StringFormat=dd/MM/yyyy}" Width="1.5*"/>
-                            <DataGridTextColumn Header="العميل" Binding="{Binding CustomerName}" Width="2*"/>
-                            <DataGridTextColumn Header="قيمة الفاتورة" Binding="{Binding InvoiceTotal, StringFormat={}{0:N2}}" Width="1.5*"/>
-                            <DataGridTextColumn Header="المتبقي (الدين)" Binding="{Binding UnpaidBalance, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold" Foreground="#EF4444"/>
-                            <DataGridTextColumn Header="تجاوزت الأيام" Binding="{Binding DaysOverdue}" Width="1.2*" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="فئة التمرحل" Binding="{Binding AgingBucket}" Width="1.5*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 5: جرد وتقييم المخزون -->
-                    <!-- ============================================== -->
-                    <Grid Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=5}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                            <TextBlock Text="تصفية بالمستودع:" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <ComboBox ItemsSource="{Binding Warehouses}" SelectedValue="{Binding SelectedWarehouseID}" 
-                                      SelectedValuePath="WarehouseID" DisplayMemberPath="WarehouseName" Width="200"
-                                      Style="{DynamicResource ModernComboBoxStyle}"/>
-                            <Button Content="بحث" Command="{Binding LoadReportCommand}" Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="10,0,0,0"/>
-
-                            <!-- Total Valuation Display -->
-                            <TextBlock Text="إجمالي تقييم المخزون:" FontWeight="Bold" FontSize="16" Foreground="#1E293B" Margin="50,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding TotalInventoryValue, StringFormat={}{0:N2}}" FontWeight="Black" FontSize="20" Foreground="#10B981" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding InventoryValuation}" AutoGenerateColumns="False" IsReadOnly="True" 
-                                  RowHeight="40" Background="Transparent" BorderThickness="0">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="المستودع" Binding="{Binding WarehouseName}" Width="1.5*"/>
-                                <DataGridTextColumn Header="كود الصنف" Binding="{Binding Barcode}" Width="1.5*"/>
-                                <DataGridTextColumn Header="اسم الصنف" Binding="{Binding ProductName}" Width="2.5*"/>
-                                <DataGridTextColumn Header="الرصيد الفعلي" Binding="{Binding CurrentStock, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold" Foreground="#3B82F6"/>
-                                <DataGridTextColumn Header="متوسط سعر التكلفة" Binding="{Binding UnitCost, StringFormat={}{0:N2}}" Width="1.5*"/>
-                                <DataGridTextColumn Header="إجمالي القيمة التقديرية" Binding="{Binding TotalCostValue, StringFormat={}{0:N2}}" Width="2*" FontWeight="Bold" Foreground="#10B981"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 6: الأصناف الراكدة -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding SlowMovingStock}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=6}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="الباركود" Binding="{Binding Barcode}" Width="1*"/>
-                            <DataGridTextColumn Header="الصنف" Binding="{Binding ProductName}" Width="2*"/>
-                            <DataGridTextColumn Header="التصنيف" Binding="{Binding CatName}" Width="1.5*"/>
-                            <DataGridTextColumn Header="رصيد حالي" Binding="{Binding CurrentTotalStock, StringFormat={}{0:N2}}" Width="1*"/>
-                            <DataGridTextColumn Header="تاريخ آخر بيع" Binding="{Binding LastSoldDate, StringFormat=dd/MM/yyyy}" Width="1.5*"/>
-                            <DataGridTextColumn Header="أيام الركود" Binding="{Binding DaysSinceLastSale}" Width="1.2*" FontWeight="Bold" Foreground="#EF4444"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 7: حركة صنف -->
-                    <!-- ============================================== -->
-                    <Grid Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=7}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                            <TextBlock Text="الصنف:" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <ComboBox ItemsSource="{Binding Products}" SelectedValue="{Binding SelectedProductID}" 
-                                      SelectedValuePath="ProductID" DisplayMemberPath="ProductName" Width="250"
-                                      Style="{DynamicResource ModernComboBoxStyle}" IsEditable="True"/>
-                            
-                            <TextBlock Text="المستودع:" Foreground="#64748B" VerticalAlignment="Center" Margin="20,0,10,0"/>
-                            <ComboBox ItemsSource="{Binding Warehouses}" SelectedValue="{Binding SelectedWarehouseID}" 
-                                      SelectedValuePath="WarehouseID" DisplayMemberPath="WarehouseName" Width="150"
-                                      Style="{DynamicResource ModernComboBoxStyle}"/>
-                            <Button Content="يحث الحركة" Command="{Binding LoadReportCommand}" Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="10,0,0,0"/>
-                        </StackPanel>
-
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding StockMovement}" AutoGenerateColumns="False" IsReadOnly="True" 
-                                  RowHeight="40" Background="Transparent" BorderThickness="0">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="التاريخ" Binding="{Binding TransactionDate, StringFormat=dd/MM/yyyy HH:mm}" Width="1.5*"/>
-                                <DataGridTextColumn Header="نوع الحركة والبيان" Binding="{Binding TransactionType}" Width="2*"/>
-                                <DataGridTextColumn Header="المستودع" Binding="{Binding WarehouseName}" Width="1.5*"/>
-                                <DataGridTextColumn Header="وارد (+)" Binding="{Binding QtyIn, StringFormat={}{0:N2}}" Width="1*" FontWeight="Bold" Foreground="#10B981"/>
-                                <DataGridTextColumn Header="منصرف (-)" Binding="{Binding QtyOut, StringFormat={}{0:N2}}" Width="1*" FontWeight="Bold" Foreground="#EF4444"/>
-                                <DataGridTextColumn Header="سعر الوحدة" Binding="{Binding UnitPrice, StringFormat={}{0:N2}}" Width="1*"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 8: تحليل المصروفات -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding ExpenseAnalysis}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=8}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="رقم الحساب" Binding="{Binding AccountCode}" Width="1*"/>
-                            <DataGridTextColumn Header="اسم بند المصروف" Binding="{Binding AccountName}" Width="3*"/>
-                            <DataGridTextColumn Header="إجمالي المنصرف" Binding="{Binding TotalExpense, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold" Foreground="#EF4444"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 9: عروض الأسعار -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding QuotationStatus}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              RowHeight="40" Background="Transparent" BorderThickness="0"
-                              Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=9}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="رقم العرض" Binding="{Binding QuoteID}" Width="1*"/>
-                            <DataGridTextColumn Header="تاريخ العرض" Binding="{Binding QuoteDate, StringFormat=dd/MM/yyyy}" Width="1.5*"/>
-                            <DataGridTextColumn Header="انتهاء الصلاحية" Binding="{Binding ExpiryDate, StringFormat=dd/MM/yyyy}" Width="1.5*"/>
-                            <DataGridTextColumn Header="اسم العميل" Binding="{Binding CustomerName}" Width="2.5*"/>
-                            <DataGridTextColumn Header="القيمة الإجمالية" Binding="{Binding QuoteTotalValue, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="حالة العرض" Binding="{Binding QuoteStatus}" Width="1.5*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 10: ملخص ربحية العملاء -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding CustomerSalesSummary}" AutoGenerateColumns="False" IsReadOnly="True" 
-                               RowHeight="40" Background="Transparent" BorderThickness="0"
-                               Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=10}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="اسم العميل" Binding="{Binding PartnerName}" Width="2*"/>
-                            <DataGridTextColumn Header="عدد الفواتير" Binding="{Binding InvoiceCount}" Width="0.8*"/>
-                            <DataGridTextColumn Header="إجمالي المبيعات" Binding="{Binding TotalSales, StringFormat={}{0:N2}}" Width="1.2*"/>
-                            <DataGridTextColumn Header="تكلفة المبيعات (COGS)" Binding="{Binding TotalCOGS, StringFormat={}{0:N2}}" Width="1.2*"/>
-                            <DataGridTextColumn Header="صافي الربح" Binding="{Binding TotalProfit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{Binding TotalProfit, Converter={StaticResource ProfitColorConverter}}"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 11: تفاصيل أرباح فواتير العميل -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding CustomerInvoicesDetail}" AutoGenerateColumns="False" IsReadOnly="True" 
-                               RowHeight="40" Background="Transparent" BorderThickness="0"
-                               Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=11}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="رقم الفاتورة" Binding="{Binding InvID}" Width="1*"/>
-                            <DataGridTextColumn Header="التاريخ" Binding="{Binding InvDate, StringFormat=dd/MM/yyyy}" Width="1.2*"/>
-                            <DataGridTextColumn Header="المرجع" Binding="{Binding ReferenceNo}" Width="1.2*"/>
-                            <DataGridTextColumn Header="إجمالي الفاتورة" Binding="{Binding NetAmount, StringFormat={}{0:N2}}" Width="1.2*"/>
-                            <DataGridTextColumn Header="التكلفة" Binding="{Binding TotalCOGS, StringFormat={}{0:N2}}" Width="1.2*"/>
-                            <DataGridTextColumn Header="الربح" Binding="{Binding Profit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{Binding Profit, Converter={StaticResource ProfitColorConverter}}"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 12: ربحية أصناف العميل -->
-                    <!-- ============================================== -->
-                    <DataGrid ItemsSource="{Binding CustomerProductSales}" AutoGenerateColumns="False" IsReadOnly="True" 
-                               RowHeight="40" Background="Transparent" BorderThickness="0"
-                               Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=12}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="العميل" Binding="{Binding PartnerName}" Width="1.5*"/>
-                            <DataGridTextColumn Header="الصنف" Binding="{Binding ProductName}" Width="2*"/>
-                            <DataGridTextColumn Header="الكمية المباعة" Binding="{Binding TotalQty, StringFormat={}{0:N2}}" Width="1*"/>
-                            <DataGridTextColumn Header="قيمة المبيعات" Binding="{Binding TotalSalesValue, StringFormat={}{0:N2}}" Width="1.2*"/>
-                            <DataGridTextColumn Header="قيمة التكلفة" Binding="{Binding TotalCostValue, StringFormat={}{0:N2}}" Width="1.2*"/>
-                            <DataGridTextColumn Header="صافي الربح" Binding="{Binding NetProfit, StringFormat={}{0:N2}}" Width="1.5*" FontWeight="Bold">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="{Binding NetProfit, Converter={StaticResource ProfitColorConverter}}"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- ============================================== -->
-                    <!-- REPORT 13: تقرير الهالك والتوالف              -->
-                    <!-- ============================================== -->
-                    <Grid Visibility="{Binding SelectedReportTab, Converter={StaticResource IntToVisConverter}, ConverterParameter=13}">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <!-- Filters + Total -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                            <TextBlock Text="المستودع:" Foreground="#64748B" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <ComboBox ItemsSource="{Binding Warehouses}" SelectedValue="{Binding SelectedWarehouseID}" 
-                                      SelectedValuePath="WarehouseID" DisplayMemberPath="WarehouseName" Width="200"
-                                      Style="{DynamicResource ModernComboBoxStyle}"/>
-                            <Button Content="تطبيق" Command="{Binding LoadReportCommand}" Style="{DynamicResource ModernButtonStyle}" Background="#3B82F6" Margin="10,0,0,0"/>
-                            <TextBlock Text="إجمالي الهالك:" FontWeight="Bold" FontSize="16" Foreground="#1E293B" Margin="50,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding TotalWastageValue, StringFormat={}{0:N3}}" FontWeight="Black" FontSize="20" Foreground="#EF4444" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding WastageReport}" AutoGenerateColumns="False" IsReadOnly="True" 
-                                  RowHeight="40" Background="Transparent" BorderThickness="0">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="م.الهالك" Binding="{Binding WastageID}" Width="0.7*"/>
-                                <DataGridTextColumn Header="التاريخ" Binding="{Binding WastageDate, StringFormat=dd/MM/yyyy}" Width="1.2*"/>
-                                <DataGridTextColumn Header="المستودع" Binding="{Binding WarehouseName}" Width="1.5*"/>
-                                <DataGridTextColumn Header="الكود" Binding="{Binding ProductCode}" Width="1*"/>
-                                <DataGridTextColumn Header="الصنف" Binding="{Binding ProductName}" Width="2.5*"/>
-                                <DataGridTextColumn Header="الكمية" Binding="{Binding Quantity, StringFormat={}{0:N3}}" Width="1*"/>
-                                <DataGridTextColumn Header="سعر التكلفة" Binding="{Binding CostPrice, StringFormat={}{0:N3}}" Width="1.2*"/>
-                                <DataGridTextColumn Header="الإجمالي" Binding="{Binding TotalCost, StringFormat={}{0:N3}}" Width="1.3*" FontWeight="Bold" Foreground="#EF4444"/>
-                                <DataGridTextColumn Header="الحالة" Binding="{Binding StatusText}" Width="1*"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </Grid>
-
-                </Grid>
-            </Border>
         </Grid>
-        
-        <!-- Snackbar Notification -->
-        <Border x:Name="SnackbarBorder"
-                VerticalAlignment="Bottom" HorizontalAlignment="Center"
-                Background="#1E293B" CornerRadius="12"
-                Padding="20,12" Margin="0,0,0,30"
-                Visibility="Collapsed" Panel.ZIndex="99"
-                MinWidth="250">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.3" Color="#000000"/>
-            </Border.Effect>
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="✅" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <TextBlock x:Name="SnackbarText"
-                           Text="تم التصدير بنجاح"
-                           Foreground="White" FontSize="14" FontWeight="SemiBold"
-                           VerticalAlignment="Center"/>
-            </StackPanel>
-        </Border>
     </Grid>
 </UserControl>

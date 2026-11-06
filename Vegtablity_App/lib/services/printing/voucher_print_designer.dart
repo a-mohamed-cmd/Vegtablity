@@ -37,6 +37,11 @@ class VoucherPrintDesigner {
 
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      if (voucher['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
       await SunmiPrinter.printText(voucherTitle, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -74,6 +79,9 @@ class VoucherPrintDesigner {
 
       await SunmiPrinter.printText(isArabic ? 'توقيع المستلم: ___________________' : 'Recipient Signature: ___________________', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      if (voucher['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      }
       await SunmiPrinter.printText(isArabic ? 'شكراً لتعاملكم معنا!' : 'Thank you for your business!', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -109,6 +117,11 @@ class VoucherPrintDesigner {
 
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      if (voucher['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
       await SunmiPrinter.printText(title, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -126,6 +139,9 @@ class VoucherPrintDesigner {
         await SunmiPrinter.printText(isArabic ? 'البيان: $notes' : 'Notes: $notes', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       }
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      if (voucher['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      }
       await SunmiPrinter.printText(isArabic ? 'طُبعت عبر نظام POS' : 'Printed via POS System', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -282,6 +298,11 @@ class VoucherPrintDesigner {
     final bool isReceipt = type == 'receipt' || type.toString().contains('قبض');
     final String voucherTitle = isReceipt ? (isArabic ? '*** سند قبض ***' : '*** RECEIPT VOUCHER ***') : (isArabic ? '*** سند صرف ***' : '*** PAYMENT VOUCHER ***');
 
+    if (voucher['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', bold: true, fontSize: headerSize, align: ui.TextAlign.center);
+      addText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', bold: true, fontSize: smallSize, align: ui.TextAlign.center);
+      addDivider();
+    }
     addText(voucherTitle, bold: true, fontSize: headerSize, align: ui.TextAlign.center);
     addDivider(dashed: true);
 
@@ -324,6 +345,9 @@ class VoucherPrintDesigner {
 
     addText(isArabic ? 'توقيع المستلم: ___________________' : 'Recipient Signature: ___________________', fontSize: bodySize);
     addDivider();
+    if (voucher['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', bold: true, fontSize: smallSize, align: ui.TextAlign.center);
+    }
     addText(isArabic ? 'شكراً لتعاملكم معنا!' : 'Thank you for your business!', fontSize: bodySize, align: ui.TextAlign.center);
     addDivider();
     currentY += 15.0;
@@ -415,6 +439,11 @@ class VoucherPrintDesigner {
     final bool isReceipt = type == 'Receipt' || type.toString().contains('قبض');
     final String title = isReceipt ? (isArabic ? '*** سند قبض عام ***' : '*** GENERAL RECEIPT VOUCHER ***') : (isArabic ? '*** سند صرف عام ***' : '*** GENERAL PAYMENT VOUCHER ***');
 
+    if (voucher['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', bold: true, fontSize: headerSize, align: ui.TextAlign.center);
+      addText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+      addDivider();
+    }
     addText(title, bold: true, fontSize: headerSize, align: ui.TextAlign.center);
     addDivider(dashed: true);
 
@@ -438,6 +467,9 @@ class VoucherPrintDesigner {
     }
     addDivider();
 
+    if (voucher['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+    }
     addText(isArabic ? 'طُبعت عبر نظام POS' : 'Printed via POS System', fontSize: bodySize, align: ui.TextAlign.center);
     addDivider();
     currentY += 15.0;

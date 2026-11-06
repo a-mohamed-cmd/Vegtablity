@@ -1,0 +1,18 @@
+<UserControl x:Class="Controls.ReportRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FlowDirection="RightToLeft"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
+
+    <Border x:Name="RowContainer"
+            Background="White"
+            BorderBrush="#F1F5F9"
+            BorderThickness="0,0,0,1"
+            Padding="10,7"
+            MinHeight="44"
+            MouseEnter="RowContainer_MouseEnter"
+            MouseLeave="RowContainer_MouseLeave">
+        <Grid x:Name="CellsGrid" VerticalAlignment="Center"/>
+    </Border>
+</UserControl>
+

@@ -1,7 +1,7 @@
 name: vegtablity_app
 description: POS system for Vegtablity.
 publish_to: 'none'
-version: 2.2.0+6
+version: 2.2.2+8
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

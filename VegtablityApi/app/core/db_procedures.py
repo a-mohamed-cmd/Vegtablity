@@ -135,6 +135,7 @@ class StoredProcedures:
     
     # Retrieves the header details of a specific invoice
     INVOICE_GET_BY_ID = "{CALL [Sales].[sp_Invoice_GetByID] (?)}"
+    INVOICE_SEARCH_BY_PHONE = "EXEC [Sales].[sp_Invoice_SearchByPhone] @Phone=?"
     
     # Retrieves the line items for a specific invoice
     INVOICE_DETAILS_GET = "{CALL [Sales].[sp_InvoiceDetails_GetByInvID] (?)}"
@@ -144,6 +145,7 @@ class StoredProcedures:
     
     # Saves a new invoice and its line items using XML format
     INVOICE_SAVE_XML = """
+        SET NOCOUNT ON;
         DECLARE @InvID INT = ?;
         EXEC [Sales].[sp_Invoice_Save_XML] 
             @InvID = @InvID OUTPUT,
@@ -168,7 +170,7 @@ class StoredProcedures:
             @TempAddress = ?,
             @TempDeliveryDate = ?,
             @TempDeliveryTime = ?;
-        SELECT @InvID as InvID;
+        SELECT CAST(@InvID AS INT) AS InvID;
     """
 
     # =========================================================================

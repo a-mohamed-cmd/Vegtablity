@@ -16,6 +16,7 @@ import 'screens/license_check_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/language_viewmodel.dart';
 import 'viewmodels/barcode_print_viewmodel.dart';
+import 'viewmodels/sync_viewmodel.dart';
 import 'core/localization/app_localizations.dart';
 
 void main() {
@@ -63,6 +64,9 @@ void main() {
         ),
         ChangeNotifierProvider<BarcodePrintViewModel>(
           create: (context) => BarcodePrintViewModel(apiService),
+        ),
+        ChangeNotifierProvider<SyncViewModel>(
+          create: (context) => SyncViewModel(apiService),
         ),
       ],
       child: const MyApp(),

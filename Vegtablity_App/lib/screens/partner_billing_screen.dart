@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
+import '../services/offline_sync_service.dart';
+import '../viewmodels/sync_viewmodel.dart';
 import '../services/printer_service.dart';
 import '../widgets/product_entry_scanner.dart';
 import '../core/localization/app_localizations.dart';
@@ -668,6 +670,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     final details = _cartItems.map((item) {
       return {
         'ProductID': item['ProductID'],
+        'ProductName': item['name'] ?? item['ProductName'] ?? '',
+        'UnitName': item['UnitName'] ?? item['unitName'] ?? item['unit_name'] ?? '',
         'UnitPrice': item['price'],
         'Quantity': item['quantity'],
         'TotalPrice': item['total'],
@@ -712,7 +716,16 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       final response = await apiService.savePartnerInvoice(payload);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final int newInvId = response.data['InvID'] ?? 0;
+        final dynamic respData = response.data;
+        final dynamic rawSavedId = respData is Map
+            ? (respData['InvID'] ?? respData['id'] ?? respData['InvoiceID'] ?? respData['inv_id'])
+            : null;
+        final int newInvId = (rawSavedId is int
+                ? rawSavedId
+                : (rawSavedId is num
+                    ? rawSavedId.toInt()
+                    : int.tryParse(rawSavedId?.toString() ?? ''))) ??
+            0;
 
         String? paymentAccountName;
         if (isCash) {
@@ -731,6 +744,9 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
         final printInvoiceData = {
           'InvID': newInvId,
+          'id': newInvId,
+          'InvoiceID': newInvId,
+          'invoice_id': newInvId,
           'PartnerName': widget.partner['PartnerName'],
           'type': widget.type == 'Sales' ? 'Sales' : 'Purchase',
           'created_at': DateTime.now().toIso8601String(),
@@ -789,7 +805,22 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              '${pbSaveErrorTpl}: $e',
+              'تم حفظ الفاتورة محلياً بنجاح (وضع عدم الاتصال) وسيتم مزامنتها عند توفر الإنترنت',
+              textAlign: TextAlign.right,
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        await OfflineSyncService.EnqueueOfflineInvoiceStatic({
+          ...payload,
+          '_partnerName': widget.partner['PartnerName']?.toString() ?? '',
+        });
+        if (mounted) {
+          await Provider.of<SyncViewModel>(context, listen: false).loadAllQueues();
+          nav.pop();
+        }
+        if (false) messenger.showSnackBar(const SnackBar(content: Text(
+              '',
               textAlign: TextAlign.right,
             ),
             backgroundColor: Colors.red,

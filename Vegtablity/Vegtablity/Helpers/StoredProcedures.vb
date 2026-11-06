@@ -47,6 +47,7 @@ Namespace Helpers
         Public Const SP_SHIFT_GETSUMMARY As String = "[Sales].[sp_Shift_GetSummary]"
         Public Const SP_SHIFT_GETVOUCHERS As String = "[Sales].[sp_Shift_GetVouchers]"
         Public Const SP_SHIFT_GETPAYMENTMETHODTOTALS As String = "[Sales].[sp_Shift_GetPaymentMethodTotals]"
+        Public Const SP_SHIFT_UPDATESTATUS As String = "[Sales].[sp_Shift_UpdateStatus]"
         Public Const SP_INVOICE_GETALL_POS As String = "[Sales].[sp_Invoice_GetAll_Pos]"
 
         ' =============================================
@@ -233,6 +234,8 @@ Namespace Helpers
         Public Const SP_REPORT_CUSTOMERSALESSUMMARY As String = "[Sales].[sp_Report_CustomerSalesSummary]"
         Public Const SP_REPORT_CUSTOMERINVOICESDETAIL As String = "[Sales].[sp_Report_CustomerInvoicesDetail]"
         Public Const SP_REPORT_CUSTOMERPRODUCTSALES As String = "[Sales].[sp_Report_CustomerProductSales]"
+        Public Const SP_REPORT_WAREHOUSESALES As String = "[Reports].[sp_Report_WarehouseSales]"
+        Public Const SP_REPORT_PURCHASEINVOICES As String = "[Reports].[sp_Report_PurchaseInvoices]"
 
         Public Const SP_REPORT_INVOICE_PRINT As String = "[Sales].[sp_Report_InvoicePrint]"
 

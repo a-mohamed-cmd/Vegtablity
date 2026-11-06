@@ -22,6 +22,9 @@ class WastageItem {
   Map<String, dynamic> toJson() {
     return {
       'ProductID': productID,
+      'ProductName': productName,
+      'UnitName': unitName,
+      'Barcode': barcode,
       'Quantity': quantity,
       'CostPrice': costPrice,
       'StockBefore': stockBefore,
@@ -66,6 +69,9 @@ class StockTakeItem {
   Map<String, dynamic> toJson() {
     return {
       'ProductID': productID,
+      'ProductName': productName,
+      'UnitName': unitName,
+      'Barcode': barcode,
       'SystemQuantity': systemQty,
       'ActualQuantity': actualQty,
       'CostPrice': costPrice,

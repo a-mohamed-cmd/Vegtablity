@@ -25,6 +25,11 @@ class InventoryPrintDesigner {
       final String companyName = companySettings?['CompanyName'] ?? (isArabic ? 'شركه الضحي للمنتجات الزراعيه' : 'Al-Doha Agricultural Products');
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      if (data['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
       await SunmiPrinter.printText(isArabic ? '*** إيصال إتلاف مواد ***' : '*** WASTAGE RECEIPT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -49,6 +54,9 @@ class InventoryPrintDesigner {
         await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       }
 
+      if (data['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      }
       await SunmiPrinter.printText(isArabic ? 'طُبعت عبر نظام POS' : 'Printed via POS System', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -76,6 +84,11 @@ class InventoryPrintDesigner {
       final String companyName = companySettings?['CompanyName'] ?? (isArabic ? 'شركه الضحي للمنتجات الزراعيه' : 'Al-Doha Agricultural Products');
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(companyName, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      if (data['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
       await SunmiPrinter.printText(isArabic ? '*** إيصال جرد المخزون ***' : '*** STOCK TAKE RECEIPT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -100,6 +113,9 @@ class InventoryPrintDesigner {
 
       await SunmiPrinter.printText(isArabic ? 'توقيع المسؤول: ___________________' : 'Auditor Signature: ___________________', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      if (data['is_offline_unapproved'] == true) {
+        await SunmiPrinter.printText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      }
       await SunmiPrinter.printText(isArabic ? 'طُبعت عبر نظام POS' : 'Printed via POS System', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
@@ -196,6 +212,11 @@ class InventoryPrintDesigner {
     addText(companyName, bold: true, fontSize: titleSize, align: ui.TextAlign.center);
     addDivider();
 
+    if (data['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', bold: true, fontSize: headerSize, align: ui.TextAlign.center);
+      addText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+      addDivider();
+    }
     addText(isArabic ? '*** إيصال إتلاف مواد ***' : '*** WASTAGE RECEIPT ***', bold: true, fontSize: headerSize, align: ui.TextAlign.center);
     addDivider(dashed: true);
 
@@ -224,6 +245,9 @@ class InventoryPrintDesigner {
       addDivider();
     }
 
+    if (data['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+    }
     addText(isArabic ? 'طُبعت عبر نظام POS' : 'Printed via POS System', fontSize: bodySize, align: ui.TextAlign.center);
     addDivider();
     currentY += 15.0;
@@ -297,6 +321,11 @@ class InventoryPrintDesigner {
     addText(companyName, bold: true, fontSize: titleSize, align: ui.TextAlign.center);
     addDivider();
 
+    if (data['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** [ وثيقة غير معتمدة / لم تتم مزامنتها ] ***' : '*** [ UNAPPROVED / UNSYNCED DOCUMENT ] ***', bold: true, fontSize: headerSize, align: ui.TextAlign.center);
+      addText(isArabic ? '⚠️ عملية محفوظة محلياً بدون اتصال بالإنترنت ⚠️' : '⚠️ SAVED OFFLINE - NOT SYNCED YET ⚠️', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+      addDivider();
+    }
     addText(isArabic ? '*** إيصال جرد المخزون ***' : '*** STOCK TAKE RECEIPT ***', bold: true, fontSize: headerSize, align: ui.TextAlign.center);
     addDivider(dashed: true);
 
@@ -325,6 +354,9 @@ class InventoryPrintDesigner {
 
     addText(isArabic ? 'توقيع المسؤول: ___________________' : 'Auditor Signature: ___________________', fontSize: bodySize);
     addDivider();
+    if (data['is_offline_unapproved'] == true) {
+      addText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
+    }
     addText(isArabic ? 'طُبعت عبر نظام POS' : 'Printed via POS System', fontSize: bodySize, align: ui.TextAlign.center);
     addDivider();
     currentY += 15.0;
