@@ -37,6 +37,9 @@ Namespace Views
             If ReportScrollViewer IsNot Nothing Then
                 ReportScrollViewer.ScrollToTop()
             End If
+            If JournalDebtAgingView IsNot Nothing Then
+                JournalDebtAgingView.ScrollToTop()
+            End If
         End Sub
 
         ' =======================================================
@@ -200,12 +203,20 @@ Namespace Views
         Private Sub BtnExportCsv_Click(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(Me.DataContext, ReportsViewModel)
             If vm Is Nothing Then Return
+            If vm.IsJournalDebtAgingTabSelected Then
+                vm.JournalDebtAgingVM.ExportToExcel(vm.CurrentReportTitle, vm.SummaryMetrics)
+                Return
+            End If
             ReportExporter.ExportReportRowsToCsv(vm.CurrentReportTitle, vm.CurrentReportHeaders, vm.AllFilteredRowsForExport, vm.SummaryMetrics)
         End Sub
 
         Private Sub BtnExportPdf_Click(sender As Object, e As RoutedEventArgs)
             Dim vm = TryCast(Me.DataContext, ReportsViewModel)
             If vm Is Nothing Then Return
+            If vm.IsJournalDebtAgingTabSelected Then
+                vm.JournalDebtAgingVM.ExportToPdf(vm.CurrentReportTitle, vm.SummaryMetrics)
+                Return
+            End If
             ReportExporter.ExportReportRowsToPdf(vm.CurrentReportTitle, vm.CurrentReportHeaders, vm.AllFilteredRowsForExport, vm.SummaryMetrics)
         End Sub
 

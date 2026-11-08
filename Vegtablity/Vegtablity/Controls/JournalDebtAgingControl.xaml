@@ -1,0 +1,569 @@
+<UserControl x:Class="Controls.JournalDebtAgingControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="620" d:DesignWidth="1050"
+             FlowDirection="RightToLeft"
+             FontFamily="pack://application:,,,/Resources/Fonts/#Cairo, Cairo">
+
+    <UserControl.Resources>
+        <!-- Duration Filter Pill Button Style -->
+        <Style x:Key="BucketPillBtn" TargetType="Button">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#EFF6FF"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#93C5FD"/>
+                                <Setter Property="Foreground" Value="#1D4ED8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Mini Action Button Style -->
+        <Style x:Key="MiniExportBtn" TargetType="Button">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="9,4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary Pagination Button Style -->
+        <Style x:Key="PageNavBtn" TargetType="Button">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Border Background="White"
+            CornerRadius="12"
+            BorderBrush="#E2E8F0"
+            BorderThickness="1"
+            ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- Row 0: Duration Bucket Filter Bar & Aggregate Bucket Summary -->
+                <RowDefinition Height="Auto"/>
+                <!-- Row 1: Virtualized Customer Aging Cards (No DataGrid) -->
+                <RowDefinition Height="*"/>
+                <!-- Row 2: Pagination Footer -->
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ======================================================= -->
+            <!-- 1. TOP DURATION BUCKET FILTER & PERIOD SUMMARY STRIP    -->
+            <!-- ======================================================= -->
+            <Border Grid.Row="0"
+                    Background="#F8FAFC"
+                    BorderBrush="#E2E8F0"
+                    BorderThickness="0,0,0,1"
+                    Padding="12,9">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Duration Bucket Quick Filters -->
+                    <WrapPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,8">
+                        <TextBlock Text="فلتر المدة العمرية:"
+                                   VerticalAlignment="Center"
+                                   FontWeight="Bold"
+                                   FontSize="12"
+                                   Foreground="#1E293B"
+                                   Margin="0,0,8,0"/>
+
+                        <Button Content="📋 الكل (جميع المدد)"
+                                Command="{Binding SetBucketFilterCommand}"
+                                CommandParameter="All"
+                                Style="{StaticResource BucketPillBtn}"/>
+
+                        <Button Content="🟢 0 - 30 يوم"
+                                Command="{Binding SetBucketFilterCommand}"
+                                CommandParameter="0_30"
+                                Style="{StaticResource BucketPillBtn}"/>
+
+                        <Button Content="⏳ 31 - 60 يوم"
+                                Command="{Binding SetBucketFilterCommand}"
+                                CommandParameter="31_60"
+                                Style="{StaticResource BucketPillBtn}"/>
+
+                        <Button Content="⚠️ 61 - 90 يوم"
+                                Command="{Binding SetBucketFilterCommand}"
+                                CommandParameter="61_90"
+                                Style="{StaticResource BucketPillBtn}"/>
+
+                        <Button Content="🚨 أكثر من 90 يوم (+90)"
+                                Command="{Binding SetBucketFilterCommand}"
+                                CommandParameter="Over_90"
+                                Style="{StaticResource BucketPillBtn}"/>
+
+                        <Button Content="💰 مديونية قائمة فقط"
+                                Command="{Binding SetBucketFilterCommand}"
+                                CommandParameter="ActiveDebt"
+                                Style="{StaticResource BucketPillBtn}"/>
+                    </WrapPanel>
+
+                    <!-- Aggregate 4-Bucket Summary Strip (الفواتير والسداد لكل مدة) -->
+                    <UniformGrid Grid.Row="1" Rows="1" Columns="4">
+                        <!-- 0-30 Summary -->
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="7" Padding="8,4" Margin="0,0,4,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="0 - 30 يوم:" FontWeight="Bold" FontSize="11" Foreground="#1E40AF" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <TextBlock Text="فواتير: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_0_30_Debit}" FontSize="11" FontWeight="Bold" Foreground="#1D4ED8" Margin="0,0,8,0"/>
+                                    <TextBlock Text="سداد: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_0_30_Paid}" FontSize="11" FontWeight="Bold" Foreground="#059669"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 31-60 Summary -->
+                        <Border Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="7" Padding="8,4" Margin="2,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="31 - 60 يوم:" FontWeight="Bold" FontSize="11" Foreground="#B45309" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <TextBlock Text="فواتير: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_31_60_Debit}" FontSize="11" FontWeight="Bold" Foreground="#B45309" Margin="0,0,8,0"/>
+                                    <TextBlock Text="سداد: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_31_60_Paid}" FontSize="11" FontWeight="Bold" Foreground="#059669"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 61-90 Summary -->
+                        <Border Background="#FFF7ED" BorderBrush="#FED7AA" BorderThickness="1" CornerRadius="7" Padding="8,4" Margin="2,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="61 - 90 يوم:" FontWeight="Bold" FontSize="11" Foreground="#C2410C" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <TextBlock Text="فواتير: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_61_90_Debit}" FontSize="11" FontWeight="Bold" Foreground="#C2410C" Margin="0,0,8,0"/>
+                                    <TextBlock Text="سداد: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_61_90_Paid}" FontSize="11" FontWeight="Bold" Foreground="#059669"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- +90 Summary -->
+                        <Border Background="#FFF1F2" BorderBrush="#FECDD3" BorderThickness="1" CornerRadius="7" Padding="8,4" Margin="4,0,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="+90 يوم:" FontWeight="Bold" FontSize="11" Foreground="#BE123C" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
+                                    <TextBlock Text="فواتير: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_Over_90_Debit}" FontSize="11" FontWeight="Bold" Foreground="#BE123C" Margin="0,0,8,0"/>
+                                    <TextBlock Text="سداد: " FontSize="10.5" Foreground="#475569"/>
+                                    <TextBlock Text="{Binding TotalBucket_Over_90_Paid}" FontSize="11" FontWeight="Bold" Foreground="#059669"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </UniformGrid>
+                </Grid>
+            </Border>
+
+            <!-- ======================================================= -->
+            <!-- 2. CUSTOMER DEBT AGING CARDS (Custom UserControl View)  -->
+            <!-- ======================================================= -->
+            <ScrollViewer x:Name="CardsScrollViewer"
+                          Grid.Row="1"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="10,8">
+                <Grid>
+                    <ItemsControl ItemsSource="{Binding PagedCustomers}"
+                                  VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling"
+                                  ScrollViewer.CanContentScroll="True">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="White"
+                                        BorderBrush="#CBD5E1"
+                                        BorderThickness="1"
+                                        CornerRadius="10"
+                                        Margin="0,0,0,10"
+                                        Padding="12,10">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <!-- Card Header: Customer Name, Phone, Status Badge & Quick Single Export -->
+                                            <RowDefinition Height="Auto"/>
+                                            <!-- Card Body: 4 Aging Period Columns (Invoices & Payments in same period) -->
+                                            <RowDefinition Height="Auto"/>
+                                            <!-- Card Footer: Opening, Total Invoices, Total Paid, Net Closing Balance -->
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- ── ROW 0: CUSTOMER HEADER ── -->
+                                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Sequence Number Badge -->
+                                            <Border Grid.Column="0"
+                                                    Background="#EFF6FF"
+                                                    BorderBrush="#BFDBFE"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    MinWidth="36" Height="36"
+                                                    Padding="8,0"
+                                                    Margin="0,0,10,0"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding RowNumber, StringFormat='#{0}'}"
+                                                           FontWeight="ExtraBold"
+                                                           FontSize="12.5"
+                                                           Foreground="#1D4ED8"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"/>
+                                            </Border>
+
+                                            <!-- Customer Name & Sub-info -->
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding PartnerName}"
+                                                           FontSize="14.5"
+                                                           FontWeight="ExtraBold"
+                                                           Foreground="#0F172A"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding CustomerSubInfoText}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#64748B"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+
+                                            <!-- Aging Status Badge + Collection Rate -->
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                                <Border Background="#F0FDF4"
+                                                        BorderBrush="#BBF7D0"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="8,3"
+                                                        Margin="0,0,6,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="نسبة التحصيل: " FontSize="11" Foreground="#166534" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding CollectionRateText}" FontSize="11.5" Foreground="#15803D" FontWeight="ExtraBold"/>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border Background="{Binding AgingStatusBg}"
+                                                        BorderBrush="{Binding AgingStatusBorder}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="10,3">
+                                                    <TextBlock Text="{Binding AgingStatusBadgeText}"
+                                                               Foreground="{Binding AgingStatusFg}"
+                                                               FontSize="11.5"
+                                                               FontWeight="Bold"/>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <!-- Single Customer PDF & Excel Quick Export Buttons -->
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="📄 PDF"
+                                                        ToolTip="تصدير أعمار ديون هذا العميل فقط إلى PDF"
+                                                        Command="{Binding DataContext.ExportSingleCustomerPdfCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MiniExportBtn}"
+                                                        Background="#FFF1F2"
+                                                        Foreground="#BE123C"
+                                                        BorderBrush="#FECDD3"
+                                                        Margin="0,0,4,0"/>
+                                                <Button Content="📊 CSV"
+                                                        ToolTip="تصدير أعمار ديون هذا العميل فقط إلى ملف CSV"
+                                                        Command="{Binding DataContext.ExportSingleCustomerExcelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Style="{StaticResource MiniExportBtn}"
+                                                        Background="#ECFDF5"
+                                                        Foreground="#047857"
+                                                        BorderBrush="#A7F3D0"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- ── ROW 1: 4 AGING PERIOD COLUMNS (الفواتير والسداد في نفس الفترة) ── -->
+                                        <UniformGrid Grid.Row="1" Rows="1" Columns="4" Margin="0,0,0,8">
+                                            <!-- Period 1: 0 - 30 Days -->
+                                            <Border Background="#F8FAFC" BorderBrush="#DBEAFE" BorderThickness="1" CornerRadius="8" Padding="10,7" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <Grid Margin="0,0,0,4">
+                                                        <TextBlock Text="🟢 من 0 إلى 30 يوم" FontWeight="Bold" FontSize="11.5" Foreground="#1E40AF" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Meta_0_30_Text}" FontSize="10" Foreground="#64748B" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Separator Background="#E2E8F0" Margin="0,0,0,4"/>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="الفواتير (مدين):" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Debit_0_30_Text}" FontSize="12" FontWeight="Bold" Foreground="#1D4ED8" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="السداد بنفس الفترة:" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Paid_0_30_Text}" FontSize="12" FontWeight="Bold" Foreground="#059669" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,2,0,0">
+                                                        <TextBlock Text="صافي الفترة:" FontSize="11" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Net_0_30_Text}" FontSize="12" FontWeight="ExtraBold" Foreground="#0F172A" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Period 2: 31 - 60 Days -->
+                                            <Border Background="#F8FAFC" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="8" Padding="10,7" Margin="2,0">
+                                                <StackPanel>
+                                                    <Grid Margin="0,0,0,4">
+                                                        <TextBlock Text="⏳ من 31 إلى 60 يوم" FontWeight="Bold" FontSize="11.5" Foreground="#B45309" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Meta_31_60_Text}" FontSize="10" Foreground="#64748B" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Separator Background="#E2E8F0" Margin="0,0,0,4"/>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="الفواتير (مدين):" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Debit_31_60_Text}" FontSize="12" FontWeight="Bold" Foreground="#B45309" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="السداد بنفس الفترة:" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Paid_31_60_Text}" FontSize="12" FontWeight="Bold" Foreground="#059669" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,2,0,0">
+                                                        <TextBlock Text="صافي الفترة:" FontSize="11" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Net_31_60_Text}" FontSize="12" FontWeight="ExtraBold" Foreground="#0F172A" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Period 3: 61 - 90 Days -->
+                                            <Border Background="#F8FAFC" BorderBrush="#FED7AA" BorderThickness="1" CornerRadius="8" Padding="10,7" Margin="2,0">
+                                                <StackPanel>
+                                                    <Grid Margin="0,0,0,4">
+                                                        <TextBlock Text="⚠️ من 61 إلى 90 يوم" FontWeight="Bold" FontSize="11.5" Foreground="#C2410C" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Meta_61_90_Text}" FontSize="10" Foreground="#64748B" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Separator Background="#E2E8F0" Margin="0,0,0,4"/>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="الفواتير (مدين):" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Debit_61_90_Text}" FontSize="12" FontWeight="Bold" Foreground="#C2410C" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="السداد بنفس الفترة:" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Paid_61_90_Text}" FontSize="12" FontWeight="Bold" Foreground="#059669" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,2,0,0">
+                                                        <TextBlock Text="صافي الفترة:" FontSize="11" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Net_61_90_Text}" FontSize="12" FontWeight="ExtraBold" Foreground="#0F172A" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Period 4: Over 90 Days -->
+                                            <Border Background="#F8FAFC" BorderBrush="#FECDD3" BorderThickness="1" CornerRadius="8" Padding="10,7" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <Grid Margin="0,0,0,4">
+                                                        <TextBlock Text="🚨 أكثر من 90 يوم (+90)" FontWeight="Bold" FontSize="11.5" Foreground="#BE123C" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Meta_Over_90_Text}" FontSize="10" Foreground="#64748B" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Separator Background="#E2E8F0" Margin="0,0,0,4"/>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="الفواتير (مدين):" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Debit_Over_90_Text}" FontSize="12" FontWeight="Bold" Foreground="#BE123C" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,1">
+                                                        <TextBlock Text="السداد بنفس الفترة:" FontSize="11" Foreground="#475569" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Paid_Over_90_Text}" FontSize="12" FontWeight="Bold" Foreground="#059669" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                    <Grid Margin="0,2,0,0">
+                                                        <TextBlock Text="صافي الفترة:" FontSize="11" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Right"/>
+                                                        <TextBlock Text="{Binding Net_Over_90_Text}" FontSize="12" FontWeight="ExtraBold" Foreground="#0F172A" HorizontalAlignment="Left"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+                                        </UniformGrid>
+
+                                        <!-- ── ROW 2: CUSTOMER FOOTER TOTALS BAR ── -->
+                                        <Border Grid.Row="2"
+                                                Background="#F1F5F9"
+                                                CornerRadius="7"
+                                                Padding="12,6">
+                                            <UniformGrid Rows="1" Columns="4">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="رصيد سابق قبل الفترة: " FontSize="11.5" FontWeight="SemiBold" Foreground="#475569"/>
+                                                    <TextBlock Text="{Binding OpeningBalanceText}" FontSize="12.5" FontWeight="Bold" Foreground="#334155"/>
+                                                </StackPanel>
+
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="إجمالي فواتير الفترة: " FontSize="11.5" FontWeight="SemiBold" Foreground="#475569"/>
+                                                    <TextBlock Text="{Binding TotalPeriodDebitText}" FontSize="12.5" FontWeight="ExtraBold" Foreground="#2563EB"/>
+                                                </StackPanel>
+
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="إجمالي السداد بالفترة: " FontSize="11.5" FontWeight="SemiBold" Foreground="#475569"/>
+                                                    <TextBlock Text="{Binding TotalPeriodCreditText}" FontSize="12.5" FontWeight="ExtraBold" Foreground="#059669"/>
+                                                </StackPanel>
+
+                                                <Border Background="{Binding ClosingBalanceBg}"
+                                                        BorderBrush="{Binding ClosingBalanceBorder}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="10,2"
+                                                        HorizontalAlignment="Left">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="صافي المديونية المتبقية: " FontSize="11.5" FontWeight="Bold" Foreground="{Binding ClosingBalanceFg}"/>
+                                                        <TextBlock Text="{Binding ClosingBalanceText}" FontSize="13" FontWeight="ExtraBold" Foreground="{Binding ClosingBalanceFg}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </UniformGrid>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Empty State -->
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Margin="0,60">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasCustomerRows}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="40" Width="68" Height="68" HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <TextBlock Text="📭" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="لا توجد قيود مديونية أو سداد مطابقة للفلتر المحدد"
+                                   FontSize="15" FontWeight="Bold" Foreground="#334155" HorizontalAlignment="Center"/>
+                        <TextBlock Text="جرّب تغيير الفترة الزمنية أو اختيار (جميع العملاء) أو تغيير فلتر المدة العمرية"
+                                   FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- ======================================================= -->
+            <!-- 3. PAGINATION FOOTER BAR                                -->
+            <!-- ======================================================= -->
+            <Border Grid.Row="2"
+                    Background="#F8FAFC"
+                    BorderBrush="#E2E8F0"
+                    BorderThickness="0,1,0,0"
+                    Padding="14,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Button Grid.Column="0"
+                            Content="▶ الصفحة السابقة"
+                            Command="{Binding PrevPageCommand}"
+                            IsEnabled="{Binding CanGoPrevPage}"
+                            Style="{StaticResource PageNavBtn}"/>
+
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding PageLabel}"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="#334155"
+                               FontSize="12.5"
+                               FontWeight="Bold"/>
+
+                    <Button Grid.Column="2"
+                            Content="الصفحة التالية ◀"
+                            Command="{Binding NextPageCommand}"
+                            IsEnabled="{Binding CanGoNextPage}"
+                            Style="{StaticResource PageNavBtn}"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>
+

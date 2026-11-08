@@ -1,0 +1,2249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>خطة الربط الشاملة (Integrations Master Plan) — نظام Vegtablity ERP & POS</title>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-alt: #263349;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #3b82f6;
+            --accent: #f59e0b;
+            --purple: #8b5cf6;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.75;
+            padding-bottom: 60px;
+        }
+        header {
+            background: linear-gradient(135deg, #064e3b 0%, #0f172a 60%, #1e1b4b 100%);
+            border-bottom: 2px solid var(--primary);
+            padding: 36px 24px;
+            text-align: center;
+        }
+        header h1 {
+            font-size: 2rem;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        header p {
+            color: #cbd5e1;
+            font-size: 1.05rem;
+            max-width: 940px;
+            margin: 0 auto;
+        }
+        .badge-bar {
+            margin-top: 16px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--primary);
+            color: #6ee7b7;
+            padding: 4px 14px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge.blue {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: var(--secondary);
+            color: #93c5fd;
+        }
+        .badge.amber {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--accent);
+            color: #fcd34d;
+        }
+        .badge.purple {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--purple);
+            color: #c4b5fd;
+        }
+        .container {
+            max-width: 1280px;
+            margin: 28px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 992px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+        nav.toc {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+        nav.toc h3 {
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+        nav.toc ul {
+            list-style: none;
+        }
+        nav.toc li {
+            margin-bottom: 8px;
+        }
+        nav.toc a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.91rem;
+            display: block;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        nav.toc a:hover {
+            background: var(--bg-card-alt);
+            color: #ffffff;
+            transform: translateX(-4px);
+        }
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+        section.card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        }
+        section.card h2 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.42rem;
+            color: #ffffff;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+        }
+        .sec-num {
+            background: var(--primary);
+            color: #052e16;
+            font-weight: 800;
+            font-size: 0.95rem;
+            padding: 4px 12px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+        h3 {
+            color: #6ee7b7;
+            margin: 18px 0 10px 0;
+            font-size: 1.15rem;
+        }
+        h4 {
+            color: #93c5fd;
+            margin: 14px 0 8px 0;
+            font-size: 1.02rem;
+        }
+        p, li {
+            color: #e2e8f0;
+        }
+        ul, ol {
+            padding-right: 22px;
+            margin-bottom: 12px;
+        }
+        li {
+            margin-bottom: 6px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+            margin-top: 14px;
+        }
+        .provider-box {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border);
+            border-right: 4px solid var(--primary);
+            border-radius: 12px;
+            padding: 18px;
+        }
+        .provider-box.blue {
+            border-right-color: var(--secondary);
+        }
+        .provider-box.amber {
+            border-right-color: var(--accent);
+        }
+        .provider-box.purple {
+            border-right-color: var(--purple);
+        }
+        .provider-box.danger {
+            border-right-color: var(--danger);
+        }
+        .provider-title {
+            font-size: 1.12rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 8px;
+        }
+        .tag {
+            font-size: 0.78rem;
+            padding: 2px 10px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.08);
+            color: #cbd5e1;
+            white-space: nowrap;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            text-align: right;
+        }
+        th {
+            background: #0f172a;
+            color: #6ee7b7;
+            font-weight: 700;
+        }
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        pre {
+            background: #090d16;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            overflow-x: auto;
+            direction: ltr;
+            text-align: left;
+            color: #a7f3d0;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 0.87rem;
+            margin: 12px 0;
+        }
+        code {
+            background: rgba(15, 23, 42, 0.7);
+            padding: 2px 6px;
+            border-radius: 5px;
+            font-family: Consolas, monospace;
+            color: #fcd34d;
+            font-size: 0.9em;
+        }
+        .alert {
+            background: rgba(16, 185, 129, 0.1);
+            border-right: 4px solid var(--primary);
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin: 14px 0;
+        }
+        .alert.warn {
+            background: rgba(245, 158, 11, 0.1);
+            border-right-color: var(--accent);
+        }
+        .alert.info {
+            background: rgba(59, 130, 246, 0.1);
+            border-right-color: var(--secondary);
+        }
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background: var(--bg-card-alt);
+            padding: 14px 18px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+        }
+        .flow-step .step-circle {
+            background: var(--secondary);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .dialog-preview {
+            background: #0f172a;
+            border: 2px dashed var(--primary);
+            border-radius: 14px;
+            padding: 22px;
+            max-width: 620px;
+            margin: 16px auto;
+            text-align: center;
+        }
+        .dialog-preview h4 {
+            color: #ffffff;
+            font-size: 1.15rem;
+            margin-bottom: 8px;
+        }
+        .dialog-btns {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        .btn-mock {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .btn-green { background: var(--primary); color: #052e16; }
+        .btn-blue { background: var(--secondary); color: #fff; }
+        .btn-gray { background: #334155; color: #e2e8f0; }
+        .status-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+        .st-pending { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid #f59e0b; }
+        .st-paid { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid #10b981; }
+        .st-failed { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
+        .st-expired { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid #64748b; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🔗 خطة الربط الموحدة والمحافظ الإلكترونية ومنصات التوصيل (Integrations Master Plan)</h1>
+    <p>معمارية قابلة للتخصيص بالكامل (Customizable MVVM + Strategy Pattern) لربط نظام Vegtablity ERP &amp; POS (WPF + FastAPI + Flutter) مع بوابات الدفع الإلكتروني ومنصات الطلبات في دولة الكويت</p>
+    <div class="badge-bar">
+        <span class="badge">🇰🇼 مخصص لسوق دولة الكويت</span>
+        <span class="badge blue">🏗️ معمارية MVVM + كلاس مستقل لكل بوابة</span>
+        <span class="badge amber">🏦 إنشاء آلي لحساب فرعي تحت الأب AccountID = 10</span>
+        <span class="badge purple">⚡ Triggers ذكية لتخفيف الضغط ومنع تكرار القيود</span>
+    </div>
+</header>
+
+<div class="container">
+    <!-- الفهرس الجانبي لسهولة المناقشة -->
+    <nav class="toc">
+        <h3>📑 فهرس أقسام الخطة</h3>
+        <ul>
+            <li><a href="#sec-1">القسم 1: نظرة عامة وقواعد التنفيذ بوابةً ببوابة</a></li>
+            <li><a href="#sec-2">القسم 2: المحافظ وبوابات البيع المقترحة في الكويت</a></li>
+            <li><a href="#sec-3">القسم 3: هيكلة CompanySettings وجداول البوابات (صفوف)</a></li>
+            <li><a href="#sec-4">القسم 4: الإنشاء المشروط للحسابات والعملاء بعد حفظ الإعدادات</a></li>
+            <li><a href="#sec-5">القسم 5: شاشة إعدادات الربط في WPF والصلاحيات</a></li>
+            <li><a href="#sec-6">القسم 6: ربط الفواتير وشاشات متابعة الطلبات في WPF و Flutter 📱🖥️</a></li>
+            <li><a href="#sec-7">القسم 7: معمارية MVVM والكلاسات المنفصلة</a></li>
+            <li><a href="#sec-8">القسم 8: خطة الربط التفصيلية لكل محفظة وبوابة بيع</a></li>
+            <li><a href="#sec-9">القسم 9: سيناريو حفظ الفاتورة ومتابعة تحصيل اللينك (منفرد ومجمع)</a></li>
+            <li><a href="#sec-10">القسم 10: الإضافات الـ 6 القابلة للتخصيص والباركود (58/80/WPF) ⚙️</a></li>
+            <li><a href="#sec-11">القسم 11: هندسة الـ Triggers لتخفيف الضغط ⚡</a></li>
+            <li><a href="#sec-12">القسم 12: الفهرس المرجعي للـ SPs والـ Triggers والـ Classes</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- القسم 1 -->
+        <section id="sec-1" class="card">
+            <h2><span class="sec-num">القسم 1</span> نظرة عامة وقواعد التنفيذ المرحلي (بوابةً ببوابة) دون المساس بالعمليات الحالية</h2>
+            <p>تهدف هذه الخطة إلى بناء منظومة ربط مرنة ومعزولة تماماً عن الكود الأساسي للنظام، بحيث يتم التنفيذ <strong>بوابةً ببوابة (Gateway by Gateway)</strong> بناءً على التعليمات والكتيبات التي سيتم تزويدنا بها لكل بوابة جنباً إلى جنب مع الخبرة الفنية بأفضل ممارسات تلك البوابة، ودون أي تغيير أو تأثير يعطل أو يلغي أياً من العمليات الحالية في النظام.</p>
+            <div class="alert">
+                <strong>🎯 القواعد الذهبية المعتمدة في هذه الخطة:</strong>
+                <ul>
+                    <li><strong>التنفيذ المرحلي بوابةً ببوابة (Phased Per-Gateway Rollout):</strong> عند البدء في الإنشاء، يتم بناء واختبار كل بوابة على حدة بالكامل (قاعدة بيانات + API + WPF + Flutter) قبل الانتقال للبوابة التالية.</li>
+                    <li><strong>العزل التام (Single Responsibility &amp; Strategy Pattern):</strong> كل بوابة دفع أو بوابة بيع لها <code>Class</code> مستقل خاص بها يرث من واجهة موحدة <code>IPaymentGatewayProvider</code> أو <code>IDeliveryPlatformProvider</code>.</li>
+                    <li><strong>فصل التفعيل عن البيانات التفصيلية:</strong> جدول <code>[Settings].[CompanySettings]</code> يحتفظ فقط بأعمدة التفعيل وإيقاف التفعيل (<code>BIT</code>)، بينما تُحفظ أرقام الحسابات المحاسبية و<code>PartnerID</code> ومفاتيح الربط والإضافات الـ 6 لكل بوابة في جدول منفصل بشكل عرضي (صف مستقل لكل بوابة <code>[Settings].[IntegrationProviders]</code>).</li>
+                    <li><strong>القاعدة الحاكمة لتوقيت إنشاء الحسابات والعملاء (Deferred Creation Rule):</strong>
+                        <ul>
+                            <li>عند تفعيل أي بوابة من <code>[Settings].[CompanySettings]</code>: <strong>لا يتم إجراء أي تغييرات في شجرة الحسابات أو جدول العملاء إطلاقاً</strong>، وإنما يقتصر الأثر على إظهار صلاحية <code>IntegrationSettings</code> في <code>UserPermissions</code> وإظهار بطاقة إعدادات هذه البوابة في صفحة إعدادات WPF.</li>
+                            <li><strong>فقط بعد قيام المستخدم بإدخال وحفظ الإعدادات الخاصة بالبوابة في صفحة الإعدادات في WPF (<code>IsConfigured = 1</code>):</strong>
+                                <br/>1️⃣ إذا كانت <strong>بوابة دفع (<code>Tap Payments</code>, <code>MyFatoorah</code>, <code>UPayments</code>)</strong> &larr; يتم إنشاء حسابها تلقائياً في <code>[Accounting].[ChartOfAccounts]</code> تحت الحساب الأب <code>AccountID = 10</code>.
+                                <br/>2️⃣ إذا كانت <strong>بوابة بيع/توصيل (<code>Talabat</code>, <code>Jahez</code>)</strong> &larr; تعامل معاملة <strong>العملاء</strong>، فيتم إضافتها تلقائياً كعميل في جدول العملاء <code>[Sales].[Partners]</code> (صفحة العملاء)، ومن ثم يتولى الـ Trigger الحالي للعملاء <code>[Sales].[trg_Partner_AfterInsert]</code> إضافتها تلقائياً إلى شجرة الحسابات تحت حساب العملاء!</li>
+                        </ul>
+                    </li>
+                    <li><strong>الربط الكامل مع الفواتير وشاشة متابعة الطلبات في <code>WPF</code> و <code>Flutter</code>:</strong> توفير شاشة مخصصة لمتابعة طلبات وفواتير بوابات الدفع في كل من WPF و Flutter (مع خيار إظهار/إخفاء الشاشة من إعدادات تطبيق Flutter لكل جهاز)، تدعم الفلترة والبحث وإعادة إرسال اللينك للفواتير غير المحصلة <strong>لكل فاتورة على حدة أو بشكل مجمع</strong>.</li>
+                    <li><strong>طباعة الباركود / QR Code على فواتير POS (مقاسي <code>58mm</code> و <code>80mm</code>) وفواتير <code>WPF</code>:</strong> مع التحكم الكامل بتفعيلها وتخصيصها داخل إعدادات إضافة الباركود لكل بوابة.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- القسم 2 -->
+        <section id="sec-2" class="card">
+            <h2><span class="sec-num">القسم 2</span> المحافظ الإلكترونية وبوابات البيع المقترحة في دولة الكويت 🇰🇼</h2>
+            <p>تم تقسيم الجهات المعتمدة والمقترحة للربط في سوق دولة الكويت إلى فئتين رئيسيتين تختلفان في المعالجة المحاسبية:</p>
+
+            <h3>أولاً: بوابات الدفع والمحافظ الإلكترونية (Payment Gateways — تُنشأ تحت الحساب الأب <code>AccountID = 10</code> بعد حفظ إعداداتها)</h3>
+            <div class="grid-2">
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>1. Tap Payments (تاب للمدفوعات)</span>
+                        <span class="tag">أولوية أولى ⭐</span>
+                    </div>
+                    <ul>
+                        <li>الأكثر انتشاراً في الكويت والخليج.</li>
+                        <li>يدعم: <strong>KNET، Apple Pay، Google Pay، Visa/MasterCard</strong>.</li>
+                        <li>يدعم إنشاء روابط دفع سريعة (Tap Invoices / Charges API) وإرسالها عبر SMS أو WhatsApp مع Webhook واستعلام لحظي لتأكيد التحصيل تلقائياً.</li>
+                    </ul>
+                </div>
+
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>2. MyFatoorah (ماي فاتورة)</span>
+                        <span class="tag">أولوية أولى ⭐</span>
+                    </div>
+                    <ul>
+                        <li>شركة كويتية رائدة في روابط الدفع والتحصيل الإلكتروني.</li>
+                        <li>تدعم: <strong>KNET، Apple Pay، Samsung Pay، البطاقات الائتمانية</strong>.</li>
+                        <li>تتميز بـ <code>SendPayment</code> و <code>GetPaymentStatus</code> API لتوليد رابط فاتورة فوري وإرساله للعميل ومتابعة تحصيله أو عرضه كـ QR Code.</li>
+                    </ul>
+                </div>
+
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>3. UPayments (يو بايمنتس - الكويت)</span>
+                        <span class="tag">مقترح قوي للكويت 🇰🇼</span>
+                    </div>
+                    <ul>
+                        <li>بوابة دفع كويتية واسعة الانتشار جداً لدى المتاجر والمطاعم والجمعيات في الكويت.</li>
+                        <li>تدعم <strong>KNET وخدمة ومض (Wamd) و Apple Pay</strong> وروابط التحصيل السريعة بعمولات تنافسية محلياً.</li>
+                    </ul>
+                </div>
+
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>4. Hesabe (حسابي) &amp; Bookeey (بوكي)</span>
+                        <span class="tag">مقترح محلي 🇰🇼</span>
+                    </div>
+                    <ul>
+                        <li><strong>Hesabe (حسابي):</strong> بوابة دفع كويتية معتمدة تدعم KNET و MPGS وروابط الفواتير.</li>
+                        <li><strong>Bookeey (بوكي):</strong> محفظة إلكترونية كويتية شهيرة تدعم الدفع عبر QR Code وروابط الدفع السريعة.</li>
+                    </ul>
+                </div>
+
+                <div class="provider-box amber">
+                    <div class="provider-title">
+                        <span>5. خدمة ومض (Wamd / KNET Instant Link)</span>
+                        <span class="tag">تحويل فوري 🇰🇼</span>
+                    </div>
+                    <ul>
+                        <li>خدمة الدفع الفوري برقم الهاتف التابعة لـ KNET في الكويت.</li>
+                        <li>يمكن تخصيص خيار لها لإرسال طلب دفع أو توليد QR/رسالة واتساب برقم هاتف/رابط ومض الخاص بالمنشأة مع رقم الفاتورة المرجعي.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>ثانياً: بوابات البيع ومنصات التوصيل (Sales &amp; Delivery Platforms — تعامل معاملة العملاء في <code>[Sales].[Partners]</code> بعد حفظ إعداداتها)</h3>
+            <div class="grid-2">
+                <div class="provider-box purple">
+                    <div class="provider-title">
+                        <span>1. Talabat (طلبات - الكويت)</span>
+                        <span class="tag">المنصة الأولى في الكويت 🚀</span>
+                    </div>
+                    <ul>
+                        <li>تعامل معاملة <strong>العميل (Customer)</strong>: بعد تفعيلها وحفظ إعداداتها في WPF، تُضاف تلقائياً إلى جدول العملاء <code>[Sales].[Partners]</code> باسم <code>Talabat</code>، فيقوم الـ Trigger <code>[Sales].[trg_Partner_AfterInsert]</code> بفتح حسابها تلقائياً في شجرة الحسابات تحت بند العملاء (<code>AccountCode = '12'</code>).</li>
+                        <li>استقبال الطلبات وفواتير المبيعات الآجلة/المدفوعة على حساب العميل <code>Talabat</code> لمتابعة المديونية والتسويات والعمولات بدقة في كشف حساب العميل وأعمار الديون.</li>
+                    </ul>
+                </div>
+
+                <div class="provider-box purple">
+                    <div class="provider-title">
+                        <span>2. Jahez (جاهز - الكويت)</span>
+                        <span class="tag">انتشار واسع في الكويت 🚀</span>
+                    </div>
+                    <ul>
+                        <li>تعامل معاملة <strong>العميل (Customer)</strong> بنفس الآلية: عند حفظ إعداداتها في WPF، تُدرج في صفحة العملاء <code>[Sales].[Partners]</code> باسم <code>Jahez</code> ويُولّد حسابها المحاسبي تلقائياً في شجرة الحسابات.</li>
+                        <li>ربط قائمة الأصناف والأسعار واستقبال الطلبات الفورية وترحيلها على حساب العميل <code>Jahez</code>.</li>
+                    </ul>
+                </div>
+
+                <div class="provider-box purple">
+                    <div class="provider-title">
+                        <span>3. Deliveroo (ديليفرو) &amp; Cari (كاري)</span>
+                        <span class="tag">منصات توصيل في الكويت</span>
+                    </div>
+                    <ul>
+                        <li><strong>Deliveroo Kuwait</strong> و <strong>Cari Kuwait</strong>: نفس معمارية الكلاسات المعزولة ومعاملتها كعملاء عند تفعيلها وحفظ إعداداتها.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- القسم 3 -->
+        <section id="sec-3" class="card">
+            <h2><span class="sec-num">القسم 3</span> هيكلة قاعدة البيانات: فصل التفعيل في <code>CompanySettings</code> عن جدول صفوف البوابات</h2>
+            <p>بناءً على توجيهكم الهندسي الدقيق، تم فصل أرقام الحسابات ومعرفات العملاء والإعدادات التفصيلية إلى جدول مستقل يعمل بنظام الصفوف (صف لكل بوابة)، مع ترك أعمدة التفعيل وإيقاف التفعيل فقط في جدول <code>[Settings].[CompanySettings]</code>:</p>
+
+            <h3>1. أعمدة التفعيل فقط في جدول <code>[Settings].[CompanySettings]</code></h3>
+            <p>يقتصر دور جدول <code>[Settings].[CompanySettings]</code> على مفاتيح التفعيل العامة (<code>BIT</code>) لإظهار البوابة في شاشة الإعدادات وتفعيل صلاحيتها في <code>UserPermissions</code> فقط، <strong>دون إنشاء أي حسابات أو عملاء في هذه الخطوة</strong>:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>اسم العمود في <code>[Settings].[CompanySettings]</code></th>
+                        <th>النوع</th>
+                        <th>الافتراضي</th>
+                        <th>الأثر المباشر عند التفعيل (قبل حفظ إعدادات البوابة)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>EnableTapIntegration</code></td>
+                        <td><code>BIT</code></td>
+                        <td><code>0</code></td>
+                        <td>إظهار صلاحية الربط في <code>UserPermissions</code> + إظهار بطاقة إعدادات <strong>Tap Payments</strong> في صفحة إعدادات WPF</td>
+                    </tr>
+                    <tr>
+                        <td><code>EnableMyFatoorahIntegration</code></td>
+                        <td><code>BIT</code></td>
+                        <td><code>0</code></td>
+                        <td>إظهار صلاحية الربط في <code>UserPermissions</code> + إظهار بطاقة إعدادات <strong>MyFatoorah</strong> في صفحة إعدادات WPF</td>
+                    </tr>
+                    <tr>
+                        <td><code>EnableUPaymentsIntegration</code></td>
+                        <td><code>BIT</code></td>
+                        <td><code>0</code></td>
+                        <td>إظهار صلاحية الربط في <code>UserPermissions</code> + إظهار بطاقة إعدادات <strong>UPayments</strong> في صفحة إعدادات WPF</td>
+                    </tr>
+                    <tr>
+                        <td><code>EnableTalabatIntegration</code></td>
+                        <td><code>BIT</code></td>
+                        <td><code>0</code></td>
+                        <td>إظهار صلاحية الربط في <code>UserPermissions</code> + إظهار بطاقة إعدادات <strong>Talabat</strong> في صفحة إعدادات WPF</td>
+                    </tr>
+                    <tr>
+                        <td><code>EnableJahezIntegration</code></td>
+                        <td><code>BIT</code></td>
+                        <td><code>0</code></td>
+                        <td>إظهار صلاحية الربط في <code>UserPermissions</code> + إظهار بطاقة إعدادات <strong>Jahez</strong> في صفحة إعدادات WPF</td>
+                    </tr>
+                    <tr>
+                        <td><code>PromptSendPaymentLinkOnSave</code></td>
+                        <td><code>BIT</code></td>
+                        <td><code>1</code></td>
+                        <td>إظهار رسالة سؤال الكاشير لإنشاء وإرسال لينك الفاتورة عند الحفظ بطريقة دفع إلكترونية مربوطة ومكتملة الإعداد</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>2. جدول حسابات وإعدادات البوابات المنفصل بنظام الصفوف <code>[Settings].[IntegrationProviders]</code></h3>
+            <p>يتم تمثيل كل بوابة في <strong>صف مستقل (Row per Gateway)</strong> داخل جدول <code>[Settings].[IntegrationProviders]</code>، ويضم حالة استكمال وحفظ الإعدادات (<code>IsConfigured</code>)، ورقم الحساب المحاسبي (<code>AccountID</code>)، ورقم العميل لبوابات البيع (<code>PartnerID</code>)، وخيارات طباعة الباركود على طابعات <code>58mm</code> و <code>80mm</code> و <code>WPF</code>، وبقية الإضافات الـ 6:</p>
+            <pre>
+CREATE TABLE [Settings].[IntegrationProviders] (
+    ProviderID                      INT IDENTITY(1,1) PRIMARY KEY,
+    ProviderCode                    VARCHAR(50)   NOT NULL UNIQUE, -- 'TAP', 'MYFATOORAH', 'UPAYMENTS', 'TALABAT', 'JAHEZ'
+    ProviderNameEn                  NVARCHAR(100) NOT NULL,        -- 'Tap Payments', 'MyFatoorah', 'UPayments', 'Talabat', 'Jahez'
+    ProviderCategory                VARCHAR(30)   NOT NULL,        -- 'PAYMENT_GATEWAY' | 'DELIVERY_PLATFORM'
+    IsEnabled                       BIT           NOT NULL DEFAULT 0, -- متزامن مع عمود التفعيل في CompanySettings
+    IsConfigured                    BIT           NOT NULL DEFAULT 0, -- يصبح 1 فقط بعد حفظ إعدادات البوابة في صفحة إعدادات WPF
+    AccountID                       INT           NULL,            -- يُربط فقط بعد حفظ إعدادات البوابة (تحت الأب 10 لبوابات الدفع، أو حساب العميل لبوابات البيع)
+    PartnerID                       INT           NULL,            -- لبوابات البيع (Talabat / Jahez): رقم العميل المولد في [Sales].[Partners] بعد حفظ الإعدادات
+
+    -- بيانات ومفاتيح الربط (API Credentials &amp; Connection Status)
+    IsLiveMode                      BIT           NOT NULL DEFAULT 0, -- 0 = Sandbox/Test, 1 = Live Production
+    MerchantID                      NVARCHAR(100) NULL,
+    ApiKey                          NVARCHAR(500) NULL,
+    SecretKey                       NVARCHAR(500) NULL,
+    WebhookSecret                   NVARCHAR(255) NULL,
+    BaseUrl                         NVARCHAR(255) NULL,
+    DefaultCurrency                 VARCHAR(10)   NOT NULL DEFAULT 'KWD',
+    ConnectionStatus                VARCHAR(30)   NOT NULL DEFAULT 'NotConfigured', -- NotConfigured | SandboxVerified | LiveVerified | ConnectionError
+    LastTestedAt                    DATETIME      NULL,
+    LastStatusMessage               NVARCHAR(500) NULL,
+
+    -- الإضافة 1: طباعة الباركود / QR Code للدفع على الفواتير (CheckBoxes متعددة: يمكن اختيار أي منها أو كلهم معاً)
+    EnablePrintQrOnInvoice          BIT           NOT NULL DEFAULT 0, -- التفعيل الرئيسي لطباعة الباركود/QR للبوابة
+    PrintQrOnPos80mm                BIT           NOT NULL DEFAULT 1, -- خيار 1: طباعة الباركود/QR على إيصال POS الحراري مقاس 80mm (Flutter &amp; WPF)
+    PrintQrOnPos58mm                BIT           NOT NULL DEFAULT 1, -- خيار 2: طباعة الباركود/QR على إيصال POS الحراري مقاس 58mm (Flutter &amp; WPF)
+    PrintQrOnWpfInvoice             BIT           NOT NULL DEFAULT 1, -- خيار 3: طباعة الباركود/QR على فواتير المبيعات في تطبيق WPF
+
+    -- الإضافة 2: الإرسال المباشر عبر WhatsApp + إشعارات SMS المجانية من البوابة
+    EnableWhatsAppSend              BIT           NOT NULL DEFAULT 1,
+    WhatsAppSendMode                VARCHAR(30)   NOT NULL DEFAULT 'DirectUrl', -- 'DirectUrl' | 'BusinessApi'
+    WhatsAppMessageTemplate         NVARCHAR(500) NULL,
+    EnableGatewayNativeSms          BIT           NOT NULL DEFAULT 1, -- تفعيل إرسال SMS وإيصال السداد مباشرة من خوادم البوابة (مثل Tap receipt.sms)
+
+    -- الإضافة 3: المعالجة المحاسبية الآلية لعمولة البوابة
+    EnableAutoCommissionEntry       BIT           NOT NULL DEFAULT 0,
+    CommissionPercent               DECIMAL(6,3)  NOT NULL DEFAULT 0,
+    CommissionFixedFee              DECIMAL(18,3) NOT NULL DEFAULT 0,
+    CommissionExpenseAccountID      INT           NULL,            -- حساب مصروف عمولة البوابة من شجرة الحسابات
+    CommissionSettlementAccountID   INT           NULL,            -- حساب التسوية/البنك الوسيط من شجرة الحسابات
+    CommissionPostingTrigger        VARCHAR(30)   NOT NULL DEFAULT 'OnLinkPaid', -- 'OnLinkPaid' | 'OnShiftClose'
+
+    -- الإضافة 4: متابعة تحصيل الرابط وإعادة الإرسال وفحص الحالة وتحديد وسيلة الدفع المفضلة
+    EnableLinkStatusTracking        BIT           NOT NULL DEFAULT 1,
+    LinkExpiryMinutes               INT           NOT NULL DEFAULT 60,
+    AutoPollPendingLinks            BIT           NOT NULL DEFAULT 1,
+    PollIntervalSeconds             INT           NOT NULL DEFAULT 30,
+    AutoPostPaymentOnPaid           BIT           NOT NULL DEFAULT 1,
+    DefaultPaymentSource            VARCHAR(50)   NOT NULL DEFAULT 'src_all', -- في Tap: 'src_all' (كل الوسائل) أو 'src_kw.knet' (كي نت مباشر) أو 'src_apple_pay'
+
+    -- الإضافة 5: دعم الدفع المقسم (Split Payment) والروابط المجمعة
+    EnableSplitPaymentLink          BIT           NOT NULL DEFAULT 1,
+    MinSplitLinkAmount              DECIMAL(18,3) NOT NULL DEFAULT 0.100,
+    AllowMultipleLinksPerInvoice    BIT           NOT NULL DEFAULT 1,
+    AllowConsolidatedInvoicesLink   BIT           NOT NULL DEFAULT 1, -- السماح بإنشاء لينك دفع مجمع لعدة فواتير غير محصلة لنفس العميل
+
+    -- الإضافة 6: تنبيهات التحصيل الفورية للكاشير والإدارة
+    EnableInstantPaymentAlert       BIT           NOT NULL DEFAULT 1,
+    PlaySoundOnPaymentReceived      BIT           NOT NULL DEFAULT 1,
+    AutoPrintPaymentConfirmation    BIT           NOT NULL DEFAULT 0,
+
+    -- الإضافة 7: إرجاع المبالغ الإلكترونية للعميل (Refunds API) وصلاحية ظهور زر الاسترجاع
+    EnableGatewayRefunds            BIT           NOT NULL DEFAULT 0, -- تفعيل/إيقاف ميزة إرجاع المبالغ للبوابة (يتحكم في إظهار/إخفاء زر إرجاع المبلغ في صفحة الروابط)
+    AllowPartialRefunds             BIT           NOT NULL DEFAULT 1, -- السماح بالاسترجاع الجزئي لمبلغ أقل من قيمة الرابط أم الاسترجاع الكلي فقط
+    AutoPostRefundJournalEntry      BIT           NOT NULL DEFAULT 1, -- توليد قيد محاسبي عكسي تلقائياً عبر Trigger فور نجاح إرجاع المبلغ
+    RefundChargeOnCustomer          BIT           NOT NULL DEFAULT 0, -- في MyFatoorah MakeRefund: هل يتحمل العميل رسوم عملية الاسترجاع (1) أم المنشأة (0)
+    ServiceChargeOnCustomer         BIT           NOT NULL DEFAULT 0, -- في MyFatoorah MakeRefund: هل تُخصم عمولة الدفع الأصلية من مبلغ العميل المسترجع (1) أم تتحملها المنشأة (0)
+
+    ExtraConfigJson                 NVARCHAR(MAX) NULL,
+    UpdatedAt                       DATETIME      NOT NULL DEFAULT GETDATE()
+);</pre>
+
+            <h4>مثال الصفوف في جدول <code>[Settings].[IntegrationProviders]</code> وكيفية معالجتها بعد حفظ إعداداتها في WPF:</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th><code>ProviderID</code></th>
+                        <th><code>ProviderCode</code></th>
+                        <th><code>ProviderNameEn</code></th>
+                        <th>النوع <code>ProviderCategory</code></th>
+                        <th>المعالجة التلقائية (تتم <strong>فقط بعد حفظ إعدادات البوابة في WPF</strong>)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><code>TAP</code></td>
+                        <td><code>Tap Payments</code></td>
+                        <td><code>PAYMENT_GATEWAY</code></td>
+                        <td>إنشاء حساب حركي باسم <code>Tap Payments</code> تحت الأب <code>AccountID = 10</code> وحفظ <code>AccountID</code></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><code>MYFATOORAH</code></td>
+                        <td><code>MyFatoorah</code></td>
+                        <td><code>PAYMENT_GATEWAY</code></td>
+                        <td>إنشاء حساب حركي باسم <code>MyFatoorah</code> تحت الأب <code>AccountID = 10</code> وحفظ <code>AccountID</code></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><code>UPAYMENTS</code></td>
+                        <td><code>UPayments</code></td>
+                        <td><code>PAYMENT_GATEWAY</code></td>
+                        <td>إنشاء حساب حركي باسم <code>UPayments</code> تحت الأب <code>AccountID = 10</code> وحفظ <code>AccountID</code></td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><code>TALABAT</code></td>
+                        <td><code>Talabat</code></td>
+                        <td><code>DELIVERY_PLATFORM</code></td>
+                        <td>إدراج عميل جديد باسم <code>Talabat</code> في <code>[Sales].[Partners]</code> &larr; فيولّد الـ Trigger الحالي <code>trg_Partner_AfterInsert</code> حسابه في شجرة الحسابات تلقائياً، ويُحفظ <code>PartnerID</code> و <code>AccountID</code></td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><code>JAHEZ</code></td>
+                        <td><code>Jahez</code></td>
+                        <td><code>DELIVERY_PLATFORM</code></td>
+                        <td>إدراج عميل جديد باسم <code>Jahez</code> في <code>[Sales].[Partners]</code> &larr; فيولّد الـ Trigger الحالي <code>trg_Partner_AfterInsert</code> حسابه في شجرة الحسابات تلقائياً، ويُحفظ <code>PartnerID</code> و <code>AccountID</code></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>3. جدول سجل ومتابعة روابط الدفع <code>[Sales].[InvoicePaymentLinks]</code>وجدول التخصيص المجمع <code>[Sales].[InvoicePaymentLinkAllocations]</code></h3>
+            <p>لدعم إرسال رابط دفع <strong>لكل فاتورة على حدة</strong> أو <strong>رابط دفع مجمع لعدة فواتير غير محصلة</strong>، يتم اعتماد الجدولين التاليين:</p>
+            <pre>
+CREATE TABLE [Sales].[InvoicePaymentLinks] (
+    LinkID              INT IDENTITY(1,1) PRIMARY KEY,
+    InvID               INT             NULL,            -- رقم الفاتورة (أو الفاتورة الرئيسية في حال الرابط المجمع)
+    IsConsolidated      BIT             NOT NULL DEFAULT 0, -- 0 = رابط لفاتورة مفردة، 1 = رابط مجمع لعدة فواتير غير محصلة
+    InvoiceNumbersCsv   NVARCHAR(500)   NULL,            -- أرقام الفواتير المشمولة بالرابط (مثلاً '1045,1048,1052')
+    PartnerID           INT             NULL,            -- رقم العميل في [Sales].[Partners]
+    ProviderID          INT             NOT NULL,        -- مربوط مع [Settings].[IntegrationProviders]
+    ProviderCode        VARCHAR(50)     NOT NULL,        -- 'TAP', 'MYFATOORAH', 'UPAYMENTS'
+    AccountID           INT             NOT NULL,        -- الحساب المصرفي المرتبط بالبوابة (تحت الأب AccountID=10)
+    Amount              DECIMAL(18,3)   NOT NULL,        -- المبلغ المطلوب تحصيله بالرابط
+    CommissionAmount    DECIMAL(18,3)   NOT NULL DEFAULT 0,
+    NetCreditedAmount   DECIMAL(18,3)   NOT NULL DEFAULT 0,
+    Currency            VARCHAR(10)     NOT NULL DEFAULT 'KWD',
+    CustomerName        NVARCHAR(150)   NULL,
+    CustomerPhone       VARCHAR(30)     NULL,
+    ExternalChargeID    NVARCHAR(150)   NULL,            -- رقم المرجع لدى البوابة (ChargeID / InvoiceId)
+    ExternalPaymentID   NVARCHAR(150)   NULL,            -- رقم عملية الدفع الفعلي بعد السداد (KNET PaymentID / TrackID)
+    PaymentUrl          NVARCHAR(1000)  NOT NULL,        -- رابط الدفع المرسل للعميل (ويُستخدم لتوليد الباركود/QR على الفاتورة)
+    PaymentStatus       VARCHAR(30)     NOT NULL DEFAULT 'Pending', -- Pending | Paid | Failed | Expired | Cancelled | Refunded | PartiallyRefunded
+    SentChannel         VARCHAR(30)     NULL,            -- WhatsApp | SMS | QR | Copy
+    ResendCount         INT             NOT NULL DEFAULT 0,
+    LastCheckedAt       DATETIME        NULL,
+    ExpiresAt           DATETIME        NULL,
+    CreatedAt           DATETIME        NOT NULL DEFAULT GETDATE(),
+    PaidAt              DATETIME        NULL,
+    JournalEntryNo      INT             NULL,
+    -- حقول إرجاع المبالغ (Refunds Tracking)
+    RefundedAmount      DECIMAL(18,3)   NOT NULL DEFAULT 0, -- المبلغ المسترجع للعميل عبر البوابة
+    ExternalRefundID    NVARCHAR(150)   NULL,            -- رقم عملية الاسترجاع لدى البوابة (مثلاً ref_TS03A...)
+    RefundReason        NVARCHAR(100)   NULL,            -- 'requested_by_customer' | 'duplicate' | 'fraudulent'
+    RefundedAt          DATETIME        NULL,            -- تاريخ ووقت الاسترجاع
+    RefundJournalNo     INT             NULL,            -- رقم القيد المحاسبي العكسي للاسترجاع
+    RawResponseJson     NVARCHAR(MAX)   NULL
+);
+
+-- جدول تفصيل الفواتير المشمولة في الرابط المجمع (عند إرسال لينك مجمع لعدة فواتير غير محصلة)
+CREATE TABLE [Sales].[InvoicePaymentLinkAllocations] (
+    AllocationID        INT IDENTITY(1,1) PRIMARY KEY,
+    LinkID              INT             NOT NULL,        -- مربوط مع [Sales].[InvoicePaymentLinks]
+    InvID               INT             NOT NULL,        -- رقم الفاتورة في [Sales].[InvoiceHeader]
+    AllocatedAmount     DECIMAL(18,3)   NOT NULL         -- المبلغ المخصص لهذه الفاتورة من إجمالي الرابط
+);</pre>
+        </section>
+
+        <!-- القسم 4 -->
+        <section id="sec-4" class="card">
+            <h2><span class="sec-num">القسم 4</span> الآلية المشروطة لإنشاء الحسابات وإضافة العملاء وإظهار الصفحات (فقط بعد نجاح اختبار الاتصال وحفظ الإعدادات في WPF)</h2>
+            <div class="alert warn">
+                <strong>⚠️ قاعدة حاكمة ومثبتة في الخطة (تخص كل بوابة على حدة):</strong>
+                <ol style="margin-top:6px;">
+                    <li>تفعيل أي بوابة من جدول <code>[Settings].[CompanySettings]</code> <strong>لا يقوم بإضافة أي حساب في شجرة الحسابات ولا يضيف أي عميل في صفحة العملاء ولا يظهر شاشات التشغيل</strong>، بل يقتصر فقط على إظهار الصلاحية في <code>UserPermissions</code> وإظهار بطاقة البوابة في شاشة إعدادات WPF.</li>
+                    <li><strong>شرط نجاح اختبار الاتصال قبل الحفظ (Mandatory Connection Test Before Save):</strong> لكل بوابة على حدة، <strong>لا يتم حفظ البيانات ولا تنفيذ أمر الحفظ ولا ما يترتب عليه (من إنشاء الحسابات أو إضافة العملاء أو إظهار الصفحات في WPF و Flutter) إلا إذا نجح اختبار الاتصال فعلياً بالبوابة (<code>ConnectionStatus IN ('SandboxVerified', 'LiveVerified')</code>)</strong>! إذا فشل الاتصال يتم منع الحفظ وعرض رسالة الخطأ التشخيصية للمستخدم.</li>
+                </ol>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-circle">1</div>
+                <div>
+                    <strong>المرحلة الأولى — التفعيل المبدئي في <code>[Settings].[CompanySettings]</code>:</strong>
+                    يقوم المدير بتفعيل الخيار (مثلاً <code>EnableTapIntegration = 1</code> أو <code>EnableTalabatIntegration = 1</code>). هنا يتم فقط تفعيل ظهور صلاحية <code>IntegrationSettings</code> في <code>UserPermissions</code> وإظهار البوابة في شاشة إعدادات البوابات في WPF دون المساس بـ <code>ChartOfAccounts</code> أو <code>Partners</code>.
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-circle">2</div>
+                <div>
+                    <strong>المرحلة الثانية — إدخال الإعدادات ونجاح اختبار الاتصال ثم الحفظ في WPF (لكل بوابة على حدة):</strong>
+                    يدخل المستخدم المخول إلى صفحة إعدادات بوابات الربط في WPF، ويملأ بيانات البوابة (مفاتيح الربط، إعدادات الباركود والعمولة...). عند الضغط على <strong>"🔌 اختبار عملية الربط"</strong> أو <strong>"💾 حفظ إعدادات البوابة"</strong>، يقوم النظام أولاً بفحص الاتصال الحقيقي مع خادم البوابة (<code>TestConnectionAsync</code>):
+                    <br/>🔹 <strong>إذا فشل الاتصال:</strong> يتوقف أمر الحفظ فوراً ولا يتم حفظ البيانات ولا تنفيذ أي أثر محاسبي أو تشغيلي.
+                    <br/>🔹 <strong>إذا نجح الاتصال فقط (<code>SandboxVerified</code> أو <code>LiveVerified</code>):</strong> يتم اعتماد حفظ البيانات وتفعيل <code>IsConfigured = 1</code> وتنفيذ المراحل المترتبة أدناه!
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-circle">3</div>
+                <div>
+                    <strong>المرحلة الثالثة (أ) — إذا كانت البوابة "بوابة دفع" (<code>PAYMENT_GATEWAY</code>: <code>Tap Payments</code>, <code>MyFatoorah</code>, <code>UPayments</code>):</strong>
+                    فور <strong>نجاح اختبار الاتصال وحفظ إعدادات البوابة في WPF</strong>، يقوم الإجراء/الـ Trigger بالبحث في <code>[Accounting].[ChartOfAccounts]</code> عن الحساب الأب للنقدية والبنوك (<strong><code>AccountID = 10</code></strong> أو الكود <code>11</code>)، ويولّد كود حساب فرعي تسلسلي جديد يلي آخر حساب تابع للأب <code>AccountID = 10</code>، ويُنشئ الحساب الفرعي الحركي (<code>IsTransactional = 1</code>) بالاسم الإنجليزي فقط (<code>Tap Payments</code>, <code>MyFatoorah</code>, <code>UPayments</code>) ويربط <code>AccountID</code> في جدول <code>IntegrationProviders</code>.
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-circle">4</div>
+                <div>
+                    <strong>المرحلة الثالثة (ب) — إذا كانت البوابة "بوابة بيع / تسويق" (<code>DELIVERY_PLATFORM</code>: <code>Talabat</code>, <code>Jahez</code>):</strong>
+                    فور <strong>نجاح اختبار الاتصال وحفظ إعدادات البوابة في WPF</strong>، تعامل البوابة <strong>معاملة العملاء</strong> وتُفتح شاشاتها التشغيلية:
+                    <ol style="margin-top:6px;">
+                        <li>يتم إدراج البوابة كعميل جديد في جدول العملاء <code>[Sales].[Partners]</code> (<code>PartnerName = 'Talabat'</code> أو <code>'Jahez'</code>, <code>PartnerType = 'Customer'</code>, <code>IsActive = 1</code>) فتظهر فوراً في <strong>صفحة العملاء</strong>.</li>
+                        <li>يعمل تلقائياً الـ Trigger الموجود حالياً في قاعدة البيانات <code>[Sales].[trg_Partner_AfterInsert]</code> (دون أي تعديل عليه) فيقوم بإنشاء الحساب المحاسبي لهذا العميل في <code>[Accounting].[ChartOfAccounts]</code> تحت الحساب الأب للعملاء (الكود <code>12</code>) ويربطه بـ <code>Partners.AccountID</code>.</li>
+                        <li>يُحفظ كل من <code>PartnerID</code> و <code>AccountID</code> في صف البوابة داخل <code>[Settings].[IntegrationProviders]</code>.</li>
+                        <li><strong>إظهار شاشات التشغيل الخاصة بالمنصة (مثل <code>Talabat</code>):</strong>
+                            <br/>• في <strong>WPF</strong>: تظهر صفحة <strong>"🛵 طلبات Talabat"</strong> تلقائياً <strong>أسفل قسم المبيعات</strong> في القائمة الجانبية.
+                            <br/>• في <strong>Flutter App</strong>: يظهر خيار تفعيل شاشة طلبات <code>Talabat</code> داخل شاشة إعدادات التطبيق (<code>settings_screen.dart</code>) ليتمكن المستخدم من إضافتها أو إخفائها على الجهاز!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <h4>نموذج الكود المقرر للإجراء <code>[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]</code> (يُستدعى فقط بعد نجاح اختبار الاتصال وحفظ الإعدادات في WPF):</h4>
+            <pre>
+CREATE PROCEDURE [Accounting].[sp_Integration_EnsureProviderEntityAndAccount]
+    @ProviderCode   VARCHAR(50),
+    @AccountID      INT OUTPUT,
+    @PartnerID      INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @ProviderNameEn NVARCHAR(100), @ProviderCategory VARCHAR(30), @ConnectionStatus VARCHAR(30);
+    SELECT
+        @ProviderNameEn   = ProviderNameEn,
+        @ProviderCategory = ProviderCategory,
+        @ConnectionStatus = ConnectionStatus,
+        @AccountID        = AccountID,
+        @PartnerID        = PartnerID
+    FROM [Settings].[IntegrationProviders]
+    WHERE ProviderCode = @ProviderCode;
+
+    -- شرط الحماية: لا يتم إنشاء أي حساب أو عميل إلا إذا نجح اختبار الاتصال بالبوابة
+    IF @ConnectionStatus NOT IN ('SandboxVerified', 'LiveVerified')
+        RETURN;
+
+    -- إذا كان الحساب مربوطاً وموجوداً مسبقاً لا نكرر الإنشاء
+    IF @AccountID IS NOT NULL AND EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @AccountID)
+        RETURN;
+
+    -- =========================================================================
+    -- الحالة 1: بوابات البيع والتوصيل (Talabat / Jahez) -> تضاف كعميل في [Sales].[Partners]
+    -- ومن ثم يتولى [Sales].[trg_Partner_AfterInsert] إضافتها تلقائياً لشجرة الحسابات
+    -- =========================================================================
+    IF @ProviderCategory = 'DELIVERY_PLATFORM'
+    BEGIN
+        SELECT TOP 1
+            @PartnerID = PartnerID,
+            @AccountID = AccountID
+        FROM [Sales].[Partners]
+        WHERE PartnerType = 'Customer' AND PartnerName = @ProviderNameEn;
+
+        IF @PartnerID IS NULL
+        BEGIN
+            INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, IsActive)
+            VALUES (@ProviderNameEn, 'Customer', NULL, N'بوابة بيع إلكتروني', 1);
+
+            SET @PartnerID = CAST(SCOPE_IDENTITY() AS INT);
+
+            -- جلب AccountID الذي أنشأه الـ Trigger الحالي [Sales].[trg_Partner_AfterInsert] تلقائياً
+            SELECT @AccountID = AccountID
+            FROM [Sales].[Partners]
+            WHERE PartnerID = @PartnerID;
+        END
+
+        UPDATE [Settings].[IntegrationProviders]
+        SET PartnerID    = @PartnerID,
+            AccountID    = @AccountID,
+            IsConfigured = 1,
+            UpdatedAt    = GETDATE()
+        WHERE ProviderCode = @ProviderCode;
+
+        RETURN;
+    END
+
+    -- =========================================================================
+    -- الحالة 2: بوابات الدفع (Tap Payments / MyFatoorah / UPayments)
+    -- تضاف مباشرة تحت الحساب الأب للنقدية والبنوك AccountID = 10 بالاسم الإنجليزي
+    -- =========================================================================
+    DECLARE @ParentAccountID INT = 10;
+    DECLARE @ParentCode NVARCHAR(20) = '11';
+    DECLARE @ParentType NVARCHAR(50) = 'Assets';
+    DECLARE @ParentLevel INT = 2;
+
+    SELECT TOP 1
+        @ParentAccountID = AccountID,
+        @ParentCode      = AccountCode,
+        @ParentType      = ISNULL(AccountType, 'Assets'),
+        @ParentLevel     = ISNULL(AccountLevel, 2)
+    FROM [Accounting].[ChartOfAccounts]
+    WHERE AccountID = 10 OR AccountCode = '11'
+    ORDER BY CASE WHEN AccountID = 10 THEN 0 ELSE 1 END;
+
+    SELECT TOP 1 @AccountID = AccountID
+    FROM [Accounting].[ChartOfAccounts]
+    WHERE ParentAccountID = @ParentAccountID
+      AND AccountName = @ProviderNameEn;
+
+    IF @AccountID IS NULL
+    BEGIN
+        DECLARE @LastChildCode INT;
+        SELECT @LastChildCode = MAX(TRY_CAST(AccountCode AS INT))
+        FROM [Accounting].[ChartOfAccounts]
+        WHERE ParentAccountID = @ParentAccountID
+          AND TRY_CAST(AccountCode AS INT) IS NOT NULL;
+
+        DECLARE @NewAccountCode NVARCHAR(20);
+        IF @LastChildCode IS NOT NULL
+            SET @NewAccountCode = CAST(@LastChildCode + 1 AS NVARCHAR(20));
+        ELSE
+            SET @NewAccountCode = @ParentCode + '01';
+
+        INSERT INTO [Accounting].[ChartOfAccounts]
+            (AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional)
+        VALUES
+            (@NewAccountCode, @ProviderNameEn, @ParentAccountID, @ParentType, @ParentLevel + 1, 1);
+
+        SET @AccountID = CAST(SCOPE_IDENTITY() AS INT);
+    END
+
+    UPDATE [Settings].[IntegrationProviders]
+    SET AccountID    = @AccountID,
+        IsConfigured = 1,
+        UpdatedAt    = GETDATE()
+    WHERE ProviderCode = @ProviderCode;
+END</pre>
+        </section>
+
+        <!-- القسم 5 -->
+        <section id="sec-5" class="card">
+            <h2><span class="sec-num">القسم 5</span> شاشة إعدادات الربط في WPF ونظام الصلاحيات الديناميكي (UserPermissions) وشرط نجاح الاتصال قبل الحفظ</h2>
+            <p>تم تصميم تجربة إدارة إعدادات الربط في تطبيق سطح المكتب WPF لتكون محمية بالصلاحيات، ذكية في العرض، وتفاعلية في إرشاد المستخدم، وهي المحطة التي يتم عند نجاح اختبار اتصالها وحفظها إنشاء حساب البوابة أو إضافتها كعميل وإظهار صفحاتها:</p>
+
+            <h3>1. الارتباط الديناميكي بصلاحيات المستخدمين (<code>UserPermissions</code>)</h3>
+            <ul>
+                <li><strong>إخفاء الصلاحية عند عدم تفعيل أي بوابة:</strong> طالما أن جميع أعمدة تفعيل البوابات في <code>[Settings].[CompanySettings]</code> تساوي <code>0</code>، لا تظهر صلاحية إعدادات بوابات الربط في قائمة الصلاحيات حتى لا تزدحم شاشة الصلاحيات بخيارات غير مستخدمة.</li>
+                <li><strong>الظهور التلقائي في <code>UserPermissions</code> فور تفعيل أي بوابة:</strong> بمجرد تفعيل بوابة واحدة على الأقل في <code>[Settings].[CompanySettings]</code> (مثل <code>EnableTapIntegration = 1</code>)، يظهر بند الصلاحية الجديد <code>"IntegrationSettings"</code> (<strong>"إعدادات الربط وبوابات الدفع"</strong>) تلقائياً في شاشة صلاحيات المستخدمين والأدوار (<code>UserManagementViewModel</code>).</li>
+                <li><strong>منح الصلاحية للمستخدمين:</strong> يستطيع مدير النظام من شاشة الصلاحيات منح أو حجب صلاحية (العرض <code>CanView</code> / التعديل والحفظ <code>CanEdit</code>) لإعدادات بوابات الربط لأي دور وظيفي أو مستخدم.</li>
+            </ul>
+
+            <h3>2. شاشة إعدادات بوابات الدفع في WPF (شرط نجاح اختبار الاتصال قبل تنفيذ الحفظ لكل بوابة على حدة)</h3>
+            <ul>
+                <li>يُضاف قسم/تبويب جديد في شاشة الإعدادات (أو صفحة مستقلة ضمن الإعدادات) باسم <strong>"🔗 إعدادات الربط وبوابات الدفع"</strong>، ولا يظهر هذا القسم للمستخدم إلا إذا كان لديه صلاحية <code>CanView</code> في <code>UserPermissions</code>.</li>
+                <li><strong>فلترة العرض الذكية:</strong> تعرض الشاشة <strong>فقط</strong> بطاقات الإعدادات الخاصة بالبوابات المفعلة في <code>[Settings].[CompanySettings]</code>.</li>
+                <li><strong>🔒 القاعدة العامة الإلزامية للحفظ لكل بوابة على حدة (No Save Without Successful Connection Test):</strong>
+                    <ul>
+                        <li>لا يُسمح بحفظ بيانات أي بوابة ولا تنفيذ أمر الحفظ وما يترتب عليه إلا <strong>بعد نجاح اختبار الاتصال (<code>TestConnectionAsync</code> = <code>True</code>)</strong>.</li>
+                        <li>إذا ضغط المستخدم على <strong>"💾 حفظ إعدادات البوابة"</strong> مباشرةً، يقوم الـ ViewModel تلقائياً بإجراء اختبار الاتصال أولاً:
+                            <ul>
+                                <li>❌ <strong>إذا فشل اختبار الاتصال:</strong> يتم إيقاف عملية الحفظ تماماً، وتبقى <code>IsConfigured = 0</code>، ولا يتم إنشاء أي حساب أو عميل ولا إظهار أي صفحة خاصة بالبوابة، وتظهر للمستخدم رسالة تشخيصية توضح سبب فشل الاتصال.</li>
+                                <li>✅ <strong>إذا نجح اختبار الاتصال فقط:</strong> يتم تنفيذ الحفظ في قاعدة البيانات (<code>IsConfigured = 1</code> و <code>ConnectionStatus = 'SandboxVerified' | 'LiveVerified'</code>) ويتبع ذلك تلقائياً:
+                                    <br/>1. لبوابات الدفع (<code>Tap Payments</code>, <code>MyFatoorah</code>, <code>UPayments</code>): إنشاء حسابها الفرعي تحت الأب <code>AccountID = 10</code>.
+                                    <br/>2. لبوابات البيع (<code>Talabat</code>, <code>Jahez</code>): إضافتها كعميل في <code>[Sales].[Partners]</code> وإنشاء حسابها عبر <code>[Sales].[trg_Partner_AfterInsert]</code>، وإظهار صفحتها تحت قسم المبيعات في <code>WPF</code> وإظهار خيارها في إعدادات <code>Flutter App</code>!</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+            <h3>3. اختبار عملية الربط (Test Connection) والإرشادات التفاعلية حسب حالة الربط</h3>
+            <p>داخل بطاقة كل بوابة مفعلة في شاشة الإعدادات، تتوفر حقول الربط (<code>MerchantID</code>, <code>ApiKey</code>, <code>SecretKey</code>, <code>WebhookUrl</code>, وضع الاختبار/الفعلي) مع زر <strong>"🔌 اختبار عملية الربط (Test Connection)"</strong> وصندوق إرشادات ذكي يتغير محتواه ولونه تلقائياً حسب حالة الربط (<code>ConnectionStatus</code>):</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>حالة الربط (<code>ConnectionStatus</code>)</th>
+                        <th>شارة الحالة في الواجهة</th>
+                        <th>الإرشادات الذكية التي يعرضها النظام للمستخدم</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>NotConfigured</code></td>
+                        <td><span class="status-pill st-expired">⚪ غير مكتمل الإعداد (يشترط نجاح الاتصال للحفظ)</span></td>
+                        <td>
+                            "تم تفعيل البوابة من إعدادات الشركة، ولكن لم يتم حفظها أو إنشاء حسابها بعد. لإتمام الربط مع <strong>[اسم البوابة]</strong>: أدخل مفاتيح الربط واضغط <strong>اختبار عملية الربط</strong> ثم <strong>حفظ إعدادات البوابة</strong> (لا يتم الحفظ إلا بعد نجاح الاتصال)."
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>SandboxVerified</code></td>
+                        <td><span class="status-pill st-pending">🟡 متصل ومحفوظ (بيئة تجريبية Sandbox)</span></td>
+                        <td>
+                            "نجح اختبار الاتصال وتم حفظ الإعدادات وإنشاء الحساب/العميل المرتبط: <code>[AccountName - AccountCode]</code> وتفعيل شاشات البوابة! عند الجاهزية للعمل الفعلي قم بتفعيل خيار <strong>الوضع الفعلي (Live Mode)</strong> وأدخل مفاتيح الإنتاج."
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>LiveVerified</code></td>
+                        <td><span class="status-pill st-paid">🟢 متصل ومحفوظ وفعال (Live Production)</span></td>
+                        <td>
+                            "الربط مع <strong>[اسم البوابة]</strong> يعمل بنجاح في الوضع الفعلي ✅. الحساب المرتبط في شجرة الحسابات: <code>[AccountName - AccountCode]</code> وجميع شاشات البوابة مفعلة."
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><code>ConnectionError</code></td>
+                        <td><span class="status-pill st-failed">🔴 فشل الاتصال بالبوابة (الحفظ موقوف)</span></td>
+                        <td>
+                            "تعذر الاتصال بـ <strong>[اسم البوابة]</strong>: <code>[رسالة الخطأ من البوابة مثل 401 Unauthorized]</code>. <strong>تم إيقاف حفظ البيانات</strong>؛ يرجى التأكد من صحة مفاتيح الربط ومطابقتها للبيئة المختارة (Test مقابل Live) ثم إعادة المحاولة."
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- القسم 6: ربط الفواتير وشاشات بوابات الدفع وشاشات Talabat في WPF و Flutter -->
+        <section id="sec-6" class="card" style="border-color: var(--secondary);">
+            <h2><span class="sec-num" style="background: var(--secondary); color:#fff;">القسم 6</span> 🖥️📱 الربط مع الفواتير وشاشات متابعة بوابات الدفع وشاشات طلبات <code>Talabat</code> في <code>WPF</code> و <code>Flutter</code></h2>
+            <p>يشمل النظام ربطاً متكاملاً مع شاشات الفواتير في كل من تطبيق سطح المكتب <strong>WPF</strong> وتطبيق نقاط البيع <strong>Flutter App</strong>، مع إنشاء شاشات متخصصة لبوابات الدفع ولطلبات <strong>Talabat</strong> تظهر فقط بعد نجاح اختبار الاتصال وحفظ الإعدادات:</p>
+
+            <div class="grid-2">
+                <!-- WPF Pages -->
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>1. في تطبيق سطح المكتب <code>WPF</code></span>
+                        <span class="tag">صفحة روابط الدفع + صفحة Talabat أسفل المبيعات</span>
+                    </div>
+                    <ul>
+                        <li><strong>الربط مع شاشات الفواتير (<code>SalesInvoicePage</code> &amp; <code>PosPage</code>):</strong>
+                            <ul>
+                                <li>إتاحة حسابات بوابات الدفع (بعد نجاح الاتصال وحفظ إعداداتها) ضمن طرق الدفع، وإتاحة بوابات البيع (<code>Talabat</code>, <code>Jahez</code>) ضمن قائمة العملاء.</li>
+                                <li>توليد رابط الدفع وإرساله للعميل، وطباعة الباركود/QR Code الخاص بالرابط على الفاتورة الورقية (حسب الخيارات المحددة للبوابة).</li>
+                            </ul>
+                        </li>
+                        <li><strong>أ- صفحة "💳 طلبات وفواتير بوابات الدفع" (<code>PaymentGatewayInvoicesPage.xaml</code>):</strong>
+                            <ul>
+                                <li>عرض شامل لجميع الفواتير والروابط الخاصة ببوابات الدفع مع الفلترة والبحث المتقدم.</li>
+                                <li><strong>إعادة إرسال اللينك (منفرد ومجمع):</strong> لكل فاتورة غير محصلة على حدة أو دمج عدة فواتير غير محصلة في رابط دفع مجمع واحد.</li>
+                                <li><strong>زر "↩️ إرجاع المبلغ (Refund)" الديناميكي:</strong> يظهر عند تفعيل <code>EnableGatewayRefunds = 1</code> ويختفي عند تعطيله.</li>
+                            </ul>
+                        </li>
+                        <li><strong>ب- صفحة "🛵 طلبات Talabat" أسفل قسم المبيعات (<code>TalabatOrdersPage.xaml</code>) ⭐:</strong>
+                            <ul>
+                                <li><strong>شرط الظهور في القائمة الجانبية (أسفل قسم المبيعات):</strong> لا تظهر هذه الصفحة في القائمة الجانبية لـ WPF إلا بعد تفعيل <code>EnableTalabatIntegration = 1</code> في <code>CompanySettings</code> <strong>ونجاح اختبار الاتصال بـ Talabat وحفظ الإعدادات (<code>IsConfigured = 1</code>)</strong>!</li>
+                                <li><strong>وظائف الصفحة المتكاملة مع APIs طلبات:</strong>
+                                    <br/>🔹 استقبال وعرض طلبات Talabat الواردة لحظياً (<code>Dispatch Order</code>) مع التنبيه الصوتي وعرض الرقم القصير <code>shortCode</code> (مثل <code>#42</code>) ونوع التوصيل (<code>delivery</code> / <code>pickup</code>) ونوع الدفع (<code>paid</code> / <code>cod</code>).
+                                    <br/>🔹 أزرار <strong>قبول الطلب (<code>order_accepted</code>)</strong> أو <strong>رفض الطلب (<code>order_rejected</code> مع تحديد السبب)</strong>، وتحويل الطلب المقبول تلقائياً إلى فاتورة مبيعات مسجلة على حساب العميل <strong><code>Talabat</code></strong>.
+                                    <br/>🔹 زر <strong>"📦 جاهز للاستلام (Order Prepared)"</strong> لإشعار سائق Talabat عبر <code>preparation-completed</code>.
+                                    <br/>🔹 زر <strong>طباعة إيصال/فاتورة طلب Talabat</strong> (على طابعات <code>58mm</code> أو <code>80mm</code> أو فاتورة <code>WPF</code>).
+                                    <br/>🔹 مفتاح علوي للتحكم الفوري في <strong>حالة المتجر على تطبيق Talabat (<code>AVAILABLE</code> مفتوح / <code>BUSY</code> مشغول / <code>CLOSED</code> مغلق)</strong>.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Flutter App Pages & Device Settings Toggles -->
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>2. في تطبيق الموبايل/الكاشير <code>Flutter App</code></span>
+                        <span class="tag">شاشة روابط الدفع + شاشة Talabat + إعدادات الجهاز</span>
+                    </div>
+                    <ul>
+                        <li><strong>الربط مع فواتير Flutter (<code>pos_screen.dart</code> &amp; <code>partner_billing_screen.dart</code>):</strong>
+                            <ul>
+                                <li>بعد حفظ الفاتورة واستلام <code>newInvId</code> الفعلي، إذا كانت طريقة الدفع بوابة مربوطة، يتم إنشاء الرابط وطباعة الباركود/QR على إيصال الكاشير الحراري مقاس <code>58mm</code> أو <code>80mm</code> أو كليهما حسب ما تم اختياره في إعدادات البوابة.</li>
+                            </ul>
+                        </li>
+                        <li><strong>أ- شاشة "💳 فواتير وطلبات بوابات الدفع" (<code>payment_gateway_invoices_screen.dart</code>):</strong>
+                            <ul>
+                                <li>مطابقة لشاشة الـ WPF، مع خيار إظهار/إخفاء الشاشة على الجهاز في <code>settings_screen.dart</code> (<code>show_payment_gateway_invoices</code>).</li>
+                            </ul>
+                        </li>
+                        <li><strong>ب- شاشة "🛵 طلبات Talabat" في Flutter وخيار إضافتها للجهاز في الإعدادات (<code>talabat_orders_screen.dart</code>) ⭐:</strong>
+                            <ul>
+                                <li><strong>شرط الظهور في إعدادات تطبيق Flutter (<code>settings_screen.dart</code>):</strong>
+                                    <br/>بمجرد تفعيل <code>Talabat</code> في <code>CompanySettings</code> <strong>ونجاح اختبار الاتصال وحفظ إعداداته في WPF (<code>IsConfigured = 1</code>)</strong>، يظهر تلقائياً داخل شاشة إعدادات تطبيق Flutter قسم/خيار خاص بـ Talabat (<code>show_talabat_orders</code> في <code>SharedPreferences</code>) يتيح للمستخدم اختيار <strong>إضافة صفحة طلبات Talabat إلى هذا الجهاز أو إخفائها منه</strong>!</li>
+                                <li><strong>وظائف شاشة طلبات Talabat في Flutter (عند تفعيل عرضها على الجهاز):</strong>
+                                    <br/>🔹 استقبال طلبات Talabat لحظياً (<code>Dispatch Order</code>) مع جرس تنبيه للكاشير وعرض <code>shortCode</code> وتفاصيل الأصناف.
+                                    <br/>🔹 تنفيذ الطلب: <strong>قبول (<code>order_accepted</code>)</strong> / <strong>رفض (<code>order_rejected</code>)</strong>، إنشاء فاتورة المبيعات باسم العميل <code>Talabat</code>، و<strong>إشعار جاهزية الطلب للسائق (<code>preparation-completed</code>)</strong>.
+                                    <br/>🔹 <strong>طباعة إيصال طلب Talabat وفاتورته</strong> مباشرة من جهاز الكاشير على طابعات البلوتوث/الشبكة مقاس <code>58mm</code> و <code>80mm</code> متضمناً كود الطلب القصير <code>shortCode</code>.
+                                    <br/>🔹 التحكم في حالة الفرع على منصة Talabat (مفتوح / مشغول / مغلق) ومتابعة وبحث جميع طلبات Talabat المنفذة والملغاة.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- القسم 7 -->
+        <section id="sec-7" class="card">
+            <h2><span class="sec-num">القسم 7</span> معمارية الكود بنمط MVVM والكلاسات المنفصلة لكل موقع</h2>
+            <p>لضمان سهولة الصيانة والتعديل المستقبلي دون أي تداخل مع الكود الحالي، سيتم عزل كود الربط بالكامل في مجلدات وكلاسات مستقلة في الطبقات الثلاث:</p>
+
+            <h3>1. في تطبيق سطح المكتب WPF (<code>Vegtablity</code> - VB.NET)</h3>
+            <pre>
+Vegtablity/
+ ├── Models/Integrations/
+ │    ├── IntegrationProviderConfig.vb       ' نموذج صف البوابة من جدول IntegrationProviders + الإضافات الـ 7
+ │    ├── PaymentLinkRequest.vb              ' نموذج طلب إنشاء رابط فاتورة مفرد أو مجمع (InvIDs, Amount, Phone, CustomerName)
+ │    ├── PaymentLinkStatusInfo.vb           ' نموذج متابعة حالة الرابط والفواتير المرتبطة به
+ │    └── TalabatOrderModel.vb               ' نموذج طلبات Talabat (token, code, shortCode, expeditionType, items, status)
+ │
+ ├── Services/Integrations/
+ │    ├── Interfaces/
+ │    │    ├── IPaymentGatewayProvider.vb    ' الواجهة الموحدة لبوابات الدفع (CreatePaymentLinkAsync, CheckLinkStatusAsync, RefundAsync, TestConnectionAsync)
+ │    │    └── IDeliveryPlatformProvider.vb  ' الواجهة الموحدة لمنصات البيع (AcceptOrderAsync, RejectOrderAsync, MarkPreparedAsync, SetVendorAvailabilityAsync, TestConnectionAsync)
+ │    │
+ │    ├── IntegrationManagerService.vb       ' المنسق العام: يحدد الكلاس المناسب ويتحقق من نجاح الاتصال قبل السماح بالحفظ
+ │    ├── PaymentQrGeneratorService.vb       ' خدمة توليد صورة الباركود / QR Code لرابط الدفع للطباعة على 58mm و 80mm و WPF
+ │    │
+ │    └── Providers/                         ' كلاس مستقل لكل موقع على حدة (يُبنى بوابةً ببوابة)
+ │         ├── TapPaymentProvider.vb         ' كلاس الربط الخاص ببوابة Tap Payments فقط
+ │         ├── MyFatoorahProvider.vb         ' كلاس الربط الخاص ببوابة MyFatoorah فقط
+ │         ├── UPaymentsProvider.vb          ' كلاس الربط الخاص ببوابة UPayments فقط
+ │         ├── TalabatPlatformProvider.vb    ' كلاس الربط الخاص بمنصة Talabat فقط (POS Plugin &amp; Middleware API)
+ │         └── JahezPlatformProvider.vb      ' كلاس الربط الخاص بمنصة Jahez فقط
+ │
+ ├── Views/
+ │    ├── Integrations/
+ │    │    ├── IntegrationSettingsPage.xaml       ' شاشة إعدادات البوابات المفعلة وفحص الاتصال الإلزامي قبل الحفظ والإضافات الـ 7
+ │    │    └── PaymentGatewayInvoicesPage.xaml    ' شاشة متابعة طلبات وفواتير بوابات الدفع وإعادة إرسال الروابط وزر إرجاع المبلغ
+ │    └── Sales/
+ │         └── TalabatOrdersPage.xaml             ' شاشة طلبات Talabat أسفل قسم المبيعات (تظهر فقط بعد نجاح الاتصال وحفظ إعدادات Talabat)
+ │
+ └── ViewModels/
+      ├── Integrations/
+      │    ├── IntegrationSettingsViewModel.vb    ' ViewModel شاشة إعدادات البوابات (يشترط نجاح TestConnection قبل الحفظ وإنشاء الحساب/العميل)
+      │    ├── PaymentLinkPromptViewModel.vb      ' ViewModel نافذة سؤال الكاشير وإرسال الرابط بعد حفظ الفاتورة
+      │    └── PaymentGatewayInvoicesViewModel.vb ' ViewModel صفحة متابعة وبحث وفلترة فواتير البوابات وإعادة الإرسال والاسترجاع
+      └── Sales/
+           └── TalabatOrdersViewModel.vb          ' ViewModel شاشة طلبات Talabat (استقبال، قبول/رفض، تحويل لفاتورة مبيعات، طباعة، وتغيير حالة المتجر)</pre>
+
+            <h3>2. في الخادم الخلفي FastAPI (<code>VegtablityApi</code> - Python)</h3>
+            <pre>
+VegtablityApi/app/
+ ├── schemas/integrations.py                 # Pydantic Schemas لطلبات الروابط، الاسترجاع، وطلبات Talabat (Dispatch Order / Cancel Order)
+ ├── routes/integrations.py                  # مسارات API (/integrations/payment-link, /integrations/talabat/order/{remoteId}, /integrations/talabat/orders, ...)
+ └── services/integrations/
+      ├── base_provider.py                   # الكلاس الأب المجرد (Abstract Base Class)
+      ├── integration_manager.py             # مدير الربط وفحص الاتصال ومتابعة تحصيل الروابط
+      ├── tap_provider.py                    # كلاس Tap Payments المنفصل
+      ├── myfatoorah_provider.py             # كلاس MyFatoorah المنفصل
+      ├── upayments_provider.py              # كلاس UPayments المنفصل
+      ├── talabat_provider.py                # كلاس Talabat المنفصل (Dispatch Order, /v2/login, Accept/Reject, Prepared, Availability)
+      └── jahez_provider.py                  # كلاس Jahez المنفصل</pre>
+
+            <h3>3. في تطبيق نقاط البيع Flutter (<code>Vegtablity_App</code> - Dart)</h3>
+            <pre>
+Vegtablity_App/lib/
+ ├── models/
+ │    ├── integration_models.dart                     // نماذج بيانات البوابات المفعلة، روابط الدفع، وفلاتر البحث
+ │    └── talabat_order_model.dart                    // نموذج طلب Talabat وبنوده وحالته في Flutter
+ ├── services/integrations/
+ │    ├── integration_service.dart                    // خدمة الاتصال بـ API الربط وإنشاء وفحص وإعادة إرسال الروابط والاسترجاع
+ │    └── talabat_service.dart                        // خدمة عمليات Talabat في Flutter (جلب الطلبات، قبول/رفض، جاهزية، تغيير حالة المتجر)
+ ├── viewmodels/
+ │    ├── payment_gateway_invoices_viewmodel.dart     // MVVM ViewModel لشاشة متابعة فواتير بوابات الدفع
+ │    └── talabat_orders_viewmodel.dart               // MVVM ViewModel لشاشة إدارة وتنفيذ وطباعة طلبات Talabat في Flutter
+ ├── screens/
+ │    ├── payment_gateway_invoices_screen.dart        // شاشة متابعة فواتير وطلبات بوابات الدفع في Flutter
+ │    ├── talabat_orders_screen.dart                  // شاشة استقبال وتنفيذ وطباعة طلبات Talabat في Flutter
+ │    └── settings_screen.dart                        // عرض خيار show_talabat_orders (فقط بعد نجاح اتصال وحفظ Talabat) لإضافة الصفحة للجهاز أو إخفائها
+ └── widgets/integrations/
+      └── payment_link_prompt_dialog.dart             // نافذة الحوار بعد حفظ الفاتورة وعرض/طباعة QR الدفع على 58mm و 80mm</pre>
+        </section>
+
+        <!-- القسم 8 -->
+        <section id="sec-8" class="card">
+            <h2><span class="sec-num">القسم 8</span> خطة الربط التفصيلية مقسمة حسب كل محفظة وبوابة بيع (تُنفذ بوابةً ببوابة)</h2>
+
+            <h3>8.1 خطة الربط المعتمدة مع بوابة Tap Payments (<code>TapPaymentProvider</code>) — تم فحص وتوثيق المرجع الرسمي ✅</h3>
+            <div class="alert">
+                <strong>📘 مرجع التوثيق الرسمي الذي تم فحصه:</strong>
+                <code>https://developers.tap.company/reference/api-endpoint</code> (Tap Payments API v2 — الكويت <code>KWD</code>).
+                <br/>تم حفظ الكتيب الفني المفصل لبوابة Tap في: <code>Plans/integration/tap_payments_manual.html</code>.
+            </div>
+            <ul>
+                <li><strong>المعالجة المحاسبية (فقط بعد حفظ إعدادات البوابة في WPF):</strong> إنشاء حساب فرعي حركي باسم <code>Tap Payments</code> تحت الأب <code>AccountID = 10</code> (الكود <code>11</code>).</li>
+                <li><strong>الرابط الأساسي الموحد (Base URL):</strong> <code>https://api.tap.company/v2</code> (تستخدم Tap نفس الرابط للبيئة التجريبية والفعلية، ويتم التمييز تلقائياً من بادئة المفتاح السري: <code>sk_test_...</code> للاختبار و <code>sk_live_...</code> للإنتاج الفعلي).</li>
+                <li><strong>الترويسات المطلوبة (HTTP Headers):</strong>
+                    <ul>
+                        <li><code>Authorization: Bearer {SecretKey}</code></li>
+                        <li><code>Content-Type: application/json</code> و <code>Accept: application/json</code></li>
+                    </ul>
+                </li>
+                <li><strong>خيارات إنشاء رابط الدفع في <code>TapPaymentProvider</code> (يدعم المسارين حسب تفضيل المنشأة):</strong>
+                    <ul>
+                        <li><strong>المسار الأول (الافتراضي الموصى به للفواتير والروابط المجمعة) — Tap Invoices API (<code>POST /v2/invoices</code>):</strong>
+                            <ul>
+                                <li>يولّد رابط فاتورة مستضاف قصير ومثالي لطباعة الباركود/QR على إيصالات <code>58mm</code> و <code>80mm</code> وفواتير <code>WPF</code> (`url`).</li>
+                                <li>يدعم تحديد وقت انتهاء الرابط بدقة بالثواني/الملي ثانية (<code>due</code> و <code>expiry</code> محولين من <code>LinkExpiryMinutes</code>).</li>
+                                <li>يدعم إرسال الرابط تلقائياً من خوادم Tap عبر SMS/Email مجاناً عبر كائن <code>notifications: { "channels": ["SMS"], "dispatch": true }</code> بالإضافة للإرسال عبر WhatsApp من نظامنا.</li>
+                                <li>يدعم إرسال بنود الفاتورة أو الفواتير المجمعة داخل مصفوفة <code>order.items</code> بالعملة <code>KWD</code> (3 خانات عشرية).</li>
+                            </ul>
+                        </li>
+                        <li><strong>المسار الثاني (الدفع المباشر السريع) — Tap Charges API (<code>POST /v2/charges</code>):</strong>
+                            <ul>
+                                <li>يولّد عملية تحصيل مباشرة ويعيد رابط الدفع في الحقل <code>transaction.url</code> ومعرف العملية <code>id: "chg_..."</code> بحالة ابتدائية <code>INITIATED</code>.</li>
+                                <li>تحديد بوابة الدفع في الكويت عبر <code>source.id</code>:
+                                    <br/>🔹 <code>"src_all"</code>: يفتح صفحة دفع Tap التي تعرض للعميل جميع الوسائل المفعلة (KNET، Apple Pay، Visa/MasterCard).
+                                    <br/>🔹 <code>"src_kw.knet"</code>: يحوّل العميل مباشرة إلى صفحة الدفع البنكي <strong>KNET</strong> الكويتية دون خطوات وسيطة.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li><strong>نقاط النهاية (Endpoints) المعتمدة في كلاس <code>TapPaymentProvider</code>:</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>العملية في النظام</th>
+                                <th>Method &amp; Endpoint في Tap API v2</th>
+                                <th>الحقول المستخرجة والمعالجة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>إنشاء رابط دفع مباشرة (Charge Link)</strong></td>
+                                <td><code>POST https://api.tap.company/v2/charges</code></td>
+                                <td>يُحفظ <code>id</code> (مثل <code>chg_TS...</code>) في <code>ExternalChargeID</code>، و<code>transaction.url</code> في <code>PaymentUrl</code> (يُطبع كـ QR على 58/80/WPF).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إنشاء رابط فاتورة (Invoice Link)</strong></td>
+                                <td><code>POST https://api.tap.company/v2/invoices</code></td>
+                                <td>يُحفظ <code>id</code> (مثل <code>inv_...</code>) في <code>ExternalChargeID</code>، و<code>url</code> في <code>PaymentUrl</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>فحص حالة التحصيل (Check Status / Polling)</strong></td>
+                                <td><code>GET /v2/charges/{id}</code> أو <code>GET /v2/invoices/{id}</code></td>
+                                <td>يفحص حقل <code>status</code> ورقم مرجع الدفع الفعلي <code>reference.payment</code> (رقم عملية KNET).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إعادة إرسال / تذكير الفاتورة</strong></td>
+                                <td><code>POST /v2/invoices/{id}/remind</code></td>
+                                <td>إعادة إرسال إشعار الرابط للعميل من Tap أو عبر WhatsApp مع زيادة عداد <code>ResendCount</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إلغاء رابط معلق</strong></td>
+                                <td><code>DELETE /v2/invoices/{id}</code></td>
+                                <td>إلغاء الرابط لدى Tap عند استبداله برابط جديد وتحويل حالته إلى <code>Cancelled</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إرجاع المبلغ للعميل (Refund API — كلي أو جزئي) ↩️</strong></td>
+                                <td><code>POST https://api.tap.company/v2/refunds</code></td>
+                                <td>يرسل <code>charge_id</code>، <code>amount</code> (3 خانات عشرية لـ KWD)، <code>currency: "KWD"</code>، و<code>reason</code> (<code>requested_by_customer</code> / <code>duplicate</code>) ويعيد <code>id: "ref_..."</code> وحالة <code>REFUNDED</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>فحص حالة عملية استرجاع</strong></td>
+                                <td><code>GET https://api.tap.company/v2/refunds/{refund_id}</code></td>
+                                <td>الاستعلام عن حالة طلب استرجاع المبلغ للعميل (<code>REFUNDED</code> / <code>PENDING</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>اختبار الاتصال (Test Connection في WPF)</strong></td>
+                                <td><code>POST https://api.tap.company/v2/charges/list</code></td>
+                                <td>يرسل <code>{"limit": 1}</code> للتحقق من صلاحية <code>SecretKey</code> وتحديث الحالة إلى <code>SandboxVerified</code> أو <code>LiveVerified</code>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+                <li><strong>🌟 إمكانيات إضافية تم استخلاصها من كتيب Tap Payments الرسمي للاستفادة منها في الدفع وإرجاع المبالغ:</strong>
+                    <ol>
+                        <li><strong>إرجاع المبالغ الكلي والجزئي للعميل عبر البوابة (Tap Refunds API — <code>POST /v2/refunds</code>):</strong>
+                            <ul>
+                                <li>تيح بوابة Tap إرجاع المبلغ المسدد (سواء <strong>استرجاعاً كلياً Full Refund</strong> أو <strong>استرجاعاً جزئياً Partial Refund</strong> حتى 3 خانات عشرية للدينار الكويتي <code>KWD</code>) مباشرة إلى بطاقة العميل البنكية (KNET / Visa / MasterCard) التي دفع بها، دون الحاجة لإرجاع نقدي من درج الكاشير!</li>
+                                <li>تم ربط هذه الميزة بخيار تفعيل/إلغاء مستقل في إعدادات البوابة (<code>EnableGatewayRefunds</code>): عند تفعيله يظهر زر <strong>"↩️ إرجاع المبلغ"</strong> في صفحة الروابط الجديدة (في WPF و Flutter) أمام الفواتير المحصلة (<code>Paid</code>)، وعند تعطيله <strong>يختفي الزر تماماً</strong>!</li>
+                            </ul>
+                        </li>
+                        <li><strong>تخصيص بوابة الدفع الافتراضية للرابط في الكويت (<code>source.id</code> Filtering):</strong>
+                            <ul>
+                                <li>يمكن من إعدادات بوابة Tap تحديد ما يظهر للعميل عند فتح الرابط:
+                                    <br/>🔹 <code>src_all</code>: عرض جميع وسائل الدفع (KNET + Apple Pay + البطاقات الائتمانية).
+                                    <br/>🔹 <code>src_kw.knet</code>: فتح شاشة بنك <strong>KNET</strong> الكويتية مباشرة للعميل بضغطة واحدة (الأقل عمولة والأسرع في الكويت).
+                                    <br/>🔹 <code>src_apple_pay</code> أو <code>src_card</code>: تخصيص وسيلة محددة عند الحاجة.</li>
+                            </ul>
+                        </li>
+                        <li><strong>إرسال SMS وإيصال السداد الرسمي مجاناً من خوادم Tap (<code>receipt.sms</code> &amp; <code>notifications</code>):</strong>
+                            <ul>
+                                <li>عند تفعيل <code>"receipt": {"sms": true}</code>، تقوم خوادم Tap تلقائياً بإرسال إيصال الدفع الرسمي برسالة نصية SMS لرقم هاتف العميل الكويتي (<code>+965</code>) فور نجاح عملية السداد دون أي تكلفة رسائل إضافية على المنشأة.</li>
+                            </ul>
+                        </li>
+                        <li><strong>تضمين بيانات الفاتورة والوردية والكاشير داخل <code>metadata</code> و <code>reference</code> في Tap:</strong>
+                            <ul>
+                                <li>إرسال <code>inv_id</code>، <code>shift_id</code>، <code>cashier_name</code>، و<code>partner_id</code> داخل حقل <code>metadata</code> في طلب Tap، مما يجعل كل عملية في لوحة تحكم Tap الرسمية (Tap Dashboard) مربوطة برقم الفاتورة والوردية في Vegtablity لتسهيل المطابقة البنكية للمحاسب.</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </li>
+                <li><strong>جدول مطابقة الحالات (Status Mapping) بين Tap ونظام Vegtablity:</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الحالة الواردة من Tap (<code>status</code>)</th>
+                                <th>الحالة المقابلة في <code>[Sales].[InvoicePaymentLinks]</code></th>
+                                <th>الإجراء التلقائي في النظام</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>INITIATED</code> / <code>IN_PROGRESS</code> / <code>SAVED</code> / <code>CREATED</code></td>
+                                <td><span class="status-pill st-pending">Pending</span></td>
+                                <td>يبقى الرابط قيد الانتظار مع إمكانية إعادة الإرسال أو الفحص.</td>
+                            </tr>
+                            <tr>
+                                <td><code>CAPTURED</code> / <code>PAID</code></td>
+                                <td><span class="status-pill st-paid">Paid</span></td>
+                                <td>ينطلق الـ Trigger <code>trg_InvoicePaymentLinks_OnStatusPaid</code> لتسديد الفاتورة (أو الفواتير المجمعة) وترحيل قيد التحصيل لحساب <code>Tap Payments</code> وقيد العمولة.</td>
+                            </tr>
+                            <tr>
+                                <td><code>REFUNDED</code> (من <code>/v2/refunds</code>)</td>
+                                <td><span class="status-pill st-failed">Refunded / PartiallyRefunded</span></td>
+                                <td>ينطلق الـ Trigger <code>trg_InvoicePaymentLinks_OnStatusRefunded</code> لتسجيل المبلغ المسترجع وتوليد القيد المحاسبي العكسي تلقائياً من حساب <code>Tap Payments</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>TIMEDOUT</code> / <code>EXPIRED</code> / <code>ABANDONED</code></td>
+                                <td><span class="status-pill st-expired">Expired</span></td>
+                                <td>تحديث الحالة إلى منتهي الصلاحية وإتاحة زر توليد وإرسال رابط جديد في شاشة متابعة الطلبات.</td>
+                            </tr>
+                            <tr>
+                                <td><code>DECLINED</code> / <code>FAILED</code> / <code>RESTRICTED</code> / <code>VOID</code></td>
+                                <td><span class="status-pill st-failed">Failed</span></td>
+                                <td>تحديث الحالة إلى فشل الدفع مع تسجيل سبب الرفض في <code>LastStatusMessage</code> وإتاحة إعادة الإرسال.</td>
+                            </tr>
+                            <tr>
+                                <td><code>CANCELLED</code></td>
+                                <td><span class="status-pill st-expired">Cancelled</span></td>
+                                <td>ملغى ولن يقبل الدفع.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+                <li><strong>التحقق الأمني من إشعارات الـ Webhook (<code>hashstring</code> HMAC-SHA256 Validation):</strong>
+                    <ul>
+                        <li>ترسل Tap إشعار الدفع الفوري (IPN) إلى مسارنا <code>POST /api/integrations/webhook/tap</code> مع ترويسة <code>hashstring</code>.</li>
+                        <li>يتم التحقق من صحة الإشعار في FastAPI عبر بناء السلسلة النصية القياسية لـ Tap وتشفيرها بـ <code>HMAC-SHA256</code> باستخدام <code>SecretKey</code> (مع تنسيق المبلغ بـ 3 خانات عشرية للعملة <code>KWD</code> مثل <code>14.750</code>):
+                            <pre>x_id{id}x_amount{amount_3_decimals}x_currency{currency}x_gateway_reference{reference.gateway}x_payment_reference{reference.payment}x_status{status}x_created{created}</pre>
+                        </li>
+                    </ul>
+                </li>
+                <li><strong>نموذج Payload المعتمد لإنشاء رابط دفع Tap في الكويت (<code>KWD</code>):</strong>
+                    <pre>
+{
+  "amount": 14.750,
+  "currency": "KWD",
+  "customer_initiated": true,
+  "threeDSecure": true,
+  "save_card": false,
+  "description": "Invoice #10452 - Vegtablity POS",
+  "metadata": {
+    "inv_id": "10452",
+    "is_consolidated": "0",
+    "invoice_list": "10452"
+  },
+  "reference": {
+    "transaction": "TXN_10452",
+    "order": "ORD_10452"
+  },
+  "receipt": {
+    "email": false,
+    "sms": true
+  },
+  "customer": {
+    "first_name": "عميل نقدي",
+    "phone": {
+      "country_code": "965",
+      "number": "55000000"
+    }
+  },
+  "source": {
+    "id": "src_all"
+  },
+  "post": {
+    "url": "https://your-server-domain/api/integrations/webhook/tap"
+  },
+  "redirect": {
+    "url": "https://your-server-domain/api/integrations/redirect/tap"
+  }
+}</pre>
+                </li>
+            </ul>
+
+            <h3>8.2 خطة الربط المعتمدة مع بوابة MyFatoorah (<code>MyFatoorahProvider</code>) — تم فحص وتوثيق المرجع الرسمي ✅</h3>
+            <div class="alert info">
+                <strong>📘 مرجع التوثيق الرسمي الذي تم فحصه:</strong>
+                <code>https://docs.myfatoorah.com/docs/choose-your-payment-integration</code> (MyFatoorah API v2 — الكويت <code>KWD</code>).
+                <br/>تم حفظ الكتيب الفني المفصل لبوابة MyFatoorah في: <code>Plans/integration/myfatoorah_manual.html</code>.
+            </div>
+            <ul>
+                <li><strong>المعالجة المحاسبية (فقط بعد حفظ إعدادات البوابة في WPF):</strong> إنشاء حساب فرعي حركي باسم <code>MyFatoorah</code> تحت الأب <code>AccountID = 10</code> (الكود <code>11</code>).</li>
+                <li><strong>الروابط الأساسية حسب البيئة (Base URLs):</strong>
+                    <ul>
+                        <li><strong>بيئة الاختبار (Test / Sandbox — <code>IsLiveMode = 0</code>):</strong> <code>https://apitest.myfatoorah.com</code></li>
+                        <li><strong>بيئة الإنتاج الفعلي للكويت (Live Kuwait — <code>IsLiveMode = 1</code>):</strong> <code>https://api.myfatoorah.com</code> (مع دعم النطاق الإقليمي للكويت <code>https://api-kw.myfatoorah.com</code>)</li>
+                    </ul>
+                </li>
+                <li><strong>الترويسات المطلوبة (HTTP Headers):</strong>
+                    <ul>
+                        <li><code>Authorization: Bearer {API_Token_Key}</code> (يُحفظ المفتاح في عمود <code>SecretKey</code>).</li>
+                        <li><code>Content-Type: application/json</code> و <code>Accept: application/json</code></li>
+                    </ul>
+                </li>
+                <li><strong>خيارات وطرق التكامل المدعومة في <code>MyFatoorahProvider</code> (بناءً على <code>choose-your-payment-integration</code>):</strong>
+                    <ul>
+                        <li><strong>المسار الأول (الافتراضي الموصى به لروابط الفواتير والباركود 58/80/WPF) — Invoice Link (<code>POST /v2/SendPayment</code>):</strong>
+                            <ul>
+                                <li>ينشئ فاتورة MyFatoorah ويعيد كائناً يحتوي على <code>Data.InvoiceId</code> و <code>Data.InvoiceURL</code>.</li>
+                                <li>يدعم خيارات الإرسال المرنة عبر <code>NotificationOption</code>:
+                                    <br/>🔹 <code>"LNK"</code>: يولّد الرابط فقط ليقوم نظام Vegtablity بطباعته كـ QR Code على إيصالات <code>58mm</code> و <code>80mm</code> وفواتير <code>WPF</code> وإرساله عبر WhatsApp.
+                                    <br/>🔹 <code>"SMS"</code> أو <code>"ALL"</code>: تقوم بوابة MyFatoorah بإرسال رسالة SMS نصية مباشرة إلى جوال العميل الكويتي (<code>+965</code>) تحتوي على رابط الدفع (عند تفعيل <code>EnableGatewayNativeSms = 1</code>).</li>
+                                <li>يدعم تحديد تاريخ ووقت انتهاء صلاحية الرابط بدقة عبر حقل <code>ExpiryDate</code>، وإرفاق بنود الفاتورة في <code>InvoiceItems</code>.</li>
+                            </ul>
+                        </li>
+                        <li><strong>المسار الثاني (التوجيه المباشر لصفحة KNET أو وسيلة محددة + جلب العمولة الحقيقية) — Gateway Redirect (<code>POST /v2/InitiatePayment</code> + <code>POST /v2/ExecutePayment</code>):</strong>
+                            <ul>
+                                <li>يستعلم أولاً عبر <code>InitiatePayment</code> عن وسائل الدفع المفعلة في حساب التاجر وعمولة كل وسيلة (<code>ServiceCharge</code>)، أو ينفذ الدفع مباشرة عبر <code>ExecutePayment</code> بتمرير <code>PaymentMethodId = 1</code> (بوابة <strong>KNET</strong> في الكويت) ليفتح للعميل صفحة البنك مباشرة عبر <code>Data.PaymentURL</code>!</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                <li><strong>نقاط النهاية (Endpoints) المعتمدة في كلاس <code>MyFatoorahProvider</code>:</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>العملية في النظام</th>
+                                <th>Method &amp; Endpoint في MyFatoorah API v2</th>
+                                <th>الحقول المستخرجة والمعالجة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>اختبار الاتصال + جلب الوسائل والعمولات</strong></td>
+                                <td><code>POST /v2/InitiatePayment</code></td>
+                                <td>يرسل <code>{"InvoiceAmount": 1.000, "CurrencyIso": "KWD"}</code>؛ إذا عاد <code>IsSuccess: true</code> تتحدث حالة البوابة إلى <code>SandboxVerified</code> أو <code>LiveVerified</code>، ويعرض الوسائل المفعلة (KNET, Apple Pay, Visa) وعمولاتها.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إنشاء رابط دفع فاتورة (منفرد أو مجمع)</strong></td>
+                                <td><code>POST /v2/SendPayment</code></td>
+                                <td>يُحفظ <code>Data.InvoiceId</code> في <code>ExternalChargeID</code>، و<code>Data.InvoiceURL</code> في <code>PaymentUrl</code> (لإرساله ولطباعة الباركود على <code>58mm</code> / <code>80mm</code> / <code>WPF</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إنشاء رابط دفع مباشر لوسيلة محددة (مثل KNET)</strong></td>
+                                <td><code>POST /v2/ExecutePayment</code></td>
+                                <td>يرسل <code>PaymentMethodId</code> (مثلاً <code>1</code> لـ KNET) و<code>InvoiceValue</code>، ويحفظ <code>Data.InvoiceId</code> و <code>Data.PaymentURL</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>فحص حالة التحصيل (Check Status / Polling)</strong></td>
+                                <td><code>POST /v2/GetPaymentStatus</code></td>
+                                <td>يرسل <code>{"Key": "{InvoiceId}", "KeyType": "InvoiceId"}</code>، ويقرأ <code>Data.InvoiceStatus</code> (<code>Paid</code>, <code>Pending</code>, <code>Canceled</code>, <code>Expired</code>) ومصفوفة <code>Data.InvoiceTransactions</code> لاستخراج رقم مرجع KNET (<code>ReferenceId</code> و <code>PaymentId</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إرجاع المبلغ للعميل (Refund API — كلي أو جزئي) ↩️</strong></td>
+                                <td><code>POST /v2/MakeRefund</code></td>
+                                <td>يرسل <code>KeyType: "InvoiceId"</code> (أو <code>"PaymentId"</code>)، <code>Key</code>، <code>Amount</code> (3 خانات عشرية لـ KWD)، <code>RefundChargeOnCustomer</code>، <code>ServiceChargeOnCustomer</code>، و<code>Comment</code>، ويعيد <code>Data.RefundId</code> و<code>Data.RefundReference</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>متابعة حالة الاسترجاع البنكي</strong></td>
+                                <td><code>POST /v2/GetRefundStatus</code></td>
+                                <td>يرسل <code>{"Key": "{InvoiceId}", "KeyType": "InvoiceId"}</code> للتحقق من اكتمال إرجاع المبلغ لحساب العميل (<code>RefundStatusResult</code>).</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+                <li><strong>🌟 إمكانيات إضافية تم استخلاصها من كتيب MyFatoorah الرسمي للاستفادة منها في الدفع وإرجاع المبالغ:</strong>
+                    <ol>
+                        <li><strong>إرجاع المبالغ الكلي والجزئي مع التحكم في من يتحمل رسوم الاسترجاع والعمولة (<code>MakeRefund</code> + <code>RefundChargeOnCustomer</code> &amp; <code>ServiceChargeOnCustomer</code>):</strong>
+                            <ul>
+                                <li>تدعم بوابة MyFatoorah عبر <code>POST /v2/MakeRefund</code> إرجاع المبلغ كلياً أو جزئياً للعميل، وتنفرد بميزة محاسبية مهمة جداً عبر خيارين إضافيين في إعدادات البوابة:
+                                    <br/>🔹 <code>RefundChargeOnCustomer (true/false)</code>: تحديد ما إذا كان العميل يتحمل رسوم عملية الاسترجاع أم تتحملها المنشأة.
+                                    <br/>🔹 <code>ServiceChargeOnCustomer (true/false)</code>: تحديد ما إذا كان يتم خصم عمولة الدفع الأصلية من المبلغ المسترجع للعميل أم يُعاد المبلغ كاملاً للعميل.</li>
+                                <li>يرتبط ظهور زر <strong>"↩️ إرجاع المبلغ (Refund)"</strong> في صفحة الروابط الجديدة (في كل من WPF و Flutter) بتفعيل خيار <code>EnableGatewayRefunds</code> في إعدادات بوابة MyFatoorah، ويختفي الزر تلقائياً فور تعطيله.</li>
+                            </ul>
+                        </li>
+                        <li><strong>معرفة العمولة الفعلية لكل وسيلة دفع مسبقاً عبر <code>InitiatePayment</code>:</strong>
+                            <ul>
+                                <li>تعيد دالة <code>POST /v2/InitiatePayment</code> حقل <code>ServiceCharge</code> و <code>TotalAmount</code> لكل وسيلة دفع مفعلة (KNET، Apple Pay، Visa/MasterCard)، مما يسمح للنظام باحتساب عمولة البوابة الفعلية بدقة تامة دون تقدير يدوي إن رغب المحاسب!</li>
+                            </ul>
+                        </li>
+                        <li><strong>ربط الفاتورة والوردية عبر الحقول المخصصة <code>CustomerReference</code> و <code>UserDefinedField</code>:</strong>
+                            <ul>
+                                <li>إرسال رقم الفاتورة في <code>CustomerReference</code> (مثل <code>INV_10452</code>) وبيانات الفواتير المجمعة أو رقم الوردية في <code>UserDefinedField</code> (يدعم حتى 500 حرف) بحيث تظهر في كشوف حسابات بوابة MyFatoorah وتعود كما هي في إشعار الـ Webhook وفي نتيجة <code>GetPaymentStatus</code>.</li>
+                            </ul>
+                        </li>
+                        <li><strong>تحديد لغة صفحة الدفع (<code>Language: "ar" | "en"</code>) وتاريخ انتهاء الرابط تلقائياً (<code>ExpiryDate</code>):</strong>
+                            <ul>
+                                <li>يتم ضبط <code>Language: "ar"</code> لفتح صفحة الدفع باللغة العربية للعميل، مع تمرير <code>ExpiryDate</code> محسوباً تلقائياً من إعداد <code>LinkExpiryMinutes</code> الخاص بالبوابة.</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </li>
+                <li><strong>جدول مطابقة الحالات (Status Mapping) بين MyFatoorah ونظام Vegtablity:</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الحالة في MyFatoorah (<code>InvoiceStatus</code> / <code>TransactionStatus</code>)</th>
+                                <th>الحالة المقابلة في <code>[Sales].[InvoicePaymentLinks]</code></th>
+                                <th>الإجراء التلقائي في النظام</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>Pending</code> / <code>InProgress</code> / <code>Authorized</code></td>
+                                <td><span class="status-pill st-pending">Pending</span></td>
+                                <td>يبقى الرابط قيد الانتظار مع إمكانية إعادة الإرسال أو الفحص عبر <code>GetPaymentStatus</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Paid</code> (مع <code>TransactionStatus = "Succss"</code>)</td>
+                                <td><span class="status-pill st-paid">Paid</span></td>
+                                <td>ينطلق الـ Trigger <code>trg_InvoicePaymentLinks_OnStatusPaid</code> لتسديد الفاتورة (أو الفواتير المجمعة) وترحيل قيد التحصيل لحساب <code>MyFatoorah</code> وقيد العمولة.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Refunded</code> (من <code>MakeRefund</code> أو Webhook <code>RefundStatusChanged</code>)</td>
+                                <td><span class="status-pill st-failed">Refunded / PartiallyRefunded</span></td>
+                                <td>ينطلق الـ Trigger <code>trg_InvoicePaymentLinks_OnStatusRefunded</code> لتسجيل المبلغ المسترجع وتوليد القيد المحاسبي العكسي تلقائياً خصماً من حساب <code>MyFatoorah</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Expired</code></td>
+                                <td><span class="status-pill st-expired">Expired</span></td>
+                                <td>تحديث الحالة إلى منتهي الصلاحية وإتاحة زر توليد وإرسال رابط جديد في شاشة متابعة الطلبات.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Failed</code> / <code>Error</code></td>
+                                <td><span class="status-pill st-failed">Failed</span></td>
+                                <td>تسجيل سبب فشل العملية من <code>Error</code> / <code>TransactionStatus</code> وإتاحة إعادة الإرسال للعميل.</td>
+                            </tr>
+                            <tr>
+                                <td><code>Canceled</code></td>
+                                <td><span class="status-pill st-expired">Cancelled</span></td>
+                                <td>ملغى ولن يقبل الدفع.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+                <li><strong>التحقق الأمني من إشعارات Webhook v2 (<code>MyFatoorah-Signature</code> HMAC-SHA256 Validation):</strong>
+                    <ul>
+                        <li>ترسل MyFatoorah إشعارات Webhook v2 الفورية (حدث تغير حالة الدفع <code>EventType = 1: TransactionsStatusChanged</code>، وحدث تغير حالة الاسترجاع <code>EventType = 2: RefundStatusChanged</code>) إلى مسارنا <code>POST /api/integrations/webhook/myfatoorah</code>.</li>
+                        <li>يتم التحقق الأمني من ترويسة <code>MyFatoorah-Signature</code> عبر ترتيب حقول البيانات أبجدياً وتشفيرها بـ <code>HMAC-SHA256</code> باستخدام <code>WebhookSecretKey</code> (بترميز Base64) لضمان موثوقية الإشعار 100% قبل تعديل حالة الرابط.</li>
+                    </ul>
+                </li>
+                <li><strong>نموذج Payload المعتمد لإنشاء رابط دفع MyFatoorah في الكويت (<code>POST /v2/SendPayment</code>):</strong>
+                    <pre>
+{
+  "NotificationOption": "LNK",
+  "InvoiceValue": 14.750,
+  "CustomerName": "عميل نقدي",
+  "DisplayCurrencyIso": "KWD",
+  "MobileCountryCode": "+965",
+  "CustomerMobile": "55000000",
+  "Language": "ar",
+  "ExpiryDate": "2026-11-09T21:30:00",
+  "CustomerReference": "INV_10452",
+  "UserDefinedField": "InvID=10452;IsConsolidated=0;InvoiceList=10452",
+  "CallBackUrl": "https://your-server-domain/api/integrations/redirect/myfatoorah/success",
+  "ErrorUrl": "https://your-server-domain/api/integrations/redirect/myfatoorah/error"
+}</pre>
+                </li>
+            </ul>
+
+            <h3>8.3 خطة الربط المعتمدة مع بوابة UPayments الكويت (<code>UPaymentsProvider</code>) — تم فحص وتوثيق المرجع الرسمي ✅</h3>
+            <div class="alert">
+                <strong>📘 مرجع التوثيق الرسمي الذي تم فحصه:</strong>
+                <code>https://developers.upayments.com/reference/overview</code> (UPayments API v1 — الكويت <code>KWD</code>).
+                <br/>تم حفظ الكتيب الفني المفصل لبوابة UPayments في: <code>Plans/integration/upayments_manual.html</code>.
+            </div>
+            <ul>
+                <li><strong>المعالجة المحاسبية (فقط بعد حفظ إعدادات البوابة في WPF):</strong> إنشاء حساب فرعي حركي باسم <code>UPayments</code> تحت الأب <code>AccountID = 10</code> (الكود <code>11</code>).</li>
+                <li><strong>الروابط الأساسية حسب البيئة (Base URLs):</strong>
+                    <ul>
+                        <li><strong>بيئة الاختبار (Sandbox — <code>IsLiveMode = 0</code>):</strong> <code>https://sandboxapi.upayments.com/api/v1</code></li>
+                        <li><strong>بيئة الإنتاج الفعلي للكويت (Production — <code>IsLiveMode = 1</code>):</strong> <code>https://uapi.upayments.com/api/v1</code></li>
+                    </ul>
+                </li>
+                <li><strong>الترويسات المطلوبة (HTTP Headers):</strong>
+                    <ul>
+                        <li><code>Authorization: Bearer {API_Key}</code> (يُحفظ المفتاح في عمود <code>SecretKey</code>).</li>
+                        <li><code>Accept: application/json</code> و <code>Content-Type: application/json</code></li>
+                    </ul>
+                </li>
+                <li><strong>توجيه وسائل الدفع في الكويت عبر حقل <code>paymentGateway.src</code> في <code>UPaymentsProvider</code>:</strong>
+                    <ul>
+                        <li><code>"create-invoice"</code> (الافتراضي الموصى به لروابط الفواتير والباركود 58/80/WPF): ينشئ رابط فاتورة شامل يتيح للعميل اختيار وسيلة الدفع (KNET، Apple Pay، البطاقات الائتمانية) مع إمكانية إرسال الرابط عبر SMS/WhatsApp.</li>
+                        <li><code>"knet"</code>: يوجّه العميل مباشرةً إلى صفحة الدفع البنكي <strong>KNET</strong> الكويتية دون المرور بصفحة وسيطة.</li>
+                        <li><code>"cc"</code> / <code>"apple-pay"</code> / <code>"samsung-pay"</code> / <code>"google-pay"</code>: التوجيه المباشر للبطاقات أو المحافظ الرقمية.</li>
+                    </ul>
+                </li>
+                <li><strong>نقاط النهاية (Endpoints) المعتمدة في كلاس <code>UPaymentsProvider</code>:</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>العملية في النظام</th>
+                                <th>Method &amp; Endpoint في UPayments API v1</th>
+                                <th>الحقول المستخرجة والمعالجة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>إنشاء عملية دفع / رابط فاتورة (منفرد أو مجمع)</strong></td>
+                                <td><code>POST /api/v1/charge</code></td>
+                                <td>يرسل <code>products</code>، <code>order</code> (بالعملة <code>KWD</code>)، <code>customer</code>، و<code>paymentGateway.src</code>، ويحفظ <code>data.link</code> في <code>PaymentUrl</code> (لإرساله ولطباعة الباركود على <code>58mm</code> / <code>80mm</code> / <code>WPF</code>)، ويحفظ <code>data.track_id</code> / <code>data.session_id</code> في <code>ExternalChargeID</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>فحص حالة التحصيل (برقم <code>track_id</code> أو <code>session_id</code>)</strong></td>
+                                <td><code>GET /api/v1/get-payment-status/{track_id}</code><br/>أو <code>GET /api/v1/get-payment-status?session_id={session_id}</code></td>
+                                <td>يفحص <code>data.transaction.result</code> (<code>CAPTURED</code>, <code>NOT CAPTURED</code>, <code>CANCELED</code>, <code>PENDING</code>) ويستخرج رقم مرجع KNET (<code>payment_id</code> و <code>tran_id</code>) ومعرف الطلب <code>order_id</code> اللازم للاسترجاع.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إرجاع المبلغ للعميل (Create Refund — كلي أو جزئي) ↩️</strong></td>
+                                <td><code>POST /api/v1/create-refund</code></td>
+                                <td>يرسل <code>order_id</code>، <code>total_price</code> (المبلغ المراد إرجاعه بـ 3 خانات عشرية لـ KWD)، بيانات العميل، و<code>reference_id</code>، ويعيد <code>refund_order_id</code> و <code>refund_arn</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>فحص حالة طلب الاسترجاع</strong></td>
+                                <td><code>GET /api/v1/check-refund/{order_id}</code></td>
+                                <td>يتحقق من حالة عملية استرجاع المبلغ للعميل عبر <code>order_id</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>إلغاء طلب استرجاع معلق</strong></td>
+                                <td><code>POST /api/v1/delete-refund</code></td>
+                                <td>ميزة فريدة في UPayments تتيح إلغاء طلب استرجاع تم إرساله بالخطأ قبل تسويته النهائية عبر <code>order_id</code> و <code>refund_order_id</code>.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+                <li><strong>🌟 إمكانيات وضوابط فنية تم استخلاصها من كتيب UPayments الرسمي للاستفادة منها في الدفع وإرجاع المبالغ:</strong>
+                    <ol>
+                        <li><strong>الاستعلام المزدوج عن حالة الرابط عبر <code>track_id</code> أو <code>session_id</code>:</strong>
+                            <ul>
+                                <li>عند إنشاء رابط دفع عبر <code>POST /api/v1/charge</code>، قد لا يتولد <code>track_id</code> إلا بعد أن يفتح العميل الرابط، لكن UPayments تعيد <code>session_id</code> فورياً في استجابة الإنشاء؛ لذا يدعم كلاس <code>UPaymentsProvider</code> الاستعلام عن حالة الرابط باستخدام <code>?session_id=...</code> أو <code>/{track_id}</code> لضمان متابعة الحالة منذ اللحظة الأولى!</li>
+                            </ul>
+                        </li>
+                        <li><strong>مراعاة قيد معدل الطلبات (Rate Limit = 30 Requests / Minute):</strong>
+                            <ul>
+                                <li>ينص كتيب UPayments الرسمي على أن نقطة النهاية <code>get-payment-status</code> محددة بـ <strong>30 طلباً في الدقيقة</strong> كحد أقصى؛ لذا يعتمد نظامنا على إشعار Webhook الفوري (<code>notificationUrl</code>) كمسار أساسي، مع ضبط الفحص الدوري <code>PollIntervalSeconds = 30</code> ثانية وتطبيق <em>Exponential Backoff</em> لمنع حظر عنوان الـ IP.</li>
+                            </ul>
+                        </li>
+                        <li><strong>إرجاع المبالغ الكلي والجزئي + إمكانية إلغاء الاسترجاع المعلق (<code>create-refund</code> &amp; <code>check-refund</code> &amp; <code>delete-refund</code>):</strong>
+                            <ul>
+                                <li>تدعم UPayments إرجاع المبالغ الكلي أو الجزئي عبر <code>POST /api/v1/create-refund</code> وإرجاع رقم التتبع المصرفي <code>refund_arn</code>، بالإضافة لإمكانية إلغاء الاسترجاع عبر <code>POST /api/v1/delete-refund</code>.</li>
+                                <li>يرتبط ظهور زر <strong>"↩️ إرجاع المبلغ (Refund)"</strong> في صفحة الروابط الجديدة (في كل من WPF و Flutter) بتفعيل خيار <code>EnableGatewayRefunds</code> في إعدادات بوابة UPayments، ويختفي الزر تلقائياً فور تعطيله.</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </li>
+                <li><strong>جدول مطابقة الحالات (Status Mapping) بين UPayments ونظام Vegtablity:</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الحالة في UPayments (<code>result</code>)</th>
+                                <th>الحالة المقابلة في <code>[Sales].[InvoicePaymentLinks]</code></th>
+                                <th>الإجراء التلقائي في النظام</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>INITIATED</code> / <code>PENDING</code></td>
+                                <td><span class="status-pill st-pending">Pending</span></td>
+                                <td>يبقى الرابط قيد الانتظار مع إمكانية إعادة الإرسال أو الفحص عبر <code>track_id</code> / <code>session_id</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>CAPTURED</code> / <code>SUCCESS</code></td>
+                                <td><span class="status-pill st-paid">Paid</span></td>
+                                <td>ينطلق الـ Trigger <code>trg_InvoicePaymentLinks_OnStatusPaid</code> لتسديد الفاتورة (أو الفواتير المجمعة) وترحيل قيد التحصيل لحساب <code>UPayments</code> وقيد العمولة.</td>
+                            </tr>
+                            <tr>
+                                <td><code>REFUNDED</code> (من <code>create-refund</code> / <code>check-refund</code>)</td>
+                                <td><span class="status-pill st-failed">Refunded / PartiallyRefunded</span></td>
+                                <td>ينطلق الـ Trigger <code>trg_InvoicePaymentLinks_OnStatusRefunded</code> لتسجيل المبلغ المسترجع وتوليد القيد المحاسبي العكسي تلقائياً خصماً من حساب <code>UPayments</code>.</td>
+                            </tr>
+                            <tr>
+                                <td><code>EXPIRED</code></td>
+                                <td><span class="status-pill st-expired">Expired</span></td>
+                                <td>تحديث الحالة إلى منتهي الصلاحية وإتاحة زر توليد وإرسال رابط جديد في شاشة متابعة الطلبات.</td>
+                            </tr>
+                            <tr>
+                                <td><code>NOT CAPTURED</code> / <code>FAILED</code> / <code>ERROR</code></td>
+                                <td><span class="status-pill st-failed">Failed</span></td>
+                                <td>تسجيل سبب رفض الدفع في <code>LastStatusMessage</code> وإتاحة إعادة الإرسال للعميل.</td>
+                            </tr>
+                            <tr>
+                                <td><code>CANCELED</code> / <code>CANCELLED</code></td>
+                                <td><span class="status-pill st-expired">Cancelled</span></td>
+                                <td>ملغى ولن يقبل الدفع.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+                <li><strong>نموذج Payload المعتمد لإنشاء رابط دفع UPayments في الكويت (<code>POST /api/v1/charge</code>):</strong>
+                    <pre>
+{
+  "products": [
+    {
+      "name": "Invoice #10452",
+      "description": "Vegtablity POS Sales Invoice #10452",
+      "price": 14.750,
+      "quantity": 1
+    }
+  ],
+  "order": {
+    "id": "10452",
+    "reference": "INV_10452",
+    "description": "Invoice #10452 - Vegtablity POS",
+    "currency": "KWD",
+    "amount": 14.750
+  },
+  "language": "ar",
+  "reference": {
+    "id": "INV_10452"
+  },
+  "customer": {
+    "uniqueId": "CUST_1",
+    "name": "عميل نقدي",
+    "email": "customer@vegtablity.com",
+    "mobile": "+96555000000"
+  },
+  "paymentGateway": {
+    "src": "create-invoice"
+  },
+  "returnUrl": "https://your-server-domain/api/integrations/redirect/upayments/success",
+  "cancelUrl": "https://your-server-domain/api/integrations/redirect/upayments/cancel",
+  "notificationUrl": "https://your-server-domain/api/integrations/webhook/upayments"
+}</pre>
+                </li>
+            </ul>
+
+            <h3>8.4 خطة الربط المعتمدة مع بوابة البيع Talabat كعميل مبيعات (<code>TalabatPlatformProvider</code>) — تم فحص وتوثيق المرجع الرسمي ✅</h3>
+            <div class="alert warn">
+                <strong>📙 مرجع التوثيق الرسمي الذي تم فحصه:</strong>
+                <code>https://integration-middleware.stg.restaurant-partners.com/apidocs/pos-plugin-api#tag/Plugin-Endpoints/operation/Dispatch%20Order</code> (Delivery Hero / Talabat POS Plugin &amp; Middleware API v2).
+                <br/>تم حفظ الكتيب الفني المفصل لمنصة Talabat في: <code>Plans/integration/talabat_manual.html</code>.
+            </div>
+            <ul>
+                <li><strong>المعالجة المحاسبية والتشغيلية لـ Talabat (تتم فقط بعد نجاح اختبار الاتصال وحفظ الإعدادات في WPF):</strong>
+                    <ul>
+                        <li>عند تفعيل <code>EnableTalabatIntegration = 1</code> في جدول <code>[Settings].[CompanySettings]</code>: <strong>لا يتم إضافة أي عميل أو حساب ولا تظهر شاشات طلبات Talabat</strong>، بل تظهر فقط الصلاحية في <code>UserPermissions</code> وبطاقة إعدادات Talabat في شاشة إعدادات WPF.</li>
+                        <li><strong>شرط الحفظ والإنشاء (لا يتم الحفظ إلا بعد نجاح اختبار الاتصال <code>POST /v2/login</code>):</strong>
+                            <ol>
+                                <li>عند نجاح اختبار الاتصال وحفظ بيانات Talabat في شاشة إعدادات WPF (<code>IsConfigured = 1</code> و <code>ConnectionStatus IN ('SandboxVerified', 'LiveVerified')</code>)، يقوم الـ Trigger <code>[Settings].[trg_IntegrationProviders_OnConfigSaved]</code> بإدراج <strong><code>Talabat</code></strong> كعميل مبيعات (<code>PartnerType = 'Customer'</code>) في جدول <code>[Sales].[Partners]</code> ليظهر في صفحة العملاء.</li>
+                                <li>ينطلق تلقائياً الـ Trigger الموجود في النظام <strong><code>[Sales].[trg_Partner_AfterInsert]</code></strong> ليفتح حساباً محاسبياً للعميل <code>Talabat</code> في شجرة الحسابات <code>[Accounting].[ChartOfAccounts]</code> تحت حساب العملاء (الكود <code>12</code>) ويربط <code>PartnerID</code> و <code>AccountID</code> بصف البوابة!</li>
+                                <li><strong>في تطبيق سطح المكتب <code>WPF</code>:</strong> تظهر تلقائياً صفحة جديدة <strong>"🛵 طلبات Talabat" (<code>TalabatOrdersPage.xaml</code>) أسفل قسم المبيعات</strong> في القائمة الجانبية، وتعمل بما يتناسب بالكامل مع APIs الخاصة بـ Talabat.</li>
+                                <li><strong>في تطبيق الكاشير <code>Flutter App</code>:</strong> يظهر تلقائياً في شاشة إعدادات التطبيق (<code>settings_screen.dart</code>) خيار خاص بـ Talabat (<code>show_talabat_orders</code>) يتيح للمستخدم تحديد ما إذا كان يريد <strong>إضافة صفحة طلبات Talabat (<code>talabat_orders_screen.dart</code>) إلى هذا الجهاز أو إخفاءها</strong> (لاستقبال الطلب وتنفيذه وطباعته وكل ما يخص Talabat)!</li>
+                            </ol>
+                        </li>
+                        <li><strong>تسجيل فواتير المبيعات:</strong> تُسجل طلبات Talabat كفواتير مبيعات مرتبطة بالعميل <code>Talabat</code> (<code>PartnerID</code>)، مما يتيح متابعة مديونية المنصة، تسديداتها البنكية، وعمولاتها عبر جميع تقارير العملاء وكشوف الحساب وتقرير أعمار الديون الحالي دون أي تعارض!</li>
+                    </ul>
+                </li>
+                <li><strong>روابط البيئة والمصادقة (Middleware Base URLs &amp; JWT Auth):</strong>
+                    <ul>
+                        <li><strong>بيئة الاختبار (Staging — <code>IsLiveMode = 0</code>):</strong> <code>https://integration-middleware.stg.restaurant-partners.com</code></li>
+                        <li><strong>بيئة الإنتاج الفعلي للشرق الأوسط والكويت (Live — <code>IsLiveMode = 1</code>):</strong> <code>https://integration-middleware.me.restaurant-partners.com</code></li>
+                        <li><strong>المصادقة واختبار الاتصال (<code>POST /v2/login</code>):</strong> يرسل <code>grant_type=client_credentials&amp;username={PublicKey}&amp;password={SecretKey}</code> بصيغة <code>application/x-www-form-urlencoded</code> ويعيد رمز <code>access_token</code> (JWT Bearer Token). يُستخدم هذا المسار أيضاً لزر <strong>"اختبار عملية الربط (Test Connection)"</strong> في شاشة إعدادات WPF.</li>
+                    </ul>
+                </li>
+                <li><strong>نقاط النهاية ثنائية الاتجاه (Plugin Endpoints &amp; Middleware Endpoints) في <code>TalabatPlatformProvider</code>:</strong>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الاتجاه</th>
+                                <th>العملية</th>
+                                <th>Method &amp; Endpoint</th>
+                                <th>المعالجة في نظام Vegtablity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>وارد من Talabat (Plugin API)</strong></td>
+                                <td><strong>Dispatch Order (استقبال طلب جديد) ⭐</strong></td>
+                                <td><code>POST /api/integrations/talabat/order/{remoteId}</code></td>
+                                <td>تستقبل خدمة FastAPI الطلب من Talabat، وتتحقق من الأصناف عبر مطابقة <code>products[].remoteCode</code> مع الباركود <code>Barcode</code> / <code>ProductID</code> في نظامنا، وتنشئ فاتورة مبيعات للعميل <code>Talabat</code>، وترد فوراً خلال ثوانٍ بـ <code>HTTP 202 Accepted</code> مع <code>{"remoteResponse": {"remoteOrderId": "INV_10452"}}</code> لمنع تكرار الإرسال.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>وارد من Talabat (Plugin API)</strong></td>
+                                <td><strong>Cancel Order / Status Update</strong></td>
+                                <td><code>PUT /api/integrations/talabat/remoteId/{remoteId}/remoteOrder/{remoteOrderId}/posOrderStatus</code></td>
+                                <td>استقبال إشعار إلغاء الطلب من Talabat (<code>ORDER_CANCELLED</code>) لتحديث حالة الطلب وإشعار الكاشير صوتياً وعكس الفاتورة إن لزم.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>صادر إلى Talabat (Middleware API)</strong></td>
+                                <td><strong>Accept / Reject Order (قبول أو رفض الطلب)</strong></td>
+                                <td><code>POST /v2/chains/{chainCode}/orders/{orderToken}/status</code><br/>أو <code>PUT /v2/orders/{orderToken}</code></td>
+                                <td>إرسال <code>status: "order_accepted"</code> (تلقائياً فور وصول الطلب أو عند ضغط الكاشير على زر قبول)، أو إرسال <code>status: "order_rejected"</code> مع سبب الرفض (<code>ITEM_UNAVAILABLE</code> / <code>STORE_CLOSED</code>).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>صادر إلى Talabat (Middleware API)</strong></td>
+                                <td><strong>Order Prepared (إشعار جاهزية الطلب للسائق)</strong></td>
+                                <td><code>POST /v2/orders/{orderToken}/preparation-completed</code></td>
+                                <td>زر سريع في شاشة الكاشير/الطلبات لإشعار سائق Talabat بأن الطلب جاهز للاستلام من الكاونتر.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>صادر إلى Talabat (Middleware API)</strong></td>
+                                <td><strong>Vendor Availability (فتح/إغلاق الفرع على طلبات)</strong></td>
+                                <td><code>PUT /v2/chains/{chainCode}/remoteVendors/{remoteId}/availability</code></td>
+                                <td>إتاحة تغيير حالة المتجر على تطبيق Talabat (<code>AVAILABLE</code> متاح، <code>BUSY</code> مشغول، <code>CLOSED</code> مغلق) مباشرة من النظام.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </li>
+                <li><strong>🌟 إمكانيات إضافية تم استخلاصها من كتيب Talabat POS Plugin API للاستفادة منها في المبيعات والمحاسبة:</strong>
+                    <ol>
+                        <li><strong>ميزة القبول التلقائي أو اليدوي للطلبات (Auto-Accept vs. Cashier Confirmation):</strong>
+                            <ul>
+                                <li>بما أن معيار Talabat يفرض الرد على طلب <code>Dispatch Order</code> خلال ثوانٍ قليلة بـ <code>202 Accepted</code> ثم إرسال قرار القبول النهائي <code>order_accepted</code> بشكل غير متزامن (Asynchronous)، يوفر نظامنا خياراً في إعدادات بوابة Talabat:
+                                    <br/>🔹 <strong>قبول تلقائي فوري:</strong> بمجرد وصول الطلب يُسجل كفاتورة مبيعات للعميل <code>Talabat</code> ويُرسل <code>order_accepted</code> ويُطبع إيصال التجهيز تلقائياً.
+                                    <br/>🔹 <strong>قبول بموافقة الكاشير:</strong> يظهر تنبيه صوتي ومرئي للكاشير على شاشة POS مع تفاصيل الطلب لقبوله أو رفضه بضغطة زر.</li>
+                            </ul>
+                        </li>
+                        <li><strong>مطابقة الأصناف الذكية عبر الباركود (<code>products[].remoteCode</code> = <code>Barcode</code>) وطباعة الرقم القصير (<code>shortCode</code>):</strong>
+                            <ul>
+                                <li>يرسل طلب Talabat لكل صنف حقل <code>remoteCode</code> الذي يطابق باركود الصنف المعتمد في <code>[Inventory].[Products]</code>، مع طباعة رقم طلب Talabat القصير <strong><code>shortCode</code> (مثل <code>#42</code>)</strong> بخط كبير وواضح أعلى إيصال الكاشير الحراري (<code>58mm</code> و <code>80mm</code>) وفاتورة <code>WPF</code> ليسهل تسليمه لسائق التوصيل!</li>
+                            </ul>
+                        </li>
+                        <li><strong>التمييز المحاسبي الآلي بين طلبات الدفع الإلكتروني (<code>payment.type = "paid"</code>) والدفع عند الاستلام (<code>"cod"</code>):</strong>
+                            <ul>
+                                <li>تُسجل الفاتورة الآجلة على حساب العميل <strong><code>Talabat</code></strong> مع توثيق نوع دفع الطلب في ملاحظات الفاتورة والقيد، وإذا كانت الإضافة رقم 3 (<code>EnableAutoCommissionEntry = 1</code>) مفعلة لبوابة Talabat، يقوم النظام تلقائياً باحتساب عمولة طلبات المتفق عليها وترحيلها إلى حساب مصروف عمولة طلبات (<code>CommissionExpenseAccountID</code>) وتخفيض صافي المديونية المستحقة على العميل <code>Talabat</code>!</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </li>
+            </ul>
+
+            <h3>8.5 خطة الربط مع بوابة البيع Jahez كعميل مبيعات (<code>JahezPlatformProvider</code>)</h3>
+            <ul>
+                <li><strong>المعالجة المحاسبية كعميل مبيعات (فقط بعد حفظ إعداداتها في WPF):</strong>
+                    <ul>
+                        <li>تُضاف البوابة كعميل (<code>PartnerType = 'Customer'</code>) في جدول <code>[Sales].[Partners]</code> باسم <code>Jahez</code> فتظهر في صفحة العملاء.</li>
+                        <li>يقوم الـ Trigger الموجود في النظام <code>[Sales].[trg_Partner_AfterInsert]</code> بفتح حسابها تلقائياً في شجرة الحسابات تحت حساب العملاء (الكود <code>12</code>) وربط <code>AccountID</code> و <code>PartnerID</code>.</li>
+                    </ul>
+                </li>
+                <li><strong>الفواتير والطلبات:</strong> تُسجل طلبات ومبيعات المنصة كفواتير مبيعات مرتبطة بالعميل <code>Jahez</code> (<code>PartnerID</code>)، وبانتظار إرسال كتيب/رابط Jahez لتفصيل نقاط النهاية الخاصة بها بنفس الطريقة.</li>
+            </ul>
+        </section>
+
+        <!-- القسم 9 -->
+        <section id="sec-9" class="card">
+            <h2><span class="sec-num">القسم 9</span> سيناريو حفظ الفاتورة، طباعة الباركود، ومتابعة تحصيل اللينك (منفرد ومجمع)</h2>
+            <p>يغطي هذا القسم الدورة الكاملة بدءاً من حفظ الفاتورة في <code>WPF</code> أو <code>Flutter</code>، ومروراً بطباعة الباركود/QR على إيصالات <code>58mm</code> و <code>80mm</code> و <code>WPF</code>، وحتى متابعة سداد العميل أو إعادة إرسال الرابط منفرداً أو مجمعاً:</p>
+
+            <h3>أولاً: لحظة حفظ الفاتورة وإنشاء الرابط وطباعة الباركود</h3>
+            <div class="flow-step">
+                <div class="step-circle">1</div>
+                <div>
+                    <strong>حفظ الفاتورة وإرجاع رقم الفاتورة الفعلي (<code>InvID</code>):</strong>
+                    يحفظ الكاشير الفاتورة في WPF أو Flutter، ويستلم النظام رقم الفاتورة الفعلي <code>InvID</code> من قاعدة البيانات.
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-circle">2</div>
+                <div>
+                    <strong>فحص حساب الدفع المختار:</strong>
+                    يتحقق النظام مما إذا كان حساب الدفع المختار يطابق <code>AccountID</code> لإحدى بوابات الدفع المفعلة والمحفوظة الإعدادات (<code>IsConfigured = 1</code>) في جدول <code>[Settings].[IntegrationProviders]</code>.
+                </div>
+            </div>
+
+            <div class="flow-step">
+                <div class="step-circle">3</div>
+                <div>
+                    <strong>رسالة سؤال الكاشير + طباعة الباركود/QR على الفاتورة (58mm / 80mm / WPF):</strong>
+                    تظهر نافذة الحوار الذكية للكاشير لإرسال الرابط عبر WhatsApp/SMS، وإذا كان خيار طباعة الباركود مفعلاً للبوابة يتم تضمين رمز الباركود/QR الخاص برابط الدفع أسفل الفاتورة المطبوعة (مقاس <code>58mm</code> و <code>80mm</code> في POS، وفاتورة <code>WPF</code>).
+                </div>
+            </div>
+
+            <div class="dialog-preview">
+                <h4>💳 إرسال رابط دفع إلكتروني — فاتورة رقم #10452</h4>
+                <p style="color:#94a3b8; font-size:0.95rem;">
+                    البوابة المختارة: <strong style="color:#6ee7b7;">MyFatoorah</strong> — المبلغ المطلوب: <strong style="color:#fcd34d;">14.750 د.ك</strong><br/>
+                    هل تريد إنشاء وإرسال لينك بالفاتورة للعميل؟
+                </p>
+                <div style="margin: 12px auto; max-width: 360px; background:#1e293b; padding:8px 12px; border-radius:8px; border:1px solid #334155; text-align:right; font-size:0.9rem;">
+                    📱 رقم هاتف العميل: <strong>96555XXXXXX+</strong> (يُجلب تلقائياً من بيانات العميل أو يُكتب فوراً)
+                </div>
+                <div class="dialog-btns">
+                    <span class="btn-mock btn-green">✅ نعم، إنشاء وإرسال اللينك</span>
+                    <span class="btn-mock btn-blue">🖨️ طباعة الفاتورة مع باركود الدفع (58/80/WPF)</span>
+                    <span class="btn-mock btn-gray">❌ لا، تخطي</span>
+                </div>
+            </div>
+
+            <h3>ثانياً: متابعة التحصيل وإعادة الإرسال (لكل فاتورة على حدة أو مجمعة)</h3>
+            <div class="grid-2">
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>1. إعادة إرسال اللينك (منفرد أو مجمع) 🔄</span>
+                        <span class="tag">في شاشة متابعة طلبات البوابة</span>
+                    </div>
+                    <ul>
+                        <li><strong>إعادة إرسال لفاتورة مفردة:</strong> لأي فاتورة حالتها <code>Pending</code> أو <code>Expired</code> أو <code>Failed</code>، يمكن بضغطة زر إعادة إرسال نفس الرابط (إن كان ساري الصلاحية) أو توليد رابط جديد وإرساله للعميل.</li>
+                        <li><strong>إرسال مجمع لعدة فواتير غير محصلة (Bulk / Consolidated):</strong>
+                            <ul>
+                                <li>تحديد عدة فواتير غير محصلة من الجدول وإعادة إرسال روابطها دفعة واحدة.</li>
+                                <li>أو اختيار عدة فواتير غير محصلة لنفس العميل والضغط على <strong>"🔗 إنشاء وإرسال لينك مجمع"</strong>، فيولّد النظام رابط دفع واحداً بإجمالي المبالغ المتبقية ويربطه بالفواتير المختارة في جدول <code>[Sales].[InvoicePaymentLinkAllocations]</code>!</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>2. التحديث التلقائي للحالة والتسوية المحاسبية ⚡</span>
+                        <span class="tag">Webhook + Polling + Trigger</span>
+                    </div>
+                    <ul>
+                        <li>بمجرد سداد العميل للرابط (سواء كان رابط فاتورة مفردة أو رابطاً مجمعاً لعدة فواتير)، تتحول الحالة إلى <span class="status-pill st-paid">Paid (تم التحصيل ✅)</span>.</li>
+                        <li>يقوم الـ Trigger <code>[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]</code> تلقائياً بتسديد الفاتورة (أو جميع الفواتير المشمولة في الرابط المجمع عبر جدول <code>InvoicePaymentLinkAllocations</code>) وتوليد قيد التحصيل وقيد عمولة البوابة الآلي!</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- القسم 10 -->
+        <section id="sec-10" class="card" style="border-color: var(--accent);">
+            <h2><span class="sec-num" style="background: var(--accent);">القسم 10</span> ⚙️ الإضافات الـ 7 القابلة للتفعيل والتخصيص لكل بوابة على حدة (بما فيها خيارات طباعة الباركود المتعددة وصلاحية إرجاع المبالغ Refunds)</h2>
+            <p>يتم عرض هذه الإضافات الـ 7 داخل بطاقة إعدادات كل بوابة في شاشة إعدادات البوابات في WPF، بحيث يمكن تفعيل أو إلغاء تفعيل كل إضافة وتخصيص تفاصيلها لكل بوابة بشكل مستقل:</p>
+
+            <div class="grid-2">
+                <!-- الإضافة 1: الباركود/QR على 58 و 80 و WPF (يمكن اختيار أي منهم أو كلهم) -->
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>1. طباعة الباركود / QR للدفع على الفواتير (POS 58/80 &amp; WPF) 🧾</span>
+                        <span class="tag">اختيار متعدد: أي منهم أو كلهم</span>
+                    </div>
+                    <p><strong>طريقة التحكم والتخصيص في إعدادات البوابة:</strong></p>
+                    <ul>
+                        <li>مفتاح التفعيل الرئيسي: <code>EnablePrintQrOnInvoice (On / Off)</code>.</li>
+                        <li><strong>خيارات تحديد الطباعة (CheckBoxes مستقلة — يمكن اختيار أي خيار منها منفرداً، أو أي خيارين، أو اختيارها كلها معاً في نفس الوقت):</strong>
+                            <ul>
+                                <li>☑️ <strong>طباعة الباركود على إيصال POS مقاس <code>80mm</code> (<code>PrintQrOnPos80mm</code>):</strong> يطبع الباركود/QR Code الخاص برابط الدفع أسفل إيصال الكاشير الحراري 80mm في كل من Flutter و WPF.</li>
+                                <li>☑️ <strong>طباعة الباركود على إيصال POS مقاس <code>58mm</code> (<code>PrintQrOnPos58mm</code>):</strong> يطبع الباركود/QR Code بأبعاد متجاوبة ومضبوطة خصيصاً لعرض ورق 58mm الحراري في كل من Flutter و WPF دون قص أو تشويه.</li>
+                                <li>☑️ <strong>طباعة الباركود على فواتير المبيعات في <code>WPF</code> (<code>PrintQrOnWpfInvoice</code>):</strong> يطبع الباركود/QR Code على فواتير المبيعات العادية/A4 المطبوعة من شاشة فواتير WPF.</li>
+                            </ul>
+                        </li>
+                        <li><em>مثال مرونة الاختيار:</em> يمكن تفعيل طباعة الـ QR على طابعة <code>80mm</code> + فواتير <code>WPF</code> معاً، أو تفعيل الثلاثة معاً (<code>58mm</code> + <code>80mm</code> + <code>WPF</code>)، أو الاكتفاء بواحدة فقط حسب رغبة المنشأة لكل بوابة.</li>
+                    </ul>
+                </div>
+
+                <!-- الإضافة 2 -->
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>2. الإرسال المباشر لرابط الدفع عبر WhatsApp + إشعار SMS البوابة 📱</span>
+                        <span class="tag">تفعيل + تخصيص القالب</span>
+                    </div>
+                    <p><strong>طريقة التحكم والتخصيص عند التفعيل:</strong></p>
+                    <ul>
+                        <li>مفتاح التفعيل: <code>EnableWhatsAppSend (On / Off)</code>.</li>
+                        <li><strong>تفاصيل التخصيص (تظهر عند التفعيل فقط):</strong>
+                            <ul>
+                                <li>اختيار وضع الإرسال: <code>فتح محادثة واتساب مباشر مجاني</code> أو <code>الربط عبر WhatsApp API</code>.</li>
+                                <li>تفعيل <strong>إشعار وإيصال SMS المجاني من البوابة (<code>EnableGatewaySmsReceipt = 1</code>)</strong> (حيث تدعم Tap إرسال رابط الدفع وإيصال الدفع عبر SMS تلقائياً عبر <code>receipt.sms: true</code>).</li>
+                                <li>تخصيص نص الرسالة التلقائية (<code>WhatsAppMessageTemplate</code>) مع دعم المتغيرات: <code>{CompanyName}</code>، <code>{InvID}</code>، <code>{Amount}</code>، <code>{PaymentUrl}</code>.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- الإضافة 3 -->
+                <div class="provider-box amber">
+                    <div class="provider-title">
+                        <span>3. المعالجة المحاسبية الآلية لعمولة البوابة 🏦</span>
+                        <span class="tag">تفعيل + اختيار الحسابات والنسبة</span>
+                    </div>
+                    <p><strong>طريقة التحكم والتخصيص عند التفعيل:</strong></p>
+                    <ul>
+                        <li>مفتاح التفعيل: <code>EnableAutoCommissionEntry (On / Off)</code>.</li>
+                        <li><strong>تفاصيل التخصيص (تظهر عند التفعيل فقط):</strong>
+                            <ul>
+                                <li>اختيار <strong>حساب مصروف العمولة (<code>CommissionExpenseAccountID</code>)</strong> من شجرة الحسابات (<code>SearchableDropdown</code>).</li>
+                                <li>اختيار <strong>حساب التسوية / الخصم (<code>CommissionSettlementAccountID</code>)</strong> من شجرة الحسابات (أو الخصم المباشر من حساب البوابة).</li>
+                                <li>إدخال <strong>نسبة العمولة <code>%</code> (<code>CommissionPercent</code>)</strong> و<strong>الرسم الثابت للعملية (<code>CommissionFixedFee</code>)</strong>.</li>
+                                <li>تحديد توقيت ترحيل قيد العمولة: <code>فور تحصيل اللينك (OnLinkPaid)</code> أو <code>عند إغلاق الوردية (OnShiftClose)</code>.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- الإضافة 4 -->
+                <div class="provider-box purple">
+                    <div class="provider-title">
+                        <span>4. متابعة تحصيل الرابط وإعادة الإرسال الآلي 🔄</span>
+                        <span class="tag">تفعيل + تخصيص الصلاحية والفحص</span>
+                    </div>
+                    <p><strong>طريقة التحكم والتخصيص عند التفعيل:</strong></p>
+                    <ul>
+                        <li>مفتاح التفعيل: <code>EnableLinkStatusTracking (On / Off)</code>.</li>
+                        <li><strong>تفاصيل التخصيص (تظهر عند التفعيل فقط):</strong>
+                            <ul>
+                                <li>تحديد <strong>مدة صلاحية الرابط بالدقائق (<code>LinkExpiryMinutes</code>)</strong> (مثلاً 60 دقيقة أو 24 ساعة) قبل تحويل حالته تلقائياً إلى <code>Expired</code>.</li>
+                                <li>تفعيل الفحص التلقائي الدوري للروابط المعلقة (<code>AutoPollPendingLinks</code>) وتحديد الفاصل الزمني بالثواني (<code>PollIntervalSeconds</code>).</li>
+                                <li>خيار الترحيل المحاسبي التلقائي لسند/قيد التحصيل فور تغير الحالة إلى <code>Paid</code>.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- الإضافة 5 -->
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>5. دعم الدفع المقسم والروابط المجمعة (Split &amp; Consolidated Links) 💳</span>
+                        <span class="tag">تفعيل + خيارات التجزئة والتجميع</span>
+                    </div>
+                    <p><strong>طريقة التحكم والتخصيص عند التفعيل:</strong></p>
+                    <ul>
+                        <li>مفتاح التفعيل: <code>EnableSplitPaymentLink (On / Off)</code>.</li>
+                        <li><strong>تفاصيل التخصيص (تظهر عند التفعيل فقط):</strong>
+                            <ul>
+                                <li>تحديد <strong>الحد الأدنى للمبلغ المسموح بإنشاء رابط له (<code>MinSplitLinkAmount</code>)</strong> بالدينار الكويتي (مثلاً <code>0.100 د.ك</code>).</li>
+                                <li>خيار السماح بإصدار أكثر من رابط دفع مستقل على نفس الفاتورة (<code>AllowMultipleLinksPerInvoice</code>).</li>
+                                <li>خيار السماح بدمج عدة فواتير غير محصلة للعميل في رابط دفع موحد مجمع (<code>AllowConsolidatedInvoicesLink</code>).</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- الإضافة 6 -->
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>6. تنبيهات وإشعارات التحصيل الفورية للكاشير 🔔</span>
+                        <span class="tag">تفعيل + خيارات التنبيه</span>
+                    </div>
+                    <p><strong>طريقة التحكم والتخصيص عند التفعيل:</strong></p>
+                    <ul>
+                        <li>مفتاح التفعيل: <code>EnableInstantPaymentAlert (On / Off)</code>.</li>
+                        <li><strong>تفاصيل التخصيص (تظهر عند التفعيل فقط):</strong>
+                            <ul>
+                                <li>تفعيل/إيقاف التنبيه الصوتي والمرئي (<code>PlaySoundOnPaymentReceived</code>) على شاشة الكاشير عند تحول حالة الرابط إلى <code>Paid</code>.</li>
+                                <li>تفعيل/إيقاف الطباعة التلقائية لإيصال تأكيد التحصيل الإلكتروني (<code>AutoPrintPaymentConfirmation</code>) فور إتمام العميل للدفع.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- الإضافة 7: صلاحية إرجاع المبالغ الإلكترونية (Refunds API) وزر إرجاع المبلغ الديناميكي -->
+                <div class="provider-box amber" style="grid-column: 1 / -1;">
+                    <div class="provider-title">
+                        <span>7. صلاحية إرجاع المبالغ الإلكترونية للعميل (Gateway Refunds API) وزر الاسترجاع الديناميكي ↩️</span>
+                        <span class="tag">تفعيل/تعطيل + إظهار/إخفاء زر إرجاع المبلغ</span>
+                    </div>
+                    <p><strong>طريقة التحكم والتخصيص في إعدادات البوابة (مستفادة من كتيبي Tap Payments <code>POST /v2/refunds</code> و MyFatoorah <code>POST /v2/MakeRefund</code>):</strong></p>
+                    <ul>
+                        <li>مفتاح التفعيل والصلاحية الرئيسي في إعدادات البوابة: <code>EnableGatewayRefunds (On / Off)</code>.</li>
+                        <li><strong>قاعدة الظهور والإخفاء التلقائي لزر إرجاع المبلغ في صفحة الروابط الجديدة (WPF &amp; Flutter):</strong>
+                            <ul>
+                                <li>🟢 <strong>عند التفعيل (<code>EnableGatewayRefunds = 1</code>):</strong> يظهر زر <strong>"↩️ إرجاع المبلغ (Refund)"</strong> أمام المعاملات المحصلة (<code>Paid</code>) في شاشة متابعة روابط الدفع (في كل من WPF و Flutter).</li>
+                                <li>🔴 <strong>عند التعطيل (<code>EnableGatewayRefunds = 0</code>):</strong> يختفي زر <strong>"↩️ إرجاع المبلغ (Refund)"</strong> تماماً (<code>Visibility.Collapsed</code> في WPF و <code>if (provider.enableGatewayRefunds)</code> في Flutter) ولا يمكن لأي مستخدم تنفيذ عملية استرجاع عبر هذه البوابة.</li>
+                            </ul>
+                        </li>
+                        <li><strong>تفاصيل التخصيص الإضافية (تظهر عند تفعيل <code>EnableGatewayRefunds</code> فقط):</strong>
+                            <ul>
+                                <li>☑️ <strong>السماح بالاسترجاع الجزئي (<code>AllowPartialRefunds</code>):</strong> يسمح بإرجاع جزء من المبلغ المدفوع (أقل من <code>Amount</code> الأصلي وحتى <code> Amount - RefundedAmount</code>) أو حصر الاسترجاع بكامل المبلغ فقط.</li>
+                                <li>☑️ <strong>الترحيل المحاسبي العكسي الآلي عند الاسترجاع (<code>AutoPostRefundJournalEntry</code>):</strong> يقوم تلقائياً عند نجاح استرجاع المبلغ من البوابة بتوليد قيد عكسي في <code>[Accounting].[JournalEntries]</code> يخصم المبلغ المسترجع من حساب البوابة (تحت الأب <code>AccountID = 10</code>) ويعكس التسوية على حساب العميل/الفاتورة.</li>
+                                <li>☑️ <strong>تحميل العميل رسوم عملية الاسترجاع (<code>RefundChargeOnCustomer</code> — خاص بـ MyFatoorah):</strong> تحديد ما إذا كان العميل يتحمل رسوم الإرجاع البنكي أم المنشأة.</li>
+                                <li>☑️ <strong>خصم عمولة الدفع الأصلية من المبلغ المسترجع (<code>ServiceChargeOnCustomer</code> — خاص بـ MyFatoorah):</strong> تحديد ما إذا كان يتم استقطاع عمولة البوابة الأصلية عند إرجاع المبلغ للعميل أم إرجاع كامل المبلغ.</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- القسم 11: هندسة الـ Triggers لتخفيف الضغط -->
+        <section id="sec-11" class="card" style="border-color: var(--purple);">
+            <h2><span class="sec-num" style="background: var(--purple); color: #fff;">القسم 11</span> ⚡ مراجعة وهندسة الـ Triggers لتخفيف الضغط عن النظام والتكامل مع <code>trg_Partner_AfterInsert</code></h2>
+            <p>تم تصميم منظومة الـ Triggers بحيث تحترم قاعدة <strong>"عدم إنشاء الحسابات أو العملاء إلا بعد حفظ إعدادات البوابة في WPF"</strong>، وتستفيد بالكامل من الـ Trigger الموجود حالياً في قاعدة البيانات <strong><code>[Sales].[trg_Partner_AfterInsert]</code></strong> دون أي تعديل عليه:</p>
+
+            <div class="alert">
+                <strong>💡 كيف تتكامل الـ Triggers الجديدة مع الـ Trigger الحالي <code>[Sales].[trg_Partner_AfterInsert]</code>؟</strong>
+                <ul>
+                    <li>يوجد حالياً في قاعدة البيانات الـ Trigger <code>[Sales].[trg_Partner_AfterInsert]</code> على جدول <code>[Sales].[Partners]</code>، والذي يقوم تلقائياً عند إدراج أي عميل جديد بإنشاء حسابه في <code>[Accounting].[ChartOfAccounts]</code> تحت الحساب الأب للعملاء (الكود <code>12</code>) وتحديث <code>Partners.AccountID</code>.</li>
+                    <li>لذلك، عند حفظ إعدادات أي بوابة بيع (مثل <code>Talabat</code> أو <code>Jahez</code>) في شاشة إعدادات WPF، يقوم نظامنا فقط بإدراج صف العميل في <code>[Sales].[Partners]</code>، فيتكفل <code>[Sales].[trg_Partner_AfterInsert]</code> الموجود حالياً بإنشاء حسابه في شجرة الحسابات تلقائياً وبنفس التسلسل المحاسبي المعتمد لديكم!</li>
+                </ul>
+            </div>
+
+            <h3>الـ Triggers المعتمدة في الخطة لتخفيف الضغط:</h3>
+
+            <div class="grid-2">
+                <!-- Trigger 1 -->
+                <div class="provider-box purple">
+                    <div class="provider-title">
+                        <span>1. <code>[Settings].[trg_CompanySettings_SyncIntegrations]</code></span>
+                        <span class="tag">تفعيل الصلاحية والظهور فقط</span>
+                    </div>
+                    <p><strong>الجدول:</strong> <code>[Settings].[CompanySettings]</code></p>
+                    <ul>
+                        <li><strong>شرط الخروج الفوري:</strong> يعمل فقط إذا تغير أحد أعمدة تفعيل البوابات الخمسة (<code>IF NOT (UPDATE(EnableTapIntegration) ...) RETURN</code>).</li>
+                        <li><strong>المهام التلقائية (دون المساس بشجرة الحسابات أو العملاء):</strong>
+                            <ol>
+                                <li>مزامنة عمود <code>IsEnabled</code> في جدول <code>[Settings].[IntegrationProviders]</code> لتظهر البوابة في صفحة إعدادات WPF.</li>
+                                <li>إظهار أو إخفاء صلاحية <code>IntegrationSettings</code> تلقائياً في جدول الصلاحيات <code>UserPermissions</code>.</li>
+                                <li><strong>ملاحظة:</strong> لا يقوم بإنشاء أي حساب أو عميل في هذه المرحلة إطلاقاً.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Trigger 2 -->
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>2. <code>[Settings].[trg_IntegrationProviders_OnConfigSaved]</code></span>
+                        <span class="tag">فقط بعد نجاح الاتصال وحفظ الإعدادات ⭐</span>
+                    </div>
+                    <p><strong>الجدول:</strong> <code>[Settings].[IntegrationProviders]</code></p>
+                    <ul>
+                        <li><strong>شرط التشغيل الصارم:</strong> يعمل فقط عند حفظ إعدادات البوابة في شاشة إعدادات WPF بشرط <strong>نجاح اختبار الاتصال (<code>i.ConnectionStatus IN ('SandboxVerified', 'LiveVerified')</code>)</strong> وتحول <code>i.IsConfigured = 1</code> بينما <code>i.AccountID IS NULL</code>.</li>
+                        <li><strong>المهام التلقائية بعد نجاح الاتصال وحفظ إعدادات البوابة:</strong>
+                            <ol>
+                                <li>إذا كانت <strong>بوابة دفع (<code>PAYMENT_GATEWAY</code>)</strong>: ينشئ حسابها الحركي بالاسم الإنجليزي تحت الأب <code>AccountID = 10</code> ويربط <code>AccountID</code>.</li>
+                                <li>إذا كانت <strong>بوابة بيع (<code>DELIVERY_PLATFORM</code> مثل Talabat / Jahez)</strong>: يدرجها كعميل في <code>[Sales].[Partners]</code>، فينطلق الـ Trigger الحالي <strong><code>[Sales].[trg_Partner_AfterInsert]</code></strong> ليضيفها تلقائياً إلى شجرة الحسابات، ثم يربط <code>PartnerID</code> و <code>AccountID</code> بصف البوابة وتظهر صفحات تشغيلها في WPF و Flutter!</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Trigger 3 -->
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>3. <code>[Sales].[trg_InvoicePaymentLinks_OnInsert_Init]</code></span>
+                        <span class="tag">AFTER INSERT</span>
+                    </div>
+                    <p><strong>الجدول:</strong> <code>[Sales].[InvoicePaymentLinks]</code></p>
+                    <ul>
+                        <li><strong>المهام التلقائية فور إدراج الرابط:</strong>
+                            <ol>
+                                <li>حساب تاريخ انتهاء صلاحية الرابط تلقائياً <code>ExpiresAt = DATEADD(MINUTE, p.LinkExpiryMinutes, GETDATE())</code> من إعدادات البوابة.</li>
+                                <li>حساب قيمة العمولة المتوقعة <code>CommissionAmount</code> والصافي <code>NetCreditedAmount</code> وتعبئة <code>AccountID</code> تلقائياً من صف البوابة.</li>
+                                <li>إذا كان خيار <code>AllowMultipleLinksPerInvoice = 0</code> للبوابة، يقوم تلقائياً بتحويل أي رابط <code>Pending</code> سابق لنفس الفاتورة <code>InvID</code> إلى <code>Cancelled</code>.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Trigger 4 -->
+                <div class="provider-box amber">
+                    <div class="provider-title">
+                        <span>4. <code>[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]</code></span>
+                        <span class="tag">AFTER UPDATE (تسوية المنفرد والمجمع ⭐)</span>
+                    </div>
+                    <p><strong>الجدول:</strong> <code>[Sales].[InvoicePaymentLinks]</code></p>
+                    <ul>
+                        <li><strong>شرط الحماية الصارم:</strong> <code>IF NOT UPDATE(PaymentStatus) RETURN;</code> ويعمل حصراً للصفوف التي تحولت من <code>d.PaymentStatus &lt;&gt; 'Paid'</code> إلى <code>i.PaymentStatus = 'Paid'</code> بشرط <code>i.JournalEntryNo IS NULL</code>.</li>
+                        <li><strong>المهام التلقائية داخل الترانزاكشن:</strong>
+                            <ol>
+                                <li>تحديث المبلغ المسدد والمتبقي للفاتورة المفردة (أو لجميع الفواتير المربوطة في <code>[Sales].[InvoicePaymentLinkAllocations]</code> إذا كان الرابط مجمعاً <code>IsConsolidated = 1</code>).</li>
+                                <li>توليد قيد التحصيل في <code>[Accounting].[JournalEntries]</code> في حساب البوابة (تحت الأب <code>AccountID = 10</code>).</li>
+                                <li>إذا كانت الإضافة رقم 3 (<code>EnableAutoCommissionEntry = 1</code>) مفعلة بتوقيت <code>OnLinkPaid</code>: يولّد قيد عمولة البوابة آلياً إلى حساب <code>CommissionExpenseAccountID</code> ويحفظ رقم القيد في <code>JournalEntryNo</code>.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Trigger 5: معالجة إرجاع المبالغ الكلي أو الجزئي -->
+                <div class="provider-box purple">
+                    <div class="provider-title">
+                        <span>5. <code>[Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]</code></span>
+                        <span class="tag">AFTER UPDATE (القيد العكسي للاسترجاع ↩️)</span>
+                    </div>
+                    <p><strong>الجدول:</strong> <code>[Sales].[InvoicePaymentLinks]</code></p>
+                    <ul>
+                        <li><strong>شرط الحماية الصارم:</strong> <code>IF NOT UPDATE(RefundedAmount) RETURN;</code> ويعمل فقط عندما يزيد <code>i.RefundedAmount &gt; d.RefundedAmount</code> وتكون حالة الرابط <code>Refunded</code> أو <code>PartiallyRefunded</code>.</li>
+                        <li><strong>المهام التلقائية داخل الترانزاكشن:</strong>
+                            <ol>
+                                <li>حساب فرق المبلغ المسترجع الجديد <code>@DeltaRefund = i.RefundedAmount - ISNULL(d.RefundedAmount, 0)</code>.</li>
+                                <li>إذا كان خيار <code>AutoPostRefundJournalEntry = 1</code> مفعلاً للبوابة: ينشئ تلقائياً <strong>قيد استرجاع عكسي</strong> في <code>[Accounting].[JournalEntries]</code> (مدين: حساب العميل/المبيعات، دائن: حساب البوابة تحت الأب <code>AccountID = 10</code>) ويحفظ رقم القيد في <code>RefundJournalEntryNo</code>.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Trigger 6 -->
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>6. <code>[Sales].[trg_Shifts_OnClose_GatewayCommissions]</code></span>
+                        <span class="tag">AFTER UPDATE (تجميع العمولات)</span>
+                    </div>
+                    <p><strong>الجدول:</strong> <code>[Sales].[Shifts]</code></p>
+                    <ul>
+                        <li><strong>شرط الحماية:</strong> <code>IF NOT UPDATE(Status) RETURN;</code> ويعمل فقط عند تحول حالة الوردية من <code>'Open'</code> إلى <code>'Closed'</code>.</li>
+                        <li><strong>المهام التلقائية عند إغلاق الوردية:</strong>
+                            <ol>
+                                <li>يبحث عن البوابات المفعلة التي تم ضبط توقيت عمولتها على <code>CommissionPostingTrigger = 'OnShiftClose'</code>.</li>
+                                <li>يجمع إجمالي عمولات الروابط المحصلة (<code>Paid</code>) خلال هذه الوردية لكل بوابة، وينشئ <strong>قيد عمولة مجمع واحد فقط لكل بوابة</strong> في نهاية الوردية دون لمس <code>sp_Shift_Close</code>.</li>
+                            </ol>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- القسم 12 -->
+        <section id="sec-12" class="card">
+            <h2><span class="sec-num">القسم 12</span> الفهرس المرجعي للإجراءات المخزنة (SPs) والـ Triggers والـ Classes التي سيتم توثيقها في <code>Pos.md</code></h2>
+            <p>عند البدء في التنفيذ بوابةً ببوابة، سيتم أرشفة كل خطوة مع شرح مبسط لكل <code>Trigger</code> و <code>Stored Procedure</code> و <code>Function</code> و <code>Sub</code> في ملف <code>Plans/Pos.md</code> وفق الجدول المرجعي التالي:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>الطبقة / النوع</th>
+                        <th>اسم الـ Trigger / SP / Class / Function</th>
+                        <th>الشرح المبسط للوظيفة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SQL Trigger (حالي) ✅</strong></td>
+                        <td><code>[Sales].[trg_Partner_AfterInsert]</code></td>
+                        <td>الـ Trigger الموجود حالياً في قاعدة البيانات؛ يتولى تلقائياً إنشاء الحساب المحاسبي لبوابات البيع (<code>Talabat</code>, <code>Jahez</code>) تحت حساب العملاء (الكود <code>12</code>) فور إضافتها لجدول <code>[Sales].[Partners]</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Trigger ⚡</strong></td>
+                        <td><code>[Settings].[trg_CompanySettings_SyncIntegrations]</code></td>
+                        <td>يعمل عند تعديل أعمدة تفعيل البوابات في <code>CompanySettings</code> لمزامنة ظهور البوابة في شاشة إعدادات WPF وإظهار صلاحية <code>IntegrationSettings</code> في <code>UserPermissions</code> فقط (دون إنشاء حسابات أو عملاء).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Trigger ⚡</strong></td>
+                        <td><code>[Settings].[trg_IntegrationProviders_OnConfigSaved]</code></td>
+                        <td>يعمل <strong>فقط بعد حفظ إعدادات البوابة في صفحة إعدادات WPF</strong> (<code>IsConfigured = 1</code>) لإنشاء حساب بوابة الدفع تحت الأب <code>AccountID = 10</code>، أو إضافة بوابة البيع كعميل في <code>[Sales].[Partners]</code> ليتم إضافتها تلقائياً لشجرة الحسابات عبر <code>trg_Partner_AfterInsert</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Trigger ⚡</strong></td>
+                        <td><code>[Sales].[trg_InvoicePaymentLinks_OnInsert_Init]</code></td>
+                        <td>يعمل تلقائياً عند إدراج رابط جديد لحساب تاريخ الانتهاء <code>ExpiresAt</code>، واحتساب العمولة المتوقعة <code>CommissionAmount</code>، وإلغاء الروابط المعلقة السابقة لنفس الفاتورة إذا كان تعدد الروابط غير مفعل.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Trigger ⚡</strong></td>
+                        <td><code>[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]</code></td>
+                        <td>يعمل تلقائياً وفورياً عند تحول حالة الرابط إلى <code>Paid</code> لتحديث سداد الفاتورة المفردة أو الفواتير المجمعة (<code>InvoicePaymentLinkAllocations</code>) وتوليد قيد التحصيل وقيد عمولة البوابة.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Trigger ⚡</strong></td>
+                        <td><code>[Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]</code></td>
+                        <td>يعمل تلقائياً عند تنفيذ إرجاع كلي أو جزئي للمبلغ (<code>Refunded</code> / <code>PartiallyRefunded</code>) لتوليد القيد المحاسبي العكسي في <code>[Accounting].[JournalEntries]</code> خصماً من حساب البوابة.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL Trigger ⚡</strong></td>
+                        <td><code>[Sales].[trg_Shifts_OnClose_GatewayCommissions]</code></td>
+                        <td>يعمل تلقائياً عند إغلاق الوردية لتجميع عمولات البوابات المضبوطة على خيار <code>OnShiftClose</code> في قيد محاسبي موحد لكل بوابة دون الحاجة لتعديل إجراء <code>sp_Shift_Close</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL SP</strong></td>
+                        <td><code>[Settings].[sp_Integration_SaveProviderConfig]</code></td>
+                        <td>حفظ مفاتيح الربط وإعدادات الإضافات الـ 7 <strong>بشرط نجاح اختبار الاتصال أولاً (<code>ConnectionStatus IN ('SandboxVerified', 'LiveVerified')</code>)</strong> لكل بوابة على حدة؛ وعند نجاحه يفعّل <code>IsConfigured = 1</code> لإطلاق إنشاء الحساب/العميل وإظهار شاشات البوابة.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL SP</strong></td>
+                        <td><code>[Sales].[sp_InvoicePaymentLink_Save]</code></td>
+                        <td>حفظ رابط الدفع المولد (سواء لفاتورة مفردة أو رابط مجمع لعدة فواتير غير محصلة عبر <code>InvoicePaymentLinkAllocations</code>).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL SP</strong></td>
+                        <td><code>[Sales].[sp_InvoicePaymentLink_RecordRefund]</code></td>
+                        <td>تسجيل عملية إرجاع المبلغ (كلياً أو جزئياً) بعد نجاح استدعاء <code>POST /v2/refunds</code>، وحفظ <code>ExternalRefundID</code> و <code>RefundReason</code> وتحديث الحالة لإطلاق <code>trg_InvoicePaymentLinks_OnStatusRefunded</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SQL SP</strong></td>
+                        <td><code>[Sales].[sp_InvoicePaymentLink_GetFiltered]</code></td>
+                        <td>جلب وبحث وفلترة طلبات وفواتير بوابات الدفع (حسب البوابة، الحالة، العميل، التاريخ، ورقم الفاتورة) لشاشات المتابعة في <code>WPF</code> و <code>Flutter</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>WPF (VB.NET)</strong></td>
+                        <td><code>PaymentGatewayInvoicesPage</code> &amp; <code>PaymentGatewayInvoicesViewModel</code></td>
+                        <td>شاشة متابعة طلبات وفواتير بوابات الدفع في WPF، مع الفلترة والبحث وإعادة إرسال اللينك، وزر <strong>"↩️ إرجاع المبلغ"</strong> الذي يظهر عند تفعيل <code>EnableGatewayRefunds</code> ويختفي عند تعطيله.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>WPF (VB.NET — Sales)</strong></td>
+                        <td><code>TalabatOrdersPage</code> &amp; <code>TalabatOrdersViewModel</code></td>
+                        <td>صفحة خاصة بـ <code>Talabat</code> تُضاف <strong>أسفل قسم المبيعات في WPF</strong> وتظهر فقط بعد نجاح اختبار الاتصال وحفظ البيانات؛ تعمل بما يتناسب مع APIs طلبات (استقبال الطلب <code>Dispatch Order</code>، قبوله/رفضه، تنفيذه كفاتورة مبيعات، طباعته، إشعار جاهزيته للسائق، وتغيير حالة المتجر).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Flutter (Dart)</strong></td>
+                        <td><code>payment_gateway_invoices_screen.dart</code> &amp; <code>show_payment_gateway_invoices</code></td>
+                        <td>شاشة متابعة الفواتير المحصلة وغير المحصلة عبر بوابات الدفع في Flutter، مع نفس زر إرجاع المبلغ الديناميكي وخيار إظهار/إخفاء الشاشة لكل جهاز في <code>settings_screen.dart</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Flutter (Dart — Talabat)</strong></td>
+                        <td><code>talabat_orders_screen.dart</code> &amp; <code>show_talabat_orders</code></td>
+                        <td>خيار يظهر في إعدادات <code>Flutter App</code> (فقط بعد تفعيل Talabat ونجاح اختبار الاتصال وحفظ بياناته) لإضافة أو إخفاء شاشة طلبات Talabat على الجهاز (لاستقبال الطلب وتنفيذه وطباعته وكل ما يخص Talabat).</td>
+                    </tr>
+                    <tr>
+                        <td><strong>WPF &amp; Flutter Printing</strong></td>
+                        <td><code>PaymentQrGeneratorService</code> &amp; <code>invoice_print_designer.dart</code></td>
+                        <td>طباعة باركود / QR Code رابط الدفع على أي من فواتير POS الحرارية (<code>58mm</code> أو <code>80mm</code>) أو فواتير المبيعات في <code>WPF</code> أو جميعها معاً حسب خيارات البوابة.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert info" style="margin-top: 22px;">
+                <strong>🗣️ جاهزون للانتقال إلى البوابة التالية:</strong>
+                تم تحديث الخطة بقاعدة <strong>عدم الحفظ إلا بعد نجاح اختبار الاتصال لكل بوابة على حدة</strong>، وإضافة شاشة طلبات <strong>Talabat</strong> أسفل قسم المبيعات في WPF وفي إعدادات وشاشات Flutter App. بانتظار رفع كتيب أو رابط البوابة التالية!
+            </div>
+        </section>
+    </main>
+</div>
+
+</body>
+</html>

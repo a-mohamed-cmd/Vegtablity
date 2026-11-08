@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>كتيب الربط الفني لبوابة MyFatoorah (API v2) — Vegtablity ERP & POS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            line-height: 1.75;
+            padding: 32px;
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #38bdf8; margin-top: 22px; }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 22px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+        }
+        th, td {
+            border: 1px solid #334155;
+            padding: 10px 14px;
+            text-align: right;
+        }
+        th { background: #090d16; color: #7dd3fc; }
+        pre {
+            background: #090d16;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 16px;
+            direction: ltr;
+            text-align: left;
+            color: #bae6fd;
+            overflow-x: auto;
+        }
+        code {
+            background: rgba(15, 23, 42, 0.8);
+            color: #fcd34d;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📘 الكتيب المرجعي الفني لربط بوابة MyFatoorah (API v2 — الكويت KWD)</h1>
+    <p>تم إعداد هذا المرجع بناءً على فحص التوثيق الرسمي لبوابة MyFatoorah (<code>https://docs.myfatoorah.com/docs/choose-your-payment-integration</code>) لتنفيذه في كلاس <code>MyFatoorahProvider</code> ضمن منظومة Vegtablity.</p>
+
+    <div class="card">
+        <h2>1. روابط البيئة والمصادقة (Base URLs &amp; Authentication)</h2>
+        <ul>
+            <li><strong>بيئة الاختبار (Test / Sandbox — <code>IsLiveMode = 0</code>):</strong> <code>https://apitest.myfatoorah.com</code></li>
+            <li><strong>بيئة الإنتاج الفعلي للكويت (Live Kuwait — <code>IsLiveMode = 1</code>):</strong> <code>https://api.myfatoorah.com</code> (أو النطاق الإقليمي <code>https://api-kw.myfatoorah.com</code>)</li>
+            <li><strong>الترويسات الإلزامية (HTTP Headers):</strong>
+                <pre>Authorization: Bearer {API_Token_Key}
+Content-Type: application/json
+Accept: application/json</pre>
+            </li>
+            <li><strong>الحساب المحاسبي (يُنشأ فقط بعد حفظ إعدادات البوابة في WPF):</strong> حساب حركي باسم <code>MyFatoorah</code> تحت الحساب الأب <code>AccountID = 10</code> (الكود <code>11</code>).</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>2. خيارات وطرق التكامل في MyFatoorah API v2</h2>
+        <p>وفق دليل <code>choose-your-payment-integration</code>، يدعم كلاس <code>MyFatoorahProvider</code> طريقتين مرنتين لإصدار روابط الدفع:</p>
+        <ol>
+            <li><strong>طريقة الفاتورة الذكية (Invoice Link — <code>POST /v2/SendPayment</code>):</strong>
+                <ul>
+                    <li>تُنشئ رابط فاتورة شامل (<code>InvoiceURL</code>) ورقم مرجع (<code>InvoiceId</code>) يتيح للعميل اختيار وسيلة الدفع (KNET، Apple Pay، Visa/MasterCard).</li>
+                    <li>تدعم خاصية <code>NotificationOption</code>:
+                        <ul>
+                            <li><code>"LNK"</code>: إرجاع الرابط فقط لنظام Vegtablity لطباعته كـ QR Code على الفواتير (<code>58mm</code> / <code>80mm</code> / <code>WPF</code>) وإرساله عبر WhatsApp.</li>
+                            <li><code>"SMS"</code> أو <code>"ALL"</code>: قيام خوادم MyFatoorah بإرسال رسالة SMS مباشرة لهاتف العميل تحتوي على رابط الدفع بالإضافة لإرجاع الرابط للنظام.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li><strong>طريقة التوجيه المباشر لوسيلة دفع محددة (Direct Gateway Execution — <code>POST /v2/InitiatePayment</code> + <code>POST /v2/ExecutePayment</code>):</strong>
+                <ul>
+                    <li>تتيح تمرير <code>PaymentMethodId</code> (مثلاً <code>1</code> لبوابة <strong>KNET</strong> في الكويت) ليتم تحويل العميل مباشرة إلى شاشة الدفع البنكي KNET دون المرور بصفحة اختيار الوسيلة، مع معرفة عمولة كل وسيلة دفع مسبقاً (<code>ServiceCharge</code>).</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>3. جدول نقاط النهاية المعتمدة (MyFatoorah API v2 Endpoints)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>العملية</th>
+                    <th>Endpoint</th>
+                    <th>الوصف والحقول الأساسية</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>فحص الاتصال وجلب وسائل الدفع وعمولاتها</td>
+                    <td><code>POST /v2/InitiatePayment</code></td>
+                    <td>يرسل <code>{"InvoiceAmount": 1.000, "CurrencyIso": "KWD"}</code> ويعيد قائمة <code>PaymentMethods</code> شاملة <code>PaymentMethodId</code> و<code>ServiceCharge</code>. يُستخدم أيضاً لزر <strong>اختبار الاتصال (Test Connection)</strong>.</td>
+                </tr>
+                <tr>
+                    <td>إنشاء رابط دفع فاتورة (منفرد أو مجمع)</td>
+                    <td><code>POST /v2/SendPayment</code></td>
+                    <td>يعيد <code>Data.InvoiceId</code> و <code>Data.InvoiceURL</code> مع دعم <code>ExpiryDate</code> و <code>CustomerReference</code> و <code>UserDefinedField</code>.</td>
+                </tr>
+                <tr>
+                    <td>تنفيذ دفع مباشر على KNET / وسيلة محددة</td>
+                    <td><code>POST /v2/ExecutePayment</code></td>
+                    <td>يرسل <code>PaymentMethodId</code> و <code>InvoiceValue</code> ويعيد <code>Data.PaymentURL</code> و <code>Data.InvoiceId</code>.</td>
+                </tr>
+                <tr>
+                    <td>الاستعلام عن حالة الفاتورة / الدفع</td>
+                    <td><code>POST /v2/GetPaymentStatus</code></td>
+                    <td>يرسل <code>{"Key": "...", "KeyType": "InvoiceId" | "PaymentId"}</code> ويعيد <code>Data.InvoiceStatus</code> (<code>Paid</code>, <code>Pending</code>, <code>Canceled</code>) وتفاصيل <code>InvoiceTransactions</code>.</td>
+                </tr>
+                <tr>
+                    <td>إرجاع المبلغ للعميل (Refund — كلي أو جزئي) ↩️</td>
+                    <td><code>POST /v2/MakeRefund</code></td>
+                    <td>يرسل <code>KeyType</code>، <code>Key</code>، <code>Amount</code>، <code>Comment</code>، مع خياري <code>RefundChargeOnCustomer</code> و <code>ServiceChargeOnCustomer</code>.</td>
+                </tr>
+                <tr>
+                    <td>الاستعلام عن حالة الاسترجاع</td>
+                    <td><code>POST /v2/GetRefundStatus</code></td>
+                    <td>يرسل <code>{"Key": "...", "KeyType": "InvoiceId" | "RefundId"}</code> لمتابعة حالة الإرجاع البنكي للعميل.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>4. نموذج طلب إنشاء رابط الدفع (<code>POST /v2/SendPayment</code>)</h2>
+        <pre>{
+  "NotificationOption": "LNK",
+  "InvoiceValue": 14.750,
+  "CustomerName": "عميل نقدي",
+  "DisplayCurrencyIso": "KWD",
+  "MobileCountryCode": "+965",
+  "CustomerMobile": "55000000",
+  "Language": "ar",
+  "ExpiryDate": "2026-11-09T21:30:00",
+  "CustomerReference": "INV_10452",
+  "UserDefinedField": "InvID=10452;IsConsolidated=0;ShiftID=12",
+  "CallBackUrl": "https://your-server-domain/api/integrations/redirect/myfatoorah/success",
+  "ErrorUrl": "https://your-server-domain/api/integrations/redirect/myfatoorah/error"
+}</pre>
+    </div>
+
+    <div class="card">
+        <h2>5. نموذج طلب إرجاع المبلغ الكلي أو الجزئي (<code>POST /v2/MakeRefund</code>) ↩️</h2>
+        <pre>{
+  "KeyType": "InvoiceId",
+  "Key": "2948104",
+  "Amount": 14.750,
+  "RefundChargeOnCustomer": false,
+  "ServiceChargeOnCustomer": false,
+  "Comment": "إرجاع فاتورة رقم #10452 بناءً على طلب العميل"
+}</pre>
+    </div>
+
+    <div class="card">
+        <h2>6. التحقق من التوقيع الأمني للـ Webhook v2 (<code>MyFatoorah-Signature</code>)</h2>
+        <p>ترسل MyFatoorah إشعارات Webhook v2 (مثل <code>TransactionsStatusChanged</code> و <code>RefundStatusChanged</code>) إلى <code>POST /api/integrations/webhook/myfatoorah</code> مرفقة بترويسة <code>MyFatoorah-Signature</code> المشفرة بـ <code>HMAC-SHA256</code> باستخدام مفتاح <code>WebhookSecretKey</code> الخاص بالبوابة.</p>
+    </div>
+</body>
+</html>
+

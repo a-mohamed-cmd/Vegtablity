@@ -19,6 +19,9 @@ Namespace ViewModels
         Private ReadOnly _allProducts As New List(Of Product)()
         Private ReadOnly _allPartners As New List(Of Partner)()
 
+        ' ViewModel مستقل لتقرير أعمار الديون للعملاء من واقع القيود المحاسبية (MVVM)
+        Public ReadOnly Property JournalDebtAgingVM As New CustomerJournalDebtAgingViewModel()
+
         Public Sub New()
             ' Default Dates to current month
             SelectedStartDate = New DateTime(DateTime.Now.Year, DateTime.Now.Month, 1)
@@ -48,6 +51,12 @@ Namespace ViewModels
             SummaryMetrics = New ObservableCollection(Of ReportSummaryMetric)()
             CurrentReportHeaders = New ObservableCollection(Of ReportColumnHeader)()
             CurrentReportRows = New ObservableCollection(Of ReportRowItem)()
+
+            AddHandler JournalDebtAgingVM.FiltersChanged, Sub(s, e)
+                                                              If SelectedReportTab = 16 Then
+                                                                  SyncJournalDebtAgingSummaryBar()
+                                                              End If
+                                                          End Sub
 
             NextReportPageCommand = New RelayCommand(Sub() ReportPage += 1, Function() CanGoNextReport)
             PrevReportPageCommand = New RelayCommand(Sub() ReportPage -= 1, Function() CanGoPrevReport)
@@ -179,23 +188,41 @@ Namespace ViewModels
                 If SetProperty(_selectedReportTab, value) Then
                     _reportQuickSearch = ""
                     OnPropertyChanged(NameOf(ReportQuickSearch))
-                    If (prevTab = 15 OrElse value = 15) Then
+                    If (prevTab = 15 OrElse value = 15 OrElse prevTab = 16 OrElse value = 16) Then
                         SelectedPartnerID = 0
                         ApplyPartnerFilter("")
+                    End If
+                    If value = 16 AndAlso (SelectedEndDate.Date - SelectedStartDate.Date).TotalDays < 95 Then
+                        SelectedStartDate = DateTime.Now.Date.AddMonths(-6)
+                        SelectedStartDateText = SelectedStartDate.ToString("dd/MM/yyyy")
                     End If
                     OnPropertyChanged(NameOf(ShowPartnerFilter))
                     OnPropertyChanged(NameOf(PartnerFilterLabel))
                     OnPropertyChanged(NameOf(PartnerFilterWatermark))
                     OnPropertyChanged(NameOf(ShowWarehouseFilter))
                     OnPropertyChanged(NameOf(ShowProductFilter))
+                    OnPropertyChanged(NameOf(IsJournalDebtAgingTabSelected))
+                    OnPropertyChanged(NameOf(IsStandardReportTableVisible))
                     ExecuteLoadReport(Nothing) ' Auto load when switching tabs
                 End If
             End Set
         End Property
 
+        Public ReadOnly Property IsJournalDebtAgingTabSelected As Boolean
+            Get
+                Return SelectedReportTab = 16
+            End Get
+        End Property
+
+        Public ReadOnly Property IsStandardReportTableVisible As Boolean
+            Get
+                Return SelectedReportTab <> 16
+            End Get
+        End Property
+
         Public ReadOnly Property ShowPartnerFilter As Boolean
             Get
-                Return SelectedReportTab = 4 OrElse SelectedReportTab = 10 OrElse SelectedReportTab = 11 OrElse SelectedReportTab = 12 OrElse SelectedReportTab = 15
+                Return SelectedReportTab = 4 OrElse SelectedReportTab = 10 OrElse SelectedReportTab = 11 OrElse SelectedReportTab = 12 OrElse SelectedReportTab = 15 OrElse SelectedReportTab = 16
             End Get
         End Property
 
@@ -310,6 +337,11 @@ Namespace ViewModels
                                                           String.Equals(p.PartnerType, "Supplier", StringComparison.OrdinalIgnoreCase) OrElse
                                                           String.Equals(p.PartnerType, "Both", StringComparison.OrdinalIgnoreCase) OrElse
                                                           (p.PartnerType IsNot Nothing AndAlso p.PartnerType.Contains("مورد")))
+            ElseIf SelectedReportTab = 16 Then
+                baseList = _allPartners.Where(Function(p) p.PartnerID = 0 OrElse
+                                                          String.Equals(p.PartnerType, "Customer", StringComparison.OrdinalIgnoreCase) OrElse
+                                                          String.Equals(p.PartnerType, "Both", StringComparison.OrdinalIgnoreCase) OrElse
+                                                          (p.PartnerType IsNot Nothing AndAlso (p.PartnerType.Contains("عميل") OrElse p.PartnerType.Contains("زبون"))))
             End If
 
             If String.IsNullOrWhiteSpace(searchText) Then
@@ -663,6 +695,12 @@ Namespace ViewModels
         End Property
 
         Private Sub ApplyInReportQuickSearchAndPaginate()
+            If SelectedReportTab = 16 Then
+                JournalDebtAgingVM.ApplyQuickSearch(ReportQuickSearch)
+                SyncJournalDebtAgingSummaryBar()
+                Return
+            End If
+
             If String.IsNullOrWhiteSpace(ReportQuickSearch) Then
                 _filteredConvertedRows = _allConvertedRows.ToList()
             Else
@@ -968,6 +1006,20 @@ Namespace ViewModels
                         For Each item In data
                             _allReportData.Add(item)
                         Next
+
+                    Case 16 ' تقرير أعمار الديون للعملاء (القيود المحاسبية)
+                        CurrentReportTitle = "⏳ تقرير أعمار الديون للعملاء (القيود المحاسبية)"
+                        Dim custLabel As String = "جميع العملاء"
+                        If SelectedPartnerID > 0 Then
+                            Dim cust = _allPartners.FirstOrDefault(Function(p) p.PartnerID = SelectedPartnerID)
+                            If cust IsNot Nothing Then custLabel = cust.PartnerName
+                        End If
+                        CurrentReportSubtitle = $"تحليل الفواتير والسداد في نفس الفترة لكل عميل من جدول القيود ({custLabel}) من {SelectedStartDate:yyyy/MM/dd} إلى {SelectedEndDate:yyyy/MM/dd}"
+                        Dim pId As Integer? = If(SelectedPartnerID > 0, CType(SelectedPartnerID, Integer?), Nothing)
+                        JournalDebtAgingVM.LoadReport(SelectedStartDate, SelectedEndDate, pId, ReportQuickSearch)
+                        SyncJournalDebtAgingSummaryBar()
+                        RaiseEvent ReportLoaded(Me, EventArgs.Empty)
+                        Return
                 End Select
 
                 BuildHeadersAndRowsForActiveReport()
@@ -1145,6 +1197,13 @@ Namespace ViewModels
                     SummaryMetrics.Add(CreateMetric("إجمالي المدفوع للموردين", $"{totalPaid:N2}", "المسدد نقداً أو بنكي", "✅", "#10B981", "#ECFDF5", "#A7F3D0"))
                     SummaryMetrics.Add(CreateMetric("إجمالي المتبقي للموردين", $"{totalRem:N2}", "ذمم الموردين المستحقة", "⏳", "#E11D48", "#FFF1F2", "#FECDD3"))
             End Select
+        End Sub
+
+        Private Sub SyncJournalDebtAgingSummaryBar()
+            SummaryMetrics.Clear()
+            For Each m In JournalDebtAgingVM.BuildSummaryMetrics()
+                SummaryMetrics.Add(m)
+            Next
         End Sub
 
         Private Function CreateMetric(title As String, valueText As String, subText As String, icon As String, accent As String, bg As String, border As String) As ReportSummaryMetric

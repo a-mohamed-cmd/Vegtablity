@@ -236,6 +236,7 @@ Namespace Helpers
         Public Const SP_REPORT_CUSTOMERPRODUCTSALES As String = "[Sales].[sp_Report_CustomerProductSales]"
         Public Const SP_REPORT_WAREHOUSESALES As String = "[Reports].[sp_Report_WarehouseSales]"
         Public Const SP_REPORT_PURCHASEINVOICES As String = "[Reports].[sp_Report_PurchaseInvoices]"
+        Public Const SP_REPORT_CUSTOMERDEBTAGING_JOURNAL As String = "[Reports].[sp_Report_CustomerDebtAging_Journal]"
 
         Public Const SP_REPORT_INVOICE_PRINT As String = "[Sales].[sp_Report_InvoicePrint]"
 

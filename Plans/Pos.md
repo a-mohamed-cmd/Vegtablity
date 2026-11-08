@@ -3605,3 +3605,120 @@
 - **`lib/screens/pos_screen.dart` & `lib/screens/partner_billing_screen.dart`**: انتظار انتهاء حفظ الفاتورة واستلام `newInvId` الفعلي من الخادم ثم تمريره في كافة مفاتيح الفاتورة المرسلة للطباعة (`InvID`, `id`, `InvoiceID`, `invoice_id`) قبل استدعاء `printerService.printReceipt(...)`.
 - **`lib/services/printing/invoice_print_designer.dart`**: إعطاء الأولوية القصوى لحقل `invoice['InvID']` عند قراءة رقم الفاتورة المطبوع على الإيصال.
 
+
+---
+
+## 89. خطة الربط الموحدة مع المحافظ الإلكترونية ومنصات التوصيل في دولة الكويت (Integrations Master Plan)
+
+### 📁 ملفات الخطة المعتمدة
+- **[integration.html](file:///d:/VB.NET/backup/Vegtablity/Plans/integration.html)** و **[integration/integration_plan.html](file:///d:/VB.NET/backup/Vegtablity/Plans/integration/integration_plan.html)**: وثيقة الخطة التفاعلية بصيغة HTML المقسمة إلى 12 قسماً مرقماً لسهولة المراجعة والمناقشة، ومجلد `Plans/integration/` المخصص لحفظ جميع خطط وكتيبات الربط.
+- **[tap_payments_manual.html](file:///d:/VB.NET/backup/Vegtablity/Plans/integration/tap_payments_manual.html)**: الكتيب الفني المفصل لربط بوابة **Tap Payments (API v2 — الكويت KWD)** المستخرج من المرجع الرسمي `developers.tap.company/reference/api-endpoint`.
+- **[myfatoorah_manual.html](file:///d:/VB.NET/backup/Vegtablity/Plans/integration/myfatoorah_manual.html)**: الكتيب الفني المفصل لربط بوابة **MyFatoorah (API v2 — الكويت KWD)** المستخرج من المرجع الرسمي `docs.myfatoorah.com/docs/choose-your-payment-integration`.
+- **[upayments_manual.html](file:///d:/VB.NET/backup/Vegtablity/Plans/integration/upayments_manual.html)**: الكتيب الفني المفصل لربط بوابة **UPayments (API v1 — الكويت KWD)** المستخرج من المرجع الرسمي `developers.upayments.com/reference/overview`.
+- **[talabat_manual.html](file:///d:/VB.NET/backup/Vegtablity/Plans/integration/talabat_manual.html)**: الكتيب الفني المفصل لربط بوابة البيع **Talabat كعميل مبيعات (POS Plugin & Middleware API v2)** المستخرج من المرجع الرسمي `integration-middleware.stg.restaurant-partners.com/apidocs/pos-plugin-api`.
+
+### 📑 فهرس أقسام الخطة المعمارية (MVVM + Strategy Pattern — تنفيذ بوابةً ببوابة)
+1. **القسم 1 — فلسفة التصميم والتنفيذ المرحلي بوابةً ببوابة (Gateway by Gateway)**:
+   - يتم الإنشاء بوابةً ببوابة بناءً على التعليمات والكتيبات المرسلة والخبرة الفنية لكل بوابة، دون أي تأثير يعطل أو يلغي أياً من العمليات الحالية.
+2. **القسم 2 — المحافظ وبوابات البيع المقترحة في دولة الكويت**:
+   - **بوابات الدفع والمحافظ (`PAYMENT_GATEWAY`)**: `Tap Payments`، `MyFatoorah`، `UPayments Kuwait`، `Hesabe`، `Bookeey`، `Wamd (ومض KNET)`.
+   - **بوابات البيع ومنصات التوصيل (`DELIVERY_PLATFORM` — تعامل معاملة العملاء)**: `Talabat`، `Jahez`، `Deliveroo`، `Cari`.
+3. **القسم 3 — هيكلة قاعدة البيانات وفصل الجداول (`CompanySettings` & `IntegrationProviders` & `InvoicePaymentLinkAllocations`)**:
+   - الإبقاء **فقط** على أعمدة التفعيل وإيقاف التفعيل (`BIT`) في `[Settings].[CompanySettings]` (`EnableTapIntegration`, `EnableMyFatoorahIntegration`, `EnableUPaymentsIntegration`, `EnableTalabatIntegration`, `EnableJahezIntegration`, `PromptSendPaymentLinkOnSave`).
+   - جدول مستقل بنظام الصفوف `[Settings].[IntegrationProviders]` يضم لكل بوابة (`IsEnabled`, `IsConfigured`, `AccountID`, `PartnerID`, مفاتيح الربط، وأعمدة الإضافات الـ 6 بما فيها طباعة الباركود على `58mm` و `80mm` و `WPF`).
+   - جدول `[Sales].[InvoicePaymentLinks]` وجدول `[Sales].[InvoicePaymentLinkAllocations]` لدعم روابط الفواتير المنفردة والروابط المجمعة لعدة فواتير غير محصلة.
+4. **القسم 4 — القاعدة الحاكمة للإنشاء المشروط للحسابات والعملاء وإظهار الشاشات (لا يتم الحفظ إلا بعد نجاح اختبار الاتصال في WPF لكل بوابة على حدة)**:
+   - عند تفعيل أي بوابة من `CompanySettings`: **لا يتم إضافة أي حساب في شجرة الحسابات ولا يضاف أي عميل في صفحة العملاء ولا تظهر شاشات التشغيل**، بل تظهر فقط الصلاحية في `UserPermissions` وبطاقة البوابة في إعدادات WPF.
+   - **قاعدة عامة ملزمة لكل بوابة على حدة:** **لا يتم حفظ البيانات ولا تنفيذ أمر الحفظ وما يترتب عليه إلا إذا نجح اختبار الاتصال بالبوابة (`ConnectionStatus IN ('SandboxVerified', 'LiveVerified')`)**.
+   - **فقط بعد نجاح اختبار الاتصال وحفظ إعدادات البوابة في صفحة إعدادات WPF (`IsConfigured = 1`)**:
+     - لبوابات الدفع (`Tap Payments`, `MyFatoorah`, `UPayments`): يُنشأ حساب حركي بالاسم الإنجليزي تحت الحساب الأب **`[AccountID] = 10`** (الكود `11`).
+     - لبوابات البيع (`Talabat`, `Jahez`): تُضاف البوابة كعميل (`PartnerType = 'Customer'`) في جدول العملاء `[Sales].[Partners]`، ويتولى الـ Trigger الموجود حالياً في قاعدة البيانات **`[Sales].[trg_Partner_AfterInsert]`** إضافتها تلقائياً إلى شجرة الحسابات `[Accounting].[ChartOfAccounts]` تحت حساب العملاء (الكود `12`) وربط `AccountID` و `PartnerID`.
+     - **صفحات تشغيل `Talabat` بعد نجاح الاتصال والحفظ:**
+       - في **WPF**: تظهر صفحة **"🛵 طلبات Talabat" (`TalabatOrdersPage.xaml`) أسفل قسم المبيعات** وتعمل بما يتناسب مع APIs الخاصة بـ Talabat.
+       - في **Flutter App**: يظهر في شاشة إعدادات التطبيق (`settings_screen.dart`) خيار خاص بطلبات Talabat (`show_talabat_orders`) ليتم إضافة صفحة طلبات Talabat (`talabat_orders_screen.dart` — استقبال الطلب وتنفيذه وطباعته وكل ما يخص Talabat) إلى الجهاز أو لا.
+5. **القسم 5 — شاشة إعدادات الربط في WPF وارتباطها الديناميكي بـ `UserPermissions`**:
+   - صلاحية `IntegrationSettings` تظهر ديناميكياً في `UserPermissions` عند تفعيل أي بوابة في `CompanySettings`، وتعرض شاشة الإعدادات في WPF فقط البوابات المفعلة مع زر **اختبار عملية الربط (`Test Connection`)** وإرشادات ديناميكية حسب حالة الربط.
+6. **القسم 6 — الربط مع الفواتير وشاشات متابعة طلبات وفواتير بوابات الدفع في `WPF` و `Flutter`**:
+   - إضافة شاشة مخصصة لمتابعة طلبات وفواتير بوابات الدفع في كل من **WPF (`PaymentGatewayInvoicesPage.xaml`)** و **Flutter (`payment_gateway_invoices_screen.dart`)**.
+   - تدعم الشاشة الفلترة والبحث في الفواتير المحصلة وغير المحصلة، وإعادة إرسال اللينك للفواتير غير المحصلة **لكل فاتورة على حدة أو بشكل مجمع**.
+   - إضافة خيار `show_payment_gateway_invoices` في شاشة الإعدادات العامة لتطبيق Flutter (`settings_screen.dart`) لإظهار أو إخفاء الشاشة على كل جهاز بنفس الطريقة المتبعة حالياً.
+7. **القسم 7 — معمارية MVVM والكلاسات المنفصلة لكل موقع** (`TapPaymentProvider`, `MyFatoorahProvider`, `UPaymentsProvider`, `TalabatPlatformProvider`, `JahezPlatformProvider`, `PaymentQrGeneratorService`).
+8. **القسم 8 — خطة الربط التفصيلية لكل محفظة وبوابة بيع** (تُنفذ بوابةً ببوابة).
+9. **القسم 9 — سيناريو حفظ الفاتورة، طباعة الباركود، ومتابعة تحصيل اللينك (منفرد ومجمع)**.
+10. **القسم 10 — الإضافات الـ 7 القابلة للتخصيص لكل بوابة على حدة**:
+    - **الإضافة 1 (`طباعة الباركود / QR للدفع على الفواتير`)**: تفعيل رئيسي (`EnablePrintQrOnInvoice`) + **خيارات تحديد الطباعة كـ CheckBoxes مستقلة (يمكن اختيار أي خيار منها منفرداً أو أي خيارين أو اختيارها كلها معاً)**: إيصال POS مقاس `80mm` (`PrintQrOnPos80mm`)، وإيصال POS مقاس `58mm` (`PrintQrOnPos58mm`)، وفواتير المبيعات في `WPF` (`PrintQrOnWpfInvoice`).
+    - **الإضافات 2 إلى 6**: الإرسال عبر WhatsApp + إشعار SMS البوابة المجاني (`EnableGatewaySmsReceipt`)، المعالجة المحاسبية الآلية لعمولة البوابة، متابعة تحصيل الرابط، دعم الدفع المقسم والروابط المجمعة، والتنبيهات الفورية للكاشير.
+    - **الإضافة 7 (`صلاحية إرجاع المبالغ الإلكترونية للعميل — Refunds API وزر إرجاع المبلغ الديناميكي ↩️`)**: مفتاح صلاحية (`EnableGatewayRefunds`) مع دعم الاسترجاع الجزئي (`AllowPartialRefunds`) والقيد العكسي الآلي (`AutoPostRefundJournalEntry`)؛ بحيث **يظهر زر "↩️ إرجاع المبلغ"** في صفحة متابعة الروابط (في كل من WPF و Flutter) عند تفعيل الصلاحية، **ويختفي تماماً** عند تعطيلها.
+11. **القسم 11 — هندسة الـ Triggers لتخفيف الضغط والتكامل مع `[Sales].[trg_Partner_AfterInsert]`**:
+    - `[Sales].[trg_Partner_AfterInsert]` (الـ Trigger الحالي لإضافة العملاء تلقائياً لشجرة الحسابات).
+    - `[Settings].[trg_CompanySettings_SyncIntegrations]` (مزامنة التفعيل وإظهار الصلاحية فقط).
+    - `[Settings].[trg_IntegrationProviders_OnConfigSaved]` (إنشاء حساب بوابة الدفع تحت الأب `10` أو إدراج بوابة البيع كعميل في `Partners` فقط بعد حفظ إعداداتها في WPF).
+    - `[Sales].[trg_InvoicePaymentLinks_OnInsert_Init]`
+    - `[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]`
+    - `[Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]` (توليد القيد المحاسبي العكسي تلقائياً عند إرجاع المبلغ كلياً أو جزئياً).
+    - `[Sales].[trg_Shifts_OnClose_GatewayCommissions]`
+12. **القسم 12 — الفهرس المرجعي الشامل للـ Triggers والإجراءات المخزنة (SPs) والكلاسات والشاشات**.
+
+
+---
+
+## 90. إصلاح مقارنة الأصناف عند استيراد ملف Excel في فواتير المبيعات والمشتريات وعروض الأسعار (WPF Excel Import Product Matching Fix)
+
+### 🔍 تشخيص سبب ظهور أصناف موجودة فعلياً في قاعدة البيانات كأصناف غير معروفة عند استيراد Excel
+1. **في فاتورة المبيعات (`SalesInvoiceViewModel.ExecuteImportExcel`)**:
+   - كان الكود يعتمد حصرياً على استدعاء `_productService.GetProductPricingForInvoice(row.Barcode, partnerID)` الذي يستدعي الإجراء `[Sales].[sp_GetProductPricingForInvoice]` (وهو إجراء غير موجود في الملف الرئيسي `SQLVegtablity.sql`، وبسبب `Try...Catch Return Nothing` كان يرجع `Nothing` بصمت ويصنف الأصناف الموجودة على أنها غير معروفة `IsUnknown = True`)، كما كان يتجاهل البحث باسم الصنف أو استخدام الإجراءات المعتمدة في الإدخال اليدوي (`[Inventory].[sp_Product_GetForSales]` و `[Inventory].[sp_Product_GetByBarcode]` و `[Inventory].[sp_Product_GetAll]`).
+2. **في قارئ ملفات Excel (`ExcelImporter.vb`)**:
+   - دالة `GetCellValue` كانت تتحقق من `cell.CellValue Is Nothing` فقط وترجع نصاً فارغاً للخلايا المخزنة بصيغة `InlineString`، كما لم تكن تعالج تحويلات Excel الرقمية للباركود (مثل انتهاء الباركود بـ `.0` أو الصيغة العلمية).
+3. **في فاتورة المشتريات (`PurchaseInvoiceViewModel.ExecuteImportExcel`) وعروض المبيعات (`QuoteViewModel.ExecuteImportFromExcel`)**:
+   - في فواتير المشتريات: إذا كان `ProductionMode = 1`، فإن `sp_Product_GetForPurchase` يفلتر حسب نوع الصنف فقط دون الرجوع الاحتياطي إلى `sp_Product_GetByBarcode` و `sp_Product_GetAll`، مما قد يظهر صنفاً موجوداً في قاعدة البيانات كغير معروف.
+   - في عروض أسعار المبيعات (`QuoteViewModel.vb`): كانت دالة `ExecuteImportFromExcel` تمرر القائمة المقسمة لصفحات `Products` (التي تحتوي فقط على أصناف الصفحة الأولى المعروضة بسبب `UpdateProductPagination`) بدلاً من تمرير القائمة الكاملة من `_productService.GetProductsForSales()`.
+
+### ✅ الإصلاح المنفذ (دون أي تعديل على الإجراءات المخزنة في قاعدة البيانات)
+- **[SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb#L575-L685)**:
+  - اعتماد نفس الإجراءات المخزنة المستخدمة في الإدخال اليدوي للباركود بالترتيب: البحث في `_productService.GetProductsForSales()` (`[Inventory].[sp_Product_GetForSales]`)، ثم `_productService.GetProductByBarcode` (`[Inventory].[sp_Product_GetByBarcode]`)، ثم البحث بالاسم، ثم الفحص الشامل في `_productService.GetAllProducts()` (`[Inventory].[sp_Product_GetAll]`)، مع جلب سعر العرض الخاص للعميل عبر `_quoteService.GetActiveQuotePrice` والتكلفة المرجحة عبر `_inventoryService.GetAvgCostByProduct`.
+- **[PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb#L612-L703)**:
+  - تعزيز البحث في `ExecuteImportExcel` ليشمل `GetProductsForPurchase()` ثم `GetProductByBarcode()` ثم `GetAllProducts()` بالباركود والاسم (العربي والإنجليزي)، مع جلب سعر عرض المورد الفعال عبر `_purchaseQuoteService.GetProductPriceForPartner`.
+- **[QuoteViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/QuoteViewModel.vb#L679-L683)**:
+  - تمرير القائمة الكاملة `_productService.GetProductsForSales()` إلى `ImportQuoteFromExcel` بدلاً من القائمة المقسمة بصفحات `Products`.
+- **[ExcelImporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ExcelImporter.vb#L134-L169)**:
+  - دعم قراءة خلايا `InlineString` وتنقية الباركود عبر `NormalizeBarcode` من أي كسور صفرية (`.0`) أو مسافات.
+
+
+---
+
+## 91. تقرير أعمار الديون للعملاء من واقع جدول القيود المحاسبية (`[Accounting].[JournalEntries]`) مع `UserControl` مخصص وفصل MVVM
+
+### أ. قاعدة البيانات ([SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql))
+- **`[Reports].[sp_Report_CustomerDebtAging_Journal]`**:
+  - إجراء مخزن جديد يعمل مباشرة على جدول القيود المحاسبية `[Accounting].[JournalEntries]` المربوط بحسابات العملاء في `[Sales].[Partners]` و `[Accounting].[ChartOfAccounts]`.
+  - يقبل معاملات الفلترة `@StartDate DATE` و `@EndDate DATE` و `@PartnerID INT = 0` (`0` لجميع العملاء أو `> 0` لعميل محدد).
+  - يقسم حركات كل عميل حسب المدة العمرية (نسبةً إلى `@EndDate`) إلى 4 فترات عمرية، مع حساب **الفواتير (الحركات المدينة `DebitAmount`)** و **السداد في نفس الفترة (الحركات الدائنة `CreditAmount`)** وعدد القيود لكل فترة:
+    1. **الفترة 1 (0 - 30 يوم):** `Debit_0_30`, `Paid_0_30`, `Count_0_30`, `PayCount_0_30`
+    2. **الفترة 2 (31 - 60 يوم):** `Debit_31_60`, `Paid_31_60`, `Count_31_60`, `PayCount_31_60`
+    3. **الفترة 3 (61 - 90 يوم):** `Debit_61_90`, `Paid_61_90`, `Count_61_90`, `PayCount_61_90`
+    4. **الفترة 4 (+90 يوم):** `Debit_Over_90`, `Paid_Over_90`, `Count_Over_90`, `PayCount_Over_90`
+  - يحسب كذلك الرصيد الافتتاحي ما قبل الفترة (`OpeningBalance`)، إجمالي فواتير الفترة (`TotalPeriodDebit`)، إجمالي السداد خلال الفترة (`TotalPeriodCredit`)، صافي حركة الفترة (`NetPeriodBalance`)، وصافي المديونية الختامية (`ClosingBalance`)، وتاريخ آخر فاتورة وآخر سداد.
+
+### ب. فصل كود التقرير في كلاس مستقل وفق مبدأ MVVM ([CustomerJournalDebtAgingViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/CustomerJournalDebtAgingViewModel.vb))
+- **`Models.ReportCustomerJournalDebtAging`**: نموذج بيانات متكامل يحوي جميع حقول الفترات العمرية للفواتير والسداد، والخصائص المحسوبة لصافي كل فترة (`Net_0_30`, `Net_31_60`, `Net_61_90`, `Net_Over_90`)، ونسبة التحصيل (`CollectionRatePercent`)، وشارات الحالة العمرية الدلالية.
+- **`Services.CustomerJournalDebtAgingService`**: خدمة جلب البيانات باستدعاء `[Reports].[sp_Report_CustomerDebtAging_Journal]` مع استعلام SQL احتياطي مباشر (Fallback) يعمل فوراً حتى قبل تحديث السكربت على السيرفر.
+- **`ViewModels.CustomerJournalDebtAgingViewModel`**: كلاس ViewModel مستقل يدير:
+  - تحميل البيانات وفلترتها حسب العميل (`PartnerID`) والفترة الزمنية (`StartDate` / `EndDate`) وفلتر المدة العمرية (`SelectedBucketFilter`: الكل، `0-30 يوم`، `31-60 يوم`، `61-90 يوم`، `+90 يوم`، `مديونية قائمة فقط`) والبحث الفوري (`ApplyQuickSearch`).
+  - التصفح بالصفحات (`Pagination`) وحساب شريط الإجماليات العلوي (`BuildSummaryMetrics`).
+  - التصدير إلى **PDF** و **CSV (`ReportExporter.ExportReportRowsToCsv`)** سواء لجميع العملاء المعروضين أو لعميل واحد محدد (`ExportToPdf`, `ExportToExcel`, `ExportSingleCustomerToPdf`, `ExportSingleCustomerToExcel`).
+
+### ج. إنشاء `UserControl` جديد لعرض البيانات بدلاً من `DataGrid` ([JournalDebtAgingControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/JournalDebtAgingControl.xaml) & [JournalDebtAgingControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/JournalDebtAgingControl.xaml.vb))
+- تصميم `UserControl` مخصص يعرض:
+  1. شريط فلاتر المدد العمرية (`الكل`، `0-30 يوم`، `31-60 يوم`، `61-90 يوم`، `+90 يوم`، `مديونية قائمة فقط`) مع شريط إجماليات الفترات الأربع (إجمالي الفواتير وإجمالي السداد لكل مدة).
+  2. قائمة بطاقات العملاء (`VirtualizingStackPanel` داخل `ItemsControl` بدون `DataGrid`) حيث تعرض كل بطاقة عميل:
+     - ترويسة العميل (الرقم التسلسلي، الاسم، الهاتف، كود الحساب، آخر فاتورة، آخر سداد، نسبة التحصيل %، شارة حالة المديونية، وأزرار تصدير سريع `📄 PDF` و `📊 Excel` للعميل).
+     - شبكة من 4 أعمدة للفترات العمرية (`0-30 يوم`، `31-60 يوم`، `61-90 يوم`، `+90 يوم`) توضح في كل فترة: **الفواتير (مدين)**، **السداد بنفس الفترة (دائن)**، و **صافي الفترة**.
+     - شريط سفلي لإجماليات العميل (رصيد سابق قبل الفترة، إجمالي فواتير الفترة، إجمالي السداد بالفترة، وصافي المديونية المتبقية).
+
+### د. الربط مع شاشة التقارير الشاملة ([ReportsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ReportsViewModel.vb) & [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml))
+- إضافة التبويب رقم 16 (**`⏳ أعمار ديون العملاء (القيود)`**) في القائمة الجانبية دون المساس بالتقرير القديم الخاص بالفواتير (التبويب رقم 4).
+- تفعيل فلتر العملاء (`ShowPartnerFilter`) وفلاتر الفترة الزمنية والبحث الفوري وأزرار التصدير العلوية (`تصدير PDF` و `تصدير Excel`) للتكامل الكامل مع `JournalDebtAgingVM`.
+
+
+
+

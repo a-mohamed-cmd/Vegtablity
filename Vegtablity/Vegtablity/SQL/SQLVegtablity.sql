@@ -16894,3 +16894,274 @@ BEGIN
     END CATCH
 END
 GO
+
+-- =============================================
+-- 37. تقرير أعمار الديون للعملاء من واقع القيود المحاسبية ([Accounting].[JournalEntries])
+--     يقسم الفواتير (الحركات المدينة) والسداد (الحركات الدائنة) لكل عميل حسب المدة العمرية
+--     مع دعم الفلترة حسب العميل (@PartnerID) والفترة الزمنية (@StartDate, @EndDate)
+-- =============================================
+IF OBJECT_ID('[Reports].[sp_Report_CustomerDebtAging_Journal]', 'P') IS NOT NULL
+    DROP PROCEDURE [Reports].[sp_Report_CustomerDebtAging_Journal];
+GO
+
+CREATE PROCEDURE [Reports].[sp_Report_CustomerDebtAging_Journal]
+    @StartDate DATE,
+    @EndDate   DATE,
+    @PartnerID INT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @TargetStartDate DATE = ISNULL(@StartDate, DATEADD(MONTH, -6, CAST(GETDATE() AS DATE)));
+    DECLARE @TargetEndDate   DATE = ISNULL(@EndDate, CAST(GETDATE() AS DATE));
+
+    ;WITH CustomerAccounts AS (
+        SELECT
+            p.PartnerID,
+            ISNULL(p.PartnerName, N'عميل غير مسمى') AS PartnerName,
+            ISNULL(NULLIF(LTRIM(RTRIM(p.Phone)), ''), N'-') AS Phone,
+            ISNULL(p.AccountID, 0) AS AccountID,
+            ISNULL(a.AccountCode, N'-') AS AccountCode,
+            ISNULL(a.AccountName, p.PartnerName) AS AccountName
+        FROM [Sales].[Partners] p
+        LEFT JOIN [Accounting].[ChartOfAccounts] a ON p.AccountID = a.AccountID
+        WHERE p.AccountID IS NOT NULL
+          AND (
+              (@PartnerID > 0 AND p.PartnerID = @PartnerID)
+              OR
+              (@PartnerID = 0 AND (
+                  p.PartnerType IN ('Customer', 'Both')
+                  OR p.PartnerType LIKE N'%عميل%'
+                  OR p.PartnerType LIKE N'%زبون%'
+                  OR a.AccountCode LIKE '12%'
+              ))
+          )
+    ),
+    JournalAgg AS (
+        SELECT
+            ca.PartnerID,
+            ca.PartnerName,
+            ca.Phone,
+            ca.AccountID,
+            ca.AccountCode,
+            ca.AccountName,
+
+            -- الرصيد الافتتاحي قبل بداية الفترة
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) < @TargetStartDate
+                THEN (ISNULL(je.DebitAmount, 0) - ISNULL(je.CreditAmount, 0))
+                ELSE 0
+            END), 0) AS OpeningBalance,
+
+            -- الفترة 1: 0 - 30 يوم (فواتير / مدين + سداد / دائن في نفس الفترة)
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 0 AND 30
+                THEN ISNULL(je.DebitAmount, 0)
+                ELSE 0
+            END), 0) AS Debit_0_30,
+
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 0 AND 30
+                THEN ISNULL(je.CreditAmount, 0)
+                ELSE 0
+            END), 0) AS Paid_0_30,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 0 AND 30
+                 AND ISNULL(je.DebitAmount, 0) > 0
+                THEN je.EntryID
+            END) AS Count_0_30,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 0 AND 30
+                 AND ISNULL(je.CreditAmount, 0) > 0
+                THEN je.EntryID
+            END) AS PayCount_0_30,
+
+            -- الفترة 2: 31 - 60 يوم (فواتير / مدين + سداد / دائن في نفس الفترة)
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 31 AND 60
+                THEN ISNULL(je.DebitAmount, 0)
+                ELSE 0
+            END), 0) AS Debit_31_60,
+
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 31 AND 60
+                THEN ISNULL(je.CreditAmount, 0)
+                ELSE 0
+            END), 0) AS Paid_31_60,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 31 AND 60
+                 AND ISNULL(je.DebitAmount, 0) > 0
+                THEN je.EntryID
+            END) AS Count_31_60,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 31 AND 60
+                 AND ISNULL(je.CreditAmount, 0) > 0
+                THEN je.EntryID
+            END) AS PayCount_31_60,
+
+            -- الفترة 3: 61 - 90 يوم (فواتير / مدين + سداد / دائن في نفس الفترة)
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 61 AND 90
+                THEN ISNULL(je.DebitAmount, 0)
+                ELSE 0
+            END), 0) AS Debit_61_90,
+
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 61 AND 90
+                THEN ISNULL(je.CreditAmount, 0)
+                ELSE 0
+            END), 0) AS Paid_61_90,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 61 AND 90
+                 AND ISNULL(je.DebitAmount, 0) > 0
+                THEN je.EntryID
+            END) AS Count_61_90,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) BETWEEN 61 AND 90
+                 AND ISNULL(je.CreditAmount, 0) > 0
+                THEN je.EntryID
+            END) AS PayCount_61_90,
+
+            -- الفترة 4: أكثر من 90 يوم (فواتير / مدين + سداد / دائن في نفس الفترة)
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) > 90
+                THEN ISNULL(je.DebitAmount, 0)
+                ELSE 0
+            END), 0) AS Debit_Over_90,
+
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) > 90
+                THEN ISNULL(je.CreditAmount, 0)
+                ELSE 0
+            END), 0) AS Paid_Over_90,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) > 90
+                 AND ISNULL(je.DebitAmount, 0) > 0
+                THEN je.EntryID
+            END) AS Count_Over_90,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND DATEDIFF(DAY, CAST(je.EntryDate AS DATE), @TargetEndDate) > 90
+                 AND ISNULL(je.CreditAmount, 0) > 0
+                THEN je.EntryID
+            END) AS PayCount_Over_90,
+
+            -- إجماليات الفترة
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                THEN ISNULL(je.DebitAmount, 0)
+                ELSE 0
+            END), 0) AS TotalPeriodDebit,
+
+            ISNULL(SUM(CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                THEN ISNULL(je.CreditAmount, 0)
+                ELSE 0
+            END), 0) AS TotalPeriodCredit,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND ISNULL(je.DebitAmount, 0) > 0
+                THEN je.EntryID
+            END) AS TotalPeriodInvoicesCount,
+
+            COUNT(DISTINCT CASE
+                WHEN CAST(je.EntryDate AS DATE) BETWEEN @TargetStartDate AND @TargetEndDate
+                 AND ISNULL(je.CreditAmount, 0) > 0
+                THEN je.EntryID
+            END) AS TotalPeriodPaymentsCount,
+
+            MAX(CASE
+                WHEN CAST(je.EntryDate AS DATE) <= @TargetEndDate AND ISNULL(je.DebitAmount, 0) > 0
+                THEN je.EntryDate
+            END) AS LastInvoiceDate,
+
+            MAX(CASE
+                WHEN CAST(je.EntryDate AS DATE) <= @TargetEndDate AND ISNULL(je.CreditAmount, 0) > 0
+                THEN je.EntryDate
+            END) AS LastPaymentDate
+
+        FROM CustomerAccounts ca
+        LEFT JOIN [Accounting].[JournalEntries] je
+            ON je.AccountID = ca.AccountID
+           AND CAST(je.EntryDate AS DATE) <= @TargetEndDate
+        GROUP BY
+            ca.PartnerID,
+            ca.PartnerName,
+            ca.Phone,
+            ca.AccountID,
+            ca.AccountCode,
+            ca.AccountName
+    )
+    SELECT
+        PartnerID,
+        PartnerName,
+        Phone,
+        AccountID,
+        AccountCode,
+        AccountName,
+        CAST(ROUND(OpeningBalance, 3, 1) AS DECIMAL(18, 3)) AS OpeningBalance,
+
+        CAST(ROUND(Debit_0_30, 3, 1) AS DECIMAL(18, 3)) AS Debit_0_30,
+        CAST(ROUND(Paid_0_30, 3, 1) AS DECIMAL(18, 3)) AS Paid_0_30,
+        Count_0_30,
+        PayCount_0_30,
+
+        CAST(ROUND(Debit_31_60, 3, 1) AS DECIMAL(18, 3)) AS Debit_31_60,
+        CAST(ROUND(Paid_31_60, 3, 1) AS DECIMAL(18, 3)) AS Paid_31_60,
+        Count_31_60,
+        PayCount_31_60,
+
+        CAST(ROUND(Debit_61_90, 3, 1) AS DECIMAL(18, 3)) AS Debit_61_90,
+        CAST(ROUND(Paid_61_90, 3, 1) AS DECIMAL(18, 3)) AS Paid_61_90,
+        Count_61_90,
+        PayCount_61_90,
+
+        CAST(ROUND(Debit_Over_90, 3, 1) AS DECIMAL(18, 3)) AS Debit_Over_90,
+        CAST(ROUND(Paid_Over_90, 3, 1) AS DECIMAL(18, 3)) AS Paid_Over_90,
+        Count_Over_90,
+        PayCount_Over_90,
+
+        CAST(ROUND(TotalPeriodDebit, 3, 1) AS DECIMAL(18, 3)) AS TotalPeriodDebit,
+        CAST(ROUND(TotalPeriodCredit, 3, 1) AS DECIMAL(18, 3)) AS TotalPeriodCredit,
+        TotalPeriodInvoicesCount,
+        TotalPeriodPaymentsCount,
+        CAST(ROUND((TotalPeriodDebit - TotalPeriodCredit), 3, 1) AS DECIMAL(18, 3)) AS NetPeriodBalance,
+        CAST(ROUND((OpeningBalance + TotalPeriodDebit - TotalPeriodCredit), 3, 1) AS DECIMAL(18, 3)) AS ClosingBalance,
+        LastInvoiceDate,
+        LastPaymentDate
+    FROM JournalAgg
+    WHERE @PartnerID > 0
+       OR TotalPeriodDebit > 0
+       OR TotalPeriodCredit > 0
+       OR OpeningBalance <> 0
+       OR (OpeningBalance + TotalPeriodDebit - TotalPeriodCredit) <> 0
+    ORDER BY
+        (OpeningBalance + TotalPeriodDebit - TotalPeriodCredit) DESC,
+        TotalPeriodDebit DESC,
+        PartnerName ASC;
+END
+GO

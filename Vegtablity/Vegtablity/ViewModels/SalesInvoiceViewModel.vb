@@ -579,43 +579,103 @@ Namespace ViewModels
                     Return
                 End If
 
+                ' جلب كافة الأصناف من قاعدة البيانات عبر الـ SPs المعتمدة في الإدخال اليدوي (دون التأثر بالصفحات)
+                Dim salesProducts = _productService.GetProductsForSales()
+                Dim allDbProducts As List(Of Product) = Nothing
+
                 Dim unknownRows As New List(Of ImportedRow)()
                 Dim newDetails As New List(Of InvoiceDetail)()
                 Dim partnerID = If(CurrentInvoice.PartnerID, 0)
 
                 For Each row In importedRows
-                    ' Skip rows without a barcode
-                    If String.IsNullOrWhiteSpace(row.Barcode) Then Continue For
+                    Dim cleanBarcode = If(row.Barcode, "").Trim()
+                    Dim cleanName = If(row.ProductName, "").Trim()
+                    If String.IsNullOrWhiteSpace(cleanBarcode) AndAlso String.IsNullOrWhiteSpace(cleanName) Then Continue For
 
-                    ' Optimized lookup including active quotations
-                    Dim pricing = _productService.GetProductPricingForInvoice(row.Barcode, partnerID)
+                    Dim matched As Product = Nothing
+
+                    ' 1. البحث بالباركود في قائمة أصناف المبيعات المحملة من sp_Product_GetForSales
+                    If Not String.IsNullOrWhiteSpace(cleanBarcode) Then
+                        matched = salesProducts.FirstOrDefault(Function(p) p.Barcode IsNot Nothing AndAlso p.Barcode.Trim().Equals(cleanBarcode, StringComparison.OrdinalIgnoreCase))
+                    End If
+
+                    ' 2. البحث بالباركود مباشرة عبر sp_Product_GetByBarcode (نفس إجراء الإدخال اليدوي للباركود)
+                    If matched Is Nothing AndAlso Not String.IsNullOrWhiteSpace(cleanBarcode) Then
+                        matched = _productService.GetProductByBarcode(cleanBarcode)
+                    End If
+
+                    ' 3. البحث باسم الصنف في قائمة أصناف المبيعات
+                    If matched Is Nothing AndAlso Not String.IsNullOrWhiteSpace(cleanName) Then
+                        matched = salesProducts.FirstOrDefault(Function(p) (p.ProductName IsNot Nothing AndAlso p.ProductName.Trim().Equals(cleanName, StringComparison.OrdinalIgnoreCase)) OrElse
+                                                                           (p.ProductNameEn IsNot Nothing AndAlso p.ProductNameEn.Trim().Equals(cleanName, StringComparison.OrdinalIgnoreCase)))
+                    End If
+
+                    ' 4. فحص شامل في كل أصناف قاعدة البيانات sp_Product_GetAll (لضمان عدم اعتبار صنف موجود كغير معروف بسبب ProductionMode)
+                    If matched Is Nothing Then
+                        If allDbProducts Is Nothing Then
+                            allDbProducts = _productService.GetAllProducts()
+                        End If
+                        If Not String.IsNullOrWhiteSpace(cleanBarcode) Then
+                            matched = allDbProducts.FirstOrDefault(Function(p) p.Barcode IsNot Nothing AndAlso p.Barcode.Trim().Equals(cleanBarcode, StringComparison.OrdinalIgnoreCase))
+                        End If
+                        If matched Is Nothing AndAlso Not String.IsNullOrWhiteSpace(cleanName) Then
+                            matched = allDbProducts.FirstOrDefault(Function(p) (p.ProductName IsNot Nothing AndAlso p.ProductName.Trim().Equals(cleanName, StringComparison.OrdinalIgnoreCase)) OrElse
+                                                                               (p.ProductNameEn IsNot Nothing AndAlso p.ProductNameEn.Trim().Equals(cleanName, StringComparison.OrdinalIgnoreCase)))
+                        End If
+                    End If
 
                     Dim detail As New InvoiceDetail() With {
-                        .Barcode = row.Barcode,
+                        .Barcode = cleanBarcode,
                         .Quantity = row.Quantity,
                         .UnitPrice = row.UnitPrice,
                         .TotalPrice = row.Quantity * row.UnitPrice
                     }
 
-                    If pricing IsNot Nothing AndAlso pricing.ProductID > 0 Then
-                        detail.ProductID = pricing.ProductID
-                        detail.ProductName = pricing.ProductName
-                        detail.CostPrice = pricing.CostPrice
+                    If matched IsNot Nothing AndAlso matched.ProductID > 0 Then
+                        ' التأكد من وجود الصنف في قائمة Products الخاصة بالواجهة ليظهر في الـ Dropdown
+                        If Not Products.Any(Function(p) p.ProductID = matched.ProductID) Then
+                            Products.Add(matched)
+                        End If
 
-                        ' Pricing Logic: Excel > Quote > Default
+                        detail.ProductID = matched.ProductID
+                        detail.Barcode = If(Not String.IsNullOrWhiteSpace(matched.Barcode), matched.Barcode, cleanBarcode)
+                        detail.ProductName = matched.ProductName
+                        detail.ProductNameEn = matched.ProductNameEn
+                        detail.UnitName = matched.UnitName
+
+                        ' تحديد التكلفة بنفس منطق الإدخال اليدوي
+                        If CurrentInvoice.WarehouseID.HasValue AndAlso CurrentInvoice.WarehouseID.Value > 0 Then
+                            Dim avgCost = _inventoryService.GetAvgCostByProduct(matched.ProductID, CurrentInvoice.WarehouseID.Value)
+                            detail.CostPrice = If(avgCost > 0, avgCost, matched.PurchasePrice)
+                        Else
+                            detail.CostPrice = matched.PurchasePrice
+                        End If
+
+                        ' منطق التسعير: سعر ملف Excel (إن وجد) > عرض السعر الفعال للعميل > سعر البيع الافتراضي
                         If detail.UnitPrice = 0 Then
-                            detail.UnitPrice = If(pricing.QuotedPrice.HasValue, pricing.QuotedPrice.Value, pricing.DefaultSalePrice)
+                            Dim quotedPrice As Decimal? = Nothing
+                            If partnerID > 0 Then
+                                quotedPrice = _quoteService.GetActiveQuotePrice(partnerID, matched.ProductID)
+                            End If
+                            detail.UnitPrice = If(quotedPrice.HasValue AndAlso quotedPrice.Value > 0, quotedPrice.Value, matched.SalePrice)
                         End If
 
                         detail.CalculateTotal()
                         detail.IsUnknown = False
                     Else
-                        detail.ProductName = row.ProductName
+                        detail.ProductName = cleanName
                         detail.IsUnknown = True
                         unknownRows.Add(row)
                     End If
 
                     newDetails.Add(detail)
+                Next
+
+                ' إزالة السطر الفارغ الافتراضي إن كانت الفاتورة جديدة قبل إضافة الأصناف المستوردة
+                Dim emptyPlaceholder = _allInvoiceDetails.Where(Function(d) d.ProductID = 0 AndAlso Not d.IsUnknown AndAlso String.IsNullOrWhiteSpace(d.Barcode) AndAlso String.IsNullOrWhiteSpace(d.ProductName)).ToList()
+                For Each ep In emptyPlaceholder
+                    RemoveHandler ep.PropertyChanged, AddressOf OnDetailPropertyChanged
+                    _allInvoiceDetails.Remove(ep)
                 Next
 
                 ' Add all to grid

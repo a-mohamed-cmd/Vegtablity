@@ -46,10 +46,10 @@ Namespace Helpers
                     Dim cells = row.Elements(Of Cell)().ToList()
                     If cells.Count = 0 Then Continue For
 
-                    Dim barcodeVal = GetCellValue(cells, "A", sst).Trim()
+                    Dim barcodeVal = NormalizeBarcode(GetCellValue(cells, "A", sst))
                     Dim nameVal    = GetCellValue(cells, "B", sst).Trim()
-                    Dim qtyStr     = GetCellValue(cells, "C", sst).Trim()
-                    Dim priceStr   = GetCellValue(cells, "D", sst).Trim()
+                    Dim qtyStr     = GetCellValue(cells, "C", sst).Trim().Replace(",", ".")
+                    Dim priceStr   = GetCellValue(cells, "D", sst).Trim().Replace(",", ".")
 
                     If String.IsNullOrWhiteSpace(barcodeVal) AndAlso String.IsNullOrWhiteSpace(nameVal) Then Continue For
 
@@ -132,8 +132,16 @@ Namespace Helpers
         ' ── Helpers ──────────────────────────────────────────────
 
         Private Shared Function GetCellValue(cells As List(Of Cell), colLetter As String, sst As SharedStringTablePart) As String
-            Dim cell = cells.FirstOrDefault(Function(c) c.CellReference IsNot Nothing AndAlso c.CellReference.Value IsNot Nothing AndAlso c.CellReference.Value.StartsWith(colLetter, StringComparison.OrdinalIgnoreCase))
-            If cell Is Nothing OrElse cell.CellValue Is Nothing Then Return ""
+            Dim cell = cells.FirstOrDefault(Function(c) c.CellReference IsNot Nothing AndAlso
+                                                        c.CellReference.Value IsNot Nothing AndAlso
+                                                        System.Text.RegularExpressions.Regex.Replace(c.CellReference.Value, "\d", "").Equals(colLetter, StringComparison.OrdinalIgnoreCase))
+            If cell Is Nothing Then Return ""
+
+            If cell.DataType IsNot Nothing AndAlso cell.DataType.Value = CellValues.InlineString Then
+                Return If(cell.InlineString IsNot Nothing, cell.InlineString.InnerText, cell.InnerText)
+            End If
+
+            If cell.CellValue Is Nothing Then Return If(cell.InnerText, "")
 
             Dim val = cell.CellValue.Text
             If cell.DataType IsNot Nothing AndAlso cell.DataType.Value = CellValues.SharedString AndAlso sst IsNot Nothing Then
@@ -143,6 +151,22 @@ Namespace Helpers
                 End If
             End If
             Return If(val, "")
+        End Function
+
+        Private Shared Function NormalizeBarcode(raw As String) As String
+            If String.IsNullOrWhiteSpace(raw) Then Return ""
+            Dim s = raw.Trim()
+            ' معالجة تحويل Excel للأرقام الطويلة أو الكسور الصفرية مثل 6001234.0
+            If s.EndsWith(".0") Then
+                s = s.Substring(0, s.Length - 2)
+            End If
+            If s.Contains("E+") OrElse s.Contains("e+") Then
+                Dim d As Decimal
+                If Decimal.TryParse(s, Globalization.NumberStyles.Float, Globalization.CultureInfo.InvariantCulture, d) Then
+                    s = Decimal.Truncate(d).ToString(Globalization.CultureInfo.InvariantCulture)
+                End If
+            End If
+            Return s.Trim()
         End Function
 
         Private Shared Function MakeTextCell(ref As String, text As String) As Cell

@@ -168,7 +168,7 @@
                         </Border>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock Text="التقارير الشاملة" FontSize="15" FontWeight="Bold" Foreground="#0F172A"/>
-                            <TextBlock Text="16 تقرير تحليلي متكامل" FontSize="10.5" Foreground="#64748B"/>
+                            <TextBlock Text="17 تقرير تحليلي متكامل" FontSize="10.5" Foreground="#64748B"/>
                         </StackPanel>
                     </StackPanel>
 
@@ -238,8 +238,10 @@
                     <ListBoxItem Content="🗑️ تقرير الهالك والتوالف"/>
                     <!-- 14 -->
                     <ListBoxItem Content="🏬 مبيعات الفروع والمخازن"/>
-                    <!-- 15 (NEW) -->
+                    <!-- 15 -->
                     <ListBoxItem Content="📥 تقرير فواتير المشتريات"/>
+                    <!-- 16 (NEW) -->
+                    <ListBoxItem Content="⏳ أعمار ديون العملاء (القيود)"/>
                 </ListBox>
             </Grid>
         </Border>
@@ -520,7 +522,11 @@
             <!-- ─────────────────────────────────────────────────────── -->
             <!-- ROW 2: CUSTOM USERCONTROL REPORT TABLE + PAGINATION BAR -->
             <!-- ─────────────────────────────────────────────────────── -->
-            <Border Grid.Row="2" Style="{StaticResource CardBorder}" Padding="0" ClipToBounds="True">
+            <Border Grid.Row="2"
+                    Style="{StaticResource CardBorder}"
+                    Padding="0"
+                    ClipToBounds="True"
+                    Visibility="{Binding IsStandardReportTableVisible, Converter={StaticResource BoolToVis}}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <!-- Table Header Bar -->
@@ -628,6 +634,14 @@
                     </Border>
                 </Grid>
             </Border>
+
+            <!-- ─────────────────────────────────────────────────────── -->
+            <!-- ROW 2 (TAB 16): DEDICATED JOURNAL DEBT AGING USERCONTROL -->
+            <!-- ─────────────────────────────────────────────────────── -->
+            <controls:JournalDebtAgingControl x:Name="JournalDebtAgingView"
+                                              Grid.Row="2"
+                                              DataContext="{Binding JournalDebtAgingVM}"
+                                              Visibility="{Binding DataContext.IsJournalDebtAgingTabSelected, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVis}}"/>
         </Grid>
     </Grid>
 </UserControl>

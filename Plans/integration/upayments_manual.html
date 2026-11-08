@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>كتيب الربط الفني لبوابة UPayments (API v1) — Vegtablity ERP & POS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            line-height: 1.75;
+            padding: 32px;
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #a855f7; margin-top: 22px; }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 22px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+        }
+        th, td {
+            border: 1px solid #334155;
+            padding: 10px 14px;
+            text-align: right;
+        }
+        th { background: #090d16; color: #d8b4fe; }
+        pre {
+            background: #090d16;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 16px;
+            direction: ltr;
+            text-align: left;
+            color: #e9d5ff;
+            overflow-x: auto;
+        }
+        code {
+            background: rgba(15, 23, 42, 0.8);
+            color: #fcd34d;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📘 الكتيب المرجعي الفني لربط بوابة UPayments الكويت (API v1 — KWD)</h1>
+    <p>تم إعداد هذا المرجع بناءً على فحص التوثيق الرسمي لبوابة UPayments (<code>https://developers.upayments.com/reference/overview</code>) لتنفيذه في كلاس <code>UPaymentsProvider</code> ضمن منظومة Vegtablity.</p>
+
+    <div class="card">
+        <h2>1. روابط البيئة والمصادقة (Environment Base URLs &amp; Authentication)</h2>
+        <ul>
+            <li><strong>بيئة الاختبار (Sandbox — <code>IsLiveMode = 0</code>):</strong> <code>https://sandboxapi.upayments.com/api/v1</code></li>
+            <li><strong>بيئة الإنتاج الفعلي (Production — <code>IsLiveMode = 1</code>):</strong> <code>https://uapi.upayments.com/api/v1</code></li>
+            <li><strong>الترويسات الإلزامية (HTTP Headers):</strong>
+                <pre>Authorization: Bearer {API_Key}
+Accept: application/json
+Content-Type: application/json</pre>
+            </li>
+            <li><strong>الحساب المحاسبي (يُنشأ فقط بعد حفظ إعدادات البوابة في WPF):</strong> حساب حركي باسم <code>UPayments</code> تحت الحساب الأب <code>AccountID = 10</code> (الكود <code>11</code>).</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>2. خيارات توجيه بوابة الدفع في الكويت (<code>paymentGateway.src</code>)</h2>
+        <p>تتيح بوابة UPayments في الكويت تحديد وسيلة الدفع أو توليد رابط فاتورة شامل عبر حقل <code>paymentGateway.src</code> داخل طلب <code>POST /api/v1/charge</code>:</p>
+        <ul>
+            <li><code>"create-invoice"</code>: إنشاء رابط فاتورة ذكي يعرض للعميل جميع وسائل الدفع المفعلة (KNET، Apple Pay، البطاقات الائتمانية) ويدعم الإرسال عبر SMS/الرابط.</li>
+            <li><code>"knet"</code>: توجيه العميل مباشرة إلى صفحة الدفع البنكي <strong>KNET</strong> الكويتية دون خطوات وسيطة.</li>
+            <li><code>"cc"</code>: البطاقات الائتمانية (Visa / MasterCard).</li>
+            <li><code>"apple-pay"</code> / <code>"samsung-pay"</code> / <code>"google-pay"</code>: المحافظ الرقمية السريعة.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>3. جدول نقاط النهاية المعتمدة (UPayments API v1 Endpoints)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>العملية</th>
+                    <th>Endpoint</th>
+                    <th>الوصف والحقول الأساسية</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>إنشاء عملية دفع / رابط فاتورة (Charge)</td>
+                    <td><code>POST /api/v1/charge</code></td>
+                    <td>يرسل كائنات <code>products</code>، <code>order</code>، <code>customer</code>، <code>paymentGateway</code>، <code>notificationUrl</code> ويعيد <code>data.link</code> و <code>data.session_id</code> و <code>data.track_id</code>.</td>
+                </tr>
+                <tr>
+                    <td>الاستعلام عن حالة الدفع (برقم <code>track_id</code> أو <code>session_id</code>)</td>
+                    <td><code>GET /api/v1/get-payment-status/{track_id}</code><br/>أو <code>?session_id={session_id}</code></td>
+                    <td>يعيد حالة المعاملة في <code>data.transaction.result</code> (<code>CAPTURED</code>, <code>NOT CAPTURED</code>, <code>CANCELED</code>, <code>PENDING</code>) ورقم مرجع KNET (<code>payment_id</code>).<br/><em>ملاحظة فنية مهمة:</em> الحد الأقصى للطلبات هو <strong>30 طلباً في الدقيقة</strong>.</td>
+                </tr>
+                <tr>
+                    <td>إرجاع المبلغ للعميل (Create Refund — كلي أو جزئي) ↩️</td>
+                    <td><code>POST /api/v1/create-refund</code></td>
+                    <td>يرسل <code>order_id</code>، <code>total_price</code> (المبلغ المراد استرجاعه بـ 3 خانات عشرية لـ KWD)، بيانات العميل، و<code>reference_id</code> ويعيد <code>refund_order_id</code> و <code>refund_arn</code>.</td>
+                </tr>
+                <tr>
+                    <td>الاستعلام عن حالة طلب الاسترجاع</td>
+                    <td><code>GET /api/v1/check-refund/{order_id}</code></td>
+                    <td>يتحقق من حالة عملية الاسترجاع في البنك باستخدام <code>order_id</code>.</td>
+                </tr>
+                <tr>
+                    <td>إلغاء طلب استرجاع معلق</td>
+                    <td><code>POST /api/v1/delete-refund</code></td>
+                    <td>يتيح إلغاء طلب استرجاع قبل تسويته النهائية باستخدام <code>order_id</code> و <code>refund_order_id</code>.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>4. نموذج طلب إنشاء رابط الدفع (<code>POST /api/v1/charge</code>)</h2>
+        <pre>{
+  "products": [
+    {
+      "name": "Invoice #10452",
+      "description": "Vegtablity POS Sales Invoice #10452",
+      "price": 14.750,
+      "quantity": 1
+    }
+  ],
+  "order": {
+    "id": "10452",
+    "reference": "INV_10452",
+    "description": "Invoice #10452 - Vegtablity POS",
+    "currency": "KWD",
+    "amount": 14.750
+  },
+  "language": "ar",
+  "reference": {
+    "id": "INV_10452"
+  },
+  "customer": {
+    "uniqueId": "CUST_1",
+    "name": "عميل نقدي",
+    "email": "customer@vegtablity.com",
+    "mobile": "+96555000000"
+  },
+  "paymentGateway": {
+    "src": "create-invoice"
+  },
+  "returnUrl": "https://your-server-domain/api/integrations/redirect/upayments/success",
+  "cancelUrl": "https://your-server-domain/api/integrations/redirect/upayments/cancel",
+  "notificationUrl": "https://your-server-domain/api/integrations/webhook/upayments"
+}</pre>
+    </div>
+
+    <div class="card">
+        <h2>5. نموذج طلب إرجاع المبلغ للعميل (<code>POST /api/v1/create-refund</code>) ↩️</h2>
+        <pre>{
+  "order_id": "v1_019ae3c...",
+  "total_price": 14.750,
+  "customer_first_name": "عميل نقدي",
+  "customer_email": "customer@vegtablity.com",
+  "customer_mobile_number": "+96555000000",
+  "reference_id": "REF_INV_10452",
+  "notify_url": "https://your-server-domain/api/integrations/webhook/upayments"
+}</pre>
+    </div>
+</body>
+</html>
+

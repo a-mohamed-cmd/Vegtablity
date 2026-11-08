@@ -176,6 +176,14 @@
       <DependentUpon>ReportRowControl.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Controls\JournalDebtAgingControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Controls\JournalDebtAgingControl.xaml.vb">
+      <DependentUpon>JournalDebtAgingControl.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -318,6 +326,7 @@
     <Compile Include="ViewModels\PurchaseInvoiceViewModel.vb" />
     <Compile Include="ViewModels\SalesInvoiceViewModel.vb" />
     <Compile Include="ViewModels\InvoiceDashboardViewModel.vb" />
+    <Compile Include="ViewModels\CustomerJournalDebtAgingViewModel.vb" />
     <Compile Include="ViewModels\ReportsViewModel.vb" />
     <Compile Include="Models\Unit.vb" />
     <Compile Include="Models\Category.vb" />

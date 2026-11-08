@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>كتيب الربط الفني لبوابة Tap Payments (API v2) — Vegtablity ERP & POS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            line-height: 1.75;
+            padding: 32px;
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #10b981; margin-top: 22px; }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 22px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+        }
+        th, td {
+            border: 1px solid #334155;
+            padding: 10px 14px;
+            text-align: right;
+        }
+        th { background: #090d16; color: #6ee7b7; }
+        pre {
+            background: #090d16;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 16px;
+            direction: ltr;
+            text-align: left;
+            color: #a7f3d0;
+            overflow-x: auto;
+        }
+        code {
+            background: rgba(15, 23, 42, 0.8);
+            color: #fcd34d;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📘 الكتيب المرجعي الفني لربط بوابة Tap Payments (API v2 — الكويت KWD)</h1>
+    <p>تم إعداد هذا المرجع بناءً على فحص التوثيق الرسمي لبوابة Tap Payments (<code>https://developers.tap.company/reference/api-endpoint</code>) لتنفيذه في كلاس <code>TapPaymentProvider</code> ضمن منظومة Vegtablity.</p>
+
+    <div class="card">
+        <h2>1. إعدادات الاتصال والمصادقة (Authentication &amp; Headers)</h2>
+        <ul>
+            <li><strong>Base URL الموحد:</strong> <code>https://api.tap.company/v2</code></li>
+            <li><strong>آلية التمييز بين الاختبار (Sandbox) والوضع الفعلي (Live):</strong> تستخدم Tap نفس الرابط الأساسي، ويتحدد الوضع تلقائياً حسب المفتاح السري:
+                <ul>
+                    <li>وضع الاختبار (<code>IsLiveMode = 0</code>): يبدأ المفتاح بـ <code>sk_test_...</code></li>
+                    <li>الوضع الفعلي (<code>IsLiveMode = 1</code>): يبدأ المفتاح بـ <code>sk_live_...</code></li>
+                </ul>
+            </li>
+            <li><strong>الترويسات الإلزامية:</strong>
+                <pre>Authorization: Bearer {YOUR_TAP_SECRET_KEY}
+Content-Type: application/json
+Accept: application/json</pre>
+            </li>
+            <li><strong>الحساب المحاسبي (يُنشأ فقط بعد حفظ إعدادات البوابة في WPF):</strong> حساب حركي باسم <code>Tap Payments</code> تحت الحساب الأب <code>AccountID = 10</code> (الكود <code>11</code>).</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>2. نقاط النهاية المعتمدة (Tap API v2 Endpoints)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>العملية</th>
+                    <th>Endpoint</th>
+                    <th>الوصف</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>إنشاء عملية تحصيل / رابط دفع مباشر</td>
+                    <td><code>POST /v2/charges</code></td>
+                    <td>إصدار رابط دفع لعملية مفردة أو مجمعة عبر <code>transaction.url</code> مع دعم <code>src_all</code> أو <code>src_kw.knet</code>.</td>
+                </tr>
+                <tr>
+                    <td>الاستعلام عن حالة عملية تحصيل</td>
+                    <td><code>GET /v2/charges/{charge_id}</code></td>
+                    <td>جلب الحالة الحالية (<code>INITIATED</code>, <code>CAPTURED</code>, <code>DECLINED</code>, <code>TIMEDOUT</code>) ورقم مرجع KNET (<code>reference.payment</code>).</td>
+                </tr>
+                <tr>
+                    <td>إنشاء فاتورة مستضافة (Tap Invoice)</td>
+                    <td><code>POST /v2/invoices</code></td>
+                    <td>إصدار رابط فاتورة مع بنودها وتاريخ انتهاء الصلاحية وإشعار SMS تلقائي.</td>
+                </tr>
+                <tr>
+                    <td>الاستعلام عن حالة فاتورة Tap</td>
+                    <td><code>GET /v2/invoices/{invoice_id}</code></td>
+                    <td>فحص حالة الفاتورة (<code>PAID</code>, <code>EXPIRED</code>, <code>CANCELLED</code>).</td>
+                </tr>
+                <tr>
+                    <td>إعادة إرسال تذكير بالفاتورة</td>
+                    <td><code>POST /v2/invoices/{invoice_id}/remind</code></td>
+                    <td>إعادة إرسال الرابط للعميل غير المسدد.</td>
+                </tr>
+                <tr>
+                    <td>إلغاء فاتورة معلقة</td>
+                    <td><code>DELETE /v2/invoices/{invoice_id}</code></td>
+                    <td>إلغاء صلاحية رابط قديم.</td>
+                </tr>
+                <tr>
+                    <td>إرجاع المبلغ للعميل (كلي أو جزئي — Refund) ↩️</td>
+                    <td><code>POST /v2/refunds</code></td>
+                    <td>إرجاع المبلغ المحصل كلياً أو جزئياً إلى حساب العميل البنكي برقم العملية <code>charge_id</code> مع تحديد السبب <code>reason</code>.</td>
+                </tr>
+                <tr>
+                    <td>الاستعلام عن حالة عملية الاسترجاع</td>
+                    <td><code>GET /v2/refunds/{refund_id}</code></td>
+                    <td>جلب حالة الاسترجاع (<code>REFUNDED</code>, <code>PENDING</code>, <code>DECLINED</code>).</td>
+                </tr>
+                <tr>
+                    <td>اختبار الاتصال (Test Connection)</td>
+                    <td><code>POST /v2/charges/list</code></td>
+                    <td>إرسال <code>{"limit": 1}</code> للتحقق من استجابة الخادم وصحة <code>SecretKey</code>.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>3. إرجاع المبالغ عبر بوابة Tap (Refunds API — <code>POST /v2/refunds</code>) ↩️</h2>
+        <p>تدعم بوابة Tap استرجاع المبالغ المحصلة (<code>CAPTURED</code>) كلياً أو جزئياً (بدقة 3 خانات عشرية للدينار الكويتي <code>KWD</code>). يتم تفعيل هذه الميزة من إعدادات البوابة عبر الخيار <code>EnableGatewayRefunds</code> الذي يتحكم في إظهار أو إخفاء زر <strong>"↩️ إرجاع المبلغ"</strong> في صفحة متابعة روابط الدفع (WPF &amp; Flutter):</p>
+        <pre>{
+  "charge_id": "chg_TS07A2520261432x9m1004",
+  "amount": 12.500,
+  "currency": "KWD",
+  "description": "استرجاع فاتورة رقم #10452",
+  "reason": "requested_by_customer",
+  "reference": {
+    "merchant": "REF_INV_10452"
+  },
+  "metadata": {
+    "inv_id": "10452",
+    "link_id": "88",
+    "refunded_by_user": "1"
+  },
+  "post": {
+    "url": "https://your-server-domain/api/integrations/webhook/tap"
+  }
+}</pre>
+    </div>
+
+    <div class="card">
+        <h2>4. معادلة التحقق من التوقيع الأمني للـ Webhook (<code>hashstring</code> HMAC-SHA256)</h2>
+        <p>عند وصول إشعار الدفع من Tap إلى <code>POST /api/integrations/webhook/tap</code>، يتم التحقق من ترويسة <code>hashstring</code> باستخدام المفتاح السري <code>SecretKey</code> كالتالي:</p>
+        <pre>StringToHash = "x_id" + id
+             + "x_amount" + Format(amount, "0.000")   // 3 خانات عشرية للعملة KWD
+             + "x_currency" + currency
+             + "x_gateway_reference" + reference.gateway
+             + "x_payment_reference" + reference.payment
+             + "x_status" + status
+             + "x_created" + created;
+
+ComputedHash = HMAC_SHA256(StringToHash, SecretKey);</pre>
+    </div>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>كتيب الربط الفني لمنصة Talabat (POS Plugin &amp; Middleware API) — Vegtablity ERP &amp; POS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            line-height: 1.75;
+            padding: 32px;
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 { color: #f97316; margin-top: 22px; }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 22px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+        }
+        th, td {
+            border: 1px solid #334155;
+            padding: 10px 14px;
+            text-align: right;
+        }
+        th { background: #090d16; color: #fdba74; }
+        pre {
+            background: #090d16;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 16px;
+            direction: ltr;
+            text-align: left;
+            color: #fed7aa;
+            overflow-x: auto;
+        }
+        code {
+            background: rgba(15, 23, 42, 0.8);
+            color: #fcd34d;
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📙 الكتيب المرجعي الفني لربط منصة البيع Talabat (POS Plugin &amp; Middleware API — الكويت KWD)</h1>
+    <p>تم إعداد هذا المرجع بناءً على فحص التوثيق الرسمي لـ Delivery Hero / Talabat POS Plugin API (<code>https://integration-middleware.stg.restaurant-partners.com/apidocs/pos-plugin-api#tag/Plugin-Endpoints/operation/Dispatch%20Order</code>) لتنفيذه في كلاس <code>TalabatPlatformProvider</code> ضمن منظومة Vegtablity.</p>
+
+    <div class="card">
+        <h2>1. القاعدة المحاسبية لـ Talabat كعميل مبيعات (Sales Customer)</h2>
+        <ul>
+            <li><strong>التصنيف في النظام:</strong> بوابة بيع ومنصة توصيل (<code>DELIVERY_PLATFORM</code>) تعامل معاملة <strong>العملاء (<code>Customers</code>)</strong>.</li>
+            <li><strong>شرط الإنشاء وإظهار الشاشات (فقط بعد نجاح اختبار الاتصال وحفظ إعدادات البوابة في WPF):</strong>
+                <ol>
+                    <li>عند تفعيل <code>EnableTalabatIntegration = 1</code> في <code>CompanySettings</code>، تظهر فقط الصلاحية في <code>UserPermissions</code> وبطاقة إعدادات Talabat في WPF (دون إضافة أي عميل أو حساب أو شاشات تشغيل).</li>
+                    <li><strong>قاعدة عامة ملزمة لكل بوابة:</strong> لا يتم حفظ البيانات ولا تنفيذ أمر الحفظ وما يترتب عليه إلا <strong>إذا نجح اختبار الاتصال (<code>POST /v2/login</code> = <code>200 OK</code>)</strong>.</li>
+                    <li><strong>فور نجاح اختبار الاتصال وحفظ الإعدادات في WPF (<code>IsConfigured = 1</code>):</strong>
+                        <ul>
+                            <li>يقوم الـ Trigger <code>[Settings].[trg_IntegrationProviders_OnConfigSaved]</code> بإدراج <code>Talabat</code> كعميل جديد في جدول العملاء <code>[Sales].[Partners]</code>.</li>
+                            <li>ينطلق تلقائياً الـ Trigger الموجود في النظام <strong><code>[Sales].[trg_Partner_AfterInsert]</code></strong> ليفتح حساباً محاسبياً للعميل <code>Talabat</code> في شجرة الحسابات <code>[Accounting].[ChartOfAccounts]</code> تحت حساب العملاء (الكود <code>12</code>) ويربط <code>PartnerID</code> و <code>AccountID</code>!</li>
+                            <li><strong>في WPF:</strong> تظهر تلقائياً صفحة <strong>"🛵 طلبات Talabat" (<code>TalabatOrdersPage.xaml</code>) أسفل قسم المبيعات</strong> في القائمة الجانبية، وتعمل بما يتناسب مع جميع APIs طلبات.</li>
+                            <li><strong>في Flutter App:</strong> يظهر في شاشة إعدادات التطبيق (<code>settings_screen.dart</code>) خيار خاص بطلبات Talabat (<code>show_talabat_orders</code>) لإضافة صفحة طلبات Talabat (<code>talabat_orders_screen.dart</code> — استقبال الطلب وتنفيذه وطباعته وكل ما يخص Talabat) إلى الجهاز أو إخفائها!</li>
+                        </ul>
+                    </li>
+                </ol>
+            </li>
+            <li><strong>تسجيل فواتير المبيعات:</strong> تُسجل جميع طلبات Talabat المقبولة كفواتير مبيعات آجلة على حساب العميل <code>Talabat</code> (<code>PartnerID</code>)، مما يتيح متابعة مديونية شركة طلبات، تسديداتها البنكية الدورية، وعمولاتها ضمن كشوف حسابات العملاء وتقرير أعمار الديون!</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>2. روابط البيئة والمصادقة (Middleware Base URLs &amp; JWT Auth)</h2>
+        <ul>
+            <li><strong>بيئة الاختبار (Staging — <code>IsLiveMode = 0</code>):</strong> <code>https://integration-middleware.stg.restaurant-partners.com</code></li>
+            <li><strong>بيئة الإنتاج الفعلي للشرق الأوسط والكويت (Live — <code>IsLiveMode = 1</code>):</strong> <code>https://integration-middleware.me.restaurant-partners.com</code></li>
+            <li><strong>المعرفات المطلوبة في إعدادات البوابة:</strong>
+                <ul>
+                    <li><code>PublicKey</code>: اسم مستخدم الربط (<code>Middleware Username / Client ID</code>).</li>
+                    <li><code>SecretKey</code>: كلمة مرور الربط (<code>Middleware Password / Client Secret</code>).</li>
+                    <li><code>MerchantID</code>: كود السلسلة والفرع لدى طلبات (<code>chainCode</code> &amp; <code>remoteId / posVendorId</code>).</li>
+                </ul>
+            </li>
+            <li><strong>نقطة نهاية المصادقة وفحص الاتصال (<code>POST /v2/login</code>):</strong>
+                <pre>POST /v2/login
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=client_credentials&amp;username={Username}&amp;password={Password}</pre>
+                تعيد رمز <code>access_token</code> (JWT Bearer Token) يُستخدم في جميع الطلبات المرسلة إلى Talabat، وتُستخدم كذلك لزر <strong>"اختبار عملية الربط (Test Connection)"</strong> في شاشة إعدادات WPF.
+            </li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2>3. جدول نقاط النهاية ثنائية الاتجاه (Plugin Endpoints &amp; Middleware Endpoints)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>الاتجاه</th>
+                    <th>العملية</th>
+                    <th>Method &amp; Endpoint</th>
+                    <th>الوصف والمعالجة في Vegtablity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>وارد من Talabat (Plugin API)</strong></td>
+                    <td><strong>Dispatch Order (استقبال طلب جديد)</strong> ⭐</td>
+                    <td><code>POST /api/integrations/talabat/order/{remoteId}</code></td>
+                    <td>ترسل Talabat بيانات الطلب كاملاً (الأصناف <code>products</code> مربوطة بالباركود <code>remoteCode</code>، الإجمالي <code>price.grandTotal</code>، رقم الطلب القصير <code>shortCode</code>، ونوع التوصيل <code>expeditionType</code>). يرد خادمنا فوراً بـ <code>202 Accepted</code> مع <code>remoteOrderId</code> وينشئ فاتورة مبيعات باسم العميل <code>Talabat</code>.</td>
+                </tr>
+                <tr>
+                    <td><strong>وارد من Talabat (Plugin API)</strong></td>
+                    <td><strong>Cancel Order (إشعار إلغاء طلب)</strong></td>
+                    <td><code>PUT /api/integrations/talabat/remoteId/{remoteId}/remoteOrder/{remoteOrderId}/posOrderStatus</code></td>
+                    <td>إشعار من Talabat بإلغاء الطلب (<code>ORDER_CANCELLED</code>) لعكس/إلغاء الطلب في شاشة المتابعة وإشعار الكاشير صوتياً.</td>
+                </tr>
+                <tr>
+                    <td><strong>صادر إلى Talabat (Middleware API)</strong></td>
+                    <td><strong>Accept / Reject Order (قبول أو رفض الطلب)</strong></td>
+                    <td><code>POST /v2/chains/{chainCode}/orders/{orderToken}/status</code><br/>أو <code>PUT /v2/orders/{orderToken}</code></td>
+                    <td>يرسل <code>status: "order_accepted"</code> مع <code>remoteOrderId</code> عند قبول الطلب (تلقائياً أو بضغطة الكاشير)، أو <code>status: "order_rejected"</code> مع سبب الرفض (<code>ITEM_UNAVAILABLE</code> / <code>STORE_CLOSED</code>).</td>
+                </tr>
+                <tr>
+                    <td><strong>صادر إلى Talabat (Middleware API)</strong></td>
+                    <td><strong>Order Prepared (إشعار جاهزية الطلب للسائق)</strong></td>
+                    <td><code>POST /v2/orders/{orderToken}/preparation-completed</code></td>
+                    <td>إشعار تطبيق سائق Talabat بأن الطلب تم تجهيزه وتغليفه في الفرع وجاهز للاستلام.</td>
+                </tr>
+                <tr>
+                    <td><strong>صادر إلى Talabat (Middleware API)</strong></td>
+                    <td><strong>Vendor Availability (فتح/إغلاق الفرع)</strong></td>
+                    <td><code>PUT /v2/chains/{chainCode}/remoteVendors/{remoteId}/availability</code></td>
+                    <td>تغيير حالة الفرع على تطبيق Talabat (<code>AVAILABLE</code> مفتوح، <code>BUSY</code> مشغول، <code>CLOSED</code> مغلق) مباشرة من شاشة النظام.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>4. نموذج Payload عملية Dispatch Order الوارد من Talabat</h2>
+        <pre>{
+  "token": "tlb-ord-99887766",
+  "code": "k9x2-m4p1",
+  "shortCode": "42",
+  "expeditionType": "delivery",
+  "createdAt": "2026-11-08T18:45:00Z",
+  "customer": {
+    "firstName": "Ahmad",
+    "lastName": "Al-Sabah",
+    "mobilePhone": "+96555000000"
+  },
+  "payment": {
+    "type": "paid",
+    "remoteCode": "ONLINE_KNET"
+  },
+  "price": {
+    "grandTotal": "14.750",
+    "subTotal": "14.750",
+    "discountAmountTotal": "0.000",
+    "deliveryFees": []
+  },
+  "products": [
+    {
+      "id": "prod_1",
+      "remoteCode": "6281000001015",
+      "name": "صندوق خضار مشكل ممتاز",
+      "quantity": "2",
+      "unitPrice": "7.375",
+      "paidPrice": "14.750",
+      "selectedToppings": []
+    }
+  ]
+}</pre>
+        <p><strong>الرد الفوري المطلوب من خادمنا خلال ثوانٍ (HTTP 202 Accepted):</strong></p>
+        <pre>{
+  "remoteResponse": {
+    "remoteOrderId": "INV_10452"
+  }
+}</pre>
+    </div>
+</body>
+</html>
+

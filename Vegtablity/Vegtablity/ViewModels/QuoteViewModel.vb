@@ -677,7 +677,8 @@ Namespace ViewModels
         End Sub
 
         Private Sub ExecuteImportFromExcel(parameter As Object)
-            Dim imported = Helpers.ReportExporter.ImportQuoteFromExcel(Products, _productService)
+            Dim allProductsForImport = _productService.GetProductsForSales()
+            Dim imported = Helpers.ReportExporter.ImportQuoteFromExcel(allProductsForImport, _productService)
             If imported Is Nothing Then Return ' user cancelled
 
             If imported.Count = 0 Then
