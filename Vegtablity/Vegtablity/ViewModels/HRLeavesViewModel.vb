@@ -362,7 +362,7 @@ Namespace ViewModels
                 TotalRecords = result.TotalCount
                 NotifyPaginationChanged()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب سجل الإجازات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب سجل الإجازات")
             End Try
         End Sub
 
@@ -516,7 +516,7 @@ Namespace ViewModels
                     ExecuteNewLeave(Nothing)
                 End If
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الإجازة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الإجازة")
             End Try
         End Sub
 
@@ -544,7 +544,7 @@ Namespace ViewModels
                 LoadLeaves()
                 SelectedLeave = Leaves.FirstOrDefault(Function(l) l.LeaveID = curId)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء تسجيل المباشرة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تسجيل المباشرة")
             End Try
         End Sub
 

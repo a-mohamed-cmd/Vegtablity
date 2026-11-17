@@ -50,14 +50,23 @@ BEGIN
         PasswordHash NVARCHAR(255) NOT NULL,
         FullName NVARCHAR(100),
         IsActive BIT DEFAULT 1,
+        CanRefundPaymentGateway BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME DEFAULT GETDATE(),
         FOREIGN KEY (RoleID) REFERENCES [Security].[Roles](RoleID)
     );
 
 -- إضافة مستخدم افتراضي 
-INSERT INTO [Security].Users (RoleID, Username, PasswordHash, FullName) VALUES (1, N'admin', N'123', N'Administrator');
+INSERT INTO [Security].Users (RoleID, Username, PasswordHash, FullName, CanRefundPaymentGateway) VALUES (1, N'admin', N'123', N'Administrator', 1);
 end
 go
+
+IF COL_LENGTH('[Security].[Users]', 'CanRefundPaymentGateway') IS NULL
+BEGIN
+    ALTER TABLE [Security].[Users]
+        ADD CanRefundPaymentGateway BIT NOT NULL
+        CONSTRAINT DF_Users_CanRefundPaymentGateway DEFAULT 0;
+END
+GO
 
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RolePermissions' AND schema_id = SCHEMA_ID('Security'))
 BEGIN
@@ -177,7 +186,7 @@ BEGIN
         PartnerType NVARCHAR(20) NOT NULL, -- Supplier, Customer
         Phone NVARCHAR(20),
         Address NVARCHAR(255),
-        CurrentBalance DECIMAL(18, 2) DEFAULT 0,
+        CurrentBalance DECIMAL(18, 3) DEFAULT 0,
         IsActive BIT DEFAULT 1,
         AccountID INT NULL
     );
@@ -411,7 +420,7 @@ BEGIN
         UnitID INT,
         PurchasePrice DECIMAL(18, 3) DEFAULT 0,
         SalePrice DECIMAL(18, 3) DEFAULT 0,
-        AlertQty DECIMAL(18, 2) DEFAULT 0,
+        AlertQty DECIMAL(18, 3) DEFAULT 0,
         IsActive BIT DEFAULT 1,
         FOREIGN KEY (CategoryID) REFERENCES [Settings].[Categories](CatID),
         FOREIGN KEY (UnitID) REFERENCES [Settings].[Units](UnitID)
@@ -426,7 +435,7 @@ BEGIN
         StockID INT PRIMARY KEY IDENTITY(1,1),
         ProductID INT NOT NULL,
         WarehouseID INT NOT NULL,
-        CurrentQty DECIMAL(18, 2) DEFAULT 0,
+        CurrentQty DECIMAL(18, 3) DEFAULT 0,
         AvgCostPrice DECIMAL(18, 3) DEFAULT 0,   -- متوسط سعر التكلفة المرجح لكل مخزن
         FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID),
         FOREIGN KEY (WarehouseID) REFERENCES [Settings].[Warehouses](WarehouseID),
@@ -438,7 +447,7 @@ go
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Inventory].[ProductStock]') AND name = 'AvgCostPrice')
 BEGIN
     ALTER TABLE [Inventory].[ProductStock]
-    ADD AvgCostPrice DECIMAL(18, 2) DEFAULT 0;
+    ADD AvgCostPrice DECIMAL(18, 3) DEFAULT 0;
 END
 go
 -- =============================================
@@ -482,7 +491,7 @@ BEGIN
         ProductID INT NOT NULL,
 		ReferenceNo nvarchar null,
         UnitPrice DECIMAL(18, 3) DEFAULT 0,
-        Quantity DECIMAL(18, 2) DEFAULT 1,
+        Quantity DECIMAL(18, 3) DEFAULT 1,
         TotalPrice DECIMAL(18, 3) DEFAULT 0, 
         CostPrice DECIMAL(18, 3) DEFAULT 0, 
         FOREIGN KEY (InvID) REFERENCES [Sales].[InvoiceHeader](InvID) ON DELETE CASCADE,
@@ -1159,7 +1168,7 @@ BEGIN
     SET NOCOUNT ON;
 
     -- 1. حساب الرصيد الافتتاحى (ما قبل الفترة)
-    DECLARE @OpeningBalance DECIMAL(18, 2) = 0;
+    DECLARE @OpeningBalance DECIMAL(18, 3) = 0;
 
     SELECT @OpeningBalance = ISNULL(SUM(DebitAmount - CreditAmount), 0)
     FROM [Accounting].[JournalEntries]
@@ -1291,7 +1300,7 @@ BEGIN
         ALTER TABLE [Accounting].[JournalHeader] ADD JournalNo INT NOT NULL DEFAULT (NEXT VALUE FOR [Accounting].[seq_EntryNo]);
     
     IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Accounting].[JournalHeader]') AND name = 'TotalAmount')
-        ALTER TABLE [Accounting].[JournalHeader] ADD TotalAmount DECIMAL(18, 2) DEFAULT 0;
+        ALTER TABLE [Accounting].[JournalHeader] ADD TotalAmount DECIMAL(18, 3) DEFAULT 0;
 END
 GO
 
@@ -2205,7 +2214,7 @@ BEGIN
             THROW 50001, N'حساب أرباح وخسائر مبقاة غير موجود، يرجى تهيئته.', 1;
 
         -- 2. حساب أرصدة الإيرادات والمصروفات حتى تاريخ الإقفال
-        DECLARE @Balances TABLE (AccountID INT, Balance DECIMAL(18,2), AccType NVARCHAR(50));
+        DECLARE @Balances TABLE (AccountID INT, Balance DECIMAL(18, 3), AccType NVARCHAR(50));
 
         INSERT INTO @Balances (AccountID, Balance, AccType)
         SELECT 
@@ -2261,9 +2270,9 @@ BEGIN
         FROM @Balances WHERE AccType = 'Expenses' AND Balance <> 0;
 
         -- 5. إقفال صافي الربح / الخسارة في الأرباح المبقاة
-        DECLARE @TotalRevenues DECIMAL(18,2) = ISNULL((SELECT SUM(Balance) FROM @Balances WHERE AccType = 'Revenue'), 0);
-        DECLARE @TotalExpenses DECIMAL(18,2) = ISNULL((SELECT SUM(Balance) FROM @Balances WHERE AccType = 'Expenses'), 0);
-        DECLARE @NetProfit DECIMAL(18,2) = @TotalRevenues - @TotalExpenses;
+        DECLARE @TotalRevenues DECIMAL(18, 3) = ISNULL((SELECT SUM(Balance) FROM @Balances WHERE AccType = 'Revenue'), 0);
+        DECLARE @TotalExpenses DECIMAL(18, 3) = ISNULL((SELECT SUM(Balance) FROM @Balances WHERE AccType = 'Expenses'), 0);
+        DECLARE @NetProfit DECIMAL(18, 3) = @TotalRevenues - @TotalExpenses;
 
         IF @NetProfit <> 0
         BEGIN
@@ -2275,7 +2284,7 @@ BEGIN
         END
 
         -- 6. تحديث إجمالي القيد
-        DECLARE @TotalDebit DECIMAL(18,2) = ISNULL((SELECT SUM(Debit) FROM [Accounting].[JournalDetails] WHERE JID = @JID), 0);
+        DECLARE @TotalDebit DECIMAL(18, 3) = ISNULL((SELECT SUM(Debit) FROM [Accounting].[JournalDetails] WHERE JID = @JID), 0);
         UPDATE [Accounting].[JournalHeader] SET TotalAmount = @TotalDebit WHERE JID = @JID;
 
         -- 7. ترحيل القيد لإثبات الحركات في سجل القيود العام
@@ -2341,7 +2350,15 @@ CREATE PROCEDURE [Security].[sp_User_GetAll]
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT u.UserID, u.RoleID, r.RoleName, u.Username, u.FullName, u.IsActive, u.CreatedAt
+    SELECT u.UserID, u.RoleID, r.RoleName, u.Username, u.FullName, u.IsActive,
+           CAST(CASE WHEN EXISTS (
+               SELECT 1
+               FROM [Security].[RolePermissions] rp
+               WHERE rp.RoleID = u.RoleID
+                 AND rp.FormName = N'PaymentGatewayInvoices'
+                 AND ISNULL(rp.CanDelete, 0) = 1
+           ) THEN 1 ELSE 0 END AS BIT) AS CanRefundPaymentGateway,
+           u.CreatedAt
     FROM [Security].[Users] u
     INNER JOIN [Security].[Roles] r ON u.RoleID = r.RoleID
     ORDER BY u.UserID
@@ -2358,12 +2375,13 @@ CREATE PROCEDURE [Security].[sp_User_Add]
     @Username NVARCHAR(100),
     @PasswordHash NVARCHAR(256),
     @FullName NVARCHAR(200),
-    @IsActive BIT
+    @IsActive BIT,
+    @CanRefundPaymentGateway BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
-    INSERT INTO [Security].[Users] (RoleID, Username, PasswordHash, FullName, IsActive)
-    VALUES (@RoleID, @Username, @PasswordHash, @FullName, @IsActive);
+    INSERT INTO [Security].[Users] (RoleID, Username, PasswordHash, FullName, IsActive, CanRefundPaymentGateway)
+    VALUES (@RoleID, @Username, @PasswordHash, @FullName, @IsActive, ISNULL(@CanRefundPaymentGateway, 0));
     SELECT SCOPE_IDENTITY();
 END
 GO
@@ -2378,12 +2396,17 @@ CREATE PROCEDURE [Security].[sp_User_Update]
     @RoleID INT,
     @Username NVARCHAR(100),
     @FullName NVARCHAR(200),
-    @IsActive BIT
+    @IsActive BIT,
+    @CanRefundPaymentGateway BIT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     UPDATE [Security].[Users]
-    SET RoleID = @RoleID, Username = @Username, FullName = @FullName, IsActive = @IsActive
+    SET RoleID = @RoleID,
+        Username = @Username,
+        FullName = @FullName,
+        IsActive = @IsActive,
+        CanRefundPaymentGateway = ISNULL(@CanRefundPaymentGateway, CanRefundPaymentGateway)
     WHERE UserID = @UserID
 END
 GO
@@ -2710,7 +2733,7 @@ CREATE PROCEDURE [Inventory].[sp_Product_Save]
     @UnitID INT = NULL,
     @PurchasePrice DECIMAL(18,3) = 0,
     @SalePrice DECIMAL(18,3) = 0,
-    @AlertQty DECIMAL(18,2) = 0,
+    @AlertQty DECIMAL(18, 3) = 0,
     @ProductType INT = 1
 AS
 BEGIN
@@ -3213,7 +3236,7 @@ BEGIN
     DECLARE @TotalOutValue     DECIMAL(18,3) = 0;
     DECLARE @LastPurchasePrice DECIMAL(18,3) = 0;
     DECLARE @ProfitRate        DECIMAL(18,3) = 0;
-    DECLARE @AlertQty          DECIMAL(18,2) = 0;
+    DECLARE @AlertQty          DECIMAL(18, 3) = 0;
     DECLARE @Barcode           NVARCHAR(50) = '';
 
     -- معلومات الصنف (حد الطلب، الباركود)
@@ -3264,7 +3287,7 @@ BEGIN
     -- معدل الربح التقريبي
     IF @TotalOutQty > 0 AND @AvgCost > 0
     BEGIN
-        DECLARE @TotalCostOfSales DECIMAL(18,2) = @TotalOutQty * @AvgCost;
+        DECLARE @TotalCostOfSales DECIMAL(18, 3) = @TotalOutQty * @AvgCost;
         IF @TotalCostOfSales > 0
             SET @ProfitRate = ((@TotalOutValue - @TotalCostOfSales) / @TotalCostOfSales) * 100;
         ELSE
@@ -3397,11 +3420,11 @@ CREATE PROCEDURE [Sales].[sp_Invoice_Save]
     @InvDate DATETIME,
     @PartnerID INT,
     @WarehouseID INT,
-    @TotalAmount DECIMAL(18, 2),
-    @Discount DECIMAL(18, 2),
-    @NetAmount DECIMAL(18, 2),
-    @PaidAmount DECIMAL(18, 2),
-    @Remainder DECIMAL(18, 2),
+    @TotalAmount DECIMAL(18, 3),
+    @Discount DECIMAL(18, 3),
+    @NetAmount DECIMAL(18, 3),
+    @PaidAmount DECIMAL(18, 3),
+    @Remainder DECIMAL(18, 3),
     @UserID INT,
     @Notes NVARCHAR(255),
     @IsPosted BIT = 0,
@@ -3439,10 +3462,10 @@ GO
 CREATE PROCEDURE [Sales].[sp_InvoiceDetail_Save]
     @InvID INT,
     @ProductID INT,
-    @UnitPrice DECIMAL(18, 2),
-    @Quantity DECIMAL(18, 2),
-    @TotalPrice DECIMAL(18, 2),
-    @CostPrice DECIMAL(18, 2)
+    @UnitPrice DECIMAL(18, 3),
+    @Quantity DECIMAL(18, 3),
+    @TotalPrice DECIMAL(18, 3),
+    @CostPrice DECIMAL(18, 3)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -3608,11 +3631,11 @@ CREATE PROCEDURE [Sales].[sp_Invoice_Save]
     @InvDate DATETIME,
     @PartnerID INT,
     @WarehouseID INT,
-    @TotalAmount DECIMAL(18, 2),
-    @Discount DECIMAL(18, 2),
-    @NetAmount DECIMAL(18, 2),
-    @PaidAmount DECIMAL(18, 2),
-    @Remainder DECIMAL(18, 2),
+    @TotalAmount DECIMAL(18, 3),
+    @Discount DECIMAL(18, 3),
+    @NetAmount DECIMAL(18, 3),
+    @PaidAmount DECIMAL(18, 3),
+    @Remainder DECIMAL(18, 3),
     @UserID INT,
     @Notes NVARCHAR(255),
     @IsPosted BIT = 0,
@@ -3694,10 +3717,10 @@ GO
 CREATE PROCEDURE [Sales].[sp_InvoiceDetail_Save]
     @InvID INT,
     @ProductID INT,
-    @UnitPrice DECIMAL(18, 2),
-    @Quantity DECIMAL(18, 2),
-    @TotalPrice DECIMAL(18, 2),
-    @CostPrice DECIMAL(18, 2)
+    @UnitPrice DECIMAL(18, 3),
+    @Quantity DECIMAL(18, 3),
+    @TotalPrice DECIMAL(18, 3),
+    @CostPrice DECIMAL(18, 3)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -3939,7 +3962,7 @@ IF OBJECT_ID('[Sales].[sp_Invoice_AddPayment]', 'P') IS NOT NULL DROP PROCEDURE 
 GO
 CREATE PROCEDURE [Sales].[sp_Invoice_AddPayment]
     @InvID            INT,
-    @PaymentAmount    DECIMAL(18,2),
+    @PaymentAmount    DECIMAL(18, 3),
     @PaymentAccountID INT,
     @UserID           INT
 AS
@@ -3949,7 +3972,7 @@ BEGIN
         BEGIN TRANSACTION;
 
         DECLARE @InvType   NVARCHAR(20), @PartnerID INT,
-                @Remainder DECIMAL(18,2), @IsPosted  BIT;
+                @Remainder DECIMAL(18, 3), @IsPosted  BIT;
 
         SELECT @InvType   = InvType,
                @PartnerID = PartnerID,
@@ -4235,7 +4258,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
-    DECLARE @AlertQty DECIMAL(18,2) = 0;
+    DECLARE @AlertQty DECIMAL(18, 3) = 0;
     SELECT @AlertQty = ISNULL(AlertQty, 0)
     FROM [Inventory].[Products]
     WHERE ProductID = @ProductID;
@@ -4256,7 +4279,7 @@ create PROCEDURE [Inventory].[sp_ProductCard_UpdateQuickDetails]
     @ProductID   INT,
     @ProductName NVARCHAR(255),
     @Barcode     NVARCHAR(50),
-    @SalePrice   DECIMAL(18,2)
+    @SalePrice   DECIMAL(18, 3)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -4290,8 +4313,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @TodaySales DECIMAL(18,2) = 0;
-    DECLARE @TodayPurchases DECIMAL(18,2) = 0;
+    DECLARE @TodaySales DECIMAL(18, 3) = 0;
+    DECLARE @TodayPurchases DECIMAL(18, 3) = 0;
     DECLARE @TotalProducts INT = 0;
     DECLARE @TotalCustomers INT = 0;
     DECLARE @Today DATE = CAST(GETDATE() AS DATE);
@@ -4445,7 +4468,14 @@ BEGIN
         Users.FullName, 
         Users.RoleID,  -- تمت إضافة هذا العمود المفقود
         Roles.RoleName, 
-        Users.IsActive 
+        Users.IsActive,
+        CAST(CASE WHEN EXISTS (
+            SELECT 1
+            FROM [Security].[RolePermissions] rp
+            WHERE rp.RoleID = Users.RoleID
+              AND rp.FormName = N'PaymentGatewayInvoices'
+              AND ISNULL(rp.CanDelete, 0) = 1
+        ) THEN 1 ELSE 0 END AS BIT) AS CanRefundPaymentGateway
     FROM [Security].Users 
     INNER JOIN [Security].Roles ON Users.RoleID = Roles.RoleID 
     WHERE Username = @Username AND PasswordHash = @PasswordHash;
@@ -6168,7 +6198,7 @@ CREATE TABLE [Purchases].[PurchaseQuoteDetails](
     [DetailID] INT IDENTITY(1,1) PRIMARY KEY,
     [PurchaseQuoteID] INT NOT NULL,
     [ProductID] INT NOT NULL,
-    [Quantity] DECIMAL(18,2) NOT NULL DEFAULT 1,
+    [Quantity] DECIMAL(18, 3) NOT NULL DEFAULT 1,
     [UnitPrice] DECIMAL(18,3) NOT NULL,
     CONSTRAINT FK_Details_Header FOREIGN KEY (PurchaseQuoteID) REFERENCES [Purchases].[PurchaseQuoteHeader](PurchaseQuoteID) ON DELETE CASCADE,
     CONSTRAINT FK_Details_Product FOREIGN KEY (ProductID) REFERENCES [Inventory].[Products](ProductID)
@@ -6721,7 +6751,7 @@ BEGIN
         [UserID] INT NOT NULL,
         [StartTime] DATETIME NOT NULL DEFAULT GETDATE(),
         [EndTime] DATETIME NULL,
-        [StartingCash] DECIMAL(18, 2) NOT NULL DEFAULT 0,
+        [StartingCash] DECIMAL(18, 3) NOT NULL DEFAULT 0,
         [EndingCash] DECIMAL(18, 3) NULL,
         [Status] NVARCHAR(20) NOT NULL DEFAULT 'Open', -- 'Open', 'Closed'
         FOREIGN KEY ([UserID]) REFERENCES [Security].[Users]([UserID])
@@ -6750,7 +6780,7 @@ IF OBJECT_ID('[Sales].[sp_Shift_Open]', 'P') IS NOT NULL DROP PROCEDURE [Sales].
 GO
 CREATE PROCEDURE [Sales].[sp_Shift_Open]
     @UserID INT,
-    @StartingCash DECIMAL(18, 2),
+    @StartingCash DECIMAL(18, 3),
     @ShiftID INT OUTPUT
 AS
 BEGIN
@@ -6775,7 +6805,7 @@ IF OBJECT_ID('[Sales].[sp_Shift_Close]', 'P') IS NOT NULL DROP PROCEDURE [Sales]
 GO
 CREATE PROCEDURE [Sales].[sp_Shift_Close]
     @ShiftID INT,
-    @EndingCash DECIMAL(18, 2)
+    @EndingCash DECIMAL(18, 3)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -6978,7 +7008,7 @@ BEGIN
                 BEGIN
                     DECLARE @CashboxID INT;
                     DECLARE @RevenueIDchild INT;
-                    DECLARE @AbsDiff DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
+                    DECLARE @AbsDiff DECIMAL(18, 3) = CAST(ABS(@Difference) AS DECIMAL(18, 3));
                     DECLARE @JournalDesc NVARCHAR(255);
                     DECLARE @EntryNo INT;
                     DECLARE @DebitAccID INT;
@@ -7610,7 +7640,7 @@ BEGIN
         BEGIN
             DECLARE @CashboxID      INT;
             DECLARE @RevenueIDchild INT;
-            DECLARE @AbsDiff        DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
+            DECLARE @AbsDiff        DECIMAL(18, 3) = CAST(ABS(@Difference) AS DECIMAL(18, 3));
             DECLARE @JournalDesc    NVARCHAR(255);
             DECLARE @EntryNo        INT;
             DECLARE @DebitAccID     INT;
@@ -7700,7 +7730,7 @@ GO
 
 CREATE PROCEDURE [Sales].[sp_Invoice_AddPayment_pos]
     @InvID            INT,
-    @PaymentAmount    DECIMAL(18,2),
+    @PaymentAmount    DECIMAL(18, 3),
     @PaymentAccountID INT,
     @UserID           INT
 AS
@@ -7710,7 +7740,7 @@ BEGIN
         BEGIN TRANSACTION;
 
         DECLARE @InvType   NVARCHAR(20), @PartnerID INT,
-                @Remainder DECIMAL(18,2), @IsPosted  BIT;
+                @Remainder DECIMAL(18, 3), @IsPosted  BIT;
 
         SELECT @InvType   = InvType,
                @PartnerID = PartnerID,
@@ -8015,7 +8045,7 @@ BEGIN
         BEGIN
             DECLARE @CashboxID      INT;
             DECLARE @RevenueIDchild INT;
-            DECLARE @AbsDiff        DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
+            DECLARE @AbsDiff        DECIMAL(18, 3) = CAST(ABS(@Difference) AS DECIMAL(18, 3));
             DECLARE @JournalDesc    NVARCHAR(255);
             DECLARE @EntryNo        INT;
             DECLARE @DebitAccID     INT;
@@ -8653,7 +8683,7 @@ BEGIN
         BEGIN
             DECLARE @CashboxID      INT;
             DECLARE @RevenueIDchild INT;
-            DECLARE @AbsDiff        DECIMAL(18,2) = CAST(ABS(@Difference) AS DECIMAL(18,2));
+            DECLARE @AbsDiff        DECIMAL(18, 3) = CAST(ABS(@Difference) AS DECIMAL(18, 3));
             DECLARE @JournalDesc    NVARCHAR(255);
             DECLARE @EntryNo        INT;
             DECLARE @DebitAccID     INT;
@@ -10088,17 +10118,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @Balance           DECIMAL(18,2) = 0;
-    DECLARE @AvgCost           DECIMAL(18,2) = 0;
-    DECLARE @TotalInQty        DECIMAL(18,2) = 0;
-    DECLARE @TotalInValue      DECIMAL(18,2) = 0;
-    DECLARE @TotalOutQty       DECIMAL(18,2) = 0;
-    DECLARE @TotalOutValue     DECIMAL(18,2) = 0;
-    DECLARE @LastPurchasePrice DECIMAL(18,2) = 0;
-    DECLARE @ProfitRate        DECIMAL(18,2) = 0;
-    DECLARE @AlertQty          DECIMAL(18,2) = 0;
+    DECLARE @Balance           DECIMAL(18, 3) = 0;
+    DECLARE @AvgCost           DECIMAL(18, 3) = 0;
+    DECLARE @TotalInQty        DECIMAL(18, 3) = 0;
+    DECLARE @TotalInValue      DECIMAL(18, 3) = 0;
+    DECLARE @TotalOutQty       DECIMAL(18, 3) = 0;
+    DECLARE @TotalOutValue     DECIMAL(18, 3) = 0;
+    DECLARE @LastPurchasePrice DECIMAL(18, 3) = 0;
+    DECLARE @ProfitRate        DECIMAL(18, 3) = 0;
+    DECLARE @AlertQty          DECIMAL(18, 3) = 0;
     DECLARE @Barcode           NVARCHAR(50) = '';
-    DECLARE @SalePrice         DECIMAL(18,2) = 0;
+    DECLARE @SalePrice         DECIMAL(18, 3) = 0;
 
     -- معلومات الصنف
     SELECT 
@@ -10124,8 +10154,8 @@ BEGIN
       AND h.InvType   = 'Purchase';
 
     -- إضافة زيادة الجرد المعتمدة
-    DECLARE @StockTakeInQty DECIMAL(18,2) = 0;
-    DECLARE @StockTakeInValue DECIMAL(18,2) = 0;
+    DECLARE @StockTakeInQty DECIMAL(18, 3) = 0;
+    DECLARE @StockTakeInValue DECIMAL(18, 3) = 0;
     SELECT 
         @StockTakeInQty = ISNULL(SUM(d.DifferenceQuantity), 0),
         @StockTakeInValue = ISNULL(SUM(d.DifferenceValue), 0)
@@ -10149,8 +10179,8 @@ BEGIN
       AND h.InvType   = 'Sales';
 
     -- إضافة الهوالك المرحلة
-    DECLARE @WastageOutQty DECIMAL(18,2) = 0;
-    DECLARE @WastageOutValue DECIMAL(18,2) = 0;
+    DECLARE @WastageOutQty DECIMAL(18, 3) = 0;
+    DECLARE @WastageOutValue DECIMAL(18, 3) = 0;
     SELECT
         @WastageOutQty = ISNULL(SUM(d.Quantity), 0),
         @WastageOutValue = ISNULL(SUM(d.Quantity * d.CostPrice), 0)
@@ -10160,8 +10190,8 @@ BEGIN
       AND h.IsPosted = 1;
 
     -- إضافة عجز الجرد المعتمد
-    DECLARE @StockTakeOutQty DECIMAL(18,2) = 0;
-    DECLARE @StockTakeOutValue DECIMAL(18,2) = 0;
+    DECLARE @StockTakeOutQty DECIMAL(18, 3) = 0;
+    DECLARE @StockTakeOutValue DECIMAL(18, 3) = 0;
     SELECT
         @StockTakeOutQty = ISNULL(SUM(ABS(d.DifferenceQuantity)), 0),
         @StockTakeOutValue = ISNULL(SUM(ABS(d.DifferenceValue)), 0)
@@ -10190,7 +10220,7 @@ BEGIN
     -- معدل الربح التقريبي
     IF @TotalOutQty > 0 AND @AvgCost > 0
     BEGIN
-        DECLARE @TotalCostOfSales DECIMAL(18,2) = @TotalOutQty * @AvgCost;
+        DECLARE @TotalCostOfSales DECIMAL(18, 3) = @TotalOutQty * @AvgCost;
         IF @TotalCostOfSales > 0
             SET @ProfitRate = ((@TotalOutValue - @TotalCostOfSales) / @TotalCostOfSales) * 100;
         ELSE
@@ -10224,7 +10254,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
-    DECLARE @AlertQty DECIMAL(18,2) = 0;
+    DECLARE @AlertQty DECIMAL(18, 3) = 0;
     SELECT @AlertQty = ISNULL(AlertQty, 0)
     FROM [Inventory].[Products]
     WHERE ProductID = @ProductID;
@@ -11460,7 +11490,7 @@ BEGIN
         RETURN;
     END
 
-    -- 2. تعريف القائمة الكاملة لكافة صلاحيات شاشات النظام (27 صلاحية معتمدة)
+    -- 2. تعريف القائمة الكاملة لكافة صلاحيات شاشات النظام (30 صلاحية معتمدة)
     DECLARE @Permissions TABLE (FormName NVARCHAR(100));
     INSERT INTO @Permissions (FormName) VALUES 
     (N'Dashboard'),
@@ -11489,7 +11519,10 @@ BEGIN
     (N'UserManagement'),
     (N'Wastage'),
     (N'StockTaking'),
-    (N'DailyOrders');
+    (N'DailyOrders'),
+    (N'IntegrationSettings'),
+    (N'PaymentGatewayInvoices'),
+    (N'TalabatOrders');
 
     -- 3. دمج وإدخال الصلاحيات غير الموجودة، وتحديث الحالية لمنح الصلاحيات الكاملة
     MERGE [Security].[RolePermissions] AS target
@@ -11902,6 +11935,7 @@ BEGIN
             WHERE S2.ProductID = MissingStockUnpost.TargetProductID AND S2.WarehouseID = MissingStockUnpost.WarehouseID
         );
 
+        -- ب. إعادة حساب وتخفيض متوسط التكلفة (عند إلغاء ترحيل المشتريات فقط)
         UPDATE S
         SET S.AvgCostPrice = CASE 
             WHEN (ISNULL(S.CurrentQty, 0) - T.TotalQty) > 0 
@@ -13351,7 +13385,7 @@ IF OBJECT_ID('[Sales].[sp_Invoice_AddPayment]', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE [Sales].[sp_Invoice_AddPayment]
     @InvID            INT,
-    @PaymentAmount    DECIMAL(18,2),
+    @PaymentAmount    DECIMAL(18, 3),
     @PaymentAccountID INT,
     @UserID           INT
 AS
@@ -13361,7 +13395,7 @@ BEGIN
         BEGIN TRANSACTION;
 
         DECLARE @InvType   NVARCHAR(20), @PartnerID INT,
-                @Remainder DECIMAL(18,2), @IsPosted  BIT;
+                @Remainder DECIMAL(18, 3), @IsPosted  BIT;
 
         SELECT @InvType   = InvType,
                @PartnerID = PartnerID,
@@ -13430,7 +13464,7 @@ IF OBJECT_ID('[Sales].[sp_Invoice_AddPayment_pos]', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE [Sales].[sp_Invoice_AddPayment_pos]
     @InvID            INT,
-    @PaymentAmount    DECIMAL(18,2),
+    @PaymentAmount    DECIMAL(18, 3),
     @PaymentAccountID INT,
     @UserID           INT
 AS
@@ -13440,7 +13474,7 @@ BEGIN
         BEGIN TRANSACTION;
 
         DECLARE @InvType   NVARCHAR(20), @PartnerID INT,
-                @Remainder DECIMAL(18,2), @IsPosted  BIT;
+                @Remainder DECIMAL(18, 3), @IsPosted  BIT;
 
         SELECT @InvType   = InvType,
                @PartnerID = PartnerID,
@@ -15733,14 +15767,14 @@ BEGIN
     SET NOCOUNT ON;
 
     DECLARE @TotalInvoices INT = 0;
-    DECLARE @TotalSales DECIMAL(18,2) = 0;
-    DECLARE @TotalPaid DECIMAL(18,2) = 0;
-    DECLARE @TotalCredit DECIMAL(18,2) = 0;
-    DECLARE @TotalDiscounts DECIMAL(18,2) = 0;
-    DECLARE @TotalCost DECIMAL(18,2) = 0;
-    DECLARE @TotalExpenses DECIMAL(18,2) = 0;
-    DECLARE @GrossProfit DECIMAL(18,2) = 0;
-    DECLARE @NetProfit DECIMAL(18,2) = 0;
+    DECLARE @TotalSales DECIMAL(18, 3) = 0;
+    DECLARE @TotalPaid DECIMAL(18, 3) = 0;
+    DECLARE @TotalCredit DECIMAL(18, 3) = 0;
+    DECLARE @TotalDiscounts DECIMAL(18, 3) = 0;
+    DECLARE @TotalCost DECIMAL(18, 3) = 0;
+    DECLARE @TotalExpenses DECIMAL(18, 3) = 0;
+    DECLARE @GrossProfit DECIMAL(18, 3) = 0;
+    DECLARE @NetProfit DECIMAL(18, 3) = 0;
 
     -- 1. إحصائيات الفواتير والمدفوعات والمتبقي والخصومات من رأس الفاتورة
     SELECT 
@@ -16159,7 +16193,7 @@ BEGIN
             N'مصروفات تشغيلية' AS AccountName,
             N'مصروفات تشغيلية' AS Category,
             0 AS TransactionCount,
-            CAST(0.00 AS DECIMAL(18,2)) AS TotalExpense
+            CAST(0.000 AS DECIMAL(18, 3)) AS TotalExpense
         WHERE 1 = 0;
     END
 END
@@ -16272,14 +16306,14 @@ CREATE PROCEDURE [Reports].[sp_Report_ExecutivePnLSummary]
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @GrossRevenue DECIMAL(18,2) = 0;
-    DECLARE @TotalDiscounts DECIMAL(18,2) = 0;
-    DECLARE @NetRevenue DECIMAL(18,2) = 0;
-    DECLARE @TotalCOGS DECIMAL(18,2) = 0;
-    DECLARE @GrossProfit DECIMAL(18,2) = 0;
-    DECLARE @OperatingExpenses DECIMAL(18,2) = 0;
-    DECLARE @WastageLoss DECIMAL(18,2) = 0;
-    DECLARE @NetOperatingProfit DECIMAL(18,2) = 0;
+    DECLARE @GrossRevenue DECIMAL(18, 3) = 0;
+    DECLARE @TotalDiscounts DECIMAL(18, 3) = 0;
+    DECLARE @NetRevenue DECIMAL(18, 3) = 0;
+    DECLARE @TotalCOGS DECIMAL(18, 3) = 0;
+    DECLARE @GrossProfit DECIMAL(18, 3) = 0;
+    DECLARE @OperatingExpenses DECIMAL(18, 3) = 0;
+    DECLARE @WastageLoss DECIMAL(18, 3) = 0;
+    DECLARE @NetOperatingProfit DECIMAL(18, 3) = 0;
 
     -- 1. الاعتماد الكلي على قيود اليومية JournalEntries للعمليات المرحلة (مطابق لقائمة الأرباح والخسائر في WPF)
     IF OBJECT_ID('[Accounting].[JournalEntries]', 'U') IS NOT NULL AND OBJECT_ID('[Accounting].[ChartOfAccounts]', 'U') IS NOT NULL
@@ -17163,5 +17197,3048 @@ BEGIN
         (OpeningBalance + TotalPeriodDebit - TotalPeriodCredit) DESC,
         TotalPeriodDebit DESC,
         PartnerName ASC;
+END
+GO
+
+
+-- =========================================================================================
+-- === [45] Payment Gateways & Delivery Platforms Integration System (Isolated Module) ===
+-- =========================================================================================
+PRINT N'=== [45] Adding Payment Gateways & Delivery Platforms Integration System ===';
+GO
+
+-- 1. إضافة أعمدة تفعيل البوابات في جدول إعدادات الشركة [Settings].[CompanySettings]
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableTapIntegration')
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableTapIntegration BIT NOT NULL DEFAULT 0;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableMyFatoorahIntegration')
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableMyFatoorahIntegration BIT NOT NULL DEFAULT 0;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableUPaymentsIntegration')
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableUPaymentsIntegration BIT NOT NULL DEFAULT 0;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableTalabatIntegration')
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableTalabatIntegration BIT NOT NULL DEFAULT 0;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'EnableJahezIntegration')
+    ALTER TABLE [Settings].[CompanySettings] ADD EnableJahezIntegration BIT NOT NULL DEFAULT 0;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[CompanySettings]') AND name = 'PromptSendPaymentLinkOnSave')
+    ALTER TABLE [Settings].[CompanySettings] ADD PromptSendPaymentLinkOnSave BIT NOT NULL DEFAULT 0;
+GO
+
+-- تحديث إجراءات CompanySettings مع الحفاظ الكامل على التوافق الخلفي (Optional Parameters = NULL)
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Get]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_CompanySettings_Get];
+GO
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Get]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP 1 
+        SettingID,
+        CompanyName,
+        Address,
+        Phone,
+        Email,
+        Logo,
+        ISNULL(UnifiedPartnerSearch, 1) AS UnifiedPartnerSearch,
+        ISNULL(CurrencySymbol, N'') AS CurrencySymbol,
+        ISNULL(UseDetailedInvoiceDesign, 0) AS UseDetailedInvoiceDesign,
+        ISNULL(UseCustomInvoiceDesign, 0) AS UseCustomInvoiceDesign,
+        ISNULL(ProductionMode, 0) AS ProductionMode,
+        ISNULL(EnableDailyOrders, 0) AS EnableDailyOrders,
+        DeliverySystemMode,
+        ISNULL(EnableSalesDiscounts, 0) AS EnableSalesDiscounts,
+        ISNULL(EnableHR, 0) AS EnableHR,
+        ISNULL(EnableTapIntegration, 0) AS EnableTapIntegration,
+        ISNULL(EnableMyFatoorahIntegration, 0) AS EnableMyFatoorahIntegration,
+        ISNULL(EnableUPaymentsIntegration, 0) AS EnableUPaymentsIntegration,
+        ISNULL(EnableTalabatIntegration, 0) AS EnableTalabatIntegration,
+        ISNULL(EnableJahezIntegration, 0) AS EnableJahezIntegration,
+        ISNULL(PromptSendPaymentLinkOnSave, 0) AS PromptSendPaymentLinkOnSave
+    FROM [Settings].[CompanySettings];
+END
+GO
+
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Save]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_CompanySettings_Save];
+GO
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Save]
+    @CompanyName NVARCHAR(200),
+    @Address NVARCHAR(255) = NULL,
+    @Phone NVARCHAR(50) = NULL,
+    @Email NVARCHAR(100) = NULL,
+    @Logo VARBINARY(MAX) = NULL,
+    @UnifiedPartnerSearch BIT = 1,
+    @CurrencySymbol NVARCHAR(100) = NULL,
+    @UseDetailedInvoiceDesign BIT = 0,
+    @UseCustomInvoiceDesign BIT = 0,
+    @ProductionMode BIT = 0,
+    @EnableDailyOrders BIT = 0,
+    @DeliverySystemMode NVARCHAR(50) = NULL,
+    @EnableSalesDiscounts BIT = 0,
+    @EnableHR BIT = 0,
+    @EnableTapIntegration BIT = NULL,
+    @EnableMyFatoorahIntegration BIT = NULL,
+    @EnableUPaymentsIntegration BIT = NULL,
+    @EnableTalabatIntegration BIT = NULL,
+    @EnableJahezIntegration BIT = NULL,
+    @PromptSendPaymentLinkOnSave BIT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_CompSet_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        IF EXISTS (SELECT 1 FROM [Settings].[CompanySettings])
+        BEGIN
+            UPDATE [Settings].[CompanySettings]
+            SET CompanyName = @CompanyName,
+                Address = @Address,
+                Phone = @Phone,
+                Email = @Email,
+                Logo = @Logo,
+                UnifiedPartnerSearch = @UnifiedPartnerSearch,
+                CurrencySymbol = @CurrencySymbol,
+                UseDetailedInvoiceDesign = @UseDetailedInvoiceDesign,
+                UseCustomInvoiceDesign = @UseCustomInvoiceDesign,
+                ProductionMode = @ProductionMode,
+                EnableDailyOrders = @EnableDailyOrders,
+                DeliverySystemMode = @DeliverySystemMode,
+                EnableSalesDiscounts = @EnableSalesDiscounts,
+                EnableHR = @EnableHR,
+                EnableTapIntegration = ISNULL(@EnableTapIntegration, EnableTapIntegration),
+                EnableMyFatoorahIntegration = ISNULL(@EnableMyFatoorahIntegration, EnableMyFatoorahIntegration),
+                EnableUPaymentsIntegration = ISNULL(@EnableUPaymentsIntegration, EnableUPaymentsIntegration),
+                EnableTalabatIntegration = ISNULL(@EnableTalabatIntegration, EnableTalabatIntegration),
+                EnableJahezIntegration = ISNULL(@EnableJahezIntegration, EnableJahezIntegration),
+                PromptSendPaymentLinkOnSave = ISNULL(@PromptSendPaymentLinkOnSave, PromptSendPaymentLinkOnSave)
+            WHERE SettingID = 1;
+        END
+        ELSE
+        BEGIN
+            INSERT INTO [Settings].[CompanySettings] (
+                SettingID, CompanyName, Address, Phone, Email, Logo,
+                UnifiedPartnerSearch, CurrencySymbol, UseDetailedInvoiceDesign,
+                UseCustomInvoiceDesign, ProductionMode, EnableDailyOrders,
+                DeliverySystemMode, EnableSalesDiscounts, EnableHR,
+                EnableTapIntegration, EnableMyFatoorahIntegration, EnableUPaymentsIntegration,
+                EnableTalabatIntegration, EnableJahezIntegration, PromptSendPaymentLinkOnSave
+            )
+            VALUES (
+                1, @CompanyName, @Address, @Phone, @Email, @Logo,
+                @UnifiedPartnerSearch, @CurrencySymbol, @UseDetailedInvoiceDesign,
+                @UseCustomInvoiceDesign, @ProductionMode, @EnableDailyOrders,
+                @DeliverySystemMode, @EnableSalesDiscounts, @EnableHR,
+                ISNULL(@EnableTapIntegration, 0), ISNULL(@EnableMyFatoorahIntegration, 0), ISNULL(@EnableUPaymentsIntegration, 0),
+                ISNULL(@EnableTalabatIntegration, 0), ISNULL(@EnableJahezIntegration, 0), ISNULL(@PromptSendPaymentLinkOnSave, 0)
+            );
+        END
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_CompSet_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Get_Ctrl]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_CompanySettings_Get_Ctrl];
+GO
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Get_Ctrl]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP 1 * FROM [Settings].[CompanySettings];
+END
+GO
+
+IF OBJECT_ID('[Settings].[sp_CompanySettings_Save_Ctrl]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_CompanySettings_Save_Ctrl];
+GO
+CREATE PROCEDURE [Settings].[sp_CompanySettings_Save_Ctrl]
+    @ProductionMode BIT = NULL,
+    @UseCustomInvoiceDesign BIT = NULL,
+    @UseDetailedInvoiceDesign BIT = NULL,
+    @UnifiedPartnerSearch BIT = NULL,
+    @CompanyName NVARCHAR(250) = NULL,
+    @CurrencySymbol NVARCHAR(50) = NULL,
+    @Address NVARCHAR(500) = NULL,
+    @Phone NVARCHAR(50) = NULL,
+    @Email NVARCHAR(150) = NULL,
+    @EnableDailyOrders BIT = NULL,
+    @DeliverySystemMode NVARCHAR(50) = NULL,
+    @EnableSalesDiscounts BIT = NULL,
+    @EnableHR BIT = NULL,
+    @EnableTapIntegration BIT = NULL,
+    @EnableMyFatoorahIntegration BIT = NULL,
+    @EnableUPaymentsIntegration BIT = NULL,
+    @EnableTalabatIntegration BIT = NULL,
+    @EnableJahezIntegration BIT = NULL,
+    @PromptSendPaymentLinkOnSave BIT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_CompSetCtrl_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        UPDATE [Settings].[CompanySettings]
+        SET ProductionMode = ISNULL(@ProductionMode, ProductionMode),
+            UseCustomInvoiceDesign = ISNULL(@UseCustomInvoiceDesign, UseCustomInvoiceDesign),
+            UseDetailedInvoiceDesign = ISNULL(@UseDetailedInvoiceDesign, UseDetailedInvoiceDesign),
+            UnifiedPartnerSearch = ISNULL(@UnifiedPartnerSearch, UnifiedPartnerSearch),
+            CompanyName = COALESCE(@CompanyName, CompanyName),
+            CurrencySymbol = COALESCE(@CurrencySymbol, CurrencySymbol),
+            Address = COALESCE(@Address, Address),
+            Phone = COALESCE(@Phone, Phone),
+            Email = COALESCE(@Email, Email),
+            EnableDailyOrders = ISNULL(@EnableDailyOrders, EnableDailyOrders),
+            DeliverySystemMode = COALESCE(@DeliverySystemMode, DeliverySystemMode),
+            EnableSalesDiscounts = ISNULL(@EnableSalesDiscounts, EnableSalesDiscounts),
+            EnableHR = ISNULL(@EnableHR, EnableHR),
+            EnableTapIntegration = ISNULL(@EnableTapIntegration, EnableTapIntegration),
+            EnableMyFatoorahIntegration = ISNULL(@EnableMyFatoorahIntegration, EnableMyFatoorahIntegration),
+            EnableUPaymentsIntegration = ISNULL(@EnableUPaymentsIntegration, EnableUPaymentsIntegration),
+            EnableTalabatIntegration = ISNULL(@EnableTalabatIntegration, EnableTalabatIntegration),
+            EnableJahezIntegration = ISNULL(@EnableJahezIntegration, EnableJahezIntegration),
+            PromptSendPaymentLinkOnSave = ISNULL(@PromptSendPaymentLinkOnSave, PromptSendPaymentLinkOnSave);
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_CompSetCtrl_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- =========================================================================================
+-- 2. جدول مزودي الربط وبوابات الدفع [Settings].[IntegrationProviders]
+-- =========================================================================================
+IF OBJECT_ID('[Settings].[IntegrationProviders]', 'U') IS NULL
+BEGIN
+    CREATE TABLE [Settings].[IntegrationProviders] (
+        ProviderID INT IDENTITY(1,1) PRIMARY KEY,
+        ProviderCode NVARCHAR(50) NOT NULL UNIQUE,      -- 'TAP', 'MYFATOORAH', 'UPAYMENTS', 'TALABAT', 'JAHEZ'
+        ProviderNameAr NVARCHAR(150) NOT NULL,          -- 'بوابة الدفع Tap', 'ماي فاتورة', ...
+        ProviderNameEn NVARCHAR(150) NOT NULL,
+        ProviderCategory NVARCHAR(50) NOT NULL,         -- 'PAYMENT_GATEWAY' | 'DELIVERY_PLATFORM'
+        IsEnabledInCompany BIT NOT NULL DEFAULT 0,      -- مزامن مع CompanySettings
+        IsConfigured BIT NOT NULL DEFAULT 0,            -- 1 فقط بعد نجاح اختبار الاتصال وحفظ البيانات
+        EnvironmentMode NVARCHAR(20) NOT NULL DEFAULT 'Sandbox', -- 'Sandbox' | 'Live'
+        BaseUrl NVARCHAR(300) NULL,
+        MerchantID NVARCHAR(150) NULL,
+        PublicKey NVARCHAR(500) NULL,
+        SecretKeyEncrypted NVARCHAR(MAX) NULL,
+        WebhookSecret NVARCHAR(500) NULL,
+        CallbackUrl NVARCHAR(500) NULL,
+        DefaultCurrency NVARCHAR(10) NOT NULL DEFAULT 'KWD',
+        CommissionPercent DECIMAL(8, 3) NOT NULL DEFAULT 0,
+        FixedFee DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        LinkedAccountID INT NULL,                       -- الحساب الفرعي في شجرة الحسابات (الجانب المدين عند التحصيل)
+        DefaultCreditAccountID INT NULL,                -- الجانب الدائن المخصص عند التحصيل (NULL = تلقائي حساب العميل/المبيعات)
+        CommissionAccountID INT NULL,                   -- حساب مصروف عمولات البوابات
+        RefundDebitAccountID INT NULL,                  -- الجانب المدين المخصص لقيد الاسترداد (NULL = تلقائي حساب العميل/المبيعات)
+        RefundCreditAccountID INT NULL,                 -- الجانب الدائن المخصص لقيد الاسترداد (NULL = تلقائي حساب البوابة)
+        PartnerID INT NULL,                             -- خاص بـ Talabat/Jahez (عميل المبيعات في جدول Partners)
+        AutoSendLinkOnInvoiceSave BIT NOT NULL DEFAULT 0,
+        PrintQrOnPos80mm BIT NOT NULL DEFAULT 1,        -- خيار متعدد 1: طباعة QR على فاتورة كاشير 80mm
+        PrintQrOnPos58mm BIT NOT NULL DEFAULT 0,        -- خيار متعدد 2: طباعة QR على فاتورة كاشير 58mm
+        PrintQrOnWpfInvoice BIT NOT NULL DEFAULT 0,     -- خيار متعدد 3: طباعة QR على فاتورة المبيعات (WPF A4)
+        AutoSendWhatsApp BIT NOT NULL DEFAULT 1,
+        AutoSendSms BIT NOT NULL DEFAULT 0,
+        LinkExpiryHours INT NOT NULL DEFAULT 24,
+        EnableConsolidatedLinks BIT NOT NULL DEFAULT 1,
+        DeductCommissionOnShiftClose BIT NOT NULL DEFAULT 1,
+        EnableGatewayRefunds BIT NOT NULL DEFAULT 0,    -- صلاحية إرجاع المبالغ عبر البوابة وإظهار زر الإرجاع
+        AllowPartialRefunds BIT NOT NULL DEFAULT 1,
+        AutoPostRefundJournalEntry BIT NOT NULL DEFAULT 1,
+        RefundChargeOnCustomer BIT NOT NULL DEFAULT 0,
+        ServiceChargeOnCustomer BIT NOT NULL DEFAULT 0,
+        ConnectionStatus NVARCHAR(50) NOT NULL DEFAULT 'Disconnected', -- 'Disconnected', 'SandboxVerified', 'LiveVerified', 'Error'
+        StatusMessageAr NVARCHAR(500) NULL,
+        LastTestedAt DATETIME NULL,
+        UpdatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        FOREIGN KEY (LinkedAccountID) REFERENCES [Accounting].[ChartOfAccounts](AccountID),
+        FOREIGN KEY (CommissionAccountID) REFERENCES [Accounting].[ChartOfAccounts](AccountID),
+        FOREIGN KEY (PartnerID) REFERENCES [Sales].[Partners](PartnerID)
+    );
+END
+GO
+
+-- ترقية جدول IntegrationProviders إذا كان منشأً مسبقاً بإضافة أعمدة تخصيص طرفي القيود (المدين والدائن)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[IntegrationProviders]') AND name = 'DefaultCreditAccountID')
+    ALTER TABLE [Settings].[IntegrationProviders] ADD DefaultCreditAccountID INT NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[IntegrationProviders]') AND name = 'RefundDebitAccountID')
+    ALTER TABLE [Settings].[IntegrationProviders] ADD RefundDebitAccountID INT NULL;
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('[Settings].[IntegrationProviders]') AND name = 'RefundCreditAccountID')
+    ALTER TABLE [Settings].[IntegrationProviders] ADD RefundCreditAccountID INT NULL;
+GO
+
+-- Seed Default Integration Providers
+IF NOT EXISTS (SELECT 1 FROM [Settings].[IntegrationProviders] WHERE ProviderCode = 'TAP')
+BEGIN
+    INSERT INTO [Settings].[IntegrationProviders] (ProviderCode, ProviderNameAr, ProviderNameEn, ProviderCategory, BaseUrl, DefaultCurrency, StatusMessageAr)
+    VALUES ('TAP', N'بوابة الدفع Tap Payments', 'Tap Payments', 'PAYMENT_GATEWAY', 'https://api.tap.company/v2', 'KWD', N'يرجى إدخال مفاتيح الربط واختبار الاتصال قبل الحفظ.');
+END
+IF NOT EXISTS (SELECT 1 FROM [Settings].[IntegrationProviders] WHERE ProviderCode = 'MYFATOORAH')
+BEGIN
+    INSERT INTO [Settings].[IntegrationProviders] (ProviderCode, ProviderNameAr, ProviderNameEn, ProviderCategory, BaseUrl, DefaultCurrency, StatusMessageAr)
+    VALUES ('MYFATOORAH', N'بوابة الدفع MyFatoorah', 'MyFatoorah', 'PAYMENT_GATEWAY', 'https://apitest.myfatoorah.com', 'KWD', N'يرجى إدخال مفاتيح الربط واختبار الاتصال قبل الحفظ.');
+END
+IF NOT EXISTS (SELECT 1 FROM [Settings].[IntegrationProviders] WHERE ProviderCode = 'UPAYMENTS')
+BEGIN
+    INSERT INTO [Settings].[IntegrationProviders] (ProviderCode, ProviderNameAr, ProviderNameEn, ProviderCategory, BaseUrl, DefaultCurrency, StatusMessageAr)
+    VALUES ('UPAYMENTS', N'بوابة الدفع UPayments', 'UPayments', 'PAYMENT_GATEWAY', 'https://sandboxapi.upayments.com/api/v1', 'KWD', N'يرجى إدخال مفاتيح الربط واختبار الاتصال قبل الحفظ.');
+END
+IF NOT EXISTS (SELECT 1 FROM [Settings].[IntegrationProviders] WHERE ProviderCode = 'TALABAT')
+BEGIN
+    INSERT INTO [Settings].[IntegrationProviders] (ProviderCode, ProviderNameAr, ProviderNameEn, ProviderCategory, BaseUrl, DefaultCurrency, StatusMessageAr)
+    VALUES ('TALABAT', N'منصة طلبات (Talabat)', 'Talabat Delivery Hero', 'DELIVERY_PLATFORM', 'https://integration-middleware.stg.restaurant-partners.com', 'KWD', N'يرجى إدخال بيانات ربط Talabat واختبار الاتصال قبل الحفظ.');
+END
+IF NOT EXISTS (SELECT 1 FROM [Settings].[IntegrationProviders] WHERE ProviderCode = 'JAHEZ')
+BEGIN
+    INSERT INTO [Settings].[IntegrationProviders] (ProviderCode, ProviderNameAr, ProviderNameEn, ProviderCategory, BaseUrl, DefaultCurrency, StatusMessageAr)
+    VALUES ('JAHEZ', N'منصة جاهز (Jahez)', 'Jahez Platform', 'DELIVERY_PLATFORM', 'https://partner-api.jahez.net', 'SAR', N'يرجى إدخال بيانات ربط Jahez واختبار الاتصال قبل الحفظ.');
+END
+GO
+
+-- =========================================================================================
+-- 3. جدول روابط وفواتير الدفع الإلكتروني [Sales].[InvoicePaymentLinks]
+-- =========================================================================================
+IF OBJECT_ID('[Sales].[InvoicePaymentLinks]', 'U') IS NULL
+BEGIN
+    CREATE TABLE [Sales].[InvoicePaymentLinks] (
+        LinkID INT IDENTITY(1,1) PRIMARY KEY,
+        InvID INT NOT NULL,
+        PartnerID INT NULL,
+        ProviderID INT NOT NULL,
+        ProviderCode NVARCHAR(50) NOT NULL,
+        ExternalChargeID NVARCHAR(150) NULL,
+        ExternalInvoiceID NVARCHAR(150) NULL,
+        PaymentUrl NVARCHAR(1000) NOT NULL,
+        QrCodePayload NVARCHAR(1000) NULL,
+        Amount DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        CurrencyCode NVARCHAR(10) NOT NULL DEFAULT 'KWD',
+        GatewayFeeAmount DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        NetAmount DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        LinkStatus NVARCHAR(30) NOT NULL DEFAULT 'Pending', -- 'Pending', 'Paid', 'PartiallyRefunded', 'Refunded', 'Expired', 'Failed', 'Cancelled'
+        CustomerName NVARCHAR(150) NULL,
+        CustomerPhone NVARCHAR(50) NULL,
+        CustomerEmail NVARCHAR(150) NULL,
+        SendViaWhatsApp BIT NOT NULL DEFAULT 0,
+        SendViaSms BIT NOT NULL DEFAULT 0,
+        SendViaEmail BIT NOT NULL DEFAULT 0,
+        PrintQrMode NVARCHAR(50) NULL,                  -- '80mm', '58mm', 'WPF', '80mm,58mm', '80mm,58mm,WPF'
+        CreatedByUserID INT NULL,
+        ShiftID INT NULL,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        ExpiresAt DATETIME NULL,
+        PaidAt DATETIME NULL,
+        ReceiptVoucherID INT NULL,
+        JournalEntryNo INT NULL,
+        RawResponseJson NVARCHAR(MAX) NULL,
+        Notes NVARCHAR(500) NULL,
+        IsConsolidated BIT NOT NULL DEFAULT 0,
+        RefundedAmount DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        ExternalRefundID NVARCHAR(150) NULL,
+        RefundReason NVARCHAR(300) NULL,
+        RefundedAt DATETIME NULL,
+        RefundJournalNo INT NULL,
+        FOREIGN KEY (InvID) REFERENCES [Sales].[InvoiceHeader](InvID),
+        FOREIGN KEY (ProviderID) REFERENCES [Settings].[IntegrationProviders](ProviderID)
+    );
+END
+GO
+
+-- جدول توزيع الروابط المجمعة على عدة فواتير [Sales].[InvoicePaymentLinkAllocations]
+IF OBJECT_ID('[Sales].[InvoicePaymentLinkAllocations]', 'U') IS NULL
+BEGIN
+    CREATE TABLE [Sales].[InvoicePaymentLinkAllocations] (
+        AllocationID INT IDENTITY(1,1) PRIMARY KEY,
+        LinkID INT NOT NULL,
+        InvID INT NOT NULL,
+        AllocatedAmount DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        AppliedAt DATETIME NULL,
+        FOREIGN KEY (LinkID) REFERENCES [Sales].[InvoicePaymentLinks](LinkID) ON DELETE CASCADE,
+        FOREIGN KEY (InvID) REFERENCES [Sales].[InvoiceHeader](InvID)
+    );
+END
+GO
+
+-- =========================================================================================
+-- 4. جدول طلبات منصة Talabat [Sales].[TalabatOrders]
+-- =========================================================================================
+IF OBJECT_ID('[Sales].[TalabatOrders]', 'U') IS NULL
+BEGIN
+    CREATE TABLE [Sales].[TalabatOrders] (
+        TalabatOrderID INT IDENTITY(1,1) PRIMARY KEY,
+        ProviderID INT NOT NULL,
+        OrderToken NVARCHAR(150) NOT NULL,
+        OrderCode NVARCHAR(100) NOT NULL,
+        ShortCode NVARCHAR(50) NULL,
+        RemoteVendorId NVARCHAR(100) NULL,
+        ExpeditionType NVARCHAR(50) NOT NULL DEFAULT 'delivery', -- 'delivery' | 'pickup'
+        PaymentType NVARCHAR(50) NOT NULL DEFAULT 'ONLINE',      -- 'ONLINE' | 'COD'
+        SubTotal DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        DeliveryFee DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        DiscountAmount DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        GrandTotal DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        CurrencyCode NVARCHAR(10) NOT NULL DEFAULT 'KWD',
+        OrderStatus NVARCHAR(50) NOT NULL DEFAULT 'Received',    -- 'Received', 'Accepted', 'Prepared', 'Rejected', 'Cancelled', 'Invoiced'
+        CustomerName NVARCHAR(150) NULL,
+        CustomerPhone NVARCHAR(50) NULL,
+        DeliveryAddress NVARCHAR(500) NULL,
+        Comments NVARCHAR(500) NULL,
+        ItemsJson NVARCHAR(MAX) NULL,
+        RawPayloadJson NVARCHAR(MAX) NULL,
+        InvID INT NULL,
+        PartnerID INT NULL,
+        WarehouseID INT NULL,
+        CreatedByUserID INT NULL,
+        CreatedAt DATETIME NOT NULL DEFAULT GETDATE(),
+        AcceptedAt DATETIME NULL,
+        PreparedAt DATETIME NULL,
+        RejectedAt DATETIME NULL,
+        RejectionReason NVARCHAR(300) NULL,
+        FOREIGN KEY (ProviderID) REFERENCES [Settings].[IntegrationProviders](ProviderID),
+        FOREIGN KEY (InvID) REFERENCES [Sales].[InvoiceHeader](InvID),
+        FOREIGN KEY (PartnerID) REFERENCES [Sales].[Partners](PartnerID)
+    );
+END
+GO
+
+-- =========================================================================================
+-- 5. الإجراءات المخزنة (Stored Procedures) لقسم Integration
+-- =========================================================================================
+
+-- 5.1 إجراء إنشاء الحساب المحاسبي للبوابة أو عميل المبيعات لـ Talabat (فقط بعد نجاح اختبار الاتصال!)
+IF OBJECT_ID('[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]', 'P') IS NOT NULL
+    DROP PROCEDURE [Accounting].[sp_Integration_EnsureProviderEntityAndAccount];
+GO
+CREATE PROCEDURE [Accounting].[sp_Integration_EnsureProviderEntityAndAccount]
+    @ProviderID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @ProviderCode NVARCHAR(50),
+            @ProviderNameAr NVARCHAR(150),
+            @ProviderCategory NVARCHAR(50),
+            @LinkedAccountID INT,
+            @CommissionAccountID INT,
+            @PartnerID INT,
+            @ConnectionStatus NVARCHAR(50);
+
+    SELECT 
+        @ProviderCode = ProviderCode,
+        @ProviderNameAr = ProviderNameAr,
+        @ProviderCategory = ProviderCategory,
+        @LinkedAccountID = LinkedAccountID,
+        @CommissionAccountID = CommissionAccountID,
+        @PartnerID = PartnerID,
+        @ConnectionStatus = ConnectionStatus
+    FROM [Settings].[IntegrationProviders]
+    WHERE ProviderID = @ProviderID;
+
+    -- قاعدة صارمة: لا يتم إنشاء أي حساب أو عميل إلا إذا نجح اختبار الاتصال
+    IF @ConnectionStatus NOT IN ('SandboxVerified', 'LiveVerified')
+        RETURN;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_EnsureProv_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- أ)1: التأكد من وجود الحساب الرئيسي التجميعي (مصروف عمولات بوابات الدفع الإلكتروني) كمستوى أول (AccountLevel = 1) ولا يقبل القيود المباشرة (IsTransactional = 0)
+        DECLARE @CommParentID INT = NULL, @CommParentCode NVARCHAR(20) = NULL;
+
+        SELECT TOP 1 
+            @CommParentID = AccountID,
+            @CommParentCode = AccountCode
+        FROM [Accounting].[ChartOfAccounts]
+        WHERE AccountName = N'مصروف عمولات بوابات الدفع الإلكتروني';
+
+        IF @CommParentID IS NULL
+        BEGIN
+            DECLARE @ExpenseRootID INT = NULL;
+            SELECT TOP 1 @ExpenseRootID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode IN ('42', '4', '5') ORDER BY AccountLevel DESC;
+
+            DECLARE @MaxHeadCode NVARCHAR(20) = NULL;
+            IF @ExpenseRootID IS NOT NULL
+                SELECT @MaxHeadCode = MAX(AccountCode) FROM [Accounting].[ChartOfAccounts] WHERE ParentAccountID = @ExpenseRootID AND ISNUMERIC(AccountCode) = 1;
+
+            IF @MaxHeadCode IS NULL
+                SELECT @MaxHeadCode = MAX(AccountCode) FROM [Accounting].[ChartOfAccounts] WHERE AccountLevel = 1 AND AccountType = 'Expenses' AND ISNUMERIC(AccountCode) = 1;
+
+            SET @CommParentCode = CASE WHEN @MaxHeadCode IS NULL THEN '4209' ELSE CAST((CAST(@MaxHeadCode AS BIGINT) + 1) AS NVARCHAR(20)) END;
+
+            IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = @CommParentCode)
+            BEGIN
+                INSERT INTO [Accounting].[ChartOfAccounts] (
+                    AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional
+                )
+                VALUES (
+                    @CommParentCode,
+                    N'مصروف عمولات بوابات الدفع الإلكتروني',
+                    @ExpenseRootID,
+                    'Expenses',
+                    1,
+                    0 -- حساب رئيسي تجميعي لا يقبل القيود المباشرة
+                );
+                SET @CommParentID = SCOPE_IDENTITY();
+            END
+        END
+        ELSE
+        BEGIN
+            -- ضمان أن الحساب الرئيسي (مصروف عمولات بوابات الدفع الإلكتروني) لا يقبل القيود المباشرة ومستواه AccountLevel = 1
+            UPDATE [Accounting].[ChartOfAccounts]
+            SET IsTransactional = 0,
+                AccountLevel = 1
+            WHERE AccountID = @CommParentID
+              AND (IsTransactional <> 0 OR ISNULL(AccountLevel, 0) <> 1);
+        END
+
+        -- أ)2: إنشاء حساب مصروف عمولات فرعي خاص بهذه البوابة (AccountLevel = 2, IsTransactional = 1) تحت حساب (مصروف عمولات بوابات الدفع الإلكتروني)
+        -- بنفس التسلسل لرقم الحساب الرئيسي متبوعاً بـ 01 ثم بالتتابع لبقية البوابات
+        IF @CommParentID IS NOT NULL AND (
+            @CommissionAccountID IS NULL
+            OR @CommissionAccountID = @CommParentID
+            OR NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @CommissionAccountID AND IsTransactional = 1)
+        )
+        BEGIN
+            DECLARE @SpecificCommName NVARCHAR(150) = N'مصروف عمولات - ' + @ProviderNameAr;
+            SET @CommissionAccountID = NULL;
+
+            SELECT TOP 1 @CommissionAccountID = AccountID
+            FROM [Accounting].[ChartOfAccounts]
+            WHERE ParentAccountID = @CommParentID
+              AND (AccountName = @SpecificCommName OR AccountName LIKE N'%' + @ProviderCode + N'%')
+              AND IsTransactional = 1;
+
+            IF @CommissionAccountID IS NULL
+            BEGIN
+                DECLARE @MaxCommChildCode NVARCHAR(20) = NULL;
+                SELECT @MaxCommChildCode = MAX(AccountCode)
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE ParentAccountID = @CommParentID AND ISNUMERIC(AccountCode) = 1;
+
+                DECLARE @NewCommChildCode NVARCHAR(20);
+                IF @MaxCommChildCode IS NULL
+                    SET @NewCommChildCode = @CommParentCode + '01';
+                ELSE
+                    SET @NewCommChildCode = CAST((CAST(@MaxCommChildCode AS BIGINT) + 1) AS NVARCHAR(20));
+
+                IF NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = @NewCommChildCode)
+                BEGIN
+                    INSERT INTO [Accounting].[ChartOfAccounts] (
+                        AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional
+                    )
+                    VALUES (
+                        @NewCommChildCode,
+                        @SpecificCommName,
+                        @CommParentID,
+                        'Expenses',
+                        2, -- المستوى الثاني تحت الحساب الرئيسي
+                        1  -- حساب فرعي يقبل القيود المباشرة
+                    );
+                    SET @CommissionAccountID = SCOPE_IDENTITY();
+                END
+            END
+
+            IF @CommissionAccountID IS NOT NULL
+            BEGIN
+                UPDATE [Settings].[IntegrationProviders]
+                SET CommissionAccountID = @CommissionAccountID
+                WHERE ProviderID = @ProviderID;
+            END
+        END
+
+        -- ب) إذا كان المزود منصة توصيل (مثل Talabat أو Jahez): يُعامل كـ "عميل مبيعات" في جدول [Sales].[Partners]
+        -- وتلقائياً التريجر الحالي [Sales].[trg_Partner_AfterInsert] ينشئ له حساب عميل تحت كود '12'
+        IF @ProviderCategory = 'DELIVERY_PLATFORM'
+        BEGIN
+            IF @PartnerID IS NULL OR NOT EXISTS (SELECT 1 FROM [Sales].[Partners] WHERE PartnerID = @PartnerID)
+            BEGIN
+                SELECT TOP 1 @PartnerID = PartnerID
+                FROM [Sales].[Partners]
+                WHERE PartnerType = 'Customer'
+                  AND (PartnerName = @ProviderNameAr OR PartnerName LIKE '%' + @ProviderCode + '%');
+
+                IF @PartnerID IS NULL
+                BEGIN
+                    INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive)
+                    VALUES (@ProviderNameAr, 'Customer', N'', N'منصة طلبات وتوصيل إلكترونية (' + @ProviderCode + N')', 0, 1);
+
+                    SET @PartnerID = SCOPE_IDENTITY();
+                END
+            END
+
+            SELECT @LinkedAccountID = AccountID FROM [Sales].[Partners] WHERE PartnerID = @PartnerID;
+
+            UPDATE [Settings].[IntegrationProviders]
+            SET PartnerID = @PartnerID,
+                LinkedAccountID = @LinkedAccountID
+            WHERE ProviderID = @ProviderID;
+
+            IF @TranCounter = 0
+                COMMIT TRANSACTION;
+            RETURN;
+        END
+
+        -- ج) إذا كان المزود بوابة دفع إلكتروني (Tap / MyFatoorah / UPayments):
+        -- يُنشأ له حساب فرعي تحت حساب البنك (AccountID = 10 أو AccountCode = '1102')
+        IF @ProviderCategory = 'PAYMENT_GATEWAY' AND (@LinkedAccountID IS NULL OR NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @LinkedAccountID))
+        BEGIN
+            DECLARE @BankParentID INT;
+            SELECT @BankParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountID = 10;
+            IF @BankParentID IS NULL
+                SELECT TOP 1 @BankParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1102' OR AccountName LIKE N'%البنك%';
+            IF @BankParentID IS NULL
+                SELECT TOP 1 @BankParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '11';
+
+            IF @BankParentID IS NOT NULL
+            BEGIN
+                DECLARE @ParentCode NVARCHAR(20), @ParentLevel INT;
+                SELECT @ParentCode = AccountCode, @ParentLevel = ISNULL(AccountLevel, 2)
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE AccountID = @BankParentID;
+
+                -- تحويل الحساب الأب إلى تجميعي إذا لزم الأمر
+                UPDATE [Accounting].[ChartOfAccounts] SET IsTransactional = 0 WHERE AccountID = @BankParentID;
+
+                DECLARE @MaxChildCode NVARCHAR(20);
+                SELECT @MaxChildCode = MAX(AccountCode)
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE ParentAccountID = @BankParentID AND ISNUMERIC(AccountCode) = 1;
+
+                DECLARE @NewAccountCode NVARCHAR(20);
+                IF @MaxChildCode IS NULL
+                    SET @NewAccountCode = @ParentCode + '01';
+                ELSE
+                    SET @NewAccountCode = CAST((CAST(@MaxChildCode AS BIGINT) + 1) AS NVARCHAR(20));
+
+                INSERT INTO [Accounting].[ChartOfAccounts] (
+                    AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional
+                )
+                VALUES (
+                    @NewAccountCode,
+                    @ProviderNameAr,
+                    @BankParentID,
+                    'Assets',
+                    @ParentLevel + 1,
+                    1
+                );
+
+                SET @LinkedAccountID = SCOPE_IDENTITY();
+
+                UPDATE [Settings].[IntegrationProviders]
+                SET LinkedAccountID = @LinkedAccountID
+                WHERE ProviderID = @ProviderID;
+            END
+        END
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_EnsureProv_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- ترقية الحساب الرئيسي الموجود مسبقاً (مصروف عمولات بوابات الدفع الإلكتروني) ليصبح لا يقبل القيود المباشرة (IsTransactional = 0, AccountLevel = 1)
+-- وتوليد الحسابات الفرعية (AccountLevel = 2, IsTransactional = 1) لأي بوابة مفعلة ومختبرة حالياً
+UPDATE [Accounting].[ChartOfAccounts]
+SET IsTransactional = 0,
+    AccountLevel = 1
+WHERE AccountName = N'مصروف عمولات بوابات الدفع الإلكتروني';
+GO
+
+DECLARE @MigProvID INT;
+DECLARE cur_mig_comm CURSOR LOCAL FAST_FORWARD FOR
+    SELECT ProviderID
+    FROM [Settings].[IntegrationProviders]
+    WHERE ConnectionStatus IN ('SandboxVerified', 'LiveVerified');
+OPEN cur_mig_comm;
+FETCH NEXT FROM cur_mig_comm INTO @MigProvID;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID = @MigProvID;
+    FETCH NEXT FROM cur_mig_comm INTO @MigProvID;
+END
+CLOSE cur_mig_comm;
+DEALLOCATE cur_mig_comm;
+GO
+
+-- 5.2 جلب قائمة البوابات ومزودي الربط
+IF OBJECT_ID('[Settings].[sp_Integration_GetProviders]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_Integration_GetProviders];
+GO
+CREATE PROCEDURE [Settings].[sp_Integration_GetProviders]
+    @OnlyEnabled BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- مزامنة سريعة وآمنة مع CompanySettings لضمان دقة حالة التفعيل دائماً
+    DECLARE @Tap BIT = 0, @MyFatoorah BIT = 0, @UPayments BIT = 0, @Talabat BIT = 0, @Jahez BIT = 0;
+    SELECT TOP 1
+        @Tap = ISNULL(EnableTapIntegration, 0),
+        @MyFatoorah = ISNULL(EnableMyFatoorahIntegration, 0),
+        @UPayments = ISNULL(EnableUPaymentsIntegration, 0),
+        @Talabat = ISNULL(EnableTalabatIntegration, 0),
+        @Jahez = ISNULL(EnableJahezIntegration, 0)
+    FROM [Settings].[CompanySettings];
+
+    UPDATE [Settings].[IntegrationProviders]
+    SET IsEnabledInCompany = CASE ProviderCode
+        WHEN 'TAP' THEN @Tap
+        WHEN 'MYFATOORAH' THEN @MyFatoorah
+        WHEN 'UPAYMENTS' THEN @UPayments
+        WHEN 'TALABAT' THEN @Talabat
+        WHEN 'JAHEZ' THEN @Jahez
+        ELSE IsEnabledInCompany
+    END;
+
+    SELECT 
+        p.*,
+        c.AccountCode AS LinkedAccountCode,
+        c.AccountName AS LinkedAccountName,
+        cc.AccountCode AS DefaultCreditAccountCode,
+        cc.AccountName AS DefaultCreditAccountName,
+        ce.AccountCode AS CommissionAccountCode,
+        ce.AccountName AS CommissionAccountName,
+        rd.AccountCode AS RefundDebitAccountCode,
+        rd.AccountName AS RefundDebitAccountName,
+        rc.AccountCode AS RefundCreditAccountCode,
+        rc.AccountName AS RefundCreditAccountName,
+        pr.PartnerName AS LinkedPartnerName
+    FROM [Settings].[IntegrationProviders] p
+    LEFT JOIN [Accounting].[ChartOfAccounts] c ON p.LinkedAccountID = c.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] cc ON p.DefaultCreditAccountID = cc.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] ce ON p.CommissionAccountID = ce.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] rd ON p.RefundDebitAccountID = rd.AccountID
+    LEFT JOIN [Accounting].[ChartOfAccounts] rc ON p.RefundCreditAccountID = rc.AccountID
+    LEFT JOIN [Sales].[Partners] pr ON p.PartnerID = pr.PartnerID
+    WHERE (@OnlyEnabled = 0 OR p.IsEnabledInCompany = 1)
+    ORDER BY p.ProviderID;
+END
+GO
+
+-- 5.3 حفظ إعدادات البوابة (لا يتم الحفظ وتفعيل IsConfigured إلا إذا نجح اختبار الاتصال!)
+IF OBJECT_ID('[Settings].[sp_Integration_SaveProviderConfig]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_Integration_SaveProviderConfig];
+GO
+CREATE PROCEDURE [Settings].[sp_Integration_SaveProviderConfig]
+    @ProviderID INT,
+    @EnvironmentMode NVARCHAR(20),
+    @BaseUrl NVARCHAR(300) = NULL,
+    @MerchantID NVARCHAR(150) = NULL,
+    @PublicKey NVARCHAR(500) = NULL,
+    @SecretKeyEncrypted NVARCHAR(MAX) = NULL,
+    @WebhookSecret NVARCHAR(500) = NULL,
+    @CallbackUrl NVARCHAR(500) = NULL,
+    @DefaultCurrency NVARCHAR(10) = 'KWD',
+    @CommissionPercent DECIMAL(8, 3) = 0,
+    @FixedFee DECIMAL(18, 3) = 0,
+    @LinkedAccountID INT = NULL,
+    @DefaultCreditAccountID INT = NULL,
+    @CommissionAccountID INT = NULL,
+    @RefundDebitAccountID INT = NULL,
+    @RefundCreditAccountID INT = NULL,
+    @AutoSendLinkOnInvoiceSave BIT = 0,
+    @PrintQrOnPos80mm BIT = 1,
+    @PrintQrOnPos58mm BIT = 0,
+    @PrintQrOnWpfInvoice BIT = 0,
+    @AutoSendWhatsApp BIT = 1,
+    @AutoSendSms BIT = 0,
+    @LinkExpiryHours INT = 24,
+    @EnableConsolidatedLinks BIT = 1,
+    @DeductCommissionOnShiftClose BIT = 1,
+    @EnableGatewayRefunds BIT = 0,
+    @AllowPartialRefunds BIT = 1,
+    @AutoPostRefundJournalEntry BIT = 1,
+    @RefundChargeOnCustomer BIT = 0,
+    @ServiceChargeOnCustomer BIT = 0,
+    @ConnectionStatus NVARCHAR(50),
+    @StatusMessageAr NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- التحقق الإلزامي: لا يُسمح بحفظ الإعدادات وتنفيذ ما يترتب عليها إلا إذا نجح اختبار الاتصال
+    IF @ConnectionStatus NOT IN ('SandboxVerified', 'LiveVerified')
+    BEGIN
+        RAISERROR(N'لا يمكن حفظ إعدادات البوابة إلا بعد نجاح اختبار الاتصال الفعلي (Connection Test).', 16, 1);
+        RETURN;
+    END
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_SaveProvCfg_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        UPDATE [Settings].[IntegrationProviders]
+        SET EnvironmentMode = @EnvironmentMode,
+            BaseUrl = @BaseUrl,
+            MerchantID = @MerchantID,
+            PublicKey = @PublicKey,
+            SecretKeyEncrypted = @SecretKeyEncrypted,
+            WebhookSecret = @WebhookSecret,
+            CallbackUrl = @CallbackUrl,
+            DefaultCurrency = ISNULL(@DefaultCurrency, 'KWD'),
+            CommissionPercent = ISNULL(@CommissionPercent, 0),
+            FixedFee = ISNULL(@FixedFee, 0),
+            LinkedAccountID = CASE WHEN @LinkedAccountID IS NOT NULL AND @LinkedAccountID > 0 THEN @LinkedAccountID ELSE LinkedAccountID END,
+            DefaultCreditAccountID = CASE WHEN @DefaultCreditAccountID IS NOT NULL AND @DefaultCreditAccountID > 0 THEN @DefaultCreditAccountID ELSE NULL END,
+            CommissionAccountID = CASE WHEN @CommissionAccountID IS NOT NULL AND @CommissionAccountID > 0 THEN @CommissionAccountID ELSE CommissionAccountID END,
+            RefundDebitAccountID = CASE WHEN @RefundDebitAccountID IS NOT NULL AND @RefundDebitAccountID > 0 THEN @RefundDebitAccountID ELSE NULL END,
+            RefundCreditAccountID = CASE WHEN @RefundCreditAccountID IS NOT NULL AND @RefundCreditAccountID > 0 THEN @RefundCreditAccountID ELSE NULL END,
+            AutoSendLinkOnInvoiceSave = ISNULL(@AutoSendLinkOnInvoiceSave, 0),
+            PrintQrOnPos80mm = ISNULL(@PrintQrOnPos80mm, 0),
+            PrintQrOnPos58mm = ISNULL(@PrintQrOnPos58mm, 0),
+            PrintQrOnWpfInvoice = ISNULL(@PrintQrOnWpfInvoice, 0),
+            AutoSendWhatsApp = ISNULL(@AutoSendWhatsApp, 0),
+            AutoSendSms = ISNULL(@AutoSendSms, 0),
+            LinkExpiryHours = ISNULL(@LinkExpiryHours, 24),
+            EnableConsolidatedLinks = ISNULL(@EnableConsolidatedLinks, 1),
+            DeductCommissionOnShiftClose = ISNULL(@DeductCommissionOnShiftClose, 1),
+            EnableGatewayRefunds = ISNULL(@EnableGatewayRefunds, 0),
+            AllowPartialRefunds = ISNULL(@AllowPartialRefunds, 1),
+            AutoPostRefundJournalEntry = ISNULL(@AutoPostRefundJournalEntry, 1),
+            RefundChargeOnCustomer = ISNULL(@RefundChargeOnCustomer, 0),
+            ServiceChargeOnCustomer = ISNULL(@ServiceChargeOnCustomer, 0),
+            ConnectionStatus = @ConnectionStatus,
+            StatusMessageAr = @StatusMessageAr,
+            IsConfigured = 1,
+            LastTestedAt = GETDATE(),
+            UpdatedAt = GETDATE()
+        WHERE ProviderID = @ProviderID;
+
+        -- ضمان إنشاء الحساب المحاسبي أو عميل المبيعات بعد نجاح الحفظ داخل نفس الـ Transaction (إذا لم يحدد المستخدم حساباً يدوياً)
+        EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID = @ProviderID;
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+
+        SELECT * FROM [Settings].[IntegrationProviders] WHERE ProviderID = @ProviderID;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_SaveProvCfg_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 5.3.B فصل الاتصال ببوابة الدفع أو منصة التوصيل وإيقاف حالتها النشطة (Disconnect Provider)
+IF OBJECT_ID('[Settings].[sp_Integration_DisconnectProvider]', 'P') IS NOT NULL
+    DROP PROCEDURE [Settings].[sp_Integration_DisconnectProvider];
+GO
+CREATE PROCEDURE [Settings].[sp_Integration_DisconnectProvider]
+    @ProviderID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_DiscProv_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        UPDATE [Settings].[IntegrationProviders]
+        SET IsConfigured = 0,
+            ConnectionStatus = 'Disconnected',
+            StatusMessageAr = N'⚪ تم فصل الاتصال بالبوابة يدوياً. لإعادة التفعيل يرجى الضغط على (اختبار الاتصال) ثم (حفظ الإعدادات).',
+            UpdatedAt = GETDATE()
+        WHERE ProviderID = @ProviderID;
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+
+        SELECT * FROM [Settings].[IntegrationProviders] WHERE ProviderID = @ProviderID;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_DiscProv_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 5.4 إنشاء وحفظ رابط دفع جديد (مفرد أو مجمع لعدة فواتير)
+IF OBJECT_ID('[Sales].[sp_InvoicePaymentLink_Save]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_InvoicePaymentLink_Save];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoicePaymentLink_Save]
+    @InvID INT,
+    @PartnerID INT = NULL,
+    @ProviderID INT,
+    @ProviderCode NVARCHAR(50),
+    @ExternalChargeID NVARCHAR(150) = NULL,
+    @ExternalInvoiceID NVARCHAR(150) = NULL,
+    @PaymentUrl NVARCHAR(1000),
+    @QrCodePayload NVARCHAR(1000) = NULL,
+    @Amount DECIMAL(18, 3),
+    @CurrencyCode NVARCHAR(10) = 'KWD',
+    @CustomerName NVARCHAR(150) = NULL,
+    @CustomerPhone NVARCHAR(50) = NULL,
+    @CustomerEmail NVARCHAR(150) = NULL,
+    @SendViaWhatsApp BIT = 0,
+    @SendViaSms BIT = 0,
+    @SendViaEmail BIT = 0,
+    @PrintQrMode NVARCHAR(50) = NULL,
+    @CreatedByUserID INT = NULL,
+    @ShiftID INT = NULL,
+    @RawResponseJson NVARCHAR(MAX) = NULL,
+    @Notes NVARCHAR(500) = NULL,
+    @IsConsolidated BIT = 0,
+    @ConsolidatedInvoicesCsv NVARCHAR(MAX) = NULL -- صيغة: 'InvID:Amount,InvID:Amount'
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_PayLinkSave_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- استنتاج رقم العميل من الفاتورة تلقائياً إذا لم يُمرر مع الرابط
+        IF @PartnerID IS NULL AND @InvID > 0
+        BEGIN
+            SELECT TOP 1 @PartnerID = PartnerID
+            FROM [Sales].[InvoiceHeader]
+            WHERE InvID = @InvID;
+        END
+
+        -- منع ازدواجية قيد التحصيل: إذا كانت الفاتورة قد سُجلت مدفوعة مسبقاً على حساب بوابة الدفع قبل تحصيل الرابط فعلياً،
+        -- نعيد الفاتورة إلى حالة (غير مسددة بانتظار تحصيل الرابط) ونحذف قيد السداد المبكر ليبقى قيد المبيعات فقط حتى يتحول الرابط إلى Paid
+        IF @InvID > 0
+        BEGIN
+            DECLARE @InvPaidAmt DECIMAL(18,3), @InvPayAccID INT;
+            SELECT @InvPaidAmt = ISNULL(PaidAmount, 0), @InvPayAccID = PaymentAccountID
+            FROM [Sales].[InvoiceHeader]
+            WHERE InvID = @InvID;
+
+            IF @InvPaidAmt > 0 AND @InvPayAccID IS NOT NULL AND EXISTS (
+                SELECT 1 FROM [Settings].[IntegrationProviders]
+                WHERE ProviderCategory = 'PAYMENT_GATEWAY' AND LinkedAccountID = @InvPayAccID
+            )
+            BEGIN
+                DELETE FROM [Accounting].[JournalEntries]
+                WHERE ReferenceType = 'Payment' AND ReferenceID = @InvID;
+
+                DELETE FROM [Sales].[InvoicePaymentSplits]
+                WHERE InvID = @InvID AND PaymentAccountID = @InvPayAccID;
+
+                UPDATE [Sales].[InvoiceHeader]
+                SET PaidAmount = 0,
+                    Remainder = NetAmount
+                WHERE InvID = @InvID;
+            END
+        END
+
+        INSERT INTO [Sales].[InvoicePaymentLinks] (
+            InvID, PartnerID, ProviderID, ProviderCode,
+            ExternalChargeID, ExternalInvoiceID, PaymentUrl, QrCodePayload,
+            Amount, CurrencyCode, LinkStatus,
+            CustomerName, CustomerPhone, CustomerEmail,
+            SendViaWhatsApp, SendViaSms, SendViaEmail, PrintQrMode,
+            CreatedByUserID, ShiftID, RawResponseJson, Notes, IsConsolidated
+        )
+        VALUES (
+            @InvID, @PartnerID, @ProviderID, @ProviderCode,
+            @ExternalChargeID, @ExternalInvoiceID, @PaymentUrl, ISNULL(@QrCodePayload, @PaymentUrl),
+            @Amount, ISNULL(@CurrencyCode, 'KWD'), 'Pending',
+            @CustomerName, @CustomerPhone, @CustomerEmail,
+            @SendViaWhatsApp, @SendViaSms, @SendViaEmail, @PrintQrMode,
+            @CreatedByUserID, @ShiftID, @RawResponseJson, @Notes, @IsConsolidated
+        );
+
+        DECLARE @NewLinkID INT = SCOPE_IDENTITY();
+
+        -- إذا كان الرابط مدمجاً لعدة فواتير، نوزع المبالغ في جدول التخصيصات
+        IF @IsConsolidated = 1 AND @ConsolidatedInvoicesCsv IS NOT NULL AND LEN(@ConsolidatedInvoicesCsv) > 0
+        BEGIN
+            DECLARE @Pos INT = 1, @NextPos INT, @Item NVARCHAR(100), @SepPos INT, @AllocInvID INT, @AllocAmt DECIMAL(18,3);
+            WHILE @Pos <= LEN(@ConsolidatedInvoicesCsv)
+            BEGIN
+                SET @NextPos = CHARINDEX(',', @ConsolidatedInvoicesCsv, @Pos);
+                IF @NextPos = 0 SET @NextPos = LEN(@ConsolidatedInvoicesCsv) + 1;
+                SET @Item = LTRIM(RTRIM(SUBSTRING(@ConsolidatedInvoicesCsv, @Pos, @NextPos - @Pos)));
+                SET @SepPos = CHARINDEX(':', @Item);
+                IF @SepPos > 0
+                BEGIN
+                    SET @AllocInvID = TRY_CAST(LEFT(@Item, @SepPos - 1) AS INT);
+                    SET @AllocAmt = TRY_CAST(SUBSTRING(@Item, @SepPos + 1, 50) AS DECIMAL(18,3));
+                    IF @AllocInvID IS NOT NULL AND @AllocAmt IS NOT NULL AND @AllocAmt > 0
+                    BEGIN
+                        INSERT INTO [Sales].[InvoicePaymentLinkAllocations] (LinkID, InvID, AllocatedAmount)
+                        VALUES (@NewLinkID, @AllocInvID, @AllocAmt);
+                    END
+                END
+                SET @Pos = @NextPos + 1;
+            END
+        END
+        ELSE
+        BEGIN
+            INSERT INTO [Sales].[InvoicePaymentLinkAllocations] (LinkID, InvID, AllocatedAmount)
+            VALUES (@NewLinkID, @InvID, @Amount);
+        END
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+
+        SELECT * FROM [Sales].[InvoicePaymentLinks] WHERE LinkID = @NewLinkID;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_PayLinkSave_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 5.5 تحديث حالة رابط الدفع (عند الاستعلام أو استقبال Webhook)
+IF OBJECT_ID('[Sales].[sp_InvoicePaymentLink_UpdateStatus]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_InvoicePaymentLink_UpdateStatus];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoicePaymentLink_UpdateStatus]
+    @LinkID INT = 0,
+    @ExternalChargeID NVARCHAR(150) = NULL,
+    @NewStatus NVARCHAR(30),
+    @RawResponseJson NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @LinkID = 0 AND @ExternalChargeID IS NOT NULL
+    BEGIN
+        SELECT TOP 1 @LinkID = LinkID
+        FROM [Sales].[InvoicePaymentLinks]
+        WHERE ExternalChargeID = @ExternalChargeID OR ExternalInvoiceID = @ExternalChargeID
+        ORDER BY LinkID DESC;
+    END
+
+    IF @LinkID IS NULL OR @LinkID = 0 RETURN;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_PayLinkStat_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        UPDATE [Sales].[InvoicePaymentLinks]
+        SET LinkStatus = @NewStatus,
+            PaidAt = CASE WHEN @NewStatus = 'Paid' THEN ISNULL(PaidAt, GETDATE()) ELSE PaidAt END,
+            RefundedAmount = CASE
+                WHEN @NewStatus = 'Refunded' AND ISNULL(RefundedAmount, 0) < Amount THEN Amount
+                ELSE RefundedAmount
+            END,
+            RefundedAt = CASE WHEN @NewStatus IN ('Refunded', 'PartiallyRefunded') THEN ISNULL(RefundedAt, GETDATE()) ELSE RefundedAt END,
+            RawResponseJson = COALESCE(@RawResponseJson, RawResponseJson)
+        WHERE LinkID = @LinkID;
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+
+        SELECT * FROM [Sales].[InvoicePaymentLinks] WHERE LinkID = @LinkID;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_PayLinkStat_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 5.6 تسجيل استرداد المبلغ (Refund) لرابط دفع مدفوع
+IF OBJECT_ID('[Sales].[sp_InvoicePaymentLink_RecordRefund]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_InvoicePaymentLink_RecordRefund];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoicePaymentLink_RecordRefund]
+    @LinkID INT,
+    @RefundAmount DECIMAL(18, 3),
+    @ExternalRefundID NVARCHAR(150) = NULL,
+    @RefundReason NVARCHAR(300) = NULL,
+    @UserID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @OriginalAmount DECIMAL(18, 3), @AlreadyRefunded DECIMAL(18, 3), @ProviderID INT, @EnableRefunds BIT;
+
+    IF @UserID IS NOT NULL
+    BEGIN
+        DECLARE @CanUserRefund BIT = 0;
+        SELECT @CanUserRefund = CASE WHEN EXISTS (
+            SELECT 1
+            FROM [Security].[Users] u
+            INNER JOIN [Security].[RolePermissions] rp ON rp.RoleID = u.RoleID
+            WHERE u.UserID = @UserID
+              AND ISNULL(u.IsActive, 0) = 1
+              AND rp.FormName = N'PaymentGatewayInvoices'
+              AND ISNULL(rp.CanDelete, 0) = 1
+        ) THEN 1 ELSE 0 END;
+
+        IF ISNULL(@CanUserRefund, 0) = 0
+        BEGIN
+            RAISERROR(N'عذراً، لا تملك صلاحية استرداد مبالغ بوابات الدفع الإلكتروني (حذف طلبات وفواتير بوابات الدفع). يرجى مراجعة مدير النظام.', 16, 1);
+            RETURN;
+        END
+    END
+
+    SELECT 
+        @OriginalAmount = l.Amount,
+        @AlreadyRefunded = ISNULL(l.RefundedAmount, 0),
+        @ProviderID = l.ProviderID,
+        @EnableRefunds = ISNULL(p.EnableGatewayRefunds, 0)
+    FROM [Sales].[InvoicePaymentLinks] l
+    INNER JOIN [Settings].[IntegrationProviders] p ON l.ProviderID = p.ProviderID
+    WHERE l.LinkID = @LinkID;
+
+    IF @EnableRefunds = 0
+    BEGIN
+        RAISERROR(N'خاصية إرجاع المبالغ غير مفعلة لهذه البوابة في الإعدادات.', 16, 1);
+        RETURN;
+    END
+
+    DECLARE @NewTotalRefunded DECIMAL(18, 3) = @AlreadyRefunded + @RefundAmount;
+    IF @NewTotalRefunded > @OriginalAmount
+        SET @NewTotalRefunded = @OriginalAmount;
+
+    DECLARE @TargetStatus NVARCHAR(30) = CASE WHEN @NewTotalRefunded >= @OriginalAmount THEN 'Refunded' ELSE 'PartiallyRefunded' END;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_PayLinkRef_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        UPDATE [Sales].[InvoicePaymentLinks]
+        SET RefundedAmount = @NewTotalRefunded,
+            ExternalRefundID = COALESCE(@ExternalRefundID, ExternalRefundID),
+            RefundReason = COALESCE(@RefundReason, RefundReason),
+            RefundedAt = GETDATE(),
+            LinkStatus = @TargetStatus
+        WHERE LinkID = @LinkID;
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+
+        SELECT * FROM [Sales].[InvoicePaymentLinks] WHERE LinkID = @LinkID;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_PayLinkRef_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 5.6.1 إرجاع حالة رابط الدفع إلى Pending وحذف القيود المحاسبية وتسويات الفاتورة الناتجة عن الحالات السابقة
+IF OBJECT_ID('[Sales].[sp_InvoicePaymentLink_RevertToPending]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_InvoicePaymentLink_RevertToPending];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoicePaymentLink_RevertToPending]
+    @LinkID INT,
+    @PrevStatus NVARCHAR(30) = NULL,
+    @PrevRefundedAmount DECIMAL(18, 3) = NULL,
+    @PrevJournalEntryNo INT = NULL,
+    @PrevRefundJournalNo INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @LinkID IS NULL OR @LinkID <= 0 RETURN;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_PayLinkRevPend_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        DECLARE @InvID INT,
+                @ProviderID INT,
+                @Amount DECIMAL(18, 3),
+                @CurrentStatus NVARCHAR(30),
+                @CurrJournalEntryNo INT,
+                @CurrRefundJournalNo INT,
+                @CurrRefundedAmount DECIMAL(18, 3),
+                @GatewayAccountID INT;
+
+        SELECT
+            @InvID = l.InvID,
+            @ProviderID = l.ProviderID,
+            @Amount = ISNULL(l.Amount, 0),
+            @CurrentStatus = l.LinkStatus,
+            @CurrJournalEntryNo = l.JournalEntryNo,
+            @CurrRefundJournalNo = l.RefundJournalNo,
+            @CurrRefundedAmount = ISNULL(l.RefundedAmount, 0),
+            @GatewayAccountID = p.LinkedAccountID
+        FROM [Sales].[InvoicePaymentLinks] l
+        LEFT JOIN [Settings].[IntegrationProviders] p ON l.ProviderID = p.ProviderID
+        WHERE l.LinkID = @LinkID;
+
+        IF @InvID IS NULL
+        BEGIN
+            IF @TranCounter = 0 COMMIT TRANSACTION;
+            RETURN;
+        END
+
+        DECLARE @EffStatus NVARCHAR(30)         = ISNULL(@PrevStatus, @CurrentStatus);
+        DECLARE @EffJournalNo INT               = COALESCE(@PrevJournalEntryNo, @CurrJournalEntryNo);
+        DECLARE @EffRefundJournalNo INT         = COALESCE(@PrevRefundJournalNo, @CurrRefundJournalNo);
+        DECLARE @EffPrevRefunded DECIMAL(18, 3) = ISNULL(@PrevRefundedAmount, @CurrRefundedAmount);
+
+        -- 1. حذف كافة القيود المحاسبية التي أُنشئت لهذا الرابط (قيود التحصيل PaymentLink وقيود الاسترداد PaymentRefund)
+        DELETE FROM [Accounting].[JournalEntries]
+        WHERE (ReferenceType IN ('PaymentLink', 'PaymentRefund') AND ReferenceID = @LinkID)
+           OR (@EffJournalNo IS NOT NULL AND EntryNo = @EffJournalNo)
+           OR (@EffRefundJournalNo IS NOT NULL AND EntryNo = @EffRefundJournalNo);
+
+        -- 2. عكس تأثير التسديد على الفواتير وتوزيعات الدفع (إن كان التحصيل قد طُبّق سابقاً)
+        DECLARE @HasPaidEffect BIT = CASE
+            WHEN @EffJournalNo IS NOT NULL
+              OR @EffStatus IN ('Paid', 'PartiallyRefunded')
+              OR EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentLinkAllocations] WHERE LinkID = @LinkID AND AppliedAt IS NOT NULL)
+            THEN 1 ELSE 0
+        END;
+
+        IF @HasPaidEffect = 1
+        BEGIN
+            IF EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentLinkAllocations] WHERE LinkID = @LinkID AND AppliedAt IS NOT NULL)
+            BEGIN
+                -- عكس توزيع الفواتير المجمعة وتصفير AppliedAt لتسمح بالتحصيل لاحقاً
+                DECLARE @RemainingRatio DECIMAL(18, 8) = CASE
+                    WHEN @Amount > 0 AND @EffPrevRefunded > 0 AND @EffPrevRefunded <= @Amount
+                        THEN (@Amount - @EffPrevRefunded) / @Amount
+                    WHEN @Amount > 0 AND @EffPrevRefunded > @Amount THEN 0
+                    ELSE 1
+                END;
+
+                UPDATE inv
+                SET inv.PaidAmount = CASE
+                        WHEN ISNULL(inv.PaidAmount, 0) >= ROUND(a.AllocatedAmount * @RemainingRatio, 3)
+                            THEN ISNULL(inv.PaidAmount, 0) - ROUND(a.AllocatedAmount * @RemainingRatio, 3)
+                        ELSE 0
+                    END,
+                    inv.Remainder = CASE
+                        WHEN ISNULL(inv.Remainder, 0) + ROUND(a.AllocatedAmount * @RemainingRatio, 3) > inv.NetAmount
+                            THEN inv.NetAmount
+                        ELSE ISNULL(inv.Remainder, 0) + ROUND(a.AllocatedAmount * @RemainingRatio, 3)
+                    END
+                FROM [Sales].[InvoiceHeader] inv
+                INNER JOIN [Sales].[InvoicePaymentLinkAllocations] a ON inv.InvID = a.InvID
+                WHERE a.LinkID = @LinkID AND a.AppliedAt IS NOT NULL;
+
+                IF @GatewayAccountID IS NOT NULL
+                BEGIN
+                    DELETE s
+                    FROM [Sales].[InvoicePaymentSplits] s
+                    INNER JOIN [Sales].[InvoicePaymentLinkAllocations] a ON s.InvID = a.InvID
+                    WHERE a.LinkID = @LinkID
+                      AND s.PaymentAccountID = @GatewayAccountID
+                      AND s.Amount = a.AllocatedAmount;
+                END
+
+                UPDATE [Sales].[InvoicePaymentLinkAllocations]
+                SET AppliedAt = NULL
+                WHERE LinkID = @LinkID AND AppliedAt IS NOT NULL;
+            END
+            ELSE IF @InvID > 0
+            BEGIN
+                DECLARE @NetAppliedToInvoice DECIMAL(18, 3) = CASE
+                    WHEN @Amount > @EffPrevRefunded THEN (@Amount - @EffPrevRefunded)
+                    ELSE 0
+                END;
+
+                IF @NetAppliedToInvoice > 0
+                BEGIN
+                    UPDATE [Sales].[InvoiceHeader]
+                    SET PaidAmount = CASE
+                            WHEN ISNULL(PaidAmount, 0) >= @NetAppliedToInvoice THEN ISNULL(PaidAmount, 0) - @NetAppliedToInvoice
+                            ELSE 0
+                        END,
+                        Remainder = CASE
+                            WHEN ISNULL(Remainder, 0) + @NetAppliedToInvoice > NetAmount THEN NetAmount
+                            ELSE ISNULL(Remainder, 0) + @NetAppliedToInvoice
+                        END
+                    WHERE InvID = @InvID;
+                END
+
+                IF @GatewayAccountID IS NOT NULL
+                BEGIN
+                    DELETE TOP (1) FROM [Sales].[InvoicePaymentSplits]
+                    WHERE InvID = @InvID
+                      AND PaymentAccountID = @GatewayAccountID
+                      AND Amount = @Amount;
+                END
+            END
+        END
+        ELSE IF (@EffPrevRefunded > 0 OR @EffRefundJournalNo IS NOT NULL) AND @InvID > 0
+        BEGIN
+            -- حالة خاصة: إذا تحول الرابط مباشرة إلى Refunded دون المرور بحالة Paid وتم خصم المبلغ من الفاتورة
+            DECLARE @DirectRefundToRestore DECIMAL(18, 3) = CASE
+                WHEN @EffPrevRefunded > 0 THEN @EffPrevRefunded
+                ELSE @Amount
+            END;
+
+            UPDATE [Sales].[InvoiceHeader]
+            SET PaidAmount = CASE
+                    WHEN ISNULL(PaidAmount, 0) + @DirectRefundToRestore > NetAmount THEN NetAmount
+                    ELSE ISNULL(PaidAmount, 0) + @DirectRefundToRestore
+                END,
+                Remainder = CASE
+                    WHEN ISNULL(Remainder, 0) >= @DirectRefundToRestore THEN ISNULL(Remainder, 0) - @DirectRefundToRestore
+                    ELSE 0
+                END
+            WHERE InvID = @InvID;
+        END
+
+        -- 3. تصفير بيانات التحصيل والاسترداد وأرقام القيود في سجل الرابط لإعادته لحالة Pending النظيفة
+        UPDATE [Sales].[InvoicePaymentLinks]
+        SET LinkStatus       = 'Pending',
+            PaidAt           = NULL,
+            JournalEntryNo   = NULL,
+            RefundedAmount   = 0,
+            ExternalRefundID = NULL,
+            RefundReason     = NULL,
+            RefundedAt       = NULL,
+            RefundJournalNo  = NULL
+        WHERE LinkID = @LinkID
+          AND (
+              LinkStatus <> 'Pending'
+              OR PaidAt IS NOT NULL
+              OR JournalEntryNo IS NOT NULL
+              OR ISNULL(RefundedAmount, 0) <> 0
+              OR ExternalRefundID IS NOT NULL
+              OR RefundReason IS NOT NULL
+              OR RefundedAt IS NOT NULL
+              OR RefundJournalNo IS NOT NULL
+          );
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_PayLinkRevPend_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+-- 5.7 جلب روابط وفواتير الدفع مع الفلترة والبحث والترقيم (Server-Side Pagination)
+IF OBJECT_ID('[Sales].[sp_InvoicePaymentLink_GetFiltered]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_InvoicePaymentLink_GetFiltered];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoicePaymentLink_GetFiltered]
+    @ProviderCode NVARCHAR(50) = NULL,
+    @LinkStatus NVARCHAR(30) = NULL,
+    @StartDate DATETIME = NULL,
+    @EndDate DATETIME = NULL,
+    @SearchText NVARCHAR(150) = NULL,
+    @PageNumber INT = 1,
+    @PageSize INT = 25
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF ISNULL(@PageNumber, 0) < 1 SET @PageNumber = 1;
+    IF ISNULL(@PageSize, 0) < 1 SET @PageSize = 25;
+
+    SELECT 
+        l.*,
+        p.ProviderNameAr,
+        p.EnableGatewayRefunds,
+        p.AllowPartialRefunds,
+        inv.InvDate,
+        inv.TotalAmount AS InvoiceTotalAmount,
+        inv.NetAmount AS InvoiceNetAmount,
+        inv.PaidAmount AS InvoicePaidAmount,
+        inv.Remainder AS InvoiceRemainder,
+        ISNULL(l.CustomerName, pr.PartnerName) AS DisplayCustomerName,
+        ISNULL(l.CustomerPhone, pr.Phone) AS DisplayCustomerPhone,
+        COUNT(1) OVER() AS TotalRecordsCount,
+        ISNULL(SUM(CASE WHEN l.LinkStatus IN ('Paid', 'PartiallyRefunded') THEN l.Amount - ISNULL(l.RefundedAmount, 0) ELSE 0 END) OVER(), 0) AS SummaryPaidAmount,
+        ISNULL(SUM(CASE WHEN l.LinkStatus = 'Pending' THEN l.Amount ELSE 0 END) OVER(), 0) AS SummaryPendingAmount,
+        ISNULL(SUM(ISNULL(l.RefundedAmount, 0)) OVER(), 0) AS SummaryRefundedAmount
+    FROM [Sales].[InvoicePaymentLinks] l
+    INNER JOIN [Settings].[IntegrationProviders] p ON l.ProviderID = p.ProviderID
+    LEFT JOIN [Sales].[InvoiceHeader] inv ON l.InvID = inv.InvID
+    LEFT JOIN [Sales].[Partners] pr ON ISNULL(l.PartnerID, inv.PartnerID) = pr.PartnerID
+    WHERE (@ProviderCode IS NULL OR @ProviderCode = '' OR @ProviderCode = 'ALL' OR l.ProviderCode = @ProviderCode)
+      AND (@LinkStatus IS NULL OR @LinkStatus = '' OR @LinkStatus = 'ALL' OR l.LinkStatus = @LinkStatus)
+      AND (@StartDate IS NULL OR CAST(l.CreatedAt AS DATE) >= CAST(@StartDate AS DATE))
+      AND (@EndDate IS NULL OR CAST(l.CreatedAt AS DATE) <= CAST(@EndDate AS DATE))
+      AND (
+          @SearchText IS NULL OR @SearchText = ''
+          OR CAST(l.InvID AS NVARCHAR(50)) LIKE '%' + @SearchText + '%'
+          OR CAST(l.LinkID AS NVARCHAR(50)) LIKE '%' + @SearchText + '%'
+          OR ISNULL(l.CustomerName, '') LIKE '%' + @SearchText + '%'
+          OR ISNULL(l.CustomerPhone, '') LIKE '%' + @SearchText + '%'
+          OR ISNULL(pr.PartnerName, '') LIKE '%' + @SearchText + '%'
+          OR ISNULL(l.ExternalChargeID, '') LIKE '%' + @SearchText + '%'
+      )
+    ORDER BY l.LinkID DESC
+    OFFSET (@PageNumber - 1) * @PageSize ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+END
+GO
+
+-- 5.7.1 جلب بيانات الفاتورة السريعة (المبلغ المتبقي والعميل والهاتف) عند إدخال رقم الفاتورة في شريط إصدار رابط الدفع
+IF OBJECT_ID('[Sales].[sp_InvoicePaymentLink_GetInvoiceQuickInfo]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_InvoicePaymentLink_GetInvoiceQuickInfo];
+GO
+CREATE PROCEDURE [Sales].[sp_InvoicePaymentLink_GetInvoiceQuickInfo]
+    @InvID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT TOP 1 
+        inv.InvID,
+        inv.NetAmount,
+        inv.Remainder,
+        inv.PartnerID,
+        p.PartnerName,
+        p.Phone
+    FROM [Sales].[InvoiceHeader] inv
+    LEFT JOIN [Sales].[Partners] p ON inv.PartnerID = p.PartnerID
+    WHERE inv.InvID = @InvID;
+END
+GO
+
+-- 5.8 حفظ أو تحديث طلب Talabat وتحويله إلى فاتورة مبيعات باسم عميل Talabat عند القبول
+IF OBJECT_ID('[Sales].[sp_TalabatOrder_SaveOrUpdate]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_TalabatOrder_SaveOrUpdate];
+GO
+CREATE PROCEDURE [Sales].[sp_TalabatOrder_SaveOrUpdate]
+    @OrderToken NVARCHAR(150),
+    @OrderCode NVARCHAR(100),
+    @ShortCode NVARCHAR(50) = NULL,
+    @RemoteVendorId NVARCHAR(100) = NULL,
+    @ExpeditionType NVARCHAR(50) = 'delivery',
+    @PaymentType NVARCHAR(50) = 'ONLINE',
+    @SubTotal DECIMAL(18, 3) = 0,
+    @DeliveryFee DECIMAL(18, 3) = 0,
+    @DiscountAmount DECIMAL(18, 3) = 0,
+    @GrandTotal DECIMAL(18, 3) = 0,
+    @CurrencyCode NVARCHAR(10) = 'KWD',
+    @OrderStatus NVARCHAR(50) = 'Received',
+    @CustomerName NVARCHAR(150) = NULL,
+    @CustomerPhone NVARCHAR(50) = NULL,
+    @DeliveryAddress NVARCHAR(500) = NULL,
+    @Comments NVARCHAR(500) = NULL,
+    @ItemsJson NVARCHAR(MAX) = NULL,
+    @RawPayloadJson NVARCHAR(MAX) = NULL,
+    @RejectionReason NVARCHAR(300) = NULL,
+    @UserID INT = 1,
+    @AutoCreateSalesInvoice BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @ProviderID INT, @TalabatPartnerID INT, @TalabatAccountID INT;
+    SELECT TOP 1 
+        @ProviderID = ProviderID,
+        @TalabatPartnerID = PartnerID,
+        @TalabatAccountID = LinkedAccountID
+    FROM [Settings].[IntegrationProviders]
+    WHERE ProviderCode = 'TALABAT';
+
+    IF @ProviderID IS NULL RETURN;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_TalabatOrd_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- التأكد من وجود عميل Talabat في جدول Partners إذا كانت البوابة مهيأة
+        IF @TalabatPartnerID IS NULL
+        BEGIN
+            EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID = @ProviderID;
+            SELECT @TalabatPartnerID = PartnerID, @TalabatAccountID = LinkedAccountID
+            FROM [Settings].[IntegrationProviders]
+            WHERE ProviderID = @ProviderID;
+        END
+
+        DECLARE @TalabatOrderID INT, @ExistingInvID INT;
+        SELECT TOP 1 @TalabatOrderID = TalabatOrderID, @ExistingInvID = InvID
+        FROM [Sales].[TalabatOrders]
+        WHERE OrderToken = @OrderToken OR OrderCode = @OrderCode;
+
+        IF @TalabatOrderID IS NULL
+        BEGIN
+            INSERT INTO [Sales].[TalabatOrders] (
+                ProviderID, OrderToken, OrderCode, ShortCode, RemoteVendorId,
+                ExpeditionType, PaymentType, SubTotal, DeliveryFee, DiscountAmount, GrandTotal,
+                CurrencyCode, OrderStatus, CustomerName, CustomerPhone, DeliveryAddress,
+                Comments, ItemsJson, RawPayloadJson, PartnerID, CreatedByUserID
+            )
+            VALUES (
+                @ProviderID, @OrderToken, @OrderCode, @ShortCode, @RemoteVendorId,
+                @ExpeditionType, @PaymentType, @SubTotal, @DeliveryFee, @DiscountAmount, @GrandTotal,
+                ISNULL(@CurrencyCode, 'KWD'), @OrderStatus, @CustomerName, @CustomerPhone, @DeliveryAddress,
+                @Comments, @ItemsJson, @RawPayloadJson, @TalabatPartnerID, @UserID
+            );
+            SET @TalabatOrderID = SCOPE_IDENTITY();
+        END
+        ELSE
+        BEGIN
+            UPDATE [Sales].[TalabatOrders]
+            SET OrderStatus = @OrderStatus,
+                AcceptedAt = CASE WHEN @OrderStatus = 'Accepted' THEN ISNULL(AcceptedAt, GETDATE()) ELSE AcceptedAt END,
+                PreparedAt = CASE WHEN @OrderStatus = 'Prepared' THEN ISNULL(PreparedAt, GETDATE()) ELSE PreparedAt END,
+                RejectedAt = CASE WHEN @OrderStatus IN ('Rejected', 'Cancelled') THEN ISNULL(RejectedAt, GETDATE()) ELSE RejectedAt END,
+                RejectionReason = COALESCE(@RejectionReason, RejectionReason),
+                ItemsJson = COALESCE(@ItemsJson, ItemsJson),
+                RawPayloadJson = COALESCE(@RawPayloadJson, RawPayloadJson)
+            WHERE TalabatOrderID = @TalabatOrderID;
+        END
+
+        -- إنشاء فاتورة مبيعات مرتبطة بعميل المبيعات Talabat عند قبول الطلب إذا طُلب ذلك ولم تكن منشأة مسبقاً
+        IF (@AutoCreateSalesInvoice = 1 OR @OrderStatus = 'Accepted') AND @ExistingInvID IS NULL AND @TalabatPartnerID IS NOT NULL
+        BEGIN
+            DECLARE @DefaultWarehouseID INT;
+            SELECT TOP 1 @DefaultWarehouseID = WarehouseID FROM [Settings].[Warehouses] WHERE IsActive = 1 ORDER BY WarehouseID;
+
+            INSERT INTO [Sales].[InvoiceHeader] (
+                InvType, InvDate, PartnerID, WarehouseID,
+                TotalAmount, Discount, NetAmount, PaidAmount, Remainder,
+                UserID, Notes, IsPosted, PaymentAccountID
+            )
+            VALUES (
+                'Sales', GETDATE(), @TalabatPartnerID, @DefaultWarehouseID,
+                @SubTotal + @DeliveryFee, @DiscountAmount, @GrandTotal, 0, @GrandTotal,
+                @UserID, N'طلب Talabat رقم #' + @OrderCode + N' - العميل: ' + ISNULL(@CustomerName, N''), 1, @TalabatAccountID
+            );
+
+            SET @ExistingInvID = SCOPE_IDENTITY();
+
+            UPDATE [Sales].[TalabatOrders]
+            SET InvID = @ExistingInvID
+            WHERE TalabatOrderID = @TalabatOrderID;
+        END
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+
+        SELECT 
+            t.*,
+            p.PartnerName AS TalabatPartnerName
+        FROM [Sales].[TalabatOrders] t
+        LEFT JOIN [Sales].[Partners] p ON t.PartnerID = p.PartnerID
+        WHERE t.TalabatOrderID = @TalabatOrderID;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_TalabatOrd_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 5.9 جلب طلبات Talabat مع الفلترة
+IF OBJECT_ID('[Sales].[sp_TalabatOrder_GetFiltered]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_TalabatOrder_GetFiltered];
+GO
+CREATE PROCEDURE [Sales].[sp_TalabatOrder_GetFiltered]
+    @OrderStatus NVARCHAR(50) = NULL,
+    @StartDate DATETIME = NULL,
+    @EndDate DATETIME = NULL,
+    @SearchText NVARCHAR(150) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        t.*,
+        p.PartnerName AS TalabatPartnerName
+    FROM [Sales].[TalabatOrders] t
+    LEFT JOIN [Sales].[Partners] p ON t.PartnerID = p.PartnerID
+    WHERE (@OrderStatus IS NULL OR @OrderStatus = '' OR @OrderStatus = 'ALL' OR t.OrderStatus = @OrderStatus)
+      AND (@StartDate IS NULL OR CAST(t.CreatedAt AS DATE) >= CAST(@StartDate AS DATE))
+      AND (@EndDate IS NULL OR CAST(t.CreatedAt AS DATE) <= CAST(@EndDate AS DATE))
+      AND (
+          @SearchText IS NULL OR @SearchText = ''
+          OR t.OrderCode LIKE '%' + @SearchText + '%'
+          OR ISNULL(t.ShortCode, '') LIKE '%' + @SearchText + '%'
+          OR ISNULL(t.CustomerName, '') LIKE '%' + @SearchText + '%'
+          OR ISNULL(t.CustomerPhone, '') LIKE '%' + @SearchText + '%'
+          OR CAST(ISNULL(t.InvID, 0) AS NVARCHAR(50)) LIKE '%' + @SearchText + '%'
+      )
+    ORDER BY t.TalabatOrderID DESC;
+END
+GO
+
+-- =========================================================================================
+-- 6. المراقبات الآلية المعزولة (Triggers) لقسم Integration
+-- ملاحظة معمارية: جميع التريجرات محمية بـ Guard Clauses و Savepoints (SAVE TRANSACTION) و TRY...CATCH
+-- لضمان ذرية العمليات المحاسبية دون التأثير نهائياً على استقرار النظام الحالي
+-- =========================================================================================
+
+-- 6.1 Trigger 1: مزامنة حالة تفعيل البوابات مع CompanySettings (دون إنشاء حسابات قبل اختبار الاتصال!)
+IF OBJECT_ID('[Settings].[trg_CompanySettings_SyncIntegrations]', 'TR') IS NOT NULL
+    DROP TRIGGER [Settings].[trg_CompanySettings_SyncIntegrations];
+GO
+CREATE TRIGGER [Settings].[trg_CompanySettings_SyncIntegrations]
+ON [Settings].[CompanySettings]
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT (
+        UPDATE(EnableTapIntegration) OR
+        UPDATE(EnableMyFatoorahIntegration) OR
+        UPDATE(EnableUPaymentsIntegration) OR
+        UPDATE(EnableTalabatIntegration) OR
+        UPDATE(EnableJahezIntegration)
+    )
+    RETURN;
+
+    BEGIN TRY
+        IF @@TRANCOUNT > 0
+            SAVE TRANSACTION trg_SyncInt_SP;
+
+        DECLARE @Tap BIT, @MyFatoorah BIT, @UPayments BIT, @Talabat BIT, @Jahez BIT;
+
+        SELECT TOP 1
+            @Tap = ISNULL(EnableTapIntegration, 0),
+            @MyFatoorah = ISNULL(EnableMyFatoorahIntegration, 0),
+            @UPayments = ISNULL(EnableUPaymentsIntegration, 0),
+            @Talabat = ISNULL(EnableTalabatIntegration, 0),
+            @Jahez = ISNULL(EnableJahezIntegration, 0)
+        FROM inserted;
+
+        UPDATE [Settings].[IntegrationProviders]
+        SET IsEnabledInCompany = CASE ProviderCode
+                WHEN 'TAP' THEN @Tap
+                WHEN 'MYFATOORAH' THEN @MyFatoorah
+                WHEN 'UPAYMENTS' THEN @UPayments
+                WHEN 'TALABAT' THEN @Talabat
+                WHEN 'JAHEZ' THEN @Jahez
+                ELSE IsEnabledInCompany
+            END,
+            UpdatedAt = GETDATE();
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 AND XACT_STATE() = 1
+            ROLLBACK TRANSACTION trg_SyncInt_SP;
+    END CATCH
+END
+GO
+
+-- 6.2 Trigger 2: عند حفظ إعدادات البوابة بعد نجاح اختبار الاتصال -> إنشاء حساب البوابة أو عميل Talabat
+IF OBJECT_ID('[Settings].[trg_IntegrationProviders_OnConfigSaved]', 'TR') IS NOT NULL
+    DROP TRIGGER [Settings].[trg_IntegrationProviders_OnConfigSaved];
+GO
+CREATE TRIGGER [Settings].[trg_IntegrationProviders_OnConfigSaved]
+ON [Settings].[IntegrationProviders]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT (UPDATE(ConnectionStatus) OR UPDATE(IsConfigured))
+        RETURN;
+
+    BEGIN TRY
+        IF @@TRANCOUNT > 0
+            SAVE TRANSACTION trg_ProvCfg_SP;
+
+        DECLARE @ProviderID INT;
+        DECLARE cur_cfg CURSOR LOCAL FAST_FORWARD FOR
+            SELECT i.ProviderID
+            FROM inserted i
+            WHERE i.IsConfigured = 1
+              AND i.ConnectionStatus IN ('SandboxVerified', 'LiveVerified')
+              AND (i.LinkedAccountID IS NULL OR (i.ProviderCategory = 'DELIVERY_PLATFORM' AND i.PartnerID IS NULL));
+
+        OPEN cur_cfg;
+        FETCH NEXT FROM cur_cfg INTO @ProviderID;
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID = @ProviderID;
+            FETCH NEXT FROM cur_cfg INTO @ProviderID;
+        END
+        CLOSE cur_cfg;
+        DEALLOCATE cur_cfg;
+    END TRY
+    BEGIN CATCH
+        IF CURSOR_STATUS('local', 'cur_cfg') >= -1
+        BEGIN
+            CLOSE cur_cfg;
+            DEALLOCATE cur_cfg;
+        END
+        IF @@TRANCOUNT > 0 AND XACT_STATE() = 1
+            ROLLBACK TRANSACTION trg_ProvCfg_SP;
+    END CATCH
+END
+GO
+
+-- 6.3 Trigger 3: عند إنشاء رابط دفع جديد -> حساب العمولة والصافي وتاريخ انتهاء الصلاحية تلقائياً
+IF OBJECT_ID('[Sales].[trg_InvoicePaymentLinks_OnInsert_Init]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_InvoicePaymentLinks_OnInsert_Init];
+GO
+CREATE TRIGGER [Sales].[trg_InvoicePaymentLinks_OnInsert_Init]
+ON [Sales].[InvoicePaymentLinks]
+AFTER INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        IF @@TRANCOUNT > 0
+            SAVE TRANSACTION trg_PayLinkInit_SP;
+
+        UPDATE l
+        SET l.GatewayFeeAmount = ROUND((i.Amount * ISNULL(p.CommissionPercent, 0) / 100.0) + ISNULL(p.FixedFee, 0), 3),
+            l.NetAmount        = i.Amount - ROUND((i.Amount * ISNULL(p.CommissionPercent, 0) / 100.0) + ISNULL(p.FixedFee, 0), 3),
+            l.ExpiresAt        = ISNULL(i.ExpiresAt, DATEADD(HOUR, ISNULL(p.LinkExpiryHours, 24), GETDATE())),
+            l.PartnerID        = ISNULL(i.PartnerID, inv.PartnerID)
+        FROM [Sales].[InvoicePaymentLinks] l
+        INNER JOIN inserted i ON l.LinkID = i.LinkID
+        INNER JOIN [Settings].[IntegrationProviders] p ON i.ProviderID = p.ProviderID
+        LEFT JOIN [Sales].[InvoiceHeader] inv ON i.InvID = inv.InvID;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 AND XACT_STATE() = 1
+            ROLLBACK TRANSACTION trg_PayLinkInit_SP;
+    END CATCH
+END
+GO
+
+-- 6.4 Trigger 4: عند تحول حالة الرابط إلى Paid -> تسديد الفاتورة (أو الفواتير المجمعة) وإنشاء القيد المحاسبي آلياً مع عمولة البوابة الفورية
+IF OBJECT_ID('[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_InvoicePaymentLinks_OnStatusPaid];
+GO
+CREATE TRIGGER [Sales].[trg_InvoicePaymentLinks_OnStatusPaid]
+ON [Sales].[InvoicePaymentLinks]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT UPDATE(LinkStatus) RETURN;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM inserted i
+        INNER JOIN deleted d ON i.LinkID = d.LinkID
+        WHERE i.LinkStatus = 'Paid' AND d.LinkStatus <> 'Paid' AND i.JournalEntryNo IS NULL
+    )
+    RETURN;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION trg_PayLinkPaid_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        DECLARE @LinkID INT, @InvID INT, @PartnerID INT, @ProviderID INT,
+                @Amount DECIMAL(18,3), @FeeAmount DECIMAL(18,3), @NetAmount DECIMAL(18,3),
+                @UserID INT, @ProviderNameAr NVARCHAR(150), @GatewayAccountID INT,
+                @CommissionAccountID INT;
+
+        DECLARE cur_paid CURSOR LOCAL FAST_FORWARD FOR
+            SELECT 
+                i.LinkID,
+                i.InvID,
+                ISNULL(i.PartnerID, inv.PartnerID) AS ResolvedPartnerID,
+                i.ProviderID,
+                ISNULL(i.Amount, 0),
+                ISNULL(i.GatewayFeeAmount, 0),
+                ISNULL(i.NetAmount, ISNULL(i.Amount, 0) - ISNULL(i.GatewayFeeAmount, 0)),
+                ISNULL(i.CreatedByUserID, 1)
+            FROM inserted i
+            INNER JOIN deleted d ON i.LinkID = d.LinkID
+            LEFT JOIN [Sales].[InvoiceHeader] inv ON i.InvID = inv.InvID
+            WHERE i.LinkStatus = 'Paid' AND d.LinkStatus <> 'Paid' AND i.JournalEntryNo IS NULL;
+
+        OPEN cur_paid;
+        FETCH NEXT FROM cur_paid INTO @LinkID, @InvID, @PartnerID, @ProviderID, @Amount, @FeeAmount, @NetAmount, @UserID;
+
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            IF @Amount <= 0
+            BEGIN
+                RAISERROR(N'تعذر إنشاء القيد المحاسبي لرابط الدفع رقم #%d: قيمة الرابط يجب أن تكون أكبر من الصفر.', 16, 1, @LinkID);
+            END
+
+            DECLARE @CustomCreditAccountID INT = NULL;
+            SELECT 
+                @ProviderNameAr = ProviderNameAr,
+                @GatewayAccountID = LinkedAccountID,
+                @CustomCreditAccountID = DefaultCreditAccountID,
+                @CommissionAccountID = CommissionAccountID
+            FROM [Settings].[IntegrationProviders]
+            WHERE ProviderID = @ProviderID;
+
+            IF @GatewayAccountID IS NULL OR (@FeeAmount > 0 AND @CommissionAccountID IS NULL)
+            BEGIN
+                EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID = @ProviderID;
+                SELECT 
+                    @GatewayAccountID = LinkedAccountID,
+                    @CommissionAccountID = CommissionAccountID
+                FROM [Settings].[IntegrationProviders]
+                WHERE ProviderID = @ProviderID;
+            END
+
+            IF @GatewayAccountID IS NULL
+            BEGIN
+                RAISERROR(N'تعذر إتمام قيد التحصيل الإلكتروني للرابط #%d: لم يتم تحديد الحساب المدين لبوابة الدفع (%s) في شجرة الحسابات. يرجى مراجعة شاشة إعدادات الربط.', 16, 1, @LinkID, @ProviderNameAr);
+            END
+
+            IF @FeeAmount > 0 AND @CommissionAccountID IS NULL
+            BEGIN
+                RAISERROR(N'تعذر إتمام قيد التحصيل الإلكتروني للرابط #%d: توجد عمولة للبوابة (%s) ولكن لم يتم تحديد حساب مصروف عمولات البوابة في شجرة الحسابات.', 16, 1, @LinkID, @ProviderNameAr);
+            END
+
+            -- 1. تحديد الحساب الدائن (@CreditAccountID) حسب الأولوية المعتمدة:
+            -- الأولوية (1): الحساب الدائن المخصص في إعدادات البوابة (DefaultCreditAccountID)
+            -- الأولوية (2): حساب العميل المسجل (Partner.AccountID)
+            -- الأولوية (3 - Fallback): حساب 1201 (مبيعات مباشره - AccountID = 13) للعميل غير المسجل / النقدي
+            DECLARE @CreditAccountID INT = @CustomCreditAccountID;
+
+            IF @CreditAccountID IS NULL AND @PartnerID IS NOT NULL
+                SELECT @CreditAccountID = AccountID FROM [Sales].[Partners] WHERE PartnerID = @PartnerID;
+
+            IF @CreditAccountID IS NULL
+            BEGIN
+                SELECT TOP 1 @CreditAccountID = AccountID
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE (AccountCode = '1201' OR AccountID = 13) AND IsTransactional = 1
+                ORDER BY CASE WHEN AccountCode = '1201' THEN 0 ELSE 1 END;
+            END
+
+            IF @CreditAccountID IS NULL
+            BEGIN
+                RAISERROR(N'تعذر إتمام قيد التحصيل الإلكتروني للرابط #%d: لم يتم العثور على الحساب الدائن (حساب العميل أو حساب 1201 - مبيعات مباشره). يرجى التأكد من وجود حساب 1201 كحساب حركي في شجرة الحسابات.', 16, 1, @LinkID);
+            END
+
+            -- 2. تنظيف أي قيد سداد مبكر مكرر على الفاتورة (إن وجد) قبل إثبات تحصيل الرابط
+            IF @InvID > 0 AND EXISTS (
+                SELECT 1 FROM [Accounting].[JournalEntries]
+                WHERE ReferenceType = 'Payment' AND ReferenceID = @InvID AND AccountID = @GatewayAccountID
+            )
+            BEGIN
+                DELETE FROM [Accounting].[JournalEntries]
+                WHERE ReferenceType = 'Payment' AND ReferenceID = @InvID;
+
+                UPDATE [Sales].[InvoiceHeader]
+                SET PaidAmount = 0,
+                    Remainder = NetAmount
+                WHERE InvID = @InvID;
+            END
+
+            -- 3. تحديث الفواتير المخصصة في جدول InvoicePaymentLinkAllocations (أو الفاتورة المفردة)
+            IF EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentLinkAllocations] WHERE LinkID = @LinkID)
+            BEGIN
+                UPDATE inv
+                SET inv.PaidAmount = CASE WHEN ISNULL(inv.PaidAmount, 0) + a.AllocatedAmount > inv.NetAmount THEN inv.NetAmount ELSE ISNULL(inv.PaidAmount, 0) + a.AllocatedAmount END,
+                    inv.Remainder  = CASE WHEN inv.NetAmount - (ISNULL(inv.PaidAmount, 0) + a.AllocatedAmount) < 0 THEN 0 ELSE inv.NetAmount - (ISNULL(inv.PaidAmount, 0) + a.AllocatedAmount) END,
+                    inv.PaymentAccountID = ISNULL(@GatewayAccountID, inv.PaymentAccountID)
+                FROM [Sales].[InvoiceHeader] inv
+                INNER JOIN [Sales].[InvoicePaymentLinkAllocations] a ON inv.InvID = a.InvID
+                WHERE a.LinkID = @LinkID AND a.AppliedAt IS NULL;
+
+                INSERT INTO [Sales].[InvoicePaymentSplits] (InvID, PaymentAccountID, Amount)
+                SELECT a.InvID, @GatewayAccountID, a.AllocatedAmount
+                FROM [Sales].[InvoicePaymentLinkAllocations] a
+                WHERE a.LinkID = @LinkID AND a.AppliedAt IS NULL
+                  AND NOT EXISTS (
+                      SELECT 1 FROM [Sales].[InvoicePaymentSplits] s
+                      WHERE s.InvID = a.InvID AND s.PaymentAccountID = @GatewayAccountID AND s.Amount = a.AllocatedAmount
+                  );
+
+                UPDATE [Sales].[InvoicePaymentLinkAllocations]
+                SET AppliedAt = GETDATE()
+                WHERE LinkID = @LinkID AND AppliedAt IS NULL;
+            END
+            ELSE IF @InvID > 0
+            BEGIN
+                UPDATE [Sales].[InvoiceHeader]
+                SET PaidAmount = CASE WHEN ISNULL(PaidAmount, 0) + @Amount > NetAmount THEN NetAmount ELSE ISNULL(PaidAmount, 0) + @Amount END,
+                    Remainder  = CASE WHEN NetAmount - (ISNULL(PaidAmount, 0) + @Amount) < 0 THEN 0 ELSE NetAmount - (ISNULL(PaidAmount, 0) + @Amount) END,
+                    PaymentAccountID = ISNULL(@GatewayAccountID, PaymentAccountID)
+                WHERE InvID = @InvID;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM [Sales].[InvoicePaymentSplits]
+                    WHERE InvID = @InvID AND PaymentAccountID = @GatewayAccountID AND Amount = @Amount
+                )
+                BEGIN
+                    INSERT INTO [Sales].[InvoicePaymentSplits] (InvID, PaymentAccountID, Amount)
+                    VALUES (@InvID, @GatewayAccountID, @Amount);
+                END
+            END
+
+            -- 4. إنشاء القيد المحاسبي الفوري (مع إثبات مصروف عمولة البوابة في نفس القيد دائماً)
+            DECLARE @EntryNo INT = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+            DECLARE @Desc NVARCHAR(255) = N'تحصيل إلكتروني عبر ' + @ProviderNameAr + N' - فاتورة رقم #' + CAST(@InvID AS NVARCHAR(20)) + N' (رابط #' + CAST(@LinkID AS NVARCHAR(20)) + N')';
+            DECLARE @GatewayDebitAmount DECIMAL(18,3) = CASE WHEN @FeeAmount > 0 THEN (@Amount - @FeeAmount) ELSE @Amount END;
+
+            -- الطرف المدين (1): حساب بوابة الدفع (بالصافي بعد خصم العمولة)
+            INSERT INTO [Accounting].[JournalEntries] (
+                EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID
+            )
+            VALUES (
+                @EntryNo, GETDATE(), 'PaymentLink', @LinkID, @GatewayAccountID,
+                @GatewayDebitAmount, 0, @Desc, @UserID
+            );
+
+            -- الطرف المدين (2): مصروف عمولات بوابة الدفع (مع كل قيد تحصيل)
+            IF @FeeAmount > 0 AND @CommissionAccountID IS NOT NULL
+            BEGIN
+                INSERT INTO [Accounting].[JournalEntries] (
+                    EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID
+                )
+                VALUES (
+                    @EntryNo, GETDATE(), 'PaymentLink', @LinkID, @CommissionAccountID,
+                    @FeeAmount, 0, N'عمولة بوابة ' + @ProviderNameAr + N' - فاتورة #' + CAST(@InvID AS NVARCHAR(20)) + N' (رابط #' + CAST(@LinkID AS NVARCHAR(20)) + N')', @UserID
+                );
+            END
+
+            -- الطرف الدائن: حساب العميل أو حساب 1201 (مبيعات مباشره) بإجمالي مبلغ الرابط
+            INSERT INTO [Accounting].[JournalEntries] (
+                EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID
+            )
+            VALUES (
+                @EntryNo, GETDATE(), 'PaymentLink', @LinkID, @CreditAccountID,
+                0, @Amount, @Desc, @UserID
+            );
+
+            UPDATE [Sales].[InvoicePaymentLinks]
+            SET PaidAt = ISNULL(PaidAt, GETDATE()),
+                PartnerID = ISNULL(PartnerID, @PartnerID),
+                JournalEntryNo = @EntryNo
+            WHERE LinkID = @LinkID;
+
+            FETCH NEXT FROM cur_paid INTO @LinkID, @InvID, @PartnerID, @ProviderID, @Amount, @FeeAmount, @NetAmount, @UserID;
+        END
+
+        CLOSE cur_paid;
+        DEALLOCATE cur_paid;
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF CURSOR_STATUS('local', 'cur_paid') >= -1
+        BEGIN
+            CLOSE cur_paid;
+            DEALLOCATE cur_paid;
+        END
+
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION trg_PayLinkPaid_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 6.5 Trigger 5: عند استرداد المبلغ (Refunded / PartiallyRefunded) -> عكس المبلغ وتوليد قيد استرداد آلي
+--     وعند إرجاع حالة الرابط إلى (Pending) -> استدعاء sp_InvoicePaymentLink_RevertToPending لحذف القيود وعكس تسويات الحالة السابقة
+IF OBJECT_ID('[Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_InvoicePaymentLinks_OnStatusRefunded];
+GO
+CREATE TRIGGER [Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]
+ON [Sales].[InvoicePaymentLinks]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT (UPDATE(LinkStatus) OR UPDATE(RefundedAmount)) RETURN;
+
+    DECLARE @HasRevertToPending BIT = CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM inserted i
+            INNER JOIN deleted d ON i.LinkID = d.LinkID
+            WHERE i.LinkStatus = 'Pending' AND d.LinkStatus <> 'Pending'
+        ) THEN 1 ELSE 0
+    END;
+
+    DECLARE @HasRefundTransition BIT = CASE
+        WHEN EXISTS (
+            SELECT 1
+            FROM inserted i
+            INNER JOIN deleted d ON i.LinkID = d.LinkID
+            WHERE (
+                i.LinkStatus IN ('Refunded', 'PartiallyRefunded')
+                AND ISNULL(i.RefundedAmount, 0) > ISNULL(d.RefundedAmount, 0)
+            )
+            OR (
+                i.LinkStatus = 'Refunded'
+                AND d.LinkStatus <> 'Refunded'
+                AND i.RefundJournalNo IS NULL
+                AND ISNULL(i.Amount, 0) > ISNULL(d.RefundedAmount, 0)
+            )
+        ) THEN 1 ELSE 0
+    END;
+
+    IF @HasRevertToPending = 0 AND @HasRefundTransition = 0
+        RETURN;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION trg_PayLinkRef_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- أ. إرجاع الرابط إلى Pending وحذف القيود المحاسبية وتسويات الحالة السابقة عبر الإجراء المنفصل
+        IF @HasRevertToPending = 1
+        BEGIN
+            DECLARE @RevLinkID INT,
+                    @RevPrevStatus NVARCHAR(30),
+                    @RevPrevRefunded DECIMAL(18,3),
+                    @RevPrevJournalNo INT,
+                    @RevPrevRefundJournalNo INT;
+
+            DECLARE cur_revert CURSOR LOCAL FAST_FORWARD FOR
+                SELECT
+                    i.LinkID,
+                    d.LinkStatus,
+                    ISNULL(d.RefundedAmount, 0),
+                    d.JournalEntryNo,
+                    d.RefundJournalNo
+                FROM inserted i
+                INNER JOIN deleted d ON i.LinkID = d.LinkID
+                WHERE i.LinkStatus = 'Pending'
+                  AND d.LinkStatus <> 'Pending';
+
+            OPEN cur_revert;
+            FETCH NEXT FROM cur_revert INTO @RevLinkID, @RevPrevStatus, @RevPrevRefunded, @RevPrevJournalNo, @RevPrevRefundJournalNo;
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                EXEC [Sales].[sp_InvoicePaymentLink_RevertToPending]
+                    @LinkID              = @RevLinkID,
+                    @PrevStatus          = @RevPrevStatus,
+                    @PrevRefundedAmount  = @RevPrevRefunded,
+                    @PrevJournalEntryNo  = @RevPrevJournalNo,
+                    @PrevRefundJournalNo = @RevPrevRefundJournalNo;
+
+                FETCH NEXT FROM cur_revert INTO @RevLinkID, @RevPrevStatus, @RevPrevRefunded, @RevPrevJournalNo, @RevPrevRefundJournalNo;
+            END
+
+            CLOSE cur_revert;
+            DEALLOCATE cur_revert;
+        END
+
+        -- ب. معالجة الاسترداد وتوليد القيد العكسي عند التحول إلى Refunded / PartiallyRefunded
+        IF @HasRefundTransition = 1
+        BEGIN
+            DECLARE @LinkID INT, @InvID INT, @PartnerID INT, @ProviderID INT,
+                    @DeltaRefund DECIMAL(18,3), @TotalAmount DECIMAL(18,3), @TotalFeeAmount DECIMAL(18,3),
+                    @PrevRefunded DECIMAL(18,3), @NewRefunded DECIMAL(18,3), @UserID INT;
+
+            DECLARE cur_ref CURSOR LOCAL FAST_FORWARD FOR
+                SELECT 
+                    i.LinkID,
+                    i.InvID,
+                    ISNULL(i.PartnerID, inv.PartnerID) AS ResolvedPartnerID,
+                    i.ProviderID,
+                    CASE
+                        WHEN ISNULL(i.RefundedAmount, 0) > ISNULL(d.RefundedAmount, 0)
+                            THEN (ISNULL(i.RefundedAmount, 0) - ISNULL(d.RefundedAmount, 0))
+                        ELSE (ISNULL(i.Amount, 0) - ISNULL(d.RefundedAmount, 0))
+                    END AS DeltaRefund,
+                    ISNULL(i.Amount, 0) AS TotalAmount,
+                    ISNULL(i.GatewayFeeAmount, 0) AS TotalFeeAmount,
+                    ISNULL(d.RefundedAmount, 0) AS PrevRefunded,
+                    CASE
+                        WHEN ISNULL(i.RefundedAmount, 0) > ISNULL(d.RefundedAmount, 0)
+                            THEN ISNULL(i.RefundedAmount, 0)
+                        ELSE ISNULL(i.Amount, 0)
+                    END AS NewRefunded,
+                    ISNULL(i.CreatedByUserID, 1)
+                FROM inserted i
+                INNER JOIN deleted d ON i.LinkID = d.LinkID
+                LEFT JOIN [Sales].[InvoiceHeader] inv ON i.InvID = inv.InvID
+                WHERE (
+                    i.LinkStatus IN ('Refunded', 'PartiallyRefunded')
+                    AND ISNULL(i.RefundedAmount, 0) > ISNULL(d.RefundedAmount, 0)
+                )
+                OR (
+                    i.LinkStatus = 'Refunded'
+                    AND d.LinkStatus <> 'Refunded'
+                    AND i.RefundJournalNo IS NULL
+                    AND ISNULL(i.Amount, 0) > ISNULL(d.RefundedAmount, 0)
+                );
+
+            OPEN cur_ref;
+            FETCH NEXT FROM cur_ref INTO @LinkID, @InvID, @PartnerID, @ProviderID, @DeltaRefund, @TotalAmount, @TotalFeeAmount, @PrevRefunded, @NewRefunded, @UserID;
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                DECLARE @ProviderNameAr NVARCHAR(150), @GatewayAccountID INT, @CommissionAccountID INT, @AutoPostRefund BIT,
+                        @CustomRefundDebitID INT = NULL, @CustomRefundCreditID INT = NULL, @DefaultCreditID INT = NULL;
+                SELECT 
+                    @ProviderNameAr = ProviderNameAr,
+                    @GatewayAccountID = LinkedAccountID,
+                    @CommissionAccountID = CommissionAccountID,
+                    @DefaultCreditID = DefaultCreditAccountID,
+                    @CustomRefundDebitID = RefundDebitAccountID,
+                    @CustomRefundCreditID = RefundCreditAccountID,
+                    @AutoPostRefund = ISNULL(AutoPostRefundJournalEntry, 1)
+                FROM [Settings].[IntegrationProviders]
+                WHERE ProviderID = @ProviderID;
+
+                IF @GatewayAccountID IS NULL OR (@TotalFeeAmount > 0 AND @CommissionAccountID IS NULL)
+                BEGIN
+                    EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID = @ProviderID;
+                    SELECT 
+                        @GatewayAccountID = LinkedAccountID,
+                        @CommissionAccountID = CommissionAccountID
+                    FROM [Settings].[IntegrationProviders]
+                    WHERE ProviderID = @ProviderID;
+                END
+
+                -- تحديث الفاتورة (تخفيض المسدد وزيادة المتبقي)
+                UPDATE [Sales].[InvoiceHeader]
+                SET PaidAmount = CASE WHEN ISNULL(PaidAmount, 0) >= @DeltaRefund THEN PaidAmount - @DeltaRefund ELSE 0 END,
+                    Remainder  = ISNULL(Remainder, 0) + @DeltaRefund
+                WHERE InvID = @InvID;
+
+                -- إنشاء قيد الاسترداد العكسي إذا كان مفعلاً (عكس مطابق لقيد التحصيل شاملاً عمولة البوابة)
+                IF @AutoPostRefund = 1
+                BEGIN
+                    DECLARE @FinalRefundCreditID INT = ISNULL(@CustomRefundCreditID, @GatewayAccountID);
+                    IF @FinalRefundCreditID IS NULL
+                    BEGIN
+                        RAISERROR(N'تعذر إتمام قيد استرداد المبلغ للرابط #%d: لم يتم تحديد الحساب الدائن للاسترداد أو حساب بوابة الدفع (%s) في شجرة الحسابات.', 16, 1, @LinkID, @ProviderNameAr);
+                    END
+
+                    DECLARE @DebitAccountID INT = COALESCE(@CustomRefundDebitID, @DefaultCreditID);
+                    IF @DebitAccountID IS NULL AND @PartnerID IS NOT NULL
+                        SELECT @DebitAccountID = AccountID FROM [Sales].[Partners] WHERE PartnerID = @PartnerID;
+
+                    IF @DebitAccountID IS NULL
+                    BEGIN
+                        SELECT TOP 1 @DebitAccountID = AccountID
+                        FROM [Accounting].[ChartOfAccounts]
+                        WHERE (AccountCode = '1201' OR AccountID = 13) AND IsTransactional = 1
+                        ORDER BY CASE WHEN AccountCode = '1201' THEN 0 ELSE 1 END;
+                    END
+
+                    IF @DebitAccountID IS NULL
+                    BEGIN
+                        RAISERROR(N'تعذر إتمام قيد استرداد المبلغ للرابط #%d: لم يتم العثور على الحساب المدين للاسترداد (حساب العميل أو حساب 1201 - مبيعات مباشره).', 16, 1, @LinkID);
+                    END
+
+                    -- حساب عمولة البوابة الفعلية التي تم إثباتها في قيد التحصيل لعكسها بنفس النسبة (كلي أو جزئي دون تراكم تقريب)
+                    DECLARE @ActualPaidFee DECIMAL(18,3) = 0;
+                    IF @CommissionAccountID IS NOT NULL
+                    BEGIN
+                        SELECT @ActualPaidFee = ISNULL(SUM(DebitAmount), 0)
+                        FROM [Accounting].[JournalEntries]
+                        WHERE ReferenceType = 'PaymentLink'
+                          AND ReferenceID = @LinkID
+                          AND AccountID = @CommissionAccountID
+                          AND DebitAmount > 0;
+                    END
+
+                    DECLARE @EffectiveFee DECIMAL(18,3) = CASE
+                        WHEN @CommissionAccountID IS NULL THEN 0
+                        WHEN EXISTS (SELECT 1 FROM [Accounting].[JournalEntries] WHERE ReferenceType = 'PaymentLink' AND ReferenceID = @LinkID)
+                            THEN @ActualPaidFee
+                        ELSE @TotalFeeAmount
+                    END;
+
+                    DECLARE @DeltaFee DECIMAL(18,3) = 0;
+                    IF @EffectiveFee > 0 AND @TotalAmount > 0 AND @CommissionAccountID IS NOT NULL
+                    BEGIN
+                        DECLARE @FeeBefore DECIMAL(18,3) = CASE
+                            WHEN @PrevRefunded <= 0 THEN 0
+                            WHEN @PrevRefunded >= @TotalAmount THEN @EffectiveFee
+                            ELSE ROUND(@EffectiveFee * (@PrevRefunded / @TotalAmount), 3)
+                        END;
+                        DECLARE @FeeAfter DECIMAL(18,3) = CASE
+                            WHEN @NewRefunded >= @TotalAmount THEN @EffectiveFee
+                            ELSE ROUND(@EffectiveFee * (@NewRefunded / @TotalAmount), 3)
+                        END;
+                        SET @DeltaFee = CASE WHEN @FeeAfter > @FeeBefore THEN (@FeeAfter - @FeeBefore) ELSE 0 END;
+                        IF @DeltaFee > @DeltaRefund SET @DeltaFee = @DeltaRefund;
+                    END
+
+                    DECLARE @GatewayCreditAmount DECIMAL(18,3) = @DeltaRefund - @DeltaFee;
+                    DECLARE @RefEntryNo INT = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+                    DECLARE @RefDesc NVARCHAR(255) = N'إرجاع مبلغ عبر ' + @ProviderNameAr + N' - فاتورة #' + CAST(@InvID AS NVARCHAR(20)) + N' (رابط #' + CAST(@LinkID AS NVARCHAR(20)) + N')';
+
+                    -- الطرف المدين: الجانب المدين المخصص أو حساب العميل أو حساب 1201 بإجمالي المبلغ المسترد (عكس الطرف الدائن للتحصيل)
+                    INSERT INTO [Accounting].[JournalEntries] (
+                        EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID
+                    )
+                    VALUES (
+                        @RefEntryNo, GETDATE(), 'PaymentRefund', @LinkID, @DebitAccountID,
+                        @DeltaRefund, 0, @RefDesc, @UserID
+                    );
+
+                    -- الطرف الدائن (1): حساب بوابة الدفع / المخصص بالصافي بعد خصم العمولة المعكوسة (عكس الطرف المدين 1 للتحصيل)
+                    IF @GatewayCreditAmount > 0
+                    BEGIN
+                        INSERT INTO [Accounting].[JournalEntries] (
+                            EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID
+                        )
+                        VALUES (
+                            @RefEntryNo, GETDATE(), 'PaymentRefund', @LinkID, @FinalRefundCreditID,
+                            0, @GatewayCreditAmount, @RefDesc, @UserID
+                        );
+                    END
+
+                    -- الطرف الدائن (2): عكس مصروف عمولة بوابة الدفع التي كانت محسوبة في قيد التحصيل
+                    IF @DeltaFee > 0 AND @CommissionAccountID IS NOT NULL
+                    BEGIN
+                        INSERT INTO [Accounting].[JournalEntries] (
+                            EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID
+                        )
+                        VALUES (
+                            @RefEntryNo, GETDATE(), 'PaymentRefund', @LinkID, @CommissionAccountID,
+                            0, @DeltaFee, N'عكس عمولة بوابة ' + @ProviderNameAr + N' - فاتورة #' + CAST(@InvID AS NVARCHAR(20)) + N' (رابط #' + CAST(@LinkID AS NVARCHAR(20)) + N')', @UserID
+                        );
+                    END
+
+                    UPDATE [Sales].[InvoicePaymentLinks]
+                    SET RefundJournalNo = @RefEntryNo,
+                        RefundedAmount = CASE WHEN ISNULL(RefundedAmount, 0) < @NewRefunded THEN @NewRefunded ELSE RefundedAmount END,
+                        RefundedAt = ISNULL(RefundedAt, GETDATE()),
+                        PartnerID = ISNULL(PartnerID, @PartnerID)
+                    WHERE LinkID = @LinkID;
+                END
+                ELSE
+                BEGIN
+                    UPDATE [Sales].[InvoicePaymentLinks]
+                    SET RefundedAmount = CASE WHEN ISNULL(RefundedAmount, 0) < @NewRefunded THEN @NewRefunded ELSE RefundedAmount END,
+                        RefundedAt = ISNULL(RefundedAt, GETDATE())
+                    WHERE LinkID = @LinkID;
+                END
+
+                FETCH NEXT FROM cur_ref INTO @LinkID, @InvID, @PartnerID, @ProviderID, @DeltaRefund, @TotalAmount, @TotalFeeAmount, @PrevRefunded, @NewRefunded, @UserID;
+            END
+
+            CLOSE cur_ref;
+            DEALLOCATE cur_ref;
+        END
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF CURSOR_STATUS('local', 'cur_revert') >= -1
+        BEGIN
+            CLOSE cur_revert;
+            DEALLOCATE cur_revert;
+        END
+        IF CURSOR_STATUS('local', 'cur_ref') >= -1
+        BEGIN
+            CLOSE cur_ref;
+            DEALLOCATE cur_ref;
+        END
+
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION trg_PayLinkRef_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+
+-- 6.6 Trigger 6: عند إغلاق الوردية -> قيد مجمع لعمولات بوابات الدفع الخاصة بالوردية (إذا كان الخيار مفعلاً)
+IF OBJECT_ID('[Sales].[trg_Shifts_OnClose_GatewayCommissions]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_Shifts_OnClose_GatewayCommissions];
+GO
+CREATE TRIGGER [Sales].[trg_Shifts_OnClose_GatewayCommissions]
+ON [Sales].[Shifts]
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT UPDATE(Status) RETURN;
+
+    BEGIN TRY
+        IF @@TRANCOUNT > 0
+            SAVE TRANSACTION trg_ShiftComm_SP;
+
+        DECLARE @ShiftID INT, @UserID INT;
+        DECLARE cur_sh CURSOR LOCAL FAST_FORWARD FOR
+            SELECT i.ShiftID, i.UserID
+            FROM inserted i
+            INNER JOIN deleted d ON i.ShiftID = d.ShiftID
+            WHERE i.Status = 'Closed' AND d.Status <> 'Closed';
+
+        OPEN cur_sh;
+        FETCH NEXT FROM cur_sh INTO @ShiftID, @UserID;
+
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            DECLARE @ProviderID INT, @ProviderNameAr NVARCHAR(150), @GatewayAccountID INT, @CommissionAccountID INT, @TotalFee DECIMAL(18,3);
+
+            DECLARE cur_fees CURSOR LOCAL FAST_FORWARD FOR
+                SELECT 
+                    p.ProviderID,
+                    p.ProviderNameAr,
+                    p.LinkedAccountID,
+                    p.CommissionAccountID,
+                    SUM(l.GatewayFeeAmount) AS TotalFee
+                FROM [Sales].[InvoicePaymentLinks] l
+                INNER JOIN [Settings].[IntegrationProviders] p ON l.ProviderID = p.ProviderID
+                WHERE l.ShiftID = @ShiftID
+                  AND l.LinkStatus = 'Paid'
+                  AND p.DeductCommissionOnShiftClose = 1
+                  AND l.GatewayFeeAmount > 0
+                  AND p.LinkedAccountID IS NOT NULL
+                  AND p.CommissionAccountID IS NOT NULL
+                  AND NOT EXISTS (
+                      SELECT 1 FROM [Accounting].[JournalEntries] je
+                      WHERE je.ReferenceType = 'PaymentLink'
+                        AND je.ReferenceID = l.LinkID
+                        AND je.AccountID = p.CommissionAccountID
+                  )
+                GROUP BY p.ProviderID, p.ProviderNameAr, p.LinkedAccountID, p.CommissionAccountID;
+
+            OPEN cur_fees;
+            FETCH NEXT FROM cur_fees INTO @ProviderID, @ProviderNameAr, @GatewayAccountID, @CommissionAccountID, @TotalFee;
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                IF @TotalFee > 0
+                BEGIN
+                    DECLARE @FeeEntryNo INT = NEXT VALUE FOR [Accounting].[seq_EntryNo];
+                    DECLARE @FeeDesc NVARCHAR(255) = N'تسوية عمولات بوابة ' + @ProviderNameAr + N' - إغلاق وردية #' + CAST(@ShiftID AS NVARCHAR(20));
+
+                    INSERT INTO [Accounting].[JournalEntries] (
+                        EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID
+                    )
+                    VALUES
+                    (@FeeEntryNo, GETDATE(), 'ShiftGatewayFee', @ShiftID, @CommissionAccountID, @TotalFee, 0, @FeeDesc, @UserID),
+                    (@FeeEntryNo, GETDATE(), 'ShiftGatewayFee', @ShiftID, @GatewayAccountID, 0, @TotalFee, @FeeDesc, @UserID);
+                END
+
+                FETCH NEXT FROM cur_fees INTO @ProviderID, @ProviderNameAr, @GatewayAccountID, @CommissionAccountID, @TotalFee;
+            END
+
+            CLOSE cur_fees;
+            DEALLOCATE cur_fees;
+
+            FETCH NEXT FROM cur_sh INTO @ShiftID, @UserID;
+        END
+
+        CLOSE cur_sh;
+        DEALLOCATE cur_sh;
+    END TRY
+    BEGIN CATCH
+        IF CURSOR_STATUS('local', 'cur_fees') >= -1
+        BEGIN
+            CLOSE cur_fees;
+            DEALLOCATE cur_fees;
+        END
+        IF CURSOR_STATUS('local', 'cur_sh') >= -1
+        BEGIN
+            CLOSE cur_sh;
+            DEALLOCATE cur_sh;
+        END
+        IF @@TRANCOUNT > 0 AND XACT_STATE() = 1
+            ROLLBACK TRANSACTION trg_ShiftComm_SP;
+    END CATCH
+END
+GO
+
+-- =========================================================================
+-- 10. ربط صلاحية الاسترداد لبوابات الدفع بصلاحيات الأدوار (حذف طلبات وفواتير بوابات الدفع - Idempotent)
+-- =========================================================================
+IF COL_LENGTH('[Security].[Users]', 'CanRefundPaymentGateway') IS NULL
+BEGIN
+    ALTER TABLE [Security].[Users]
+        ADD CanRefundPaymentGateway BIT NOT NULL
+        CONSTRAINT DF_Users_CanRefundPaymentGateway DEFAULT 0;
+END
+GO
+
+-- ضمان وجود سجل صلاحيات شاشة (طلبات وفواتير بوابات الدفع) لحسابات الإدارة لأول مرة فقط
+IF OBJECT_ID('[Security].[RolePermissions]', 'U') IS NOT NULL
+BEGIN
+    INSERT INTO [Security].[RolePermissions] (RoleID, FormName, CanView, CanAdd, CanEdit, CanDelete, CanPrint)
+    SELECT r.RoleID, N'PaymentGatewayInvoices', 1, 1, 1, 1, 1
+    FROM [Security].[Roles] r
+    WHERE (r.RoleID = 1 OR LOWER(r.RoleName) IN (N'admin', N'administrator', N'مدير النظام', N'مدير'))
+      AND NOT EXISTS (
+          SELECT 1 FROM [Security].[RolePermissions] rp
+          WHERE rp.RoleID = r.RoleID AND rp.FormName = N'PaymentGatewayInvoices'
+      );
+END
+GO
+
+IF OBJECT_ID('[Security].[sp_User_Login]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_Login];
+GO
+CREATE PROCEDURE [Security].[sp_User_Login]
+    @Username NVARCHAR(50),
+    @PasswordHash NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        Users.UserID,
+        Users.FullName,
+        Users.RoleID,
+        Roles.RoleName,
+        Users.IsActive,
+        CAST(CASE WHEN EXISTS (
+            SELECT 1
+            FROM [Security].[RolePermissions] rp
+            WHERE rp.RoleID = Users.RoleID
+              AND rp.FormName = N'PaymentGatewayInvoices'
+              AND ISNULL(rp.CanDelete, 0) = 1
+        ) THEN 1 ELSE 0 END AS BIT) AS CanRefundPaymentGateway,
+        CAST(CASE WHEN EXISTS (
+            SELECT 1
+            FROM [Security].[RolePermissions] rp
+            WHERE rp.RoleID = Users.RoleID
+              AND rp.FormName IN (N'Sales', N'InvoiceDashboard')
+              AND ISNULL(rp.CanDelete, 0) = 1
+        ) THEN 1 ELSE 0 END AS BIT) AS CanDeleteSalesInvoice,
+        CAST(CASE WHEN EXISTS (
+            SELECT 1
+            FROM [Security].[RolePermissions] rp
+            WHERE rp.RoleID = Users.RoleID
+              AND rp.FormName IN (N'Purchases', N'InvoiceDashboard')
+              AND ISNULL(rp.CanDelete, 0) = 1
+        ) THEN 1 ELSE 0 END AS BIT) AS CanDeletePurchaseInvoice
+    FROM [Security].Users
+    INNER JOIN [Security].Roles ON Users.RoleID = Roles.RoleID
+    WHERE Username = @Username AND PasswordHash = @PasswordHash;
+END
+GO
+
+IF OBJECT_ID('[Security].[sp_User_GetAll]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_GetAll];
+GO
+CREATE PROCEDURE [Security].[sp_User_GetAll]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT u.UserID, u.RoleID, r.RoleName, u.Username, u.FullName, u.IsActive,
+           CAST(CASE WHEN EXISTS (
+               SELECT 1
+               FROM [Security].[RolePermissions] rp
+               WHERE rp.RoleID = u.RoleID
+                 AND rp.FormName = N'PaymentGatewayInvoices'
+                 AND ISNULL(rp.CanDelete, 0) = 1
+           ) THEN 1 ELSE 0 END AS BIT) AS CanRefundPaymentGateway,
+           CAST(CASE WHEN EXISTS (
+               SELECT 1
+               FROM [Security].[RolePermissions] rp
+               WHERE rp.RoleID = u.RoleID
+                 AND rp.FormName IN (N'Sales', N'InvoiceDashboard')
+                 AND ISNULL(rp.CanDelete, 0) = 1
+           ) THEN 1 ELSE 0 END AS BIT) AS CanDeleteSalesInvoice,
+           CAST(CASE WHEN EXISTS (
+               SELECT 1
+               FROM [Security].[RolePermissions] rp
+               WHERE rp.RoleID = u.RoleID
+                 AND rp.FormName IN (N'Purchases', N'InvoiceDashboard')
+                 AND ISNULL(rp.CanDelete, 0) = 1
+           ) THEN 1 ELSE 0 END AS BIT) AS CanDeletePurchaseInvoice,
+           u.CreatedAt
+    FROM [Security].[Users] u
+    INNER JOIN [Security].[Roles] r ON u.RoleID = r.RoleID
+    ORDER BY u.UserID;
+END
+GO
+
+IF OBJECT_ID('[Security].[sp_User_Add]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_Add];
+GO
+CREATE PROCEDURE [Security].[sp_User_Add]
+    @RoleID INT,
+    @Username NVARCHAR(100),
+    @PasswordHash NVARCHAR(256),
+    @FullName NVARCHAR(200),
+    @IsActive BIT,
+    @CanRefundPaymentGateway BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO [Security].[Users] (RoleID, Username, PasswordHash, FullName, IsActive, CanRefundPaymentGateway)
+    VALUES (@RoleID, @Username, @PasswordHash, @FullName, @IsActive, ISNULL(@CanRefundPaymentGateway, 0));
+    SELECT SCOPE_IDENTITY();
+END
+GO
+
+IF OBJECT_ID('[Security].[sp_User_Update]', 'P') IS NOT NULL DROP PROCEDURE [Security].[sp_User_Update];
+GO
+CREATE PROCEDURE [Security].[sp_User_Update]
+    @UserID INT,
+    @RoleID INT,
+    @Username NVARCHAR(100),
+    @FullName NVARCHAR(200),
+    @IsActive BIT,
+    @CanRefundPaymentGateway BIT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE [Security].[Users]
+    SET RoleID = @RoleID,
+        Username = @Username,
+        FullName = @FullName,
+        IsActive = @IsActive,
+        CanRefundPaymentGateway = ISNULL(@CanRefundPaymentGateway, CanRefundPaymentGateway)
+    WHERE UserID = @UserID;
+END
+GO
+
+-- =========================================================================
+-- التحقق الفوري من صلاحية المستخدم في استرداد مبالغ بوابات الدفع الإلكتروني
+-- مربوطة بصلاحية حذف (CanDelete) في شاشة طلبات وفواتير بوابات الدفع (PaymentGatewayInvoices)
+-- =========================================================================
+IF OBJECT_ID('[Security].[sp_User_CanRefundPaymentGateway]', 'P') IS NOT NULL
+    DROP PROCEDURE [Security].[sp_User_CanRefundPaymentGateway];
+GO
+CREATE PROCEDURE [Security].[sp_User_CanRefundPaymentGateway]
+    @UserID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT CAST(CASE WHEN EXISTS (
+        SELECT 1
+        FROM [Security].[Users] u
+        INNER JOIN [Security].[RolePermissions] rp ON rp.RoleID = u.RoleID
+        WHERE u.UserID = @UserID
+          AND ISNULL(u.IsActive, 0) = 1
+          AND rp.FormName = N'PaymentGatewayInvoices'
+          AND ISNULL(rp.CanDelete, 0) = 1
+    ) THEN 1 ELSE 0 END AS BIT) AS CanRefundPaymentGateway;
+END
+GO
+
+-- =========================================================================
+-- Trigger: [Sales].[trg_InvoiceHeader_DeleteCascade] (INSTEAD OF DELETE)
+-- المسؤول الوحيد والكامل عن حذف الفاتورة وتنظيف كافة الجداول المرتبطة بأمان
+-- داخل Transaction / Savepoint (sp_InvDelByID_SP) مع منع حذف المرحّل أو المدفوع إلكترونياً
+-- =========================================================================
+IF OBJECT_ID('[Sales].[trg_InvoiceHeader_DeleteCascade]', 'TR') IS NOT NULL
+    DROP TRIGGER [Sales].[trg_InvoiceHeader_DeleteCascade];
+GO
+CREATE TRIGGER [Sales].[trg_InvoiceHeader_DeleteCascade]
+ON [Sales].[InvoiceHeader]
+INSTEAD OF DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (SELECT 1 FROM deleted)
+        RETURN;
+
+    -- 1. منع حذف أي فاتورة مرحّلة محاسبياً
+    IF EXISTS (SELECT 1 FROM deleted WHERE ISNULL(IsPosted, 0) = 1)
+    BEGIN
+        RAISERROR(N'لا يمكن حذف فاتورة مرحّلة محاسبياً؛ يرجى فك ترحيل الفاتورة أولاً.', 16, 1);
+        RETURN;
+    END
+
+    -- 2. منع حذف أي فاتورة مرتبطة برابط دفع إلكتروني مدفوع أو مسترد جزئياً (سواء مباشرة أو عبر التوزيع المجمع)
+    IF OBJECT_ID('[Sales].[InvoicePaymentLinks]', 'U') IS NOT NULL
+    BEGIN
+        IF EXISTS (
+            SELECT 1
+            FROM [Sales].[InvoicePaymentLinks] l
+            INNER JOIN deleted del ON l.InvID = del.InvID
+            WHERE l.LinkStatus IN ('Paid', 'PartiallyRefunded')
+        )
+        BEGIN
+            RAISERROR(N'لا يمكن حذف الفاتورة لأنها مرتبطة برابط دفع إلكتروني مدفوع؛ يرجى استرداد المبلغ أولاً.', 16, 1);
+            RETURN;
+        END
+
+        IF OBJECT_ID('[Sales].[InvoicePaymentLinkAllocations]', 'U') IS NOT NULL
+        BEGIN
+            IF EXISTS (
+                SELECT 1
+                FROM [Sales].[InvoicePaymentLinkAllocations] a
+                INNER JOIN deleted del ON a.InvID = del.InvID
+                INNER JOIN [Sales].[InvoicePaymentLinks] l ON l.LinkID = a.LinkID
+                WHERE l.LinkStatus IN ('Paid', 'PartiallyRefunded')
+            )
+            BEGIN
+                RAISERROR(N'لا يمكن حذف الفاتورة لأنها مشمولة ضمن رابط دفع مجمّع مدفوع؛ يرجى استرداد المبلغ أولاً.', 16, 1);
+                RETURN;
+            END
+        END
+    END
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_InvDelByID_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- 1. حذف توزيعات روابط الدفع المرتبطة
+        IF OBJECT_ID('[Sales].[InvoicePaymentLinkAllocations]', 'U') IS NOT NULL
+            DELETE a
+            FROM [Sales].[InvoicePaymentLinkAllocations] a
+            INNER JOIN deleted del ON a.InvID = del.InvID;
+
+        -- 2. حذف روابط الدفع غير المدفوعة المرتبطة
+        IF OBJECT_ID('[Sales].[InvoicePaymentLinks]', 'U') IS NOT NULL
+            DELETE l
+            FROM [Sales].[InvoicePaymentLinks] l
+            INNER JOIN deleted del ON l.InvID = del.InvID;
+
+        -- 3. تصفير ربط طلبات Talabat بدلاً من حذف سجل الطلب
+        IF OBJECT_ID('[Sales].[TalabatOrders]', 'U') IS NOT NULL
+            UPDATE t
+            SET t.InvID = NULL
+            FROM [Sales].[TalabatOrders] t
+            INNER JOIN deleted del ON t.InvID = del.InvID;
+
+        -- 4. حذف بيانات التوصيل المرتبطة
+        IF OBJECT_ID('[Sales].[TempOrderInfo]', 'U') IS NOT NULL
+            DELETE t
+            FROM [Sales].[TempOrderInfo] t
+            INNER JOIN deleted del ON t.InvID = del.InvID;
+
+        -- 5. حذف تقسيمات طرق الدفع المرتبطة
+        IF OBJECT_ID('[Sales].[InvoicePaymentSplits]', 'U') IS NOT NULL
+            DELETE s
+            FROM [Sales].[InvoicePaymentSplits] s
+            INNER JOIN deleted del ON s.InvID = del.InvID;
+
+        -- 6. حذف تفاصيل الأصناف المرتبطة
+        DELETE d
+        FROM [Sales].[InvoiceDetails] d
+        INNER JOIN deleted del ON d.InvID = del.InvID;
+
+        -- 7. حذف رأس الفاتورة أخيراً
+        DELETE h
+        FROM [Sales].[InvoiceHeader] h
+        INNER JOIN deleted del ON h.InvID = del.InvID;
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() = 1
+        BEGIN
+            ROLLBACK TRANSACTION sp_InvDelByID_SP;
+        END
+        ELSE IF XACT_STATE() = -1
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(),
+                @ErrSev INT = ERROR_SEVERITY(),
+                @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+-- إلغاء الإجراء القديم المكرر [Sales].[sp_Invoice_Delete] والاعتماد الموحد على [Sales].[sp_Invoice_DeleteByID] + [Sales].[trg_InvoiceHeader_DeleteCascade]
+IF OBJECT_ID('[Sales].[sp_Invoice_Delete]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Invoice_Delete];
+GO
+
+-- =========================================================================
+-- حذف فاتورة غير مرحّلة بناءً على رقم الفاتورة (InvID) مع التحقق من الصلاحية
+-- يعتمد كلياً على التريجر [Sales].[trg_InvoiceHeader_DeleteCascade] لتنظيف الجداول والـ Savepoint
+-- =========================================================================
+IF OBJECT_ID('[Sales].[sp_Invoice_DeleteByID]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Invoice_DeleteByID];
+GO
+CREATE PROCEDURE [Sales].[sp_Invoice_DeleteByID]
+    @InvID  INT,
+    @UserID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @InvID IS NULL OR @InvID <= 0
+    BEGIN
+        RAISERROR(N'رقم الفاتورة غير صالح.', 16, 1);
+        RETURN;
+    END
+
+    DECLARE @InvType NVARCHAR(20);
+    SELECT @InvType = InvType
+    FROM [Sales].[InvoiceHeader]
+    WHERE InvID = @InvID;
+
+    IF @InvType IS NULL
+    BEGIN
+        RAISERROR(N'لم يتم العثور على الفاتورة رقم #%d.', 16, 1, @InvID);
+        RETURN;
+    END
+
+    IF @UserID IS NOT NULL
+    BEGIN
+        DECLARE @CanDeleteInv BIT = 0;
+        SELECT @CanDeleteInv = CASE WHEN EXISTS (
+            SELECT 1
+            FROM [Security].[Users] u
+            INNER JOIN [Security].[RolePermissions] rp ON rp.RoleID = u.RoleID
+            WHERE u.UserID = @UserID
+              AND ISNULL(u.IsActive, 0) = 1
+              AND ISNULL(rp.CanDelete, 0) = 1
+              AND rp.FormName IN (
+                  CASE WHEN @InvType = 'Purchase' THEN N'Purchases' ELSE N'Sales' END,
+                  N'InvoiceDashboard'
+              )
+        ) THEN 1 ELSE 0 END;
+
+        IF ISNULL(@CanDeleteInv, 0) = 0
+        BEGIN
+            RAISERROR(N'عذراً، لا تملك صلاحية حذف الفواتير حسب صلاحيات المستخدمين.', 16, 1);
+            RETURN;
+        END
+    END
+
+    -- تنفيذ الحذف الفعلي على InvoiceHeader؛ يتولى [Sales].[trg_InvoiceHeader_DeleteCascade] التحقق والحذف التراكمي والـ Savepoint
+    BEGIN TRY
+        DELETE FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
+
+        SELECT 1 AS Success, @InvID AS DeletedInvID;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(),
+                @ErrSev INT = ERROR_SEVERITY(),
+                @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+        RETURN;
+    END CATCH
+END
+GO
+
+-- =========================================================================
+-- تحديث إجراء قيود السداد عند الترحيل: [Sales].[sp_Invoice_Post_PaymentJournals]
+-- عند اختيار طريقة دفع تابعة لبوابة دفع إلكتروني (PAYMENT_GATEWAY مثل Tap)
+-- يتم تخطي شق قيد السداد (ReferenceType = 'Payment') والاكتفاء بقيد استحقاق المبيعات
+-- لتجنب الازدواجية عند تحصيل الرابط لاحقاً عبر [Sales].[trg_InvoicePaymentLinks_OnStatusPaid]
+-- مع الحفاظ التام على [Sales].[trg_Invoice_Post] وكافة مسارات السداد الأخرى
+-- =========================================================================
+IF OBJECT_ID('[Sales].[sp_Invoice_Post_PaymentJournals]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Invoice_Post_PaymentJournals];
+GO
+
+CREATE PROCEDURE [Sales].[sp_Invoice_Post_PaymentJournals]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- ─── حسابات الفالباك (نفس الأصل تماماً) ───────────────────────────────────
+    DECLARE @CustomerAcc INT = ISNULL(
+        (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '12%' AND IsTransactional = 1),
+        (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '12'));
+
+    DECLARE @VendorAcc INT = ISNULL(
+        (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode LIKE '21%' AND IsTransactional = 1),
+        (SELECT TOP 1 AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '21'));
+
+    -- ─────────────────────────────────────────────────────────────────────────────
+    -- مسار 1: SPLIT PAYMENT
+    -- ─────────────────────────────────────────────────────────────────────────────
+
+    -- ── مشتريات Split ──
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           ISNULL(p.AccountID, @VendorAcc),   -- Dr المورد
+           sp.Amount, 0,
+           N'سداد [' + c.AccountName + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+    INNER JOIN [Accounting].[ChartOfAccounts] c  ON c.AccountID = sp.PaymentAccountID
+    WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0;
+
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           sp.PaymentAccountID,                -- Cr حساب طريقة الدفع
+           0, sp.Amount,
+           N'سداد [' + c.AccountName + N'] - مشتريات رقم ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+    INNER JOIN [Accounting].[ChartOfAccounts] c  ON c.AccountID = sp.PaymentAccountID
+    WHERE i.InvType = 'Purchase' AND i.PaidAmount > 0;
+
+    -- ── مبيعات Split (استبعاد حسابات بوابات الدفع الإلكتروني لتجنب ازدواجية القيد) ──
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           sp.PaymentAccountID,                -- Dr حساب طريقة الدفع
+           sp.Amount, 0,
+           N'سداد [' + c.AccountName + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+    INNER JOIN [Accounting].[ChartOfAccounts] c  ON c.AccountID = sp.PaymentAccountID
+    WHERE i.InvType = 'Sales' AND i.PaidAmount > 0 AND sp.Amount > 0
+      AND NOT EXISTS (
+          SELECT 1
+          FROM [Settings].[IntegrationProviders] ip
+          WHERE ip.ProviderCategory = 'PAYMENT_GATEWAY'
+            AND ip.LinkedAccountID IS NOT NULL
+            AND ip.LinkedAccountID = sp.PaymentAccountID
+      );
+
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           ISNULL(p.AccountID, @CustomerAcc), -- Cr العميل
+           0, sp.Amount,
+           N'تحصيل [' + c.AccountName + N'] - مبيعات رقم ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    INNER JOIN [Sales].[InvoicePaymentSplits] sp ON sp.InvID = i.InvID
+    INNER JOIN [Accounting].[ChartOfAccounts] c  ON c.AccountID = sp.PaymentAccountID
+    WHERE i.InvType = 'Sales' AND sp.Amount > 0 AND i.PaidAmount > 0
+      AND NOT EXISTS (
+          SELECT 1
+          FROM [Settings].[IntegrationProviders] ip
+          WHERE ip.ProviderCategory = 'PAYMENT_GATEWAY'
+            AND ip.LinkedAccountID IS NOT NULL
+            AND ip.LinkedAccountID = sp.PaymentAccountID
+      );
+
+    -- ─────────────────────────────────────────────────────────────────────────────
+    -- مسار 2: FALLBACK — PaymentAccountID الفردي
+    -- ─────────────────────────────────────────────────────────────────────────────
+
+    -- ── مشتريات Fallback ──
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           ISNULL(p.AccountID, @VendorAcc),
+           i.PaidAmount, 0,
+           N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    WHERE i.InvType = 'Purchase'
+      AND i.PaidAmount > 0
+      AND i.PaymentAccountID IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] WHERE InvID = i.InvID);
+
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           i.PaymentAccountID,
+           0, i.PaidAmount,
+           N'سداد جزئي - فاتورة مشتريات ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    WHERE i.InvType = 'Purchase'
+      AND i.PaidAmount > 0
+      AND i.PaymentAccountID IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] WHERE InvID = i.InvID);
+
+    -- ── مبيعات Fallback (استبعاد حسابات بوابات الدفع الإلكتروني لتجنب ازدواجية القيد) ──
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           i.PaymentAccountID,
+           i.PaidAmount, 0,
+           N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    WHERE i.InvType = 'Sales'
+      AND i.PaidAmount > 0
+      AND i.PaymentAccountID IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] WHERE InvID = i.InvID)
+      AND NOT EXISTS (
+          SELECT 1
+          FROM [Settings].[IntegrationProviders] ip
+          WHERE ip.ProviderCategory = 'PAYMENT_GATEWAY'
+            AND ip.LinkedAccountID IS NOT NULL
+            AND ip.LinkedAccountID = i.PaymentAccountID
+      );
+
+    INSERT INTO [Accounting].[JournalEntries]
+        (EntryNo, EntryDate, ReferenceType, ReferenceID, AccountID, DebitAmount, CreditAmount, Description, UserID)
+    SELECT m.EntryNo, i.InvDate, 'Payment', i.InvID,
+           ISNULL(p.AccountID, @CustomerAcc),
+           0, i.PaidAmount,
+           N'سداد جزئي - فاتورة مبيعات ' + CAST(i.InvID AS NVARCHAR),
+           i.UserID
+    FROM #TrgInserted i
+    JOIN #TrgEntryMap m ON m.InvID = i.InvID
+    LEFT JOIN [Sales].[Partners] p ON i.PartnerID = p.PartnerID
+    WHERE i.InvType = 'Sales'
+      AND i.PaidAmount > 0
+      AND i.PaymentAccountID IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] WHERE InvID = i.InvID)
+      AND NOT EXISTS (
+          SELECT 1
+          FROM [Settings].[IntegrationProviders] ip
+          WHERE ip.ProviderCategory = 'PAYMENT_GATEWAY'
+            AND ip.LinkedAccountID IS NOT NULL
+            AND ip.LinkedAccountID = i.PaymentAccountID
+      );
 END
 GO

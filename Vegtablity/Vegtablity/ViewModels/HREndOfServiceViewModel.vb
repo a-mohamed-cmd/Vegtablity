@@ -216,7 +216,7 @@ Namespace ViewModels
                 TotalRecords = res.TotalCount
                 NotifyPaginationChanged()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب تصفيات نهاية الخدمة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب تصفيات نهاية الخدمة")
             End Try
         End Sub
 
@@ -234,7 +234,7 @@ Namespace ViewModels
                 RaiseEvent RequestSnackbar($"💾 تم حفظ واعتماد تصفية نهاية الخدمة للموظف ({CurrentSettlement.EmployeeName}) بنجاح!")
                 LoadSettlements()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ التصفية: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ التصفية")
             End Try
         End Sub
 
@@ -250,7 +250,7 @@ Namespace ViewModels
                 _printer.PrintEndOfServiceSettlement(emp, s)
                 RaiseEvent RequestSnackbar($"🖨️ جاري طباعة مخالصة نهاية الخدمة للموظف ({s.EmployeeName})...")
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الطباعة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء الطباعة")
             End Try
         End Sub
 

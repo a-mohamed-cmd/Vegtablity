@@ -790,7 +790,7 @@ Namespace ViewModels
                 NotifyButtonStates()
                 MessageBox.Show("تم حفظ القيد بنجاح", "حفظ", MessageBoxButton.OK, MessageBoxImage.Information)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ القيد")
             End Try
         End Sub
 
@@ -814,7 +814,7 @@ Namespace ViewModels
                     MessageBox.Show("تم ترحيل القيد بنجاح", "ترحيل", MessageBoxButton.OK, MessageBoxImage.Information)
                 End If
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر ترحيل القيد")
             End Try
         End Sub
 
@@ -838,7 +838,7 @@ Namespace ViewModels
                     MessageBox.Show("تم إلغاء ترحيل القيد وحذف مفرداته من الدفتر العام بنجاح", "إلغاء الترحيل", MessageBoxButton.OK, MessageBoxImage.Information)
                 End If
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء إلغاء الترحيل: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر إلغاء ترحيل القيد")
             End Try
         End Sub
 
@@ -856,7 +856,7 @@ Namespace ViewModels
                 Dim printer As New Helpers.JournalPrinter()
                 printer.PrintJournal(CurrentJournal)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الطباعة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء الطباعة")
             End Try
         End Sub
 
@@ -869,7 +869,7 @@ Namespace ViewModels
 
                 ReportExporter.ExportJournalToPdf(CurrentJournal)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء تصدير PDF: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء تصدير PDF")
             End Try
         End Sub
 

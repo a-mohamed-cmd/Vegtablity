@@ -239,11 +239,16 @@ Namespace ViewModels
         Public Property NextPageCommand As ICommand
         Public Property PrevPageCommand As ICommand
         Public Property OpenInvoiceCommand As ICommand
+        Public Property DeleteInvoiceCommand As ICommand
         Public Property ShowPaymentPanelCommand As ICommand
         Public Property ConfirmPaymentCommand As ICommand
         Public Property ClosePaymentPanelCommand As ICommand
         Public Property FilterTypeCommand As ICommand
         Public Property FilterStatusCommand As ICommand
+
+        Private _canDeleteSalesPerm As Boolean = False
+        Private _canDeletePurchasesPerm As Boolean = False
+        Private _canDeleteDashboardPerm As Boolean = False
 
         ' ── CurrentUserID ──
         Public Property CurrentUserID As Integer = 1
@@ -266,6 +271,7 @@ Namespace ViewModels
                                              End Sub
 
             RefreshCommand = New RelayCommand(Sub(p)
+                                                 RefreshDeletePermissions()
                                                  LoadStats()
                                                  LoadInvoices()
                                              End Sub)
@@ -284,13 +290,31 @@ Namespace ViewModels
             FilterTypeCommand = New RelayCommand(Sub(p) FilterType = CStr(p))
             FilterStatusCommand = New RelayCommand(Sub(p) FilterStatus = CStr(p))
             OpenInvoiceCommand = New RelayCommand(AddressOf ExecuteOpenInvoice, Function(p) p IsNot Nothing)
+            DeleteInvoiceCommand = New RelayCommand(AddressOf ExecuteDeleteInvoice, AddressOf CanExecuteDeleteInvoice)
             ShowPaymentPanelCommand = New RelayCommand(AddressOf ExecuteShowPayment, Function(p) CanShowPaymentPanel)
             ConfirmPaymentCommand = New RelayCommand(AddressOf ExecuteConfirmPayment, Function(p) CanConfirmPayment)
             ClosePaymentPanelCommand = New RelayCommand(Sub(p) IsPaymentPanelOpen = False)
 
+            RefreshDeletePermissions()
             LoadCashAccounts()
             LoadStats()
             LoadInvoices()
+        End Sub
+
+        Public Sub RefreshDeletePermissions()
+            Try
+                If Services.Session.CurrentUser IsNot Nothing Then
+                    CurrentUserID = Services.Session.CurrentUser.UserID
+                    Dim permSvc As New PermissionService()
+                    Dim dash = permSvc.GetPermissionsForForm(Services.Session.CurrentUser.RoleID, "InvoiceDashboard")
+                    Dim sales = permSvc.GetPermissionsForForm(Services.Session.CurrentUser.RoleID, "Sales")
+                    Dim purch = permSvc.GetPermissionsForForm(Services.Session.CurrentUser.RoleID, "Purchases")
+                    _canDeleteDashboardPerm = (dash IsNot Nothing AndAlso dash.CanDelete)
+                    _canDeleteSalesPerm = (sales IsNot Nothing AndAlso sales.CanDelete)
+                    _canDeletePurchasesPerm = (purch IsNot Nothing AndAlso purch.CanDelete)
+                End If
+            Catch
+            End Try
         End Sub
 
         Private Sub LoadCashAccounts()
@@ -324,7 +348,12 @@ Namespace ViewModels
                     pageNumber:=CurrentPage, pageSize:=PAGE_SIZE)
 
                 Invoices.Clear()
-                For Each item In result.Items : Invoices.Add(item) : Next
+                For Each item In result.Items
+                    item.CanUserDeletePermission = If(item.InvType = "Purchase",
+                        (_canDeletePurchasesPerm OrElse _canDeleteDashboardPerm),
+                        (_canDeleteSalesPerm OrElse _canDeleteDashboardPerm))
+                    Invoices.Add(item)
+                Next
                 TotalCount = result.TotalCount
 
             Catch ex As Exception
@@ -346,6 +375,35 @@ Namespace ViewModels
             If item IsNot Nothing Then
                 RaiseEvent RequestOpenInvoice(item.InvID, item.InvType)
             End If
+        End Sub
+
+        Private Function CanExecuteDeleteInvoice(parameter As Object) As Boolean
+            Dim item = TryCast(parameter, InvoiceListItem)
+            If item Is Nothing Then item = SelectedInvoice
+            Return item IsNot Nothing AndAlso item.CanDeleteUnposted
+        End Function
+
+        Private Sub ExecuteDeleteInvoice(parameter As Object)
+            Dim item = TryCast(parameter, InvoiceListItem)
+            If item Is Nothing Then item = SelectedInvoice
+            If item Is Nothing OrElse Not item.CanDeleteUnposted Then Return
+
+            Dim confirm = System.Windows.MessageBox.Show(
+                $"هل أنت متأكد من حذف الفاتورة رقم #{item.InvID} نهائياً؟",
+                "تأكيد حذف الفاتورة",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning)
+            If confirm <> System.Windows.MessageBoxResult.Yes Then Return
+
+            Try
+                Dim userID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, CurrentUserID)
+                _invoiceService.DeleteInvoice(item.InvID, userID)
+                RaiseEvent RequestSnackbar($"✅ تم حذف الفاتورة رقم #{item.InvID} بنجاح")
+                LoadStats()
+                LoadInvoices()
+            Catch ex As Exception
+                Helpers.SnackbarService.ShowError(ex, "تعذر حذف الفاتورة")
+            End Try
         End Sub
 
         Private Sub ExecuteShowPayment(parameter As Object)

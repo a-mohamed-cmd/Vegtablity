@@ -350,6 +350,7 @@ Namespace ViewModels
 
         Private Sub NavigateToMain()
             Dim dashWin As New Views.DashboardWindow()
+            Application.Current.MainWindow = dashWin
             dashWin.Show()
             
             For Each win As Window In Application.Current.Windows

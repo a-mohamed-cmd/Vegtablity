@@ -105,3 +105,21 @@ async def create_invoice(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.delete("/{inv_id}", response_model=dict)
+async def delete_invoice(
+    inv_id: int,
+    user_id: int = Depends(get_current_user_id)
+):
+    service = InvoiceService()
+    try:
+        return service.delete_invoice(inv_id, user_id)
+    except PermissionError as pe:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(pe))
+    except LookupError as le:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(le))
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+

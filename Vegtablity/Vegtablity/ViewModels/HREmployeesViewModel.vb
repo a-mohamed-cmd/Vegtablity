@@ -176,7 +176,7 @@ Namespace ViewModels
                 TotalRecords = result.TotalCount
                 NotifyPaginationChanged()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء تحميل بيانات الموظفين: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل بيانات الموظفين")
             End Try
         End Sub
 
@@ -202,7 +202,7 @@ Namespace ViewModels
                     EditEmployee = emp
                 End If
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب تفاصيل الموظف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب تفاصيل الموظف")
             End Try
         End Sub
 
@@ -270,7 +270,7 @@ Namespace ViewModels
                 LoadEmployees()
                 SelectedEmployee = Employees.FirstOrDefault(Function(e) e.EmployeeID = id)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الموظف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ بيانات الموظف")
             End Try
         End Sub
 
@@ -287,7 +287,7 @@ Namespace ViewModels
                     NewEmployee(Nothing)
                     LoadEmployees()
                 Catch ex As Exception
-                    MessageBox.Show("خطأ أثناء حذف الموظف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر حذف الموظف")
                 End Try
             End If
         End Sub

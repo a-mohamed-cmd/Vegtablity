@@ -245,7 +245,7 @@ Namespace ViewModels
                 NotifyPaginationChanged()
                 FilterHistory()
             Catch ex As Exception
-                MessageBox.Show("خطأ في تحميل سجل الجرد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل سجل الجرد")
             End Try
         End Sub
 
@@ -426,7 +426,7 @@ Namespace ViewModels
                 IsEditing = False
                 LoadHistory()
             Catch ex As Exception
-                MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الجرد")
             End Try
         End Sub
 
@@ -441,7 +441,7 @@ Namespace ViewModels
                     RaiseEvent RequestSnackbar("✅ تم اعتماد الجرد وتعديل الكميات بنجاح")
                     LoadHistory()
                 Catch ex As Exception
-                    MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر اعتماد الجرد")
                 End Try
             End If
         End Sub
@@ -531,7 +531,7 @@ Namespace ViewModels
                 RaiseEvent RequestSnackbar("✅ تم إنشاء القالب — افتحه وأدخل البيانات ثم استورد")
 
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء إنشاء القالب: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر إنشاء القالب")
             End Try
         End Sub
 
@@ -563,7 +563,7 @@ Namespace ViewModels
 
                 Helpers.ReportExporter.ExportStockTakeVoucherToPdf(SelectedStockTake)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء طباعة سند الجرد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر طباعة سند الجرد")
             End Try
         End Sub
 
@@ -669,7 +669,7 @@ Namespace ViewModels
                 End If
 
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الاستيراد من Excel: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر الاستيراد من Excel")
             End Try
         End Sub
 

@@ -190,12 +190,19 @@ class LicenseControlService:
             delivery_system_mode = payload.get("DeliverySystemMode")
             enable_sales_discounts = _parse_bool(payload.get("EnableSalesDiscounts"))
             enable_hr = _parse_bool(payload.get("EnableHR"))
+            enable_tap = _parse_bool(payload.get("EnableTapIntegration"))
+            enable_myfatoorah = _parse_bool(payload.get("EnableMyFatoorahIntegration"))
+            enable_upayments = _parse_bool(payload.get("EnableUPaymentsIntegration"))
+            enable_talabat = _parse_bool(payload.get("EnableTalabatIntegration"))
+            enable_jahez = _parse_bool(payload.get("EnableJahezIntegration"))
+            prompt_send_link = _parse_bool(payload.get("PromptSendPaymentLinkOnSave"))
 
             cursor.execute(SP.CTRL_COMPANY_SETTINGS_SAVE, (
                 production_mode, use_custom, use_detailed, unified_search,
                 company_name, currency_symbol, address, phone, email,
                 enable_daily_orders, delivery_system_mode, enable_sales_discounts,
-                enable_hr
+                enable_hr, enable_tap, enable_myfatoorah, enable_upayments,
+                enable_talabat, enable_jahez, prompt_send_link
             ))
             conn.commit()
             return True

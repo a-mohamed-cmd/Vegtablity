@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../providers/settings_provider.dart';
 import '../core/localization/app_localizations.dart';
+import '../core/utils/app_snackbar.dart';
 import 'pos_screen.dart';
 import 'temp_order_screen.dart';
 
@@ -67,7 +68,7 @@ class _PartnerSelectionScreenState extends State<PartnerSelectionScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = '${context.tr('ps_conn_error')}$e';
+        _errorMessage = DbErrorHelper.format(e);
         _isLoading = false;
       });
     }

@@ -104,6 +104,30 @@ class SettingsProvider with ChangeNotifier {
     return _cachedEnableDailyOrders;
   }
 
+  bool _readCompanyBool(List<String> targetKeys) {
+    if (_companySettings != null) {
+      for (final entry in _companySettings!.entries) {
+        final key = entry.key.toString().toLowerCase().replaceAll('_', '');
+        if (targetKeys.contains(key)) {
+          final val = entry.value;
+          if (val is bool) return val;
+          if (val is num) return val == 1;
+          final s = val?.toString().toLowerCase().trim() ?? '';
+          return s == '1' || s == 'true';
+        }
+      }
+    }
+    return false;
+  }
+
+  bool get hasAnyPaymentGatewayEnabled =>
+      _readCompanyBool(['enabletapintegration']) ||
+      _readCompanyBool(['enablemyfatoorahintegration']) ||
+      _readCompanyBool(['enableupaymentsintegration']);
+
+  bool get enableTalabatIntegration =>
+      _readCompanyBool(['enabletalabatintegration']);
+
   String? get deliverySystemMode {
     if (_companySettings != null) {
       for (final entry in _companySettings!.entries) {

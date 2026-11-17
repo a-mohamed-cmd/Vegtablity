@@ -302,7 +302,7 @@ Namespace ViewModels
 
                 LoadData()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الخصم: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الخصم")
             End Try
         End Sub
 
@@ -317,7 +317,7 @@ Namespace ViewModels
                     StatusMessage = "تم حذف الخصم بنجاح."
                     LoadData()
                 Catch ex As Exception
-                    MessageBox.Show("خطأ أثناء الحذف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر حذف الخصم")
                 End Try
             End If
         End Sub

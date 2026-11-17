@@ -719,6 +719,31 @@
 
                     <!-- EMBEDDED PAGES: Shown when a page is selected (CurrentPage != null) -->
                     <ContentControl Content="{Binding CurrentPage}" />
+
+                    <!-- GLOBAL SNAP MESSAGE OVERLAY (عرض أخطاء قاعدة البيانات والإشعارات بشكل غير معطّل للواجهة) -->
+                    <Border x:Name="GlobalSnackbarBorder"
+                            Background="#1E293B" BorderBrush="#334155" BorderThickness="1.5"
+                            CornerRadius="12" Padding="18,12"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                            Margin="24,0,24,26" MaxWidth="760"
+                            Visibility="Collapsed" Opacity="0" Panel.ZIndex="9999">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="22" ShadowDepth="4" Opacity="0.38" Color="#0F172A"/>
+                        </Border.Effect>
+                        <Border.RenderTransform>
+                            <TranslateTransform x:Name="GlobalSnackbarTranslate" Y="24"/>
+                        </Border.RenderTransform>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock x:Name="GlobalSnackbarIcon" Text="⚠️" FontSize="17" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="GlobalSnackbarText" Text=""
+                                       Foreground="White" FontWeight="SemiBold" FontSize="13.5"
+                                       TextWrapping="Wrap" MaxWidth="650" VerticalAlignment="Center"/>
+                            <Button Content="✕" Click="BtnCloseGlobalSnackbar_Click"
+                                    Background="Transparent" BorderThickness="0" Foreground="#E2E8F0"
+                                    FontWeight="Bold" FontSize="13" Margin="14,0,0,0" Cursor="Hand"
+                                    VerticalAlignment="Center" ToolTip="إغلاق الإشعار"/>
+                        </StackPanel>
+                    </Border>
                     
                 </Grid>
             </Grid>

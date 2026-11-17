@@ -1,0 +1,606 @@
+<UserControl x:Class="Views.PaymentGatewayInvoicesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:Vegtablity.ViewModels.Integrations"
+             xmlns:controls="clr-namespace:Vegtablity.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="880" d:DesignWidth="1240"
+             FlowDirection="RightToLeft">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- ستايل أزرار فتح/إغلاق الكروت في الهيدر -->
+        <Style x:Key="CardTogglePillButtonStyle" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="pillBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="pillBorder" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="pillBorder" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <UserControl.DataContext>
+        <vm:PaymentGatewayInvoicesViewModel/>
+    </UserControl.DataContext>
+
+    <Grid Background="#F8FAFC" Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 1. Header & Summary KPIs + Open Create Popup & Filter Toggle Buttons -->
+        <Border Grid.Row="0" Background="White" CornerRadius="12" Padding="18,14" Margin="0,0,0,12">
+            <Border.Effect>
+                <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="💳" FontSize="28" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <StackPanel>
+                        <TextBlock Text="طلبات وفواتير بوابات الدفع الإلكتروني (Payment Links &amp; QR)" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
+                        <TextBlock Text="إصدار روابط الدفع المفردة والمجمعة، متابعة التحصيل الآلي، طباعة نموذج QR (A4)، وإرجاع المبالغ" FontSize="12" Foreground="#64748B"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- أزرار فتح نافذة إصدار الرابط وإظهار/إخفاء كارت البحث والفلتر -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                    <Button x:Name="BtnOpenCreatePopup"
+                            Command="{Binding OpenCreateLinkDialogCommand}"
+                            Style="{StaticResource CardTogglePillButtonStyle}"
+                            Background="#2563EB" BorderBrush="#1D4ED8"
+                            Margin="0,0,8,0"
+                            ToolTip="فتح نافذة إصدار رابط دفع إلكتروني جديد">
+                        <TextBlock Text="➕ إصدار رابط جديد" FontSize="12" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                    </Button>
+
+                    <Button x:Name="BtnToggleFilterCard"
+                            Click="BtnToggleFilterCard_Click"
+                            Style="{StaticResource CardTogglePillButtonStyle}"
+                            Background="#F8FAFC" BorderBrush="#CBD5E1"
+                            ToolTip="إظهار / إخفاء كارت البحث والفلتر">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="🔍 البحث والفلتر" FontSize="12" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock x:Name="TxtFilterCardArrow" Text="▲" FontSize="10" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform x:Name="FilterChevronRotate" Angle="180"/>
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- KPI Badges -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Border Background="#DCFCE7" CornerRadius="8" Padding="12,6" Margin="0,0,8,0">
+                        <StackPanel>
+                            <TextBlock Text="إجمالي المحصل الصافي" FontSize="10.5" Foreground="#166534"/>
+                            <TextBlock Text="{Binding TotalPaidAmount, StringFormat={}{0:N3}}" FontSize="14" FontWeight="Bold" Foreground="#14532D"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#FEF3C7" CornerRadius="8" Padding="12,6" Margin="0,0,8,0">
+                        <StackPanel>
+                            <TextBlock Text="روابط بانتظار الدفع" FontSize="10.5" Foreground="#92400E"/>
+                            <TextBlock Text="{Binding TotalPendingAmount, StringFormat={}{0:N3}}" FontSize="14" FontWeight="Bold" Foreground="#78350F"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#FEE2E2" CornerRadius="8" Padding="12,6"
+                            Visibility="{Binding IsRefundFeatureEnabledInAnyGateway, Converter={StaticResource BoolToVis}}">
+                        <StackPanel>
+                            <TextBlock Text="إجمالي المبالغ المستردة" FontSize="10.5" Foreground="#991B1B"/>
+                            <TextBlock Text="{Binding TotalRefundedAmount, StringFormat={}{0:N3}}" FontSize="14" FontWeight="Bold" Foreground="#7F1D1D"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 2. Filter & Action Toolbar (Search + Status Filter) - Hidden Initially & Collapsible with Smooth Animation -->
+        <Border x:Name="FilterCardBorder" Grid.Row="1" Background="White" CornerRadius="10" Padding="12,10" Margin="0" ClipToBounds="True" Visibility="Collapsed" Opacity="0">
+            <Border.Effect>
+                <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.4"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Search Input -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="بحث:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#334155"/>
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{DynamicResource ModernTextBoxStyle}"
+                             Width="220" Height="34" Padding="8,4" Margin="0,0,6,0"
+                             PreviewKeyDown="SearchBox_PreviewKeyDown"
+                             ToolTip="ابحث برقم الفاتورة، اسم العميل، الهاتف، أو رقم العملية"/>
+                    <Button Content="🔍 بحث" Command="{Binding SearchCommand}"
+                            Style="{StaticResource ModernButtonStyle}" Background="#0F172A" Foreground="White"
+                            Height="34" Padding="14,0" FontSize="12" Cursor="Hand"/>
+                </StackPanel>
+
+                <!-- Status Filter ComboBox -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
+                    <Border Width="1" Height="24" Background="#E2E8F0" Margin="0,0,12,0"/>
+                    <TextBlock Text="حالة الرابط:" VerticalAlignment="Center" Margin="0,0,6,0" FontWeight="SemiBold" Foreground="#334155"/>
+                    <ComboBox ItemsSource="{Binding StatusFilterOptions}"
+                              SelectedValue="{Binding FilterStatus, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              SelectedValuePath="StatusCode"
+                              DisplayMemberPath="TitleAr"
+                              Style="{DynamicResource ModernComboBoxStyle}"
+                              Width="185" Height="34"/>
+                </StackPanel>
+
+                <!-- Right Side: Refund + Collapse Button -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Dynamic Refund Button: Appears ONLY when EnableGatewayRefunds is enabled, Hides when disabled -->
+                    <Button Content="↩️ إرجاع المبلغ (Refund)"
+                            Command="{Binding OpenRefundDialogCommand}"
+                            Visibility="{Binding IsRefundFeatureEnabledInAnyGateway, Converter={StaticResource BoolToVis}}"
+                            IsEnabled="{Binding CanRefundSelected}"
+                            Style="{StaticResource ModernButtonStyle}" Background="#DC2626" Foreground="White"
+                            Height="32" Padding="14,0" FontSize="12" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"
+                            ToolTip="إرجاع المبلغ الكلي أو الجزئي للعميل عبر البوابة وعكس القيد المحاسبي آلياً"/>
+
+                    <Button Content="▲ طي البحث" Click="BtnToggleFilterCard_Click"
+                            Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" Foreground="#475569"
+                            FontSize="11" FontWeight="Bold" Padding="8,4" Cursor="Hand"
+                            Style="{StaticResource CardTogglePillButtonStyle}"
+                            ToolTip="إخفاء شريط الفلتر والبحث لتوسيع مساحة الجدول"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 3. Custom Row List of Payment Links (PaymentGatewayLinkRowControl) + Pagination Bar -->
+        <Grid Grid.Row="2">
+            <Border Background="White" CornerRadius="12" Padding="14">
+                <Border.Effect>
+                    <DropShadowEffect Color="#E2E8F0" BlurRadius="8" ShadowDepth="2" Opacity="0.5"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Column Header Bar matching PaymentGatewayLinkRowControl -->
+                    <Border Grid.Row="0" Background="#F1F5F9" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12,9" Margin="0,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="1.2*" MinWidth="145"/>
+                                <ColumnDefinition Width="165"/>
+                                <ColumnDefinition Width="175"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="4" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" Text="الفاتورة / الرابط" FontWeight="Bold" FontSize="12" Foreground="#475569"/>
+                            <TextBlock Grid.Column="2" Text="البوابة والتاريخ" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="6,0"/>
+                            <TextBlock Grid.Column="3" Text="اسم العميل والهاتف" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="6,0"/>
+                            <TextBlock Grid.Column="4" Text="المبلغ / العمولة / المسترد" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="6,0"/>
+                            <TextBlock Grid.Column="5" Text="حالة الدفع ورقم القيد" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="6,0"/>
+                            <TextBlock Grid.Column="6" Text="الإجراءات السريعة للرابط" FontWeight="Bold" FontSize="12" Foreground="#475569" Margin="6,0,16,0"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- ListBox using PaymentGatewayLinkRowControl -->
+                    <Grid Grid.Row="1">
+                        <ListBox ItemsSource="{Binding PaymentLinks}"
+                                 SelectedItem="{Binding SelectedLink, Mode=TwoWay}"
+                                 BorderBrush="#E2E8F0" BorderThickness="1" Background="#FAFAFA"
+                                 HorizontalContentAlignment="Stretch" Padding="6,6"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <controls:PaymentGatewayLinkRowControl/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,0,0,2"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="ItemBorder" Background="Transparent" CornerRadius="10" Padding="0" Margin="0">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="ItemBorder" Property="Background" Value="#EFF6FF"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+
+                        <!-- Empty State Placeholder -->
+                        <Border Background="#FAFAFA" CornerRadius="10" BorderBrush="#E2E8F0" BorderThickness="1"
+                                Padding="30" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PaymentLinksCount}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="💳" FontSize="42" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                <TextBlock Text="لا توجد روابط أو فواتير دفع إلكتروني مطابقة للفلتر الحالي" FontSize="14" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Center"/>
+                                <TextBlock Text="يمكنك إصدار رابط دفع جديد من الشريط العلوي أو تغيير فلتر الحالة" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Pagination Bar (شريط الترقيم السريع وتقسيم الصفحات) -->
+                    <Border Grid.Row="2" Background="#F8FAFC" Padding="12,8" Margin="0,8,0,0" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- الأولى والسابق -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <Button Content="⏮ الأولى" Command="{Binding FirstPageCommand}" IsEnabled="{Binding CanGoPrevPage}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#64748B" Foreground="White"
+                                        Width="76" Height="30" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,6,0" Cursor="Hand"/>
+                                <Button Content="▶ السابق" Command="{Binding PrevPageCommand}" IsEnabled="{Binding CanGoPrevPage}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#475569" Foreground="White"
+                                        Width="76" Height="30" FontSize="11.5" FontWeight="SemiBold" Cursor="Hand"/>
+                            </StackPanel>
+
+                            <!-- معلومات الصفحة والإجمالي -->
+                            <TextBlock Grid.Column="1" Text="{Binding PageInfoText}"
+                                       FontWeight="Bold" FontSize="13" Foreground="#1E293B"
+                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                            <!-- اختيار عدد السجلات في الصفحة -->
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                                <TextBlock Text="عدد الصفوف:" FontSize="11.5" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <ComboBox ItemsSource="{Binding PageSizeOptions}"
+                                          SelectedItem="{Binding PageSize, Mode=TwoWay}"
+                                          Width="68" Height="28" FontSize="12" FontWeight="Bold"/>
+                            </StackPanel>
+
+                            <!-- التالي والأخيرة -->
+                            <StackPanel Grid.Column="3" Orientation="Horizontal">
+                                <Button Content="التالي ◀" Command="{Binding NextPageCommand}" IsEnabled="{Binding CanGoNextPage}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#2563EB" Foreground="White"
+                                        Width="76" Height="30" FontSize="11.5" FontWeight="SemiBold" Margin="0,0,6,0" Cursor="Hand"/>
+                                <Button Content="الأخيرة ⏭" Command="{Binding LastPageCommand}" IsEnabled="{Binding CanGoNextPage}"
+                                        Style="{StaticResource ModernButtonStyle}" Background="#64748B" Foreground="White"
+                                        Width="76" Height="30" FontSize="11.5" FontWeight="SemiBold" Cursor="Hand"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Isolated Create New Payment Link Modal Popup Overlay -->
+        <Border x:Name="CreateLinkOverlayBorder" Grid.RowSpan="3"
+                Background="#800F172A" CornerRadius="12" Panel.ZIndex="900"
+                Visibility="{Binding IsCreateLinkDialogOpen, Converter={StaticResource BoolToVis}}"
+                MouseLeftButtonDown="CreateLinkOverlay_MouseLeftButtonDown"
+                PreviewKeyDown="CreateLinkOverlay_PreviewKeyDown">
+            <Border x:Name="CreateLinkModalCard" Background="White"
+                    Width="880" MaxWidth="980" MaxHeight="680"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    CornerRadius="14" Padding="24,20" Opacity="1">
+                <Border.Effect>
+                    <DropShadowEffect Color="#0F172A" BlurRadius="28" ShadowDepth="6" Opacity="0.35"/>
+                </Border.Effect>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Modal Header -->
+                        <Grid Margin="0,0,0,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="➕ إصدار رابط دفع إلكتروني جديد" FontSize="17" FontWeight="Bold" Foreground="#0F172A"/>
+                                <TextBlock Text="💡 يمكنك اختيار عميل مسجل (يتحدد هاتفه تلقائياً) أو كتابة اسم عميل غير مسجل مباشرة" FontSize="11.5" Foreground="#2563EB" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                            </StackPanel>
+
+                            <CheckBox Grid.Column="1" IsChecked="{Binding IsConsolidatedLink}"
+                                      Content="🔗 رابط مجمّع لعدة فواتير"
+                                      FontSize="12.5" FontWeight="Bold" Foreground="#0F172A" VerticalAlignment="Center" Margin="0,0,14,0" Cursor="Hand"/>
+
+                            <Button Grid.Column="2" Content="✕"
+                                    Command="{Binding CloseCreateLinkDialogCommand}"
+                                    Style="{StaticResource CardTogglePillButtonStyle}"
+                                    Background="#F1F5F9" BorderBrush="#CBD5E1" Foreground="#475569"
+                                    FontSize="13" FontWeight="Bold" Padding="10,5" Cursor="Hand"
+                                    ToolTip="إغلاق نافذة إصدار الرابط"/>
+                        </Grid>
+
+                        <Border Height="1" Background="#E2E8F0" Margin="0,0,0,14"/>
+
+                        <!-- Main Input Fields Grid (Row 1: Gateway + InvId + Amount) -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.4*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1.1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- البوابة المفعلة -->
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="البوابة المفعلة *" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
+                                <ComboBox ItemsSource="{Binding ConfiguredGateways}"
+                                          SelectedItem="{Binding SelectedGatewayForNewLink}"
+                                          DisplayMemberPath="ProviderNameAr"
+                                          Style="{DynamicResource ModernComboBoxStyle}"
+                                          Height="40"/>
+                            </StackPanel>
+
+                            <!-- رقم الفاتورة -->
+                            <StackPanel Grid.Column="1" Margin="0,0,10,0">
+                                <TextBlock Text="رقم الفاتورة *" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
+                                <TextBox x:Name="TxtNewInvId"
+                                         Text="{Binding NewInvId, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource ModernTextBoxStyle}"
+                                         Height="40" Padding="8,4"
+                                         TextAlignment="Center" FontWeight="Bold" FontSize="14.5" Foreground="#0F172A"
+                                         InputMethod.IsInputMethodEnabled="False"
+                                         GotFocus="AmountBox_GotFocus"
+                                         PreviewTextInput="IntegerBox_PreviewTextInput"
+                                         PreviewKeyDown="InvIdBox_PreviewKeyDown"
+                                         LostFocus="InvIdBox_LostFocus"
+                                         ToolTip="أدخل رقم الفاتورة واضغط Enter لجلب المبلغ وبيانات العميل تلقائياً"/>
+                            </StackPanel>
+
+                            <!-- المبلغ المطلوب -->
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="المبلغ المطلوب *" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
+                                <TextBox x:Name="TxtNewAmount"
+                                         Text="{Binding NewAmount, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}"
+                                         Style="{DynamicResource ModernTextBoxStyle}"
+                                         Height="40" Padding="8,4"
+                                         TextAlignment="Center" FontWeight="Black" FontSize="15.5" Foreground="#10B981"
+                                         InputMethod.IsInputMethodEnabled="False"
+                                         GotFocus="AmountBox_GotFocus"
+                                         PreviewTextInput="DecimalBox_PreviewTextInput"
+                                         PreviewKeyDown="DecimalBox_PreviewKeyDown"
+                                         DataObject.Pasting="DecimalBox_Pasting"
+                                         ToolTip="أدخل المبلغ المطلوب تحصيله (مثل: 15.500)"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Main Input Fields Grid (Row 2: Customer + Phone) -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.6*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- اسم العميل عبر SearchableDropdown -->
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="العميل (اختر عميلاً مسجلاً أو اكتب اسم عميل غير مسجل):" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
+                                <controls:SearchableDropdown x:Name="CustomerDropdown"
+                                                             ItemsSource="{Binding FilteredCustomers}"
+                                                             DisplayMemberPath="SearchText"
+                                                             Watermark="ابحث باسم العميل أو اكتب اسماً جديداً..."
+                                                             Height="40"
+                                                             SearchChanged="CustomerDropdown_SearchChanged"
+                                                             ItemSelected="CustomerDropdown_ItemSelected"
+                                                             ConfirmedAndMoveNext="CustomerDropdown_MoveNext"/>
+                            </StackPanel>
+
+                            <!-- هاتف العميل -->
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="هاتف العميل (واتساب):" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
+                                <TextBox x:Name="TxtCustomerPhone"
+                                         Text="{Binding NewCustomerPhone, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource ModernTextBoxStyle}"
+                                         Height="40" Padding="8,4"
+                                         FlowDirection="LeftToRight" TextAlignment="Center" FontWeight="Bold" FontSize="14" Foreground="#0F172A"
+                                         InputMethod.IsInputMethodEnabled="False"
+                                         GotFocus="TextBox_SelectAllGotFocus"
+                                         PreviewTextInput="PhoneBox_PreviewTextInput"
+                                         ToolTip="يتحدد تلقائياً عند اختيار عميل مسجل، أو أدخل رقم الهاتف لإرسال الرابط عبر واتساب"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Consolidated Invoices Builder Panel -->
+                        <Border Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,2,0,14"
+                                Visibility="{Binding IsConsolidatedLink, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="125"/>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="📑 الفواتير الفرعية للرابط المجمّع:" FontSize="12.5" FontWeight="Bold" Foreground="#0F172A"/>
+                                        <TextBlock Text="أدخل رقم الفاتورة والمبلغ ثم اضغط إضافة" FontSize="11" Foreground="#64748B"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                        <TextBlock Text="رقم الفاتورة الفرعية:" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtSubInvId"
+                                                 Text="{Binding SubInvIdInput, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{DynamicResource ModernTextBoxStyle}"
+                                                 Height="36" Padding="6,2"
+                                                 TextAlignment="Center" FontWeight="Bold" Foreground="#0F172A"
+                                                 InputMethod.IsInputMethodEnabled="False"
+                                                 GotFocus="AmountBox_GotFocus"
+                                                 PreviewTextInput="IntegerBox_PreviewTextInput"
+                                                 PreviewKeyDown="SubInvIdBox_PreviewKeyDown"
+                                                 LostFocus="SubInvIdBox_LostFocus"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Margin="0,0,8,0">
+                                        <TextBlock Text="مبلغ الفاتورة الفرعية:" FontSize="11" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,3"/>
+                                        <TextBox x:Name="TxtSubInvAmount"
+                                                 Text="{Binding SubInvAmountInput, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}"
+                                                 Style="{DynamicResource ModernTextBoxStyle}"
+                                                 Height="36" Padding="6,2"
+                                                 TextAlignment="Center" FontWeight="Black" Foreground="#0284C7"
+                                                 InputMethod.IsInputMethodEnabled="False"
+                                                 GotFocus="AmountBox_GotFocus"
+                                                 PreviewTextInput="DecimalBox_PreviewTextInput"
+                                                 PreviewKeyDown="DecimalBox_PreviewKeyDown"
+                                                 DataObject.Pasting="DecimalBox_Pasting"/>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="3" Content="➕ إضافة للرابط"
+                                            Command="{Binding AddConsolidatedItemCommand}"
+                                            Style="{StaticResource ModernButtonStyle}" Background="#0D9488" Foreground="White"
+                                            Height="36" Padding="14,0" FontSize="12" FontWeight="Bold" VerticalAlignment="Bottom" Cursor="Hand"/>
+                                </Grid>
+
+                                <ItemsControl ItemsSource="{Binding ConsolidatedItems}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="#EFF6FF" BorderBrush="#93C5FD" BorderThickness="1" CornerRadius="6" Padding="8,4" Margin="0,2,6,2">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding DisplayBadge}" FontSize="11.5" FontWeight="Bold" Foreground="#1E40AF" VerticalAlignment="Center"/>
+                                                    <Button Content="✕"
+                                                            Command="{Binding DataContext.RemoveConsolidatedItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Background="Transparent" BorderThickness="0" Foreground="#DC2626" FontWeight="Bold" FontSize="11"
+                                                            Margin="6,0,0,0" Cursor="Hand" ToolTip="إزالة من الرابط المجمع"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Modal Footer Buttons -->
+                        <Border Height="1" Background="#E2E8F0" Margin="0,4,0,14"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button x:Name="BtnCreateLinkSubmit" Content="🚀 إنشاء وإرسال الرابط"
+                                    Command="{Binding CreatePaymentLinkCommand}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#2563EB" Foreground="White"
+                                    Height="40" Padding="22,0" FontSize="13.5" FontWeight="Bold" Margin="0,0,10,0" Cursor="Hand"/>
+                            <Button Content="إلغاء"
+                                    Command="{Binding CloseCreateLinkDialogCommand}"
+                                    Style="{StaticResource ModernButtonStyle}" Background="#E2E8F0" Foreground="#334155"
+                                    Height="40" Padding="18,0" FontSize="13" FontWeight="SemiBold" Cursor="Hand"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Border>
+
+        <!-- Refund Modal Overlay -->
+        <Border Grid.RowSpan="3" Background="#800F172A" CornerRadius="12" Panel.ZIndex="900"
+                Visibility="{Binding IsRefundDialogOpen, Converter={StaticResource BoolToVis}}">
+            <Border Background="White" Width="460" VerticalAlignment="Center" HorizontalAlignment="Center"
+                    CornerRadius="14" Padding="22">
+                <StackPanel>
+                    <TextBlock Text="↩️ تأكيد إرجاع المبلغ عبر بوابة الدفع (Gateway Refund)" FontSize="16" FontWeight="Bold" Foreground="#991B1B" Margin="0,0,0,6"/>
+                    <TextBlock Text="سيتم إرسال أمر الاسترداد الفوري للبوابة وإنشاء قيد محاسبي عكسي آلياً:" FontSize="12" Foreground="#475569" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="المبلغ المراد إرجاعه:" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding RefundAmountInput, UpdateSourceTrigger=LostFocus, StringFormat={}{0:N3}}"
+                             Style="{DynamicResource ModernTextBoxStyle}"
+                             Height="38" Padding="8,4" Margin="0,0,0,10"
+                             TextAlignment="Center" FontWeight="Black" FontSize="16" Foreground="#DC2626"
+                             InputMethod.IsInputMethodEnabled="False"
+                             GotFocus="AmountBox_GotFocus"
+                             PreviewTextInput="DecimalBox_PreviewTextInput"
+                             PreviewKeyDown="DecimalBox_PreviewKeyDown"
+                             DataObject.Pasting="DecimalBox_Pasting"/>
+
+                    <TextBlock Text="سبب الإرجاع (Reason):" FontSize="12.5" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding RefundReasonInput, UpdateSourceTrigger=PropertyChanged}"
+                             Style="{DynamicResource ModernTextBoxStyle}"
+                             Height="36" Padding="8,4" Margin="0,0,0,16"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Content="✅ تنفيذ الإرجاع الفوري" Command="{Binding ConfirmRefundCommand}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#DC2626" Foreground="White"
+                                Height="36" Padding="18,0" FontWeight="Bold" Margin="0,0,8,0" Cursor="Hand"/>
+                        <Button Content="إلغاء" Command="{Binding CancelRefundDialogCommand}"
+                                Style="{StaticResource ModernButtonStyle}" Background="#E2E8F0" Foreground="#334155"
+                                Height="36" Padding="16,0" Cursor="Hand"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Bottom Snackbar (snapmessage) لعرض رسائل الإرشاد وأسباب إيقاف العملية من التريجر -->
+        <Border x:Name="SnackbarBorder" Grid.RowSpan="3"
+                Background="#1E293B" BorderBrush="#334155" BorderThickness="1.5"
+                CornerRadius="10" Padding="20,12"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,22" MaxWidth="820"
+                Visibility="Collapsed" Opacity="0" Panel.ZIndex="999">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.35" Color="#0F172A"/>
+            </Border.Effect>
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SnackbarTranslate" Y="20"/>
+            </Border.RenderTransform>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock x:Name="SnackbarText" Text="تم تنفيذ العملية"
+                           Foreground="White" FontWeight="SemiBold" FontSize="13.5"
+                           TextWrapping="Wrap" MaxWidth="740" VerticalAlignment="Center"/>
+                <Button Content="✕" Click="BtnCloseSnackbar_Click"
+                        Background="Transparent" BorderThickness="0" Foreground="#CBD5E1"
+                        FontWeight="Bold" FontSize="13" Margin="14,0,0,0" Cursor="Hand"
+                        VerticalAlignment="Center" ToolTip="إغلاق الرسالة"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

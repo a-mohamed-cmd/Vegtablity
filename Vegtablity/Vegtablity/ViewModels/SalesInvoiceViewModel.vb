@@ -113,7 +113,23 @@ Namespace ViewModels
                 OnPropertyChanged(NameOf(IsInvoicePosted))
                 OnPropertyChanged(NameOf(IsEditAllowed))
                 OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
+                OnPropertyChanged(NameOf(IsPaymentGatewaySelected))
+                OnPropertyChanged(NameOf(IsPaymentGatewayAvailable))
+                OnPropertyChanged(NameOf(CanShowDeleteButton))
             End Set
+        End Property
+
+        Private _canDeleteFromDashboard As Boolean = False
+        Public ReadOnly Property HasDeleteInvoicePermission As Boolean
+            Get
+                Return (CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete) OrElse _canDeleteFromDashboard
+            End Get
+        End Property
+
+        Public ReadOnly Property CanShowDeleteButton As Boolean
+            Get
+                Return HasDeleteInvoicePermission AndAlso CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.InvID > 0 AndAlso Not IsInvoicePosted
+            End Get
         End Property
 
         Public ReadOnly Property IsInvoicePosted As Boolean
@@ -138,7 +154,7 @@ Namespace ViewModels
 
         Public ReadOnly Property IsPaymentAccountEnabled As Boolean
             Get
-                Return IsEditAllowed AndAlso CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.PaidAmount > 0
+                Return IsEditAllowed AndAlso CurrentInvoice IsNot Nothing AndAlso (CurrentInvoice.PaidAmount > 0 OrElse IsPaymentGatewaySelected)
             End Get
         End Property
 
@@ -150,8 +166,31 @@ Namespace ViewModels
         Public Property RemoveItemCommand As ICommand
         Public Property PrintCommand As ICommand
         Public Property UnpostInvoiceCommand As ICommand
+        Public Property DeleteInvoiceCommand As ICommand
         Public Property ImportExcelCommand As ICommand
         Public Property DownloadTemplateCommand As ICommand
+        Public Property SendPaymentLinkCommand As ICommand
+
+        Private _configuredGateways As New List(Of Models.Integrations.IntegrationProviderConfig)()
+        Private _isResettingGatewayPaidAmount As Boolean = False
+
+        ''' <summary>
+        ''' يحدد ما إذا كان المستخدم قد اختار إحدى بوابات الدفع الإلكتروني المضافة كطريقة دفع في الفاتورة الحالية
+        ''' </summary>
+        Public ReadOnly Property IsPaymentGatewaySelected As Boolean
+            Get
+                If CurrentInvoice Is Nothing OrElse Not CurrentInvoice.PaymentAccountID.HasValue Then
+                    Return False
+                End If
+                Return IsPaymentGatewayAccount(CurrentInvoice.PaymentAccountID.Value)
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPaymentGatewayAvailable As Boolean
+            Get
+                Return IsPaymentGatewaySelected
+            End Get
+        End Property
 
         ' Pagination Commands
         Public Property NextDetailsPageCommand As ICommand
@@ -196,8 +235,10 @@ Namespace ViewModels
             RemoveItemCommand = New RelayCommand(AddressOf ExecuteRemoveItem, AddressOf CanExecuteRemoveItem)
             PrintCommand = New RelayCommand(AddressOf ExecutePrint, AddressOf CanExecutePrint)
             UnpostInvoiceCommand = New RelayCommand(AddressOf ExecuteUnpostInvoice, AddressOf CanExecuteUnpostInvoice)
+            DeleteInvoiceCommand = New RelayCommand(AddressOf ExecuteDeleteInvoice, AddressOf CanExecuteDeleteInvoice)
             ImportExcelCommand = New RelayCommand(AddressOf ExecuteImportExcel, AddressOf CanExecuteImportExcel)
             DownloadTemplateCommand = New RelayCommand(Sub(p) ExcelImporter.DownloadTemplate())
+            SendPaymentLinkCommand = New RelayCommand(AddressOf ExecuteSendPaymentLink, AddressOf CanExecuteSendPaymentLink)
 
             ' Pagination Commands
 
@@ -209,6 +250,15 @@ Namespace ViewModels
 
             LoadLookups()
             LoadPermissions("Sales")
+            Try
+                If Services.Session.CurrentUser IsNot Nothing Then
+                    Dim dashPerm = New Services.PermissionService().GetPermissionsForForm(Services.Session.CurrentUser.RoleID, "InvoiceDashboard")
+                    _canDeleteFromDashboard = (dashPerm IsNot Nothing AndAlso dashPerm.CanDelete)
+                End If
+            Catch
+            End Try
+            OnPropertyChanged(NameOf(HasDeleteInvoicePermission))
+            OnPropertyChanged(NameOf(CanShowDeleteButton))
             ExecuteNew(Nothing)
         End Sub
 
@@ -242,6 +292,17 @@ Namespace ViewModels
                 For Each p In productList
                     Products.Add(p)
                 Next
+
+                Try
+                    Dim intSvc As New Vegtablity.Services.Integrations.IntegrationManagerService()
+                    _configuredGateways = intSvc.GetProviders(onlyEnabled:=True) _
+                        .Where(Function(p) p.IsPaymentGateway AndAlso (p.IsConfigured OrElse p.IsConnectionVerified)) _
+                        .ToList()
+                Catch
+                    _configuredGateways = New List(Of Models.Integrations.IntegrationProviderConfig)()
+                End Try
+                OnPropertyChanged(NameOf(IsPaymentGatewaySelected))
+                OnPropertyChanged(NameOf(IsPaymentGatewayAvailable))
             Catch ex As Exception
                 ' Log
             End Try
@@ -256,10 +317,15 @@ Namespace ViewModels
             End If
             If e.PropertyName = NameOf(InvoiceHeader.PaidAmount) Then
                 OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
-                ' Clear payment account if amount becomes 0
-                If CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.PaidAmount = 0 Then
+                ' Clear payment account if amount becomes 0 (unless resetting PaidAmount during gateway save)
+                If Not _isResettingGatewayPaidAmount AndAlso CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.PaidAmount = 0 Then
                     CurrentInvoice.PaymentAccountID = Nothing
                 End If
+            End If
+            If e.PropertyName = NameOf(InvoiceHeader.PaymentAccountID) Then
+                OnPropertyChanged(NameOf(IsPaymentGatewaySelected))
+                OnPropertyChanged(NameOf(IsPaymentGatewayAvailable))
+                OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
             End If
             If e.PropertyName = NameOf(InvoiceHeader.WarehouseID) Then
                 ' Revalidate stock for all items if warehouse changes
@@ -431,7 +497,7 @@ Namespace ViewModels
                     System.Windows.MessageBox.Show($"عذراً، تعذر العثور على الفاتورة رقم {invID} أو بياناتها ناقصة.", "خطأ في التحميل", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
                 End If
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ غير متوقع أثناء تحميل الفاتورة: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء تحميل الفاتورة")
             End Try
         End Sub
 
@@ -484,6 +550,26 @@ Namespace ViewModels
                     CurrentInvoice.UserID = Services.Session.CurrentUser.UserID
                 End If
 
+                ' منع ازدواجية قيد التحصيل للبوابات الإلكترونية:
+                ' إذا تم اختيار حساب بوابة الدفع كطريقة تحصيل للفاتورة، نحفظ الفاتورة كـ (غير مسددة بانتظار تحصيل الرابط PaidAmount = 0)
+                ' مع الاحتفاظ بـ PaymentAccountID لبوابة الدفع المختارة حتى يبقى زر رابط الدفع ظاهراً ومرتبطاً بالبوابة،
+                ' وحتى يُنشئ تريجر الفاتورة قيد المبيعات فقط (من حـ/ العميل أو 1201 إلى حـ/ المبيعات)، وعند تحصيل الرابط فعلياً (Paid) ينشأ قيد البوابة والعمولة
+                _lastGatewayLinkTargetAmount = 0D
+                _lastSavedViaGateway = False
+                If CurrentInvoice.PaidAmount > 0D AndAlso CurrentInvoice.PaymentAccountID.HasValue Then
+                    If IsPaymentGatewayAccount(CurrentInvoice.PaymentAccountID.Value) Then
+                        _lastGatewayLinkTargetAmount = CurrentInvoice.PaidAmount
+                        _lastSavedViaGateway = True
+                        _isResettingGatewayPaidAmount = True
+                        Try
+                            CurrentInvoice.PaidAmount = 0D
+                            CurrentInvoice.Remainder = CurrentInvoice.NetAmount
+                        Finally
+                            _isResettingGatewayPaidAmount = False
+                        End Try
+                    End If
+                End If
+
                 ' Execute Save
                 Dim invId = _invoiceService.SaveInvoice(CurrentInvoice)
 
@@ -503,9 +589,125 @@ Namespace ViewModels
                 End If
 
                 UpdateDetailsPagination()
+                OnPropertyChanged(NameOf(IsPaymentGatewaySelected))
+                OnPropertyChanged(NameOf(IsPaymentGatewayAvailable))
+                OnPropertyChanged(NameOf(CanShowDeleteButton))
                 RaiseEvent RequestSnackbar("✅ تم حفظ الفاتورة بنجاح")
+
+                ' فحص تلقائي لبوابات الدفع الإلكتروني فقط عند اختيار المستخدم لإحدى بوابات الدفع المضافة
+                CheckAndPromptPaymentLinkAfterSave()
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الفاتورة")
+            End Try
+        End Sub
+
+        Private Function CanExecuteSendPaymentLink(parameter As Object) As Boolean
+            Return IsPaymentGatewaySelected AndAlso CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.NetAmount > 0
+        End Function
+
+        Private Sub ExecuteSendPaymentLink(parameter As Object)
+            If Not IsPaymentGatewaySelected Then
+                System.Windows.MessageBox.Show("يرجى اختيار إحدى بوابات الدفع الإلكتروني المضافة في طريقة الدفع أولاً.", "تنبيه", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information)
+                Return
+            End If
+            If CurrentInvoice Is Nothing OrElse CurrentInvoice.InvID <= 0 Then
+                System.Windows.MessageBox.Show("يرجى حفظ الفاتورة أولاً قبل إصدار رابط الدفع الإلكتروني.", "تنبيه", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information)
+                Return
+            End If
+            OpenPaymentLinkDialog(isPaidViaGateway:=True)
+        End Sub
+
+        Private _lastGatewayLinkTargetAmount As Decimal = 0D
+        Private _lastSavedViaGateway As Boolean = False
+
+        Private Function IsPaymentGatewayAccount(accountId As Integer) As Boolean
+            If accountId <= 0 Then Return False
+            Try
+                If _configuredGateways Is Nothing OrElse _configuredGateways.Count = 0 Then
+                    Dim intSvc As New Vegtablity.Services.Integrations.IntegrationManagerService()
+                    _configuredGateways = intSvc.GetProviders(onlyEnabled:=True) _
+                        .Where(Function(p) p.IsPaymentGateway AndAlso (p.IsConfigured OrElse p.IsConnectionVerified)) _
+                        .ToList()
+                End If
+
+                If _configuredGateways.Count = 0 Then Return False
+
+                ' 1. تطابق مباشر مع الحساب المربوط بالبوابة في إعدادات الربط (LinkedAccountID)
+                If _configuredGateways.Any(Function(g) g.LinkedAccountID.HasValue AndAlso g.LinkedAccountID.Value = accountId) Then
+                    Return True
+                End If
+
+                ' 2. تطابق بالاسم فقط مع البوابات التي قام المستخدم بإضافتها وتفعيلها
+                If CashAccounts IsNot Nothing Then
+                    Dim selectedAcc = CashAccounts.FirstOrDefault(Function(a) a.AccountID = accountId)
+                    If selectedAcc IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(selectedAcc.AccountName) Then
+                        For Each gw In _configuredGateways
+                            If (Not String.IsNullOrWhiteSpace(gw.ProviderCode) AndAlso selectedAcc.AccountName.IndexOf(gw.ProviderCode, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
+                               (Not String.IsNullOrWhiteSpace(gw.ProviderNameEn) AndAlso selectedAcc.AccountName.IndexOf(gw.ProviderNameEn, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
+                               (Not String.IsNullOrWhiteSpace(gw.ProviderNameAr) AndAlso selectedAcc.AccountName.IndexOf(gw.ProviderNameAr, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
+                               (Not String.IsNullOrWhiteSpace(gw.LinkedAccountName) AndAlso String.Equals(selectedAcc.AccountName.Trim(), gw.LinkedAccountName.Trim(), StringComparison.OrdinalIgnoreCase)) Then
+                                Return True
+                            End If
+                        Next
+                    End If
+                End If
+            Catch
+            End Try
+            Return False
+        End Function
+
+        Private Sub CheckAndPromptPaymentLinkAfterSave()
+            Try
+                If CurrentInvoice Is Nothing OrElse CurrentInvoice.InvID <= 0 OrElse CurrentInvoice.NetAmount <= 0D Then Return
+
+                ' يظهر نافذة إرسال رابط الدفع حصراً عندما يختار المستخدم إحدى بوابات الدفع الإلكتروني المضافة
+                If IsPaymentGatewaySelected AndAlso (_lastSavedViaGateway OrElse CurrentInvoice.PaidAmount > 0D OrElse CurrentInvoice.PaymentAccountID.HasValue) Then
+                    OpenPaymentLinkDialog(isPaidViaGateway:=True)
+                End If
+            Catch
+            End Try
+        End Sub
+
+        Private Sub OpenPaymentLinkDialog(isPaidViaGateway As Boolean)
+            Try
+                Dim partnerObj As Partner = Nothing
+                If CurrentInvoice.PartnerID.HasValue AndAlso AllPartners IsNot Nothing Then
+                    partnerObj = AllPartners.FirstOrDefault(Function(p) p.PartnerID = CurrentInvoice.PartnerID.Value)
+                End If
+
+                Dim custName As String = If(partnerObj IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(partnerObj.PartnerName),
+                                            partnerObj.PartnerName,
+                                            If(Not String.IsNullOrWhiteSpace(CurrentInvoice.PartnerName), CurrentInvoice.PartnerName, "عميل نقدي"))
+                Dim custPhone As String = If(partnerObj IsNot Nothing, partnerObj.Phone, "")
+                Dim targetAmount As Decimal = If(isPaidViaGateway AndAlso _lastGatewayLinkTargetAmount > 0D,
+                                                 _lastGatewayLinkTargetAmount,
+                                                 If(isPaidViaGateway AndAlso CurrentInvoice.PaidAmount > 0D,
+                                                    CurrentInvoice.PaidAmount,
+                                                    If(CurrentInvoice.Remainder > 0D, CurrentInvoice.Remainder, CurrentInvoice.NetAmount)))
+
+                Dim dlg As New Views.Integrations.SendPaymentLinkDialog(
+                    invId:=CurrentInvoice.InvID,
+                    partnerId:=CurrentInvoice.PartnerID,
+                    customerName:=custName,
+                    customerPhone:=custPhone,
+                    amount:=targetAmount,
+                    isPaidViaGateway:=isPaidViaGateway,
+                    preferredAccountId:=CurrentInvoice.PaymentAccountID
+                )
+                Try
+                    If System.Windows.Application.Current IsNot Nothing Then
+                        Dim activeWin = System.Windows.Application.Current.Windows.OfType(Of System.Windows.Window)().FirstOrDefault(Function(w) w IsNot dlg AndAlso w.IsLoaded AndAlso w.IsVisible)
+                        If activeWin IsNot Nothing Then
+                            dlg.Owner = activeWin
+                            dlg.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner
+                        End If
+                    End If
+                Catch
+                    dlg.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen
+                End Try
+                dlg.ShowDialog()
+            Catch ex As Exception
+                System.Windows.MessageBox.Show("تعذر فتح نافذة رابط الدفع الإلكتروني: " & ex.Message, "تنبيه", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
             End Try
         End Sub
 
@@ -533,7 +735,7 @@ Namespace ViewModels
 
                     RaiseEvent RequestSnackbar("✅ تم ترحيل الفاتورة بنجاح")
                 Catch ex As Exception
-                    System.Windows.MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر ترحيل الفاتورة")
                 End Try
             End If
         End Sub
@@ -556,9 +758,34 @@ Namespace ViewModels
                 _invoiceService.UnpostInvoice(CurrentInvoice.InvID, userID)
                 ' أعد تحميل الفاتورة كمسودة قابلة للتعديل
                 LoadInvoice(CurrentInvoice.InvID)
+                OnPropertyChanged(NameOf(CanShowDeleteButton))
                 RaiseEvent RequestSnackbar("✅ تم إلغاء الترحيل — الفاتورة مفتوحة للتعديل")
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء إلغاء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر إلغاء الترحيل")
+            End Try
+        End Sub
+
+        Private Function CanExecuteDeleteInvoice(parameter As Object) As Boolean
+            Return CanShowDeleteButton
+        End Function
+
+        Private Sub ExecuteDeleteInvoice(parameter As Object)
+            If Not CanShowDeleteButton Then Return
+
+            Dim confirm = System.Windows.MessageBox.Show(
+                $"هل أنت متأكد من حذف فاتورة المبيعات رقم #{CurrentInvoice.InvID} نهائياً؟",
+                "تأكيد حذف الفاتورة",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning)
+            If confirm <> System.Windows.MessageBoxResult.Yes Then Return
+
+            Try
+                Dim userID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
+                _invoiceService.DeleteInvoice(CurrentInvoice.InvID, userID)
+                ExecuteNew(Nothing)
+                RaiseEvent RequestSnackbar("✅ تم حذف الفاتورة بنجاح")
+            Catch ex As Exception
+                Helpers.SnackbarService.ShowError(ex, "تعذر حذف الفاتورة")
             End Try
         End Sub
 
@@ -716,7 +943,7 @@ Namespace ViewModels
                 RecalculateTotals()
 
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء الاستيراد: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء الاستيراد")
             End Try
         End Sub
 
@@ -748,8 +975,7 @@ Namespace ViewModels
                     printer.PrintSalesInvoice(reportData)
                 End If
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء تحضير الطباعة: " & ex.Message, "خطأ",
-                                               System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء تحضير الطباعة")
             End Try
         End Sub
 

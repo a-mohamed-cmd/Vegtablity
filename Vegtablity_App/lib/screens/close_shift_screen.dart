@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../services/printer_service.dart';
 import 'shift_screen.dart';
 import '../core/localization/app_localizations.dart';
+import '../core/utils/app_snackbar.dart';
 
 double _parseD(dynamic v) {
   if (v == null) return 0.0;
@@ -98,7 +99,7 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = context.tr('cs_data_load_error').replaceAll('{error}', e.toString());
+        _errorMessage = DbErrorHelper.format(e);
         _isLoadingSummary = false;
       });
     }
@@ -275,12 +276,7 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
     try {
       await shiftProvider.closeShift(shiftId, endingCash);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${context.tr('cs_close_success_msg')} ✓', textAlign: TextAlign.right),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppSnackBar.showSuccess(context, '${context.tr('cs_close_success_msg')} ✓');
         // الانتقال لشاشة فتح وردية جديدة
         Navigator.pushAndRemoveUntil(
           context,
@@ -291,12 +287,7 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
     } catch (e) {
       setState(() => _isClosing = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('cs_close_error_msg').replaceAll('{error}', e.toString()), textAlign: TextAlign.right),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppSnackBar.showError(context, e);
       }
     }
   }

@@ -77,7 +77,7 @@ Namespace ViewModels
                     LoadShiftDetails(targetShift.ShiftID)
                 End If
             Else
-                System.Windows.MessageBox.Show("تعذر تحديث حالة الوردية في قاعدة البيانات.", "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowErrorMessage("تعذر تحديث حالة الوردية في قاعدة البيانات.")
             End If
         End Sub
 

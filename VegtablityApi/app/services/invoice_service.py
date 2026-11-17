@@ -383,3 +383,46 @@ class InvoiceService:
         finally:
             conn.close()
 
+    def delete_invoice(self, inv_id: int, user_id: int) -> dict:
+        if not inv_id or inv_id <= 0:
+            raise ValueError("رقم الفاتورة غير صالح.")
+
+        from app.services.auth_service import AuthService
+
+        header = self.get_invoice_details(inv_id)
+        if not header:
+            raise LookupError(f"الفاتورة رقم #{inv_id} غير موجودة.")
+
+        inv_type = str(header.get("InvType") or "Sales")
+        is_posted = bool(header.get("IsPosted", False))
+
+        user = AuthService().get_user_by_id(user_id)
+        if not user or not bool(user.get("IsActive", True)):
+            raise PermissionError("عذراً، حساب المستخدم غير نشط أو لا يملك صلاحية الحذف.")
+
+        can_del = bool(
+            user.get("CanDeletePurchaseInvoice", False)
+            if inv_type == "Purchase"
+            else user.get("CanDeleteSalesInvoice", False)
+        )
+        if not can_del:
+            raise PermissionError("عذراً، لا تملك صلاحية حذف الفواتير حسب صلاحيات المستخدمين.")
+
+        if is_posted:
+            raise ValueError("لا يمكن حذف فاتورة مرحّلة محاسبياً؛ يرجى فك ترحيل الفاتورة أولاً.")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(SP.INVOICE_DELETE_BY_ID, (inv_id, user_id))
+            conn.commit()
+            return {"success": True, "inv_id": inv_id, "message": f"تم حذف الفاتورة رقم #{inv_id} بنجاح."}
+        except Exception as ex:
+            conn.rollback()
+            msg = str(ex)
+            if "صلاحية" in msg:
+                raise PermissionError(msg)
+            raise ValueError(msg)
+        finally:
+            conn.close()
+

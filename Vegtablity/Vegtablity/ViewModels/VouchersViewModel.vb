@@ -191,7 +191,7 @@ Namespace ViewModels
                 
                 IsAddingNewPartner = False
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الشريك الجديد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الشريك الجديد")
             End Try
         End Sub
 #End Region

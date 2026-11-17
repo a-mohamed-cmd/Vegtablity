@@ -17,7 +17,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'viewmodels/language_viewmodel.dart';
 import 'viewmodels/barcode_print_viewmodel.dart';
 import 'viewmodels/sync_viewmodel.dart';
+import 'viewmodels/payment_gateway_viewmodel.dart';
 import 'core/localization/app_localizations.dart';
+import 'core/utils/app_snackbar.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,6 +70,9 @@ void main() {
         ChangeNotifierProvider<SyncViewModel>(
           create: (context) => SyncViewModel(apiService),
         ),
+        ChangeNotifierProvider<PaymentGatewayViewModel>(
+          create: (context) => PaymentGatewayViewModel(),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -84,6 +89,7 @@ class MyApp extends StatelessWidget {
       builder: (context, languageViewModel, child) {
         return MaterialApp(
           title: 'Vegtablity POS',
+          scaffoldMessengerKey: rootScaffoldMessengerKey,
           locale: languageViewModel.appLocale,
           supportedLocales: const [
             Locale('ar'),

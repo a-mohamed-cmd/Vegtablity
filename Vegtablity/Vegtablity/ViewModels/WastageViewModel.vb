@@ -252,7 +252,7 @@ Namespace ViewModels
                 NotifyPaginationChanged()
                 FilterHistory()
             Catch ex As Exception
-                MessageBox.Show("خطأ في تحميل سجل التوالف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل سجل التوالف")
             End Try
         End Sub
 
@@ -493,7 +493,7 @@ Namespace ViewModels
                 IsEditing = False
                 LoadHistory()
             Catch ex As Exception
-                MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تنفيذ العملية")
             End Try
         End Sub
 
@@ -510,7 +510,7 @@ Namespace ViewModels
                     MessageBox.Show("تم الاعتماد وخصم الكميات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)
                     LoadHistory()
                 Catch ex As Exception
-                    MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر تنفيذ العملية")
                 End Try
             End If
         End Sub
@@ -530,7 +530,7 @@ Namespace ViewModels
                     RaiseEvent RequestSnackbar("✅ تم إلغاء الترحيل — الرصيد أُعيد وحُذف القيد")
                     LoadHistory()
                 Catch ex As Exception
-                    MessageBox.Show(ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر تنفيذ العملية")
                 End Try
             End If
         End Sub
@@ -559,7 +559,7 @@ Namespace ViewModels
 
                 Helpers.ReportExporter.ExportWastageVoucherToPdf(CurrentWastage)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الطباعة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء الطباعة")
             End Try
         End Sub
 
@@ -675,7 +675,7 @@ Namespace ViewModels
                 End If
 
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الاستيراد من Excel: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر الاستيراد من Excel")
             End Try
         End Sub
 
@@ -784,7 +784,7 @@ Namespace ViewModels
                 RaiseEvent RequestSnackbar("✅ تم إنشاء القالب — افتحه وأدخل البيانات ثم استورد")
 
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء إنشاء القالب: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر إنشاء القالب")
             End Try
         End Sub
 

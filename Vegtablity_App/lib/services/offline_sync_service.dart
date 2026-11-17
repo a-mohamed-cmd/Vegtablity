@@ -175,7 +175,8 @@ class OfflineSyncService {
   }
 
   Future<List<SyncQueueItemModel>> loadQueueItemsByCategory(
-      SyncCategoryType category) async {
+      SyncCategoryType category,
+      {bool isAr = true}) async {
     final partnersMap = await _loadCachedPartnersMap();
     final accountsMap = await _loadCachedAccountsMap();
 
@@ -185,8 +186,9 @@ class OfflineSyncService {
         return List.generate(rawList.length, (i) {
           final inv = Map<String, dynamic>.from(rawList[i]);
           final bool isPurchase = inv['InvType'] == 'Purchase';
-          final String typeTitle =
-              isPurchase ? 'فاتورة مشتريات' : 'فاتورة مبيعات';
+          final String typeTitle = isAr
+              ? (isPurchase ? 'فاتورة مشتريات' : 'فاتورة مبيعات')
+              : (isPurchase ? 'Purchase Invoice' : 'Sales Invoice');
           final List<dynamic> details =
               (inv['Details'] is List) ? inv['Details'] : [];
           final double netAmount =
@@ -211,8 +213,9 @@ class OfflineSyncService {
           }
 
           final String notes = inv['Notes']?.toString() ?? '';
+          final String partnerPrefix = isAr ? 'الشريك: ' : 'Partner: ';
           final String sub = [
-            if (partnerName.isNotEmpty) 'الشريك: $partnerName',
+            if (partnerName.isNotEmpty) '$partnerPrefix$partnerName',
             if (notes.isNotEmpty) notes,
           ].join(' | ');
 
@@ -220,8 +223,14 @@ class OfflineSyncService {
             category: SyncCategoryType.invoice,
             indexInCategory: i,
             uniqueKey: 'invoice_${i}_${inv['InvDate'] ?? ''}',
-            title: '$typeTitle (${details.length} أصناف)',
-            subtitle: sub.isEmpty ? 'عملية محفوظة محلياً (غير معتمدة)' : sub,
+            title: isAr
+                ? '$typeTitle (${details.length} أصناف)'
+                : '$typeTitle (${details.length} items)',
+            subtitle: sub.isEmpty
+                ? (isAr
+                    ? 'عملية محفوظة محلياً (غير معتمدة)'
+                    : 'Saved locally (Unapproved)')
+                : sub,
             amount: netAmount,
             date: _formatDateString(inv['InvDate']?.toString()),
             itemsCount: details.length,
@@ -236,9 +245,15 @@ class OfflineSyncService {
           final v = Map<String, dynamic>.from(rawList[i]);
           final bool isReceipt = v['VoucherType'] == 'Receipt';
           final bool isGeneral = v['IsGeneral'] == true;
-          final String typeTitle = isGeneral
-              ? (isReceipt ? 'سند قبض مباشر (عام)' : 'سند صرف مباشر (عام)')
-              : (isReceipt ? 'سند قبض عميل' : 'سند صرف مورد');
+          final String typeTitle = isAr
+              ? (isGeneral
+                  ? (isReceipt ? 'سند قبض مباشر (عام)' : 'سند صرف مباشر (عام)')
+                  : (isReceipt ? 'سند قبض عميل' : 'سند صرف مورد'))
+              : (isGeneral
+                  ? (isReceipt
+                      ? 'Direct Receipt Voucher'
+                      : 'Direct Payment Voucher')
+                  : (isReceipt ? 'Customer Receipt' : 'Supplier Payment'));
           final double amount =
               ((v['TotalAmount'] ?? v['Amount'] ?? 0) as num).toDouble();
 
@@ -250,23 +265,32 @@ class OfflineSyncService {
               : int.tryParse(v['AccountID']?.toString() ?? '');
           final int? cashAccId = int.tryParse(v['PaymentMethod']?.toString() ?? '');
 
+          final String accPrefix = isAr ? 'حساب' : 'Account';
+          final String partnerFallbackPrefix = isAr ? 'شريك' : 'Partner';
           final String partnerOrAcc = v['PartnerName']?.toString() ??
               v['TargetAccountName']?.toString() ??
               (isGeneral
-                  ? (accId != null ? (accountsMap[accId] ?? 'حساب #$accId') : '')
-                  : (pId != null ? (partnersMap[pId] ?? 'شريك #$pId') : ''));
+                  ? (accId != null
+                      ? (accountsMap[accId] ?? '$accPrefix #$accId')
+                      : '')
+                  : (pId != null
+                      ? (partnersMap[pId] ?? '$partnerFallbackPrefix #$pId')
+                      : ''));
 
           v['_resolvedTargetName'] = partnerOrAcc;
           if (isGeneral) {
             v['_resolvedCashAccountName'] =
                 (cashAccId != null && accountsMap.containsKey(cashAccId))
                     ? accountsMap[cashAccId]!
-                    : (v['PaymentMethod']?.toString() ?? 'الصندوق الرئيسي');
+                    : (v['PaymentMethod']?.toString() ??
+                        (isAr ? 'الصندوق الرئيسي' : 'Main Cashbox'));
           } else {
             v['_resolvedCashAccountName'] =
                 (accId != null && accountsMap.containsKey(accId))
                     ? accountsMap[accId]!
-                    : 'حساب نقدية #${accId ?? 1}';
+                    : (isAr
+                        ? 'حساب نقدية #${accId ?? 1}'
+                        : 'Cash Account #${accId ?? 1}');
           }
 
           final String desc = v['Description']?.toString() ?? '';
@@ -282,7 +306,11 @@ class OfflineSyncService {
             indexInCategory: i,
             uniqueKey: 'voucher_${i}_${v['VoucherDate'] ?? ''}',
             title: typeTitle,
-            subtitle: sub.isEmpty ? 'سند محفوظ محلياً (غير معتمد)' : sub,
+            subtitle: sub.isEmpty
+                ? (isAr
+                    ? 'سند محفوظ محلياً (غير معتمد)'
+                    : 'Locally saved voucher (Unapproved)')
+                : sub,
             amount: amount,
             date: _formatDateString(v['VoucherDate']?.toString()),
             itemsCount: allocs.length,
@@ -305,9 +333,14 @@ class OfflineSyncService {
             category: SyncCategoryType.wastage,
             indexInCategory: i,
             uniqueKey: 'wastage_${i}_${w['WastageDate'] ?? ''}',
-            title: 'مسودة هالك (${details.length} أصناف)',
-            subtitle:
-                notes.isEmpty ? 'مستودع رقم #${w['WarehouseID'] ?? 1}' : notes,
+            title: isAr
+                ? 'مسودة هالك (${details.length} أصناف)'
+                : 'Wastage Draft (${details.length} items)',
+            subtitle: notes.isEmpty
+                ? (isAr
+                    ? 'مستودع رقم #${w['WarehouseID'] ?? 1}'
+                    : 'Warehouse #${w['WarehouseID'] ?? 1}')
+                : notes,
             amount: totalValue,
             date: _formatDateString(w['WastageDate']?.toString()),
             itemsCount: details.length,
@@ -330,9 +363,13 @@ class OfflineSyncService {
             category: SyncCategoryType.stocktake,
             indexInCategory: i,
             uniqueKey: 'stocktake_${i}_${st['StockTakeDate'] ?? ''}',
-            title: 'مسودة جرد مخزني (${details.length} أصناف)',
+            title: isAr
+                ? 'مسودة جرد مخزني (${details.length} أصناف)'
+                : 'StockTake Draft (${details.length} items)',
             subtitle: notes.isEmpty
-                ? 'مستودع رقم #${st['WarehouseID'] ?? 1}'
+                ? (isAr
+                    ? 'مستودع رقم #${st['WarehouseID'] ?? 1}'
+                    : 'Warehouse #${st['WarehouseID'] ?? 1}')
                 : notes,
             amount: diffVal,
             date: _formatDateString(st['StockTakeDate']?.toString()),
@@ -350,9 +387,15 @@ class OfflineSyncService {
 
   Future<bool> printOfflineQueueItem(
     SyncQueueItemModel item,
-    PrinterService printerService,
-  ) async {
+    PrinterService printerService, {
+    bool isAr = true,
+  }) async {
     final raw = Map<String, dynamic>.from(item.rawPayload);
+    final String itemPrefix = isAr ? 'صنف' : 'Item';
+    final String unapprovedInvLabel =
+        isAr ? 'غير معتمدة (لم تُزامن)' : 'Unapproved (Not Synced)';
+    final String unapprovedDocLabel =
+        isAr ? 'غير معتمد (لم يُزامن)' : 'Unapproved (Not Synced)';
 
     switch (item.category) {
       case SyncCategoryType.invoice:
@@ -364,7 +407,7 @@ class OfflineSyncService {
           final pName = m['ProductName'] ??
               m['product_name'] ??
               m['name'] ??
-              'صنف #$pid';
+              '$itemPrefix #$pid';
           return {
             ...m,
             'ProductName': pName,
@@ -386,21 +429,23 @@ class OfflineSyncService {
                 ((netAmt - paidAmt) > 0 ? (netAmt - paidAmt) : 0.0)) as num)
             .toDouble();
 
+        final String cashCustomer = isAr ? 'عميل نقدي' : 'Cash Customer';
+        final String cashLabel = isAr ? 'نقدي' : 'Cash';
         final Map<String, dynamic> printInvoice = {
           ...raw,
           'is_offline_unapproved': true,
-          'id': 'غير معتمدة (لم تُزامن)',
-          'InvID': 'غير معتمدة (لم تُزامن)',
+          'id': unapprovedInvLabel,
+          'InvID': unapprovedInvLabel,
           'invoice_type': raw['InvType'] ?? 'Sales',
           'InvType': raw['InvType'] ?? 'Sales',
           'partner_name': raw['_resolvedPartnerName'] ??
               raw['_partnerName'] ??
               raw['TempCustomerName'] ??
-              'عميل نقدي',
+              cashCustomer,
           'PartnerName': raw['_resolvedPartnerName'] ??
               raw['_partnerName'] ??
               raw['TempCustomerName'] ??
-              'عميل نقدي',
+              cashCustomer,
           'created_at': raw['InvDate'] ?? DateTime.now().toIso8601String(),
           'items': formattedItems,
           'Details': formattedItems,
@@ -414,23 +459,23 @@ class OfflineSyncService {
           'Remainder': remAmt,
           'PaymentAccountName': raw['_resolvedPaymentAccountName'] ??
               raw['PaymentMethod'] ??
-              'نقدي',
+              cashLabel,
         };
         return await printerService.printReceipt(printInvoice, isReprint: true);
 
       case SyncCategoryType.voucher:
         final bool isGeneral = raw['IsGeneral'] == true;
-        final String targetName =
-            raw['_resolvedTargetName']?.toString() ?? 'غير محدد';
-        final String cashName =
-            raw['_resolvedCashAccountName']?.toString() ?? 'الصندوق الرئيسي';
+        final String targetName = raw['_resolvedTargetName']?.toString() ??
+            (isAr ? 'غير محدد' : 'Unspecified');
+        final String cashName = raw['_resolvedCashAccountName']?.toString() ??
+            (isAr ? 'الصندوق الرئيسي' : 'Main Cashbox');
 
         if (isGeneral) {
           final Map<String, dynamic> printGenVoucher = {
             ...raw,
             'is_offline_unapproved': true,
-            'VoucherID': 'غير معتمد (لم يُزامن)',
-            'id': 'غير معتمد (لم يُزامن)',
+            'VoucherID': unapprovedDocLabel,
+            'id': unapprovedDocLabel,
             'type': raw['VoucherType'] ?? 'Receipt',
             'amount': raw['TotalAmount'] ?? raw['Amount'] ?? 0.0,
             'Amount': raw['TotalAmount'] ?? raw['Amount'] ?? 0.0,
@@ -457,8 +502,8 @@ class OfflineSyncService {
           final Map<String, dynamic> printVoucher = {
             ...raw,
             'is_offline_unapproved': true,
-            'VoucherID': 'غير معتمد (لم يُزامن)',
-            'id': 'غير معتمد (لم يُزامن)',
+            'VoucherID': unapprovedDocLabel,
+            'id': unapprovedDocLabel,
             'VoucherType': raw['VoucherType'] ?? 'Receipt',
             'type': (raw['VoucherType'] == 'Payment') ? 'payment' : 'receipt',
             'PartnerName': targetName,
@@ -488,7 +533,7 @@ class OfflineSyncService {
           final pName = m['ProductName'] ??
               m['product_name'] ??
               m['name'] ??
-              'صنف #$pid';
+              '$itemPrefix #$pid';
           return {
             ...m,
             'ProductName': pName,
@@ -502,9 +547,10 @@ class OfflineSyncService {
         final Map<String, dynamic> printWastage = {
           ...raw,
           'is_offline_unapproved': true,
-          'WastageID': 'غير معتمد (لم يُزامن)',
-          'id': 'غير معتمد (لم يُزامن)',
-          'Reason': raw['Notes'] ?? 'إتلاف محفوظ محلياً',
+          'WastageID': unapprovedDocLabel,
+          'id': unapprovedDocLabel,
+          'Reason': raw['Notes'] ??
+              (isAr ? 'إتلاف محفوظ محلياً' : 'Locally saved wastage'),
           'Date': item.date,
           'date': item.date,
           'items': formattedItems,
@@ -524,7 +570,7 @@ class OfflineSyncService {
           final pName = m['ProductName'] ??
               m['product_name'] ??
               m['name'] ??
-              'صنف #$pid';
+              '$itemPrefix #$pid';
           return {
             ...m,
             'ProductName': pName,
@@ -539,8 +585,8 @@ class OfflineSyncService {
         final Map<String, dynamic> printStockTake = {
           ...raw,
           'is_offline_unapproved': true,
-          'StockTakeID': 'غير معتمد (لم يُزامن)',
-          'id': 'غير معتمد (لم يُزامن)',
+          'StockTakeID': unapprovedDocLabel,
+          'id': unapprovedDocLabel,
           'Date': item.date,
           'date': item.date,
           'items': formattedItems,
@@ -567,10 +613,12 @@ class OfflineSyncService {
     return false;
   }
 
-  String extractReadableError(Object e) {
+  String extractReadableError(Object e, {bool isAr = true}) {
     if (e is DioException) {
       if (isNetworkConnectionError(e)) {
-        return 'تعذر الاتصال بالخادم (تحقق من الاتصال بالإنترنت)';
+        return isAr
+            ? 'تعذر الاتصال بالخادم (تحقق من الاتصال بالإنترنت)'
+            : 'Unable to reach the server (check internet connection)';
       }
       final data = e.response?.data;
       if (data is Map && data['detail'] != null) {
@@ -579,13 +627,18 @@ class OfflineSyncService {
       if (data != null && data.toString().isNotEmpty) {
         return data.toString();
       }
-      return 'خطأ من الخادم (${e.response?.statusCode ?? e.message})';
+      return isAr
+          ? 'خطأ من الخادم (${e.response?.statusCode ?? e.message})'
+          : 'Server error (${e.response?.statusCode ?? e.message})';
     }
     return e.toString();
   }
 
   /// إرسال عملية واحدة للخادم دون حذفها تلقائياً من القائمة (يتم الحذف في الدالة المستدعية)
-  Future<SyncItemResultModel> executeApiForItem(SyncQueueItemModel item) async {
+  Future<SyncItemResultModel> executeApiForItem(SyncQueueItemModel item,
+      {bool isAr = true}) async {
+    final String unexpectedRespPrefix =
+        isAr ? 'استجابة غير متوقعة' : 'Unexpected response';
     try {
       switch (item.category) {
         case SyncCategoryType.invoice:
@@ -630,7 +683,7 @@ class OfflineSyncService {
               subtitle: item.subtitle,
               amount: item.amount,
               date: item.date,
-              errorMessage: 'استجابة غير متوقعة (${response.statusCode})',
+              errorMessage: '$unexpectedRespPrefix (${response.statusCode})',
             );
           }
 
@@ -688,7 +741,7 @@ class OfflineSyncService {
               subtitle: item.subtitle,
               amount: item.amount,
               date: item.date,
-              errorMessage: 'استجابة غير متوقعة (${response.statusCode})',
+              errorMessage: '$unexpectedRespPrefix (${response.statusCode})',
             );
           }
 
@@ -729,7 +782,7 @@ class OfflineSyncService {
               subtitle: item.subtitle,
               amount: item.amount,
               date: item.date,
-              errorMessage: 'استجابة غير متوقعة (${response.statusCode})',
+              errorMessage: '$unexpectedRespPrefix (${response.statusCode})',
             );
           }
 
@@ -771,7 +824,7 @@ class OfflineSyncService {
               subtitle: item.subtitle,
               amount: item.amount,
               date: item.date,
-              errorMessage: 'استجابة غير متوقعة (${response.statusCode})',
+              errorMessage: '$unexpectedRespPrefix (${response.statusCode})',
             );
           }
       }
@@ -783,7 +836,7 @@ class OfflineSyncService {
         subtitle: item.subtitle,
         amount: item.amount,
         date: item.date,
-        errorMessage: extractReadableError(e),
+        errorMessage: extractReadableError(e, isAr: isAr),
       );
     }
   }

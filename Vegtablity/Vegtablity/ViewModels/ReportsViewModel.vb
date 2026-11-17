@@ -1026,7 +1026,7 @@ Namespace ViewModels
                 ApplyInReportQuickSearchAndPaginate()
                 RaiseEvent ReportLoaded(Me, EventArgs.Empty)
             Catch ex As Exception
-                MessageBox.Show("حدث خطأ أثناء تحميل التقرير: " & Environment.NewLine & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل التقرير")
             End Try
         End Sub
 

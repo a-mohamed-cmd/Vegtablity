@@ -327,7 +327,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'المبلغ المطلوب: ${_netAmount.toStringAsFixed(2)} د.ك',
+                    'المبلغ المطلوب: ${_netAmount.toStringAsFixed(3)} د.ك',
                     style: const TextStyle(color: Colors.tealAccent, fontSize: 16, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.right,
                   ),
@@ -432,7 +432,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('${totalAmount.toStringAsFixed(2)} د.ك',
+                                Text('${totalAmount.toStringAsFixed(3)} د.ك',
                                     style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 16)),
                                 const Text('إجمالي الصافي:', style: TextStyle(color: Colors.white70)),
                               ],
@@ -441,7 +441,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('${totalPaid.toStringAsFixed(2)} د.ك',
+                                Text('${totalPaid.toStringAsFixed(3)} د.ك',
                                     style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 14)),
                                 Text(context.tr('split_paid_now'), style: const TextStyle(color: Colors.white70)),
                               ],
@@ -451,7 +451,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('${remainder.toStringAsFixed(2)} د.ك',
+                                  Text('${remainder.toStringAsFixed(3)} د.ك',
                                       style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 14)),
                                   Text(context.tr('split_remainder_credit'), style: const TextStyle(color: Colors.white70)),
                                 ],
@@ -466,7 +466,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                         final split = entry.value;
                         if (split['controller'] == null) {
                           final initialAmt = (split['Amount'] as num?)?.toDouble() ?? 0.0;
-                          split['controller'] = TextEditingController(text: initialAmt > 0 ? initialAmt.toStringAsFixed(2) : '');
+                          split['controller'] = TextEditingController(text: initialAmt > 0 ? initialAmt.toStringAsFixed(3) : '');
                         }
                         final controller = split['controller'] as TextEditingController;
 
@@ -959,7 +959,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                                       fontWeight: FontWeight.bold)),
                               Text(
                                   context.tr('pb_total_kd').replaceAll(
-                                      '{total}', _subtotal.toStringAsFixed(2)),
+                                      '{total}', _subtotal.toStringAsFixed(3)),
                                   style: const TextStyle(
                                       color: Colors.green,
                                       fontWeight: FontWeight.bold)),
@@ -1158,7 +1158,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${item['total'].toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                              '${item['total'].toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.green,
@@ -1194,7 +1194,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             children: [
               Text(context.tr('pb_subtotal'),
                   style: const TextStyle(fontSize: 15)),
-              Text('${_subtotal.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+              Text('${_subtotal.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: const TextStyle(
                       fontSize: 15, fontWeight: FontWeight.bold)),
             ],
@@ -1233,7 +1233,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               Text(context.tr('pb_net_amount'),
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('${_netAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+              Text('${_netAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -1393,7 +1393,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('الإجمالي: ${_netAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+              Text('الإجمالي: ${_netAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
               TextButton.icon(
@@ -1516,7 +1516,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                            '${item['total'].toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                                            '${item['total'].toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                                             style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 color: Colors.green)),
@@ -1567,7 +1567,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                     Text(
                       context
                           .tr('pb_final_net')
-                          .replaceAll('{total}', _netAmount.toStringAsFixed(2)),
+                          .replaceAll('{total}', _netAmount.toStringAsFixed(3)),
                       style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

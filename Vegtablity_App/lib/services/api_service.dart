@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
+import '../core/utils/app_snackbar.dart';
 
 class ApiService {
   /// عنوان السيرفر الافتراضي بناءً على نوع النسخة (Flavor: washa / jawhara)
@@ -34,7 +35,8 @@ class ApiService {
             onUnauthorized!();
           }
         }
-        return handler.next(e);
+        final cleanMsg = DbErrorHelper.format(e);
+        return handler.next(e.copyWith(message: cleanMsg));
       },
     ));
   }
@@ -223,6 +225,10 @@ class ApiService {
     );
   }
 
+  Future<Response> getCurrentUser() async {
+    return await _dio.get('/auth/me');
+  }
+
   Future<Response> openShift(double startingCash) async {
     return await _dio.post(
       '/shifts/open',
@@ -299,6 +305,10 @@ class ApiService {
 
   Future<Response> savePartnerInvoice(Map<String, dynamic> invoiceData) async {
     return await _dio.post('/invoices/', data: invoiceData);
+  }
+
+  Future<Response> deleteInvoice(int invId) async {
+    return await _dio.delete('/invoices/$invId');
   }
 
   Future<Response> checkLicense(String hwid) async {

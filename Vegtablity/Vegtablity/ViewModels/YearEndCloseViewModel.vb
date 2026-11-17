@@ -172,7 +172,7 @@ Namespace ViewModels
                 End If
 
             Catch ex As Exception
-                MessageBox.Show("خطأ غير متوقع أثناء عملية الإقفال: " & ex.Message, "حطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر إتمام عملية الإقفال")
             Finally
                 IsLoading = False
             End Try

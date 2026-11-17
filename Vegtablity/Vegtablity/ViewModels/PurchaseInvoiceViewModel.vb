@@ -96,7 +96,21 @@ Namespace ViewModels
                 OnPropertyChanged(NameOf(IsInvoicePosted))
                 OnPropertyChanged(NameOf(IsEditAllowed))
                 OnPropertyChanged(NameOf(IsPaymentAccountEnabled))
+                OnPropertyChanged(NameOf(CanShowDeleteButton))
             End Set
+        End Property
+
+        Private _canDeleteFromDashboard As Boolean = False
+        Public ReadOnly Property HasDeleteInvoicePermission As Boolean
+            Get
+                Return (CurrentPermissions IsNot Nothing AndAlso CurrentPermissions.CanDelete) OrElse _canDeleteFromDashboard
+            End Get
+        End Property
+
+        Public ReadOnly Property CanShowDeleteButton As Boolean
+            Get
+                Return HasDeleteInvoicePermission AndAlso CurrentInvoice IsNot Nothing AndAlso CurrentInvoice.InvID > 0 AndAlso Not IsInvoicePosted
+            End Get
         End Property
 
         Public ReadOnly Property IsInvoicePosted As Boolean
@@ -133,6 +147,7 @@ Namespace ViewModels
         Public Property AddItemCommand As ICommand
         Public Property RemoveItemCommand As ICommand
         Public Property UnpostInvoiceCommand As ICommand
+        Public Property DeleteInvoiceCommand As ICommand
         Public Property ImportExcelCommand As ICommand
         Public Property DownloadTemplateCommand As ICommand
         Public Property ExportPdfCommand As ICommand
@@ -178,6 +193,7 @@ Namespace ViewModels
             AddItemCommand = New RelayCommand(AddressOf ExecuteAddItem, AddressOf CanExecuteAddItem)
             RemoveItemCommand = New RelayCommand(AddressOf ExecuteRemoveItem, AddressOf CanExecuteRemoveItem)
             UnpostInvoiceCommand = New RelayCommand(AddressOf ExecuteUnpostInvoice, AddressOf CanExecuteUnpostInvoice)
+            DeleteInvoiceCommand = New RelayCommand(AddressOf ExecuteDeleteInvoice, AddressOf CanExecuteDeleteInvoice)
             ImportExcelCommand = New RelayCommand(AddressOf ExecuteImportExcel, AddressOf CanExecuteImportExcel)
             DownloadTemplateCommand = New RelayCommand(Sub(p) ExcelImporter.DownloadTemplate())
             ExportPdfCommand = New RelayCommand(AddressOf ExecuteExportPdf, AddressOf CanExecuteExportPdf)
@@ -187,6 +203,15 @@ Namespace ViewModels
 
             LoadLookups()
             LoadPermissions("Purchases")
+            Try
+                If Services.Session.CurrentUser IsNot Nothing Then
+                    Dim dashPerm = New Services.PermissionService().GetPermissionsForForm(Services.Session.CurrentUser.RoleID, "InvoiceDashboard")
+                    _canDeleteFromDashboard = (dashPerm IsNot Nothing AndAlso dashPerm.CanDelete)
+                End If
+            Catch
+            End Try
+            OnPropertyChanged(NameOf(HasDeleteInvoicePermission))
+            OnPropertyChanged(NameOf(CanShowDeleteButton))
             ExecuteNew(Nothing)
         End Sub
 
@@ -292,7 +317,7 @@ Namespace ViewModels
                     System.Windows.MessageBox.Show($"عذراً، تعذر العثور على فاتورة المشتريات رقم {invID} أو بياناتها ناقصة.", "خطأ في التحميل", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning)
                 End If
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ غير متوقع أثناء تحميل فاتورة المشتريات: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل فاتورة المشتريات")
             End Try
         End Sub
 
@@ -396,9 +421,10 @@ Namespace ViewModels
                 End If
 
                 UpdateDetailsPagination()
+                OnPropertyChanged(NameOf(CanShowDeleteButton))
                 RaiseEvent RequestSnackbar("✅ تم حفظ الفاتورة بنجاح")
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الفاتورة")
             End Try
         End Sub
 
@@ -421,7 +447,7 @@ Namespace ViewModels
                     
                     RaiseEvent RequestSnackbar("✅ تم ترحيل الفاتورة بنجاح")
                 Catch ex As Exception
-                    System.Windows.MessageBox.Show("خطأ أثناء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر ترحيل الفاتورة")
                 End Try
             End If
         End Sub
@@ -443,9 +469,34 @@ Namespace ViewModels
                 Dim userID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
                 _invoiceService.UnpostInvoice(CurrentInvoice.InvID, userID)
                 LoadInvoice(CurrentInvoice.InvID)
+                OnPropertyChanged(NameOf(CanShowDeleteButton))
                 RaiseEvent RequestSnackbar("✅ تم إلغاء الترحيل — الفاتورة مفتوحة للتعديل")
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء إلغاء الترحيل: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر إلغاء الترحيل")
+            End Try
+        End Sub
+
+        Private Function CanExecuteDeleteInvoice(parameter As Object) As Boolean
+            Return CanShowDeleteButton
+        End Function
+
+        Private Sub ExecuteDeleteInvoice(parameter As Object)
+            If Not CanShowDeleteButton Then Return
+
+            Dim confirm = System.Windows.MessageBox.Show(
+                $"هل أنت متأكد من حذف فاتورة المشتريات رقم #{CurrentInvoice.InvID} نهائياً؟",
+                "تأكيد حذف الفاتورة",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Warning)
+            If confirm <> System.Windows.MessageBoxResult.Yes Then Return
+
+            Try
+                Dim userID = If(Services.Session.CurrentUser IsNot Nothing, Services.Session.CurrentUser.UserID, 0)
+                _invoiceService.DeleteInvoice(CurrentInvoice.InvID, userID)
+                ExecuteNew(Nothing)
+                RaiseEvent RequestSnackbar("✅ تم حذف الفاتورة بنجاح")
+            Catch ex As Exception
+                Helpers.SnackbarService.ShowError(ex, "تعذر حذف الفاتورة")
             End Try
         End Sub
 
@@ -734,7 +785,7 @@ Namespace ViewModels
                 RecalculateTotals()
 
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء الاستيراد: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء الاستيراد")
             End Try
         End Sub
 
@@ -751,8 +802,7 @@ Namespace ViewModels
                 End If
                 Helpers.ReportExporter.ExportInvoiceToPdf(reportData, isPurchase:=True)
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء تحضير التصدير: " & ex.Message, "خطأ",
-                                               System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "خطأ أثناء تحضير التصدير")
             End Try
         End Sub
 

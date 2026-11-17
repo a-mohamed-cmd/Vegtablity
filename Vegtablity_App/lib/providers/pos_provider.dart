@@ -329,6 +329,8 @@ class PosProvider extends ChangeNotifier {
     int? partnerId,
     bool isCash = true,
     List<Map<String, dynamic>>? paymentSplits,
+    double? overridePaidAmount,
+    double? overrideRemainder,
     String? tempCustomerName,
     String? tempPhone,
     String? tempAddress,
@@ -404,6 +406,13 @@ class PosProvider extends ChangeNotifier {
     if (paymentSplits != null && paymentSplits.isNotEmpty) {
       paid = paymentSplits.fold<double>(0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
       remainder = totalAmount > paid ? (totalAmount - paid) : 0.0;
+    }
+
+    if (overridePaidAmount != null) {
+      paid = overridePaidAmount;
+    }
+    if (overrideRemainder != null) {
+      remainder = overrideRemainder;
     }
 
     final double grossTotal = totalOriginalAmount;

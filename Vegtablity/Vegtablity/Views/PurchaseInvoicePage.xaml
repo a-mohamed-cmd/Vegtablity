@@ -91,6 +91,11 @@
                             Visibility="{Binding IsInvoicePosted, Converter={StaticResource BoolToVis}}"
                             ToolTip="إلغاء الترحيل وفتح الفاتورة للتعديل"/>
 
+                    <Button Content="🗑 حذف الفاتورة" Command="{Binding DeleteInvoiceCommand}"
+                            Style="{DynamicResource ModernButtonStyle}" Background="#DC2626" Margin="0,0,10,0"
+                            Visibility="{Binding CanShowDeleteButton, Converter={StaticResource BoolToVis}}"
+                            ToolTip="حذف الفاتورة غير المرحلة نهائياً"/>
+
                     <Button Content="🚀 ترحيل الفاتورة" Command="{Binding PostCommand}" 
                             Style="{DynamicResource ModernButtonStyle}" Background="#F59E0B"
                             Visibility="{Binding IsEditAllowed, Converter={StaticResource BoolToVis}}"/>

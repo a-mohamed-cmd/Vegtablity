@@ -26,6 +26,10 @@ import 'daily_orders_screen.dart';
 import 'recipe_management_screen.dart';
 import 'invoice_lookup_screen.dart';
 import 'barcode_print_screen.dart';
+import 'payment_gateway_invoices_screen.dart';
+import 'talabat_orders_screen.dart';
+import '../services/integrations/integration_service.dart';
+import '../services/update_service.dart';
 import '../widgets/update_dialog.dart';
 import '../viewmodels/sync_viewmodel.dart';
 import '../widgets/sync_progress_widgets.dart';
@@ -53,14 +57,21 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _showDailyOrders = true;
   bool _showRecipes = true;
   bool _showBarcodePrinting = true;
+  bool _showPaymentGatewayInvoices = true;
+  bool _showTalabatOrders = true;
+  bool _isTalabatConfiguredOnServer = false;
+  bool _hasAvailableUpdate = false;
+  bool _isCheckingUpdate = false;
+  UpdateInfoModel? _latestUpdateInfo;
 
   @override
   void initState() {
     super.initState();
     _loadHomeLayout();
     
-    // Refresh offline cache in background
+    // Refresh offline cache and live permissions in background
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false).refreshCurrentUserPermissions();
       Provider.of<VoucherProvider>(context, listen: false).refreshCache();
       Provider.of<AccountProvider>(context, listen: false).fetchGeneralPartnerId();
       Provider.of<SettingsProvider>(context, listen: false).fetchSettings();
@@ -70,10 +81,50 @@ class _HomeScreenState extends State<HomeScreen> {
       // Silent Auto-Update Check on Startup
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
-          UpdateDialog.showIfAvailable(context);
+          _checkForAppUpdate(openDialog: true, showNoUpdateToast: false);
         }
       });
     });
+  }
+
+  Future<void> _checkForAppUpdate({
+    bool openDialog = true,
+    bool showNoUpdateToast = true,
+  }) async {
+    if (_isCheckingUpdate) return;
+    if (mounted) {
+      setState(() => _isCheckingUpdate = true);
+    }
+
+    try {
+      final info = await UpdateService().checkForUpdate();
+      if (!mounted) return;
+      setState(() {
+        _latestUpdateInfo = info;
+        _hasAvailableUpdate = info.hasUpdate;
+        _isCheckingUpdate = false;
+      });
+
+      if (info.hasUpdate && openDialog) {
+        await showDialog(
+          context: context,
+          barrierDismissible: !info.isMandatory,
+          builder: (ctx) => UpdateDialog(updateInfo: info),
+        );
+      } else if (!info.hasUpdate && showNoUpdateToast) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('update_already_latest')),
+            backgroundColor: Colors.teal,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isCheckingUpdate = false);
+      }
+    }
   }
 
   Future<void> _loadHomeLayout() async {
@@ -92,8 +143,16 @@ class _HomeScreenState extends State<HomeScreen> {
         _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
         _showRecipes = prefs.getBool('show_recipes') ?? true;
         _showBarcodePrinting = prefs.getBool('show_barcode_printing') ?? true;
+        _showPaymentGatewayInvoices = prefs.getBool('show_payment_gateway_invoices') ?? true;
+        _showTalabatOrders = prefs.getBool('show_talabat_orders') ?? true;
         _isLoadingLayout = false;
       });
+      final summary = await IntegrationPosService().fetchProvidersSummary();
+      if (mounted) {
+        setState(() {
+          _isTalabatConfiguredOnServer = summary['isTalabatConfigured'] == true;
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoadingLayout = false;
@@ -138,6 +197,72 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         actions: [
+          // Check for Updates Icon Button (Icon only, highlighted when update is available)
+          Tooltip(
+            message: context.tr('settings_check_updates'),
+            child: IconButton(
+              onPressed: _isCheckingUpdate
+                  ? null
+                  : () async {
+                      if (_hasAvailableUpdate && _latestUpdateInfo != null) {
+                        await showDialog(
+                          context: context,
+                          barrierDismissible: !_latestUpdateInfo!.isMandatory,
+                          builder: (ctx) => UpdateDialog(updateInfo: _latestUpdateInfo!),
+                        );
+                        // Re-check quietly in case user refreshed or dismissed
+                        if (mounted) {
+                          _checkForAppUpdate(openDialog: false, showNoUpdateToast: false);
+                        }
+                      } else {
+                        await _checkForAppUpdate(openDialog: true, showNoUpdateToast: true);
+                      }
+                    },
+              icon: _isCheckingUpdate
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          padding: _hasAvailableUpdate ? const EdgeInsets.all(5) : EdgeInsets.zero,
+                          decoration: _hasAvailableUpdate
+                              ? BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.25),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.amberAccent, width: 1.5),
+                                )
+                              : null,
+                          child: Icon(
+                            Icons.system_update_rounded,
+                            color: _hasAvailableUpdate ? Colors.amberAccent : Colors.white,
+                            size: _hasAvailableUpdate ? 22 : 24,
+                          ),
+                        ),
+                        if (_hasAvailableUpdate)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1.5),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+          ),
           // Global Reprint Button for Last Added Document
           Consumer<PrinterService>(
             builder: (context, printerService, child) {
@@ -421,8 +546,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.cloud_sync_rounded, color: Colors.teal),
-              title: const Text('مركز المزامنة والعمليات المعلقة', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('استعراض ومزامنة الفواتير والسندات والهالك والجرد', style: TextStyle(fontSize: 11)),
+              title: Text(context.tr('home_sync_drawer_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(context.tr('home_sync_drawer_sub'), style: const TextStyle(fontSize: 11)),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -675,6 +800,29 @@ class _HomeScreenState extends State<HomeScreen> {
             context,
             MaterialPageRoute(
                 builder: (context) => const RecipeManagementScreen()));
+      }));
+    }
+
+    final settingsProv = Provider.of<SettingsProvider>(context);
+    if (_showPaymentGatewayInvoices && settingsProv.hasAnyPaymentGatewayEnabled) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_payment_gateways'), Icons.payment_rounded, Colors.indigo,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const PaymentGatewayInvoicesScreen()));
+      }));
+    }
+
+    if (_showTalabatOrders && settingsProv.enableTalabatIntegration && _isTalabatConfiguredOnServer) {
+      cards.add(_buildActionCard(
+          context, context.tr('home_talabat_orders'), Icons.delivery_dining_rounded, Colors.deepOrange,
+          () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const TalabatOrdersScreen()));
       }));
     }
 

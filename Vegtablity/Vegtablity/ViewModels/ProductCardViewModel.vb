@@ -400,7 +400,7 @@ Namespace ViewModels
                 ' Load Chart Data
                 LoadChartData()
             Catch ex As Exception
-                MessageBox.Show("خطأ في تحميل بيانات بطاقة الصنف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل بيانات بطاقة الصنف")
             End Try
         End Sub
 
@@ -436,7 +436,7 @@ Namespace ViewModels
                 OnPropertyChanged(NameOf(PageInfo))
                 System.Windows.Input.CommandManager.InvalidateRequerySuggested()
             Catch ex As Exception
-                MessageBox.Show("خطأ في تحميل حركة الصنف: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل حركة الصنف")
             End Try
         End Sub
 
@@ -461,9 +461,9 @@ Namespace ViewModels
                 End If
                 IsQuickEditOpen = False
 
-                MessageBox.Show("تم حفظ التعديلات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)
+                Helpers.SnackbarService.ShowSuccess("تم حفظ التعديلات بنجاح")
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ التعديلات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ التعديلات")
             End Try
         End Sub
 

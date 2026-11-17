@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Request, Query
+from fastapi import APIRouter, HTTPException, status, Request, Query, Depends
 from typing import Optional
-from app.schemas.auth import TokenResponse
+from app.schemas.auth import TokenResponse, CurrentUserResponse
 from app.services.auth_service import AuthService
-from app.core.security import create_access_token
+from app.core.security import create_access_token, get_current_user_id
 
 router = APIRouter()
 
@@ -80,13 +80,49 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
-    access_token = create_access_token(data={"sub": username, "user_id": user["UserID"]})
-    
+    can_refund = bool(user.get("CanRefundPaymentGateway", False))
+    can_del_sales = bool(user.get("CanDeleteSalesInvoice", False))
+    can_del_purchase = bool(user.get("CanDeletePurchaseInvoice", False))
+    access_token = create_access_token(
+        data={
+            "sub": username,
+            "user_id": user["UserID"],
+            "can_refund_payment_gateway": can_refund,
+        }
+    )
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "username": username,
         "user_id": user["UserID"],
-        "role_name": user.get("RoleName", "admin")
+        "role_name": user.get("RoleName", "admin"),
+        "can_refund_payment_gateway": can_refund,
+        "can_delete_sales_invoice": can_del_sales,
+        "can_delete_purchase_invoice": can_del_purchase,
+    }
+
+
+@router.get("/me", response_model=CurrentUserResponse)
+async def get_current_user_info(
+    request: Request,
+    database: Optional[str] = Query(None, description="Target database name/alias"),
+    user_id: int = Depends(get_current_user_id),
+):
+    db = extract_database(request, database)
+    auth_service = AuthService()
+    user = auth_service.get_user_by_id(user_id, database=db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="المستخدم غير موجود",
+        )
+    return {
+        "user_id": int(user["UserID"]),
+        "username": str(user.get("Username") or ""),
+        "role_name": user.get("RoleName") or "user",
+        "can_refund_payment_gateway": bool(user.get("CanRefundPaymentGateway", False)),
+        "can_delete_sales_invoice": bool(user.get("CanDeleteSalesInvoice", False)),
+        "can_delete_purchase_invoice": bool(user.get("CanDeletePurchaseInvoice", False)),
     }
 

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../providers/settings_provider.dart';
 import '../core/localization/app_localizations.dart';
+import '../core/utils/app_snackbar.dart';
 import 'partner_billing_screen.dart';
 import 'temp_order_screen.dart';
 
@@ -61,7 +62,7 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
       }
     } catch (e) {
       setState(() {
-        _errorMessage = '${context.tr('po_error_network')}$e';
+        _errorMessage = DbErrorHelper.format(e);
         _isLoading = false;
       });
     }
@@ -214,13 +215,7 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${context.tr('po_error_loading_quote')}$e',
-                textAlign: TextAlign.right),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppSnackBar.showError(context, e);
       }
     }
   }

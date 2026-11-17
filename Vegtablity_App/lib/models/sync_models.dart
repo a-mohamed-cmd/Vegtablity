@@ -19,6 +19,20 @@ extension SyncCategoryTypeExtension on SyncCategoryType {
     }
   }
 
+  String localizedTitle(bool isAr) {
+    if (isAr) return arabicTitle;
+    switch (this) {
+      case SyncCategoryType.invoice:
+        return 'Invoices (Sales / Purchase / Quotations)';
+      case SyncCategoryType.voucher:
+        return 'Vouchers (Receipt / Payment / General)';
+      case SyncCategoryType.wastage:
+        return 'Wastage Drafts';
+      case SyncCategoryType.stocktake:
+        return 'StockTake Drafts';
+    }
+  }
+
   String get shortTitle {
     switch (this) {
       case SyncCategoryType.invoice:
@@ -29,6 +43,20 @@ extension SyncCategoryTypeExtension on SyncCategoryType {
         return 'هالك';
       case SyncCategoryType.stocktake:
         return 'جرد مخزني';
+    }
+  }
+
+  String localizedShortTitle(bool isAr) {
+    if (isAr) return shortTitle;
+    switch (this) {
+      case SyncCategoryType.invoice:
+        return 'Invoice';
+      case SyncCategoryType.voucher:
+        return 'Voucher';
+      case SyncCategoryType.wastage:
+        return 'Wastage';
+      case SyncCategoryType.stocktake:
+        return 'StockTake';
     }
   }
 }
@@ -57,6 +85,8 @@ class SyncQueueItemModel {
     required this.rawPayload,
     this.lastError,
   });
+
+  bool get hasError => lastError != null && lastError!.trim().isNotEmpty;
 }
 
 class SyncItemResultModel {

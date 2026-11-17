@@ -92,7 +92,7 @@ Namespace Views
 
                 Helpers.ReportExporter.ExportRecipeToPdf(recipeData, whName)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء تصدير الوصفة إلى PDF: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تصدير الوصفة إلى PDF")
             End Try
         End Sub
 
@@ -138,7 +138,7 @@ Namespace Views
 
                 Helpers.ReportExporter.ExportRecipeToCsv(recipeData, whName)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء تصدير الوصفة إلى Excel: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تصدير الوصفة إلى Excel")
             End Try
         End Sub
 

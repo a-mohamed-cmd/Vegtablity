@@ -19,10 +19,21 @@ class SyncViewModel extends ChangeNotifier {
   int _totalToSyncCount = 0;
   String _currentStatusText = '';
   SyncBatchReportModel? _lastSyncReport;
+  bool _isAr = true;
 
   SyncViewModel(ApiService apiService)
       : _syncService = OfflineSyncService(apiService) {
     loadAllQueues();
+  }
+
+  bool get isAr => _isAr;
+
+  void setLocaleIsAr(bool isAr, {bool reload = true}) {
+    if (_isAr == isAr) return;
+    _isAr = isAr;
+    if (reload) {
+      loadAllQueues();
+    }
   }
 
   // ===========================================================================
@@ -86,14 +97,18 @@ class SyncViewModel extends ChangeNotifier {
   // ===========================================================================
 
   Future<void> loadAllQueues() async {
-    _pendingInvoices =
-        await _syncService.loadQueueItemsByCategory(SyncCategoryType.invoice);
-    _pendingVouchers =
-        await _syncService.loadQueueItemsByCategory(SyncCategoryType.voucher);
-    _pendingWastages =
-        await _syncService.loadQueueItemsByCategory(SyncCategoryType.wastage);
-    _pendingStockTakes =
-        await _syncService.loadQueueItemsByCategory(SyncCategoryType.stocktake);
+    _pendingInvoices = await _syncService.loadQueueItemsByCategory(
+        SyncCategoryType.invoice,
+        isAr: _isAr);
+    _pendingVouchers = await _syncService.loadQueueItemsByCategory(
+        SyncCategoryType.voucher,
+        isAr: _isAr);
+    _pendingWastages = await _syncService.loadQueueItemsByCategory(
+        SyncCategoryType.wastage,
+        isAr: _isAr);
+    _pendingStockTakes = await _syncService.loadQueueItemsByCategory(
+        SyncCategoryType.stocktake,
+        isAr: _isAr);
     notifyListeners();
   }
 
@@ -102,7 +117,8 @@ class SyncViewModel extends ChangeNotifier {
     SyncQueueItemModel item,
     PrinterService printerService,
   ) async {
-    return await _syncService.printOfflineQueueItem(item, printerService);
+    return await _syncService.printOfflineQueueItem(item, printerService,
+        isAr: _isAr);
   }
 
   /// مزامنة عملية واحدة منفردة
@@ -119,10 +135,12 @@ class SyncViewModel extends ChangeNotifier {
     _syncedCount = 0;
     _processedCount = 0;
     _totalToSyncCount = 1;
-    _currentStatusText = 'جاري مزامنة: ${item.title}...';
+    _currentStatusText = _isAr
+        ? 'جاري مزامنة: ${item.title}...'
+        : 'Syncing: ${item.title}...';
     notifyListeners();
 
-    final result = await _syncService.executeApiForItem(item);
+    final result = await _syncService.executeApiForItem(item, isAr: _isAr);
 
     if (result.success) {
       _syncedCount = 1;
@@ -131,7 +149,9 @@ class SyncViewModel extends ChangeNotifier {
         index: item.indexInCategory,
         remove: true,
       );
-      _currentStatusText = 'تمت مزامنة ${item.title} بنجاح!';
+      _currentStatusText = _isAr
+          ? 'تمت مزامنة ${item.title} بنجاح!'
+          : 'Synced ${item.title} successfully!';
     } else {
       await _syncService.removeOrUpdateItemInStorage(
         category: item.category,
@@ -139,7 +159,9 @@ class SyncViewModel extends ChangeNotifier {
         remove: false,
         errorToSave: result.errorMessage,
       );
-      _currentStatusText = 'تعذرت مزامنة ${item.title}';
+      _currentStatusText = _isAr
+          ? 'تعذرت مزامنة ${item.title}'
+          : 'Failed to sync ${item.title}';
     }
 
     _processedCount = 1;
@@ -180,7 +202,9 @@ class SyncViewModel extends ChangeNotifier {
     _syncedCount = 0;
     _processedCount = 0;
     _totalToSyncCount = items.length;
-    _currentStatusText = 'جاري بدء مزامنة ${category.arabicTitle}...';
+    _currentStatusText = _isAr
+        ? 'جاري بدء مزامنة ${category.localizedTitle(_isAr)}...'
+        : 'Starting sync for ${category.localizedTitle(_isAr)}...';
     notifyListeners();
 
     final List<SyncItemResultModel> results = [];
@@ -220,7 +244,9 @@ class SyncViewModel extends ChangeNotifier {
     _syncedCount = 0;
     _processedCount = 0;
     _totalToSyncCount = total;
-    _currentStatusText = 'جاري بدء المزامنة الشاملة ($total عملية)...';
+    _currentStatusText = _isAr
+        ? 'جاري بدء المزامنة الشاملة ($total عملية)...'
+        : 'Starting full sync ($total operations)...';
     notifyListeners();
 
     final List<SyncItemResultModel> results = [];
@@ -254,7 +280,7 @@ class SyncViewModel extends ChangeNotifier {
     List<SyncItemResultModel> resultsCollector,
   ) async {
     final snapshot =
-        await _syncService.loadQueueItemsByCategory(category);
+        await _syncService.loadQueueItemsByCategory(category, isAr: _isAr);
     if (snapshot.isEmpty) return;
 
     int removedSoFarInCategory = 0;
@@ -265,11 +291,13 @@ class SyncViewModel extends ChangeNotifier {
           originalItem.indexInCategory - removedSoFarInCategory;
 
       _activeSingleItemKey = originalItem.uniqueKey;
-      _currentStatusText =
-          'جاري مزامنة: ${originalItem.title} (${_processedCount + 1} من $_totalToSyncCount)...';
+      _currentStatusText = _isAr
+          ? 'جاري مزامنة: ${originalItem.title} (${_processedCount + 1} من $_totalToSyncCount)...'
+          : 'Syncing: ${originalItem.title} (${_processedCount + 1} of $_totalToSyncCount)...';
       notifyListeners();
 
-      final result = await _syncService.executeApiForItem(originalItem);
+      final result =
+          await _syncService.executeApiForItem(originalItem, isAr: _isAr);
       resultsCollector.add(result);
       _processedCount++;
 
@@ -281,8 +309,9 @@ class SyncViewModel extends ChangeNotifier {
           remove: true,
         );
         removedSoFarInCategory++;
-        _currentStatusText =
-            'تمت مزامنة: ${originalItem.title} (#${result.serverReferenceId ?? ''})';
+        _currentStatusText = _isAr
+            ? 'تمت مزامنة: ${originalItem.title} (#${result.serverReferenceId ?? ''})'
+            : 'Synced: ${originalItem.title} (#${result.serverReferenceId ?? ''})';
       } else {
         await _syncService.removeOrUpdateItemInStorage(
           category: category,
@@ -290,7 +319,9 @@ class SyncViewModel extends ChangeNotifier {
           remove: false,
           errorToSave: result.errorMessage,
         );
-        _currentStatusText = 'تعذرت مزامنة: ${originalItem.title}';
+        _currentStatusText = _isAr
+            ? 'تعذرت مزامنة: ${originalItem.title}'
+            : 'Failed to sync: ${originalItem.title}';
       }
 
       await loadAllQueues();

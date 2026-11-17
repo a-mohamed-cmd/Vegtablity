@@ -30,6 +30,23 @@ Namespace Models
                 Return IsPosted AndAlso Remainder > 0
             End Get
         End Property
+
+        Private _canUserDeletePermission As Boolean = False
+        Public Property CanUserDeletePermission As Boolean
+            Get
+                Return _canUserDeletePermission
+            End Get
+            Set(value As Boolean)
+                _canUserDeletePermission = value
+            End Set
+        End Property
+
+        ''' <summary>Visible only when invoice is unposted and user has delete permission</summary>
+        Public ReadOnly Property CanDeleteUnposted As Boolean
+            Get
+                Return (Not IsPosted) AndAlso InvID > 0 AndAlso _canUserDeletePermission
+            End Get
+        End Property
     End Class
 
     ''' <summary>Dashboard KPI stats returned by sp_Invoice_GetDashboardStats</summary>

@@ -27,7 +27,8 @@ Namespace Services
                         user.Username,
                         .PasswordHash = passwordHash,
                         user.FullName,
-                        user.IsActive
+                        user.IsActive,
+                        user.CanRefundPaymentGateway
                     },
                     commandType:=CommandType.StoredProcedure)
             End Using
@@ -37,7 +38,14 @@ Namespace Services
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 conn.Execute(
                     Helpers.StoredProcedures.SP_USER_UPDATE,
-                    New With {user.UserID, user.RoleID, user.Username, user.FullName, user.IsActive},
+                    New With {
+                        user.UserID,
+                        user.RoleID,
+                        user.Username,
+                        user.FullName,
+                        user.IsActive,
+                        user.CanRefundPaymentGateway
+                    },
                     commandType:=CommandType.StoredProcedure)
             End Using
         End Sub

@@ -642,7 +642,7 @@ Namespace ViewModels
                 ExecuteLoadHistory(Nothing)
                 ExecuteNew(Nothing)
             Catch ex As Exception
-                System.Windows.MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ عرض السعر")
             End Try
         End Sub
 

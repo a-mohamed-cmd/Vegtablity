@@ -148,6 +148,13 @@ Namespace Views
             End If
         End Sub
 
+        Private Sub DeleteInvoiceBtn_Click(sender As Object, e As RoutedEventArgs)
+            Dim btn = TryCast(sender, Button)
+            If btn IsNot Nothing Then
+                VM?.DeleteInvoiceCommand.Execute(btn.Tag)
+            End If
+        End Sub
+
         Private Sub ClosePaymentPanel_Click(sender As Object, e As RoutedEventArgs)
             VM?.ClosePaymentPanelCommand.Execute(Nothing)
         End Sub

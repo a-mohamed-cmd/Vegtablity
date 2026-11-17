@@ -141,7 +141,7 @@ Namespace ViewModels
                     LeaveTypesList.Add(lt)
                 Next
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب إعدادات الموارد: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب إعدادات الموارد")
             End Try
         End Sub
 
@@ -159,7 +159,7 @@ Namespace ViewModels
                 RaiseEvent RequestSnackbar("💾 تم حفظ واعتماد ضوابط احتساب الرواتب بنجاح!")
                 LoadData()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ ضوابط الرواتب: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ ضوابط الرواتب")
             End Try
         End Sub
 
@@ -197,7 +197,7 @@ Namespace ViewModels
                 LoadData()
                 SelectedField = CustomFields.FirstOrDefault(Function(f) f.FieldID = id)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الحقل المخصص: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الحقل المخصص")
             End Try
         End Sub
 
@@ -215,7 +215,7 @@ Namespace ViewModels
                     NewCustomField(Nothing)
                     LoadData()
                 Catch ex As Exception
-                    MessageBox.Show("خطأ أثناء حذف الحقل: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر حذف الحقل")
                 End Try
             End If
         End Sub

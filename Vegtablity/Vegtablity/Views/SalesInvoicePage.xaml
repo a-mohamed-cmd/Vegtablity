@@ -134,11 +134,21 @@
                                     Style="{DynamicResource ModernButtonStyle}" Background="#6366F1" Margin="0,0,10,0"
                                     IsEnabled="{Binding CurrentPermissions.CanPrint}"/>
 
+                            <Button Content="🔗 رابط دفع إلكتروني" Command="{Binding SendPaymentLinkCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#0D9488" Margin="0,0,10,0"
+                                    Visibility="{Binding IsPaymentGatewaySelected, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="إصدار وإرسال رابط دفع إلكتروني للعميل أو طباعة رمز QR"/>
+
                             <!-- Unpost Button (only visible when invoice is posted) -->
                             <Button Content="↩️ إلغاء الترحيل" Command="{Binding UnpostInvoiceCommand}" 
                                     Style="{DynamicResource ModernButtonStyle}" Background="#EF4444" Margin="0,0,10,0"
                                     Visibility="{Binding IsInvoicePosted, Converter={StaticResource BoolToVis}}"
                                     ToolTip="إلغاء الترحيل وفتح الفاتورة للتعديل"/>
+
+                            <Button Content="🗑 حذف الفاتورة" Command="{Binding DeleteInvoiceCommand}"
+                                    Style="{DynamicResource ModernButtonStyle}" Background="#DC2626" Margin="0,0,10,0"
+                                    Visibility="{Binding CanShowDeleteButton, Converter={StaticResource BoolToVis}}"
+                                    ToolTip="حذف الفاتورة غير المرحلة نهائياً"/>
 
                             <Button Content="🚀 ترحيل الفاتورة" Command="{Binding PostCommand}" 
                                     Style="{DynamicResource ModernButtonStyle}" Background="#F59E0B"

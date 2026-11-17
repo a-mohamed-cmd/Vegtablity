@@ -10,6 +10,15 @@ class StoredProcedures:
     
     # Used to authenticate a user by username and password
     USER_LOGIN = "{CALL [Security].[sp_User_Login] (?, ?)}"
+
+    # Used to list users and resolve fresh user permissions
+    USER_GET_ALL = "{CALL [Security].[sp_User_GetAll]}"
+
+    # Used to verify live payment gateway refund permission before calling gateway APIs
+    USER_CAN_REFUND_PAYMENT_GATEWAY = "EXEC [Security].[sp_User_CanRefundPaymentGateway] @UserID=?"
+
+    # Used to resolve role permissions (PaymentGatewayInvoices -> CanDelete controls refund)
+    PERMISSION_GET_BY_ROLE = "EXEC [Security].[sp_Permission_GetByRole] @RoleID=?"
     
     # Used to verify if a POS machine hardware ID is licensed and active
     DEVICE_LICENSE_CHECK = "SELECT IsActive, ExpiryDate FROM [Security].[DeviceLicenses] WHERE MachineHWID = ?"
@@ -136,6 +145,7 @@ class StoredProcedures:
     # Retrieves the header details of a specific invoice
     INVOICE_GET_BY_ID = "{CALL [Sales].[sp_Invoice_GetByID] (?)}"
     INVOICE_SEARCH_BY_PHONE = "EXEC [Sales].[sp_Invoice_SearchByPhone] @Phone=?"
+    INVOICE_DELETE_BY_ID = "EXEC [Sales].[sp_Invoice_DeleteByID] @InvID=?, @UserID=?"
     
     # Retrieves the line items for a specific invoice
     INVOICE_DETAILS_GET = "{CALL [Sales].[sp_InvoiceDetails_GetByInvID] (?)}"
@@ -312,6 +322,48 @@ class StoredProcedures:
     REPORT_EXECUTIVE_PNL_SUMMARY = "EXEC [Reports].[sp_Report_ExecutivePnLSummary] @StartDate=?, @EndDate=?"
     REPORT_WASTAGE_ANALYSIS = "EXEC [Reports].[sp_Report_WastageAnalysis] @StartDate=?, @EndDate=?"
     REPORT_SHIFTS_ANALYTICS = "EXEC [Reports].[sp_Report_ShiftsAnalytics] @StartDate=?, @EndDate=?"
+
+    # =========================================================================
+    # Integrations & Payment Gateways (Isolated Module)
+    # =========================================================================
+    INTEGRATION_ENSURE_ACCOUNT = "EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID=?"
+    INTEGRATION_GET_PROVIDERS = "EXEC [Settings].[sp_Integration_GetProviders] @OnlyEnabled=?"
+    INTEGRATION_DISCONNECT_PROVIDER = "EXEC [Settings].[sp_Integration_DisconnectProvider] @ProviderID=?"
+    INTEGRATION_SAVE_PROVIDER_CONFIG = """
+        EXEC [Settings].[sp_Integration_SaveProviderConfig]
+            @ProviderID=?, @EnvironmentMode=?, @BaseUrl=?, @MerchantID=?, @PublicKey=?,
+            @SecretKeyEncrypted=?, @WebhookSecret=?, @CallbackUrl=?, @DefaultCurrency=?,
+            @CommissionPercent=?, @FixedFee=?, @AutoSendLinkOnInvoiceSave=?,
+            @PrintQrOnPos80mm=?, @PrintQrOnPos58mm=?, @PrintQrOnWpfInvoice=?,
+            @AutoSendWhatsApp=?, @AutoSendSms=?, @LinkExpiryHours=?,
+            @EnableConsolidatedLinks=?, @DeductCommissionOnShiftClose=?,
+            @EnableGatewayRefunds=?, @AllowPartialRefunds=?, @AutoPostRefundJournalEntry=?,
+            @RefundChargeOnCustomer=?, @ServiceChargeOnCustomer=?,
+            @ConnectionStatus=?, @StatusMessageAr=?
+    """
+    PAYMENT_LINK_SAVE = """
+        EXEC [Sales].[sp_InvoicePaymentLink_Save]
+            @InvID=?, @PartnerID=?, @ProviderID=?, @ProviderCode=?,
+            @ExternalChargeID=?, @ExternalInvoiceID=?, @PaymentUrl=?, @QrCodePayload=?,
+            @Amount=?, @CurrencyCode=?, @CustomerName=?, @CustomerPhone=?, @CustomerEmail=?,
+            @SendViaWhatsApp=?, @SendViaSms=?, @SendViaEmail=?, @PrintQrMode=?,
+            @CreatedByUserID=?, @ShiftID=?, @RawResponseJson=?, @Notes=?,
+            @IsConsolidated=?, @ConsolidatedInvoicesCsv=?
+    """
+    PAYMENT_LINK_UPDATE_STATUS = "EXEC [Sales].[sp_InvoicePaymentLink_UpdateStatus] @LinkID=?, @ExternalChargeID=?, @NewStatus=?, @RawResponseJson=?"
+    PAYMENT_LINK_RECORD_REFUND = "EXEC [Sales].[sp_InvoicePaymentLink_RecordRefund] @LinkID=?, @RefundAmount=?, @ExternalRefundID=?, @RefundReason=?, @UserID=?"
+    PAYMENT_LINK_GET_FILTERED = "EXEC [Sales].[sp_InvoicePaymentLink_GetFiltered] @ProviderCode=?, @LinkStatus=?, @StartDate=?, @EndDate=?, @SearchText=?, @PageNumber=?, @PageSize=?"
+    PAYMENT_LINK_GET_INVOICE_QUICK_INFO = "EXEC [Sales].[sp_InvoicePaymentLink_GetInvoiceQuickInfo] @InvID=?"
+    TALABAT_ORDER_SAVE_OR_UPDATE = """
+        EXEC [Sales].[sp_TalabatOrder_SaveOrUpdate]
+            @OrderToken=?, @OrderCode=?, @ShortCode=?, @RemoteVendorId=?,
+            @ExpeditionType=?, @PaymentType=?, @SubTotal=?, @DeliveryFee=?,
+            @DiscountAmount=?, @GrandTotal=?, @CurrencyCode=?, @OrderStatus=?,
+            @CustomerName=?, @CustomerPhone=?, @DeliveryAddress=?, @Comments=?,
+            @ItemsJson=?, @RawPayloadJson=?, @RejectionReason=?, @UserID=?, @AutoCreateSalesInvoice=?
+    """
+    TALABAT_ORDER_GET_FILTERED = "EXEC [Sales].[sp_TalabatOrder_GetFiltered] @OrderStatus=?, @StartDate=?, @EndDate=?, @SearchText=?"
+
 
 
 

@@ -1,13 +1,19 @@
 Imports System.Windows
+Imports System.Windows.Media
+Imports System.Windows.Media.Animation
+Imports Vegtablity.Helpers
 Imports Vegtablity.Services
 
 Namespace Views
     Public Class DashboardWindow
         Inherits Window
 
+        Private _globalSnackbarTimer As System.Windows.Threading.DispatcherTimer
+
         Public Sub New()
             InitializeComponent()
             AddHandler Me.Loaded, AddressOf OnLoaded
+            AddHandler Me.Closed, AddressOf OnWindowClosed
         End Sub
 
         Private Sub OnLoaded(sender As Object, e As RoutedEventArgs)
@@ -15,7 +21,13 @@ Namespace Views
             If vm IsNot Nothing Then
                 AddHandler vm.PropertyChanged, AddressOf OnViewModelPropertyChanged
             End If
+            RemoveHandler SnackbarService.SnackbarRequested, AddressOf ShowGlobalSnackbar
+            AddHandler SnackbarService.SnackbarRequested, AddressOf ShowGlobalSnackbar
             CheckUpdatesAsync()
+        End Sub
+
+        Private Sub OnWindowClosed(sender As Object, e As EventArgs)
+            RemoveHandler SnackbarService.SnackbarRequested, AddressOf ShowGlobalSnackbar
         End Sub
 
         Private Async Sub CheckUpdatesAsync()
@@ -134,6 +146,73 @@ Namespace Views
             If lbl IsNot Nothing Then
                 lbl.Text = If(_statsVisible, "إخفاء الإحصائيات", "إظهار الإحصائيات")
             End If
+        End Sub
+
+        ' ══════════════════════════════════════════════════
+        '  Global SnapMessage / Snackbar Overlay
+        ' ══════════════════════════════════════════════════
+
+        Public Sub ShowGlobalSnackbar(message As String, severity As SnackbarSeverity)
+            Dispatcher.BeginInvoke(New Action(Sub()
+                If GlobalSnackbarBorder Is Nothing OrElse GlobalSnackbarText Is Nothing Then Return
+
+                GlobalSnackbarText.Text = message
+                Dim bc As New BrushConverter()
+                Select Case severity
+                    Case SnackbarSeverity.[Error]
+                        GlobalSnackbarBorder.Background = DirectCast(bc.ConvertFromString("#991B1B"), Brush)
+                        GlobalSnackbarBorder.BorderBrush = DirectCast(bc.ConvertFromString("#F87171"), Brush)
+                        If GlobalSnackbarIcon IsNot Nothing Then GlobalSnackbarIcon.Text = "⛔"
+                    Case SnackbarSeverity.Warning
+                        GlobalSnackbarBorder.Background = DirectCast(bc.ConvertFromString("#92400E"), Brush)
+                        GlobalSnackbarBorder.BorderBrush = DirectCast(bc.ConvertFromString("#FBBF24"), Brush)
+                        If GlobalSnackbarIcon IsNot Nothing Then GlobalSnackbarIcon.Text = "⚠️"
+                    Case Else
+                        GlobalSnackbarBorder.Background = DirectCast(bc.ConvertFromString("#065F46"), Brush)
+                        GlobalSnackbarBorder.BorderBrush = DirectCast(bc.ConvertFromString("#34D399"), Brush)
+                        If GlobalSnackbarIcon IsNot Nothing Then GlobalSnackbarIcon.Text = "✅"
+                End Select
+
+                GlobalSnackbarBorder.Visibility = Visibility.Visible
+
+                Dim dur As New Duration(TimeSpan.FromMilliseconds(220))
+                Dim ease As New CubicEase() With {.EasingMode = EasingMode.EaseOut}
+                Dim fadeIn As New DoubleAnimation(0, 1, dur) With {.EasingFunction = ease}
+                GlobalSnackbarBorder.BeginAnimation(UIElement.OpacityProperty, fadeIn)
+
+                If GlobalSnackbarTranslate IsNot Nothing Then
+                    Dim slideUp As New DoubleAnimation(24, 0, dur) With {.EasingFunction = ease}
+                    GlobalSnackbarTranslate.BeginAnimation(TranslateTransform.YProperty, slideUp)
+                End If
+
+                If _globalSnackbarTimer Is Nothing Then
+                    _globalSnackbarTimer = New System.Windows.Threading.DispatcherTimer()
+                    AddHandler _globalSnackbarTimer.Tick, Sub(s, args)
+                                                              _globalSnackbarTimer.Stop()
+                                                              HideGlobalSnackbar()
+                                                          End Sub
+                End If
+                _globalSnackbarTimer.Stop()
+                _globalSnackbarTimer.Interval = TimeSpan.FromSeconds(If(severity = SnackbarSeverity.[Error], 7.0, If(severity = SnackbarSeverity.Warning, 5.0, 3.5)))
+                _globalSnackbarTimer.Start()
+            End Sub))
+        End Sub
+
+        Private Sub HideGlobalSnackbar()
+            If GlobalSnackbarBorder Is Nothing Then Return
+            Dim dur As New Duration(TimeSpan.FromMilliseconds(180))
+            Dim fadeOut As New DoubleAnimation(0, dur)
+            AddHandler fadeOut.Completed, Sub(s, e)
+                                              If GlobalSnackbarBorder.Opacity <= 0.05 Then
+                                                  GlobalSnackbarBorder.Visibility = Visibility.Collapsed
+                                              End If
+                                          End Sub
+            GlobalSnackbarBorder.BeginAnimation(UIElement.OpacityProperty, fadeOut)
+        End Sub
+
+        Private Sub BtnCloseGlobalSnackbar_Click(sender As Object, e As RoutedEventArgs)
+            If _globalSnackbarTimer IsNot Nothing Then _globalSnackbarTimer.Stop()
+            HideGlobalSnackbar()
         End Sub
 
     End Class

@@ -18,6 +18,7 @@ Namespace Helpers
         Public Const SP_USER_DELETE As String = "[Security].[sp_User_Delete]"
         Public Const SP_USER_RESETPASSWORD As String = "[Security].[sp_User_ResetPassword]"
         Public Const SP_USER_CHANGE_PASSWORD As String = "[Security].[sp_User_ChangePassword]"
+        Public Const SP_USER_CANREFUNDPAYMENTGATEWAY As String = "[Security].[sp_User_CanRefundPaymentGateway]"
 
         ' =============================================
         ' Security Schema - Roles
@@ -165,7 +166,7 @@ Namespace Helpers
         Public Const SP_INVOICE_GETBYID As String = "[Sales].[sp_Invoice_GetByID]"
         Public Const SP_INVOICE_SAVE As String = "[Sales].[sp_Invoice_Save]"
         Public Const SP_INVOICE_SAVE_XML As String = "[Sales].[sp_Invoice_Save_XML]"
-        Public Const SP_INVOICE_DELETE As String = "[Sales].[sp_Invoice_Delete]"
+        Public Const SP_INVOICE_DELETE_BY_ID As String = "[Sales].[sp_Invoice_DeleteByID]"
         Public Const SP_INVOICE_GETPAGED As String = "[Sales].[sp_Invoice_GetPaged]"
         Public Const SP_SALES_GETPRODUCTPRICING_INVOICE As String = "[Sales].[sp_GetProductPricingForInvoice]"
         
@@ -316,5 +317,18 @@ Namespace Helpers
 
         Public Const SP_HR_ENDOFSERVICE_GETALL As String = "[HR].[sp_EndOfService_GetAll]"
         Public Const SP_HR_ENDOFSERVICE_SAVE As String = "[HR].[sp_EndOfService_Save]"
+
+        ' === Integrations & Payment Gateways (Schema: Settings / Sales / Accounting) ===
+        Public Const SP_INTEGRATION_ENSUREACCOUNT As String = "[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]"
+        Public Const SP_INTEGRATION_GETPROVIDERS As String = "[Settings].[sp_Integration_GetProviders]"
+        Public Const SP_INTEGRATION_SAVEPROVIDERCONFIG As String = "[Settings].[sp_Integration_SaveProviderConfig]"
+        Public Const SP_INTEGRATION_DISCONNECTPROVIDER As String = "[Settings].[sp_Integration_DisconnectProvider]"
+        Public Const SP_PAYMENTLINK_SAVE As String = "[Sales].[sp_InvoicePaymentLink_Save]"
+        Public Const SP_PAYMENTLINK_UPDATESTATUS As String = "[Sales].[sp_InvoicePaymentLink_UpdateStatus]"
+        Public Const SP_PAYMENTLINK_RECORDREFUND As String = "[Sales].[sp_InvoicePaymentLink_RecordRefund]"
+        Public Const SP_PAYMENTLINK_GETFILTERED As String = "[Sales].[sp_InvoicePaymentLink_GetFiltered]"
+        Public Const SP_PAYMENTLINK_GETINVOICEQUICKINFO As String = "[Sales].[sp_InvoicePaymentLink_GetInvoiceQuickInfo]"
+        Public Const SP_TALABATORDER_SAVEORUPDATE As String = "[Sales].[sp_TalabatOrder_SaveOrUpdate]"
+        Public Const SP_TALABATORDER_GETFILTERED As String = "[Sales].[sp_TalabatOrder_GetFiltered]"
     End Class
 End Namespace

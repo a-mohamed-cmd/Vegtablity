@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/utils/app_snackbar.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
 
@@ -20,6 +21,7 @@ class InvoiceLookupViewModel extends ChangeNotifier {
   double _phoneTotalAmount = 0.0;
 
   bool _isLoading = false;
+  bool _isDeleting = false;
   String? _errorMessage;
   bool _allowEditUnposted = false;
 
@@ -38,6 +40,7 @@ class InvoiceLookupViewModel extends ChangeNotifier {
   bool get hasPhoneResults => _phoneInvoicesList.isNotEmpty;
 
   bool get isLoading => _isLoading;
+  bool get isDeleting => _isDeleting;
   String? get errorMessage => _errorMessage;
   bool get allowEditUnposted => _allowEditUnposted;
 
@@ -117,19 +120,11 @@ class InvoiceLookupViewModel extends ChangeNotifier {
         notifyListeners();
       }
     } on DioException catch (dioErr) {
-      if (dioErr.type == DioExceptionType.connectionTimeout ||
-          dioErr.type == DioExceptionType.receiveTimeout ||
-          dioErr.type == DioExceptionType.connectionError) {
-        _errorMessage =
-            'تعذر الاتصال بالسيرفر، يرجى التأكد من تشغيل الخادم وجودة الاتصال بالشبكة';
-      } else {
-        _errorMessage =
-            'حدث خطأ بالشبكة أثناء البحث برقم الهاتف: ${dioErr.message ?? dioErr.toString()}';
-      }
+      _errorMessage = DbErrorHelper.format(dioErr);
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = 'حدث خطأ غير متوقع: $e';
+      _errorMessage = DbErrorHelper.format(e);
       _isLoading = false;
       notifyListeners();
     }
@@ -180,20 +175,14 @@ class InvoiceLookupViewModel extends ChangeNotifier {
     } on DioException catch (dioErr) {
       if (dioErr.response?.statusCode == 404) {
         _errorMessage =
-            'الفاتورة رقم ($idToSearch) غير موجودة بنظام السيرفر (404 Not Found)';
-      } else if (dioErr.type == DioExceptionType.connectionTimeout ||
-          dioErr.type == DioExceptionType.receiveTimeout ||
-          dioErr.type == DioExceptionType.connectionError) {
-        _errorMessage =
-            'تعذر الاتصال بالسيرفر، يرجى التأكد من تشغيل الخادم وجودة الاتصال بالشبكة';
+            'الفاتورة رقم ($idToSearch) غير موجودة بنظام السيرفر';
       } else {
-        _errorMessage =
-            'حدث خطأ بالشبكة أثناء جلب الفاتورة: ${dioErr.message ?? dioErr.toString()}';
+        _errorMessage = DbErrorHelper.format(dioErr);
       }
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _errorMessage = 'حدث خطأ غير متوقع: $e';
+      _errorMessage = DbErrorHelper.format(e);
       _isLoading = false;
       notifyListeners();
     }
@@ -216,6 +205,50 @@ class InvoiceLookupViewModel extends ChangeNotifier {
   Future<bool> printInvoice(PrinterService printerService) async {
     if (_invoiceData == null) return false;
     return await printerService.printReceipt(_invoiceData!, isReprint: true);
+  }
+
+  Future<Map<String, dynamic>> deleteInvoice(int invId) async {
+    if (invId <= 0) {
+      return {'success': false, 'message': 'رقم الفاتورة غير صالح'};
+    }
+    _isDeleting = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.deleteInvoice(invId);
+      if (response.statusCode == 200) {
+        if (_invoiceData != null &&
+            (_invoiceData!['InvID']?.toString() == invId.toString())) {
+          _invoiceData = null;
+        }
+        _phoneInvoicesList
+            .removeWhere((item) => item['InvID']?.toString() == invId.toString());
+        _phoneTotalCount = _phoneInvoicesList.length;
+        _phoneTotalAmount = _phoneInvoicesList.fold<double>(
+          0.0,
+          (sum, e) => sum + _parseDouble(e['NetAmount']),
+        );
+        final msg = (response.data is Map && response.data['message'] != null)
+            ? response.data['message'].toString()
+            : 'تم حذف الفاتورة رقم #$invId بنجاح';
+        return {'success': true, 'message': msg};
+      }
+      return {'success': false, 'message': 'تعذر حذف الفاتورة رقم #$invId'};
+    } on DioException catch (dioErr) {
+      final fallback = dioErr.response?.statusCode == 403
+          ? 'عذراً، لا تملك صلاحية حذف الفواتير'
+          : (dioErr.response?.statusCode == 400
+              ? 'لا يمكن حذف فاتورة مرحّلة محاسبياً؛ يرجى فك ترحيلها أولاً'
+              : 'تعذر حذف الفاتورة');
+      return {
+        'success': false,
+        'message': DbErrorHelper.format(dioErr, fallback: fallback),
+      };
+    } catch (e) {
+      return {'success': false, 'message': DbErrorHelper.format(e)};
+    } finally {
+      _isDeleting = false;
+      notifyListeners();
+    }
   }
 
   double _parseDouble(dynamic val, [double fallback = 0.0]) {

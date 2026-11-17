@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../core/utils/app_snackbar.dart';
 import '../services/api_service.dart';
 
 class BarcodePrintViewModel extends ChangeNotifier {
@@ -60,19 +61,11 @@ class BarcodePrintViewModel extends ChangeNotifier {
       }
     } on DioException catch (dioErr) {
       _isLoading = false;
-      if (dioErr.response?.statusCode == 401) {
-        _errorMessage = 'انتهت جلسة الدخول أو أن المعرف غير مصرح (401 Unauthorized). يرجى إعادة تسجيل الدخول.';
-      } else if (dioErr.type == DioExceptionType.connectionTimeout ||
-          dioErr.type == DioExceptionType.receiveTimeout ||
-          dioErr.type == DioExceptionType.connectionError) {
-        _errorMessage = 'تعذر الاتصال بخادم السيرفر. يرجى التأكد من تشغيل API وجودة الاتصال.';
-      } else {
-        _errorMessage = 'خطأ في الاتصال بالخادم (${dioErr.message})';
-      }
+      _errorMessage = DbErrorHelper.format(dioErr);
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'خطأ غير متوقع: $e';
+      _errorMessage = DbErrorHelper.format(e);
       notifyListeners();
     }
   }

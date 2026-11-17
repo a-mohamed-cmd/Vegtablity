@@ -9,6 +9,7 @@ Namespace ViewModels
 
         Private ReadOnly _userService As New Services.UserManagementService()
         Private ReadOnly _roleService As New Services.RoleService()
+        Private ReadOnly _permissionService As New Services.PermissionService()
 
         ' ===== Users =====
         Private _users As ObservableCollection(Of User)
@@ -105,6 +106,15 @@ Namespace ViewModels
                 formsMap.Add("HREndOfService", "مكافأة نهاية الخدمة وتصفية المستحقات")
                 formsMap.Add("HRAlerts", "تنبيهات انتهاء الوثائق")
                 formsMap.Add("HRSettings", "إعدادات الموارد وضوابط الرواتب")
+            End If
+
+            If compInfo IsNot Nothing AndAlso compInfo.HasAnyIntegrationEnabled Then
+                formsMap.Add("IntegrationSettings", "إعدادات الربط وبوابات الدفع")
+                formsMap.Add("PaymentGatewayInvoices", "طلبات وفواتير بوابات الدفع")
+            End If
+
+            If compInfo IsNot Nothing AndAlso compInfo.EnableTalabatIntegration Then
+                formsMap.Add("TalabatOrders", "طلبات ومبيعات Talabat")
             End If
 
             AvailableForms = formsMap
@@ -548,6 +558,14 @@ Namespace ViewModels
                     SelectedUser.RoleID = EditRoleID
                     _userService.UpdateUser(SelectedUser)
 
+                    If Services.Session.CurrentUser IsNot Nothing AndAlso Services.Session.CurrentUser.UserID = SelectedUser.UserID Then
+                        Services.Session.CurrentUser.FullName = SelectedUser.FullName
+                        Services.Session.CurrentUser.IsActive = SelectedUser.IsActive
+                        Services.Session.CurrentUser.RoleID = SelectedUser.RoleID
+                        Dim pgwPerm = _permissionService.GetPermissionsForForm(SelectedUser.RoleID, "PaymentGatewayInvoices")
+                        Services.Session.CurrentUser.CanRefundPaymentGateway = (pgwPerm IsNot Nothing AndAlso pgwPerm.CanDelete)
+                    End If
+
                     If Not String.IsNullOrWhiteSpace(EditPassword) Then
                         _userService.ResetPassword(SelectedUser.UserID, EditPassword)
                     End If
@@ -658,6 +676,10 @@ Namespace ViewModels
                     perm.RoleID = SelectedPermissionRole.RoleID
                     _roleService.SavePermission(perm)
                 Next
+                If Services.Session.CurrentUser IsNot Nothing AndAlso Services.Session.CurrentUser.RoleID = SelectedPermissionRole.RoleID Then
+                    Dim pgwPerm = Permissions.FirstOrDefault(Function(p) p.FormName = "PaymentGatewayInvoices")
+                    Services.Session.CurrentUser.CanRefundPaymentGateway = (pgwPerm IsNot Nothing AndAlso pgwPerm.CanDelete)
+                End If
                 UserStatusMessage = "تم حفظ الصلاحيات بنجاح. ✅"
                 LoadPermissionsForRole(SelectedPermissionRole.RoleID)
             Catch ex As Exception

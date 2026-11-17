@@ -561,7 +561,7 @@
                         </DataGridTextColumn>
 
                         <!-- Actions -->
-                        <DataGridTemplateColumn Header="إجراءات" Width="160">
+                        <DataGridTemplateColumn Header="إجراءات" Width="230">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0">
@@ -570,15 +570,25 @@
                                                 Click="OpenInvoiceBtn_Click"
                                                 Style="{DynamicResource ModernButtonStyle}"
                                                 Background="#E2E8F0" Foreground="#334155" FontSize="12" FontWeight="Bold"
-                                                Padding="12,6" Margin="0,0,8,0"/>
+                                                Padding="12,6" Margin="0,0,6,0"/>
                                         <!-- Add payment button (only for posted with remainder) -->
                                         <Button Content="💰 سداد" Tag="{Binding}"
                                                 Click="AddPaymentBtn_Click"
                                                 Style="{DynamicResource ModernButtonStyle}"
                                                 Background="#10B981" FontSize="12" FontWeight="Bold"
-                                                Padding="12,6">
+                                                Padding="12,6" Margin="0,0,6,0">
                                             <Button.Visibility>
                                                 <Binding Path="CanAddPayment" Converter="{StaticResource BoolToVis}"/>
+                                            </Button.Visibility>
+                                        </Button>
+                                        <!-- Delete button (only when unposted and authorized) -->
+                                        <Button Content="🗑 حذف" Tag="{Binding}"
+                                                Click="DeleteInvoiceBtn_Click"
+                                                Style="{DynamicResource ModernButtonStyle}"
+                                                Background="#DC2626" Foreground="White" FontSize="12" FontWeight="Bold"
+                                                Padding="10,6">
+                                            <Button.Visibility>
+                                                <Binding Path="CanDeleteUnposted" Converter="{StaticResource BoolToVis}"/>
                                             </Button.Visibility>
                                         </Button>
                                     </StackPanel>

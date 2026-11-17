@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../providers/shift_provider.dart';
 import '../services/printer_service.dart';
 import '../core/localization/app_localizations.dart';
+import '../core/utils/app_snackbar.dart';
 
 /// شاشة سند الصرف - سداد مستحقات للموردين
 class PaymentVoucherScreen extends StatefulWidget {
@@ -271,19 +272,14 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
         _showError(voucherProv.errorMessage!);
       }
     } catch (e) {
-      _showError('${context.tr('pv_save_error')}$e');
+      _showError(DbErrorHelper.format(e));
     }
   }
 
   void _showError(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(msg, textDirection: TextDirection.rtl),
-          backgroundColor: Colors.red));
+      AppSnackBar.show(context, DbErrorHelper.format(msg), isError: true);
 
-  void _showSuccess(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(msg, textDirection: TextDirection.rtl),
-          backgroundColor: Colors.green));
+  void _showSuccess(String msg) => AppSnackBar.showSuccess(context, msg);
 
   // ─── Build ────────────────────────────────────────────────────────────────
   final _freePaymentCtrl = TextEditingController();

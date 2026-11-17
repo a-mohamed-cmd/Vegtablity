@@ -142,13 +142,19 @@ Namespace ViewModels
                     .EnableDailyOrders = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableDailyOrders, False),
                     .DeliverySystemMode = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.DeliverySystemMode, Nothing),
                     .EnableSalesDiscounts = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableSalesDiscounts, False),
-                    .EnableHR = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableHR, False)
+                    .EnableHR = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableHR, False),
+                    .EnableTapIntegration = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableTapIntegration, False),
+                    .EnableMyFatoorahIntegration = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableMyFatoorahIntegration, False),
+                    .EnableUPaymentsIntegration = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableUPaymentsIntegration, False),
+                    .EnableTalabatIntegration = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableTalabatIntegration, False),
+                    .EnableJahezIntegration = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.EnableJahezIntegration, False),
+                    .PromptSendPaymentLinkOnSave = If(_currentCompanyInfo IsNot Nothing, _currentCompanyInfo.PromptSendPaymentLinkOnSave, False)
                 }
                 _settingsService.SaveCompanyInfo(info)
 
-                MessageBox.Show("تم حفظ الإعدادات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information)
+                Helpers.SnackbarService.ShowSuccess("تم حفظ الإعدادات بنجاح")
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء الحفظ: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الإعدادات")
             End Try
         End Sub
 

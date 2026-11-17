@@ -8,6 +8,7 @@ import '../models/recipe_model.dart';
 import '../services/printer_service.dart';
 import '../services/receipt_designer.dart';
 import '../services/api_service.dart';
+import '../core/utils/app_snackbar.dart';
 import '../widgets/product_entry_scanner.dart';
 import 'add_recipe_screen.dart';
 
@@ -383,9 +384,7 @@ class _RecipeManagementScreenState extends State<RecipeManagementScreen> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('خطأ أثناء الحفظ السريع: $e'), backgroundColor: Colors.red),
-                        );
+                        AppSnackBar.showError(context, e, prefix: 'خطأ أثناء الحفظ السريع');
                       }
                     }
                   },
@@ -565,9 +564,7 @@ class _RecipeManagementScreenState extends State<RecipeManagementScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ أثناء الطباعة: $e'), backgroundColor: Colors.red),
-        );
+        AppSnackBar.showError(context, e, prefix: 'خطأ أثناء الطباعة');
       }
     }
   }

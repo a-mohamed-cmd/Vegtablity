@@ -251,7 +251,7 @@ Namespace ViewModels
                     SelectedBatch = Batches.First()
                 End If
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب مسيرات الرواتب: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب مسيرات الرواتب")
             End Try
         End Sub
 
@@ -270,7 +270,7 @@ Namespace ViewModels
                     End If
                 End If
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب تفاصيل المسير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب تفاصيل المسير")
             End Try
         End Sub
 
@@ -357,7 +357,7 @@ Namespace ViewModels
                 End If
                 RaiseEvent RequestSnackbar($"💾 تم حفظ تعديلات راتب ({d.EmployeeName}) والصافي: {d.NetSalary:N3} 👌")
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ التعديل: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ التعديل")
             End Try
         End Sub
 
@@ -378,7 +378,7 @@ Namespace ViewModels
                         NotifyBatchStatusChanged()
                         RaiseEvent RequestSnackbar("🔓 تم إلغاء اعتماد مسير الرواتب وفتحه للتعديل بنجاح!")
                     Catch ex As Exception
-                        MessageBox.Show("خطأ أثناء إلغاء اعتماد المسير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                        Helpers.SnackbarService.ShowError(ex, "تعذر إلغاء اعتماد المسير")
                     End Try
                 End If
             Else
@@ -393,7 +393,7 @@ Namespace ViewModels
                         NotifyBatchStatusChanged()
                         RaiseEvent RequestSnackbar("✔ تم اعتماد مسير الرواتب وترحيل القيد المحاسبي بنجاح!")
                     Catch ex As Exception
-                        MessageBox.Show("خطأ أثناء اعتماد المسير: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                        Helpers.SnackbarService.ShowError(ex, "تعذر اعتماد المسير")
                     End Try
                 End If
             End If

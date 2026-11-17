@@ -320,7 +320,7 @@ Namespace ViewModels
 
                 LoadAllRecipes()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء تحميل بيانات الأصناف والوصفات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل بيانات الأصناف والوصفات")
             End Try
         End Sub
 
@@ -380,7 +380,7 @@ Namespace ViewModels
                 NotifyPaginationChanged()
                 FilterRecipes()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب الوصفات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب الوصفات")
             End Try
         End Sub
 
@@ -468,7 +468,7 @@ Namespace ViewModels
                 Dim name = If(SelectedTargetProduct?.ProductName, String.Empty)
                 RaiseEvent RecipeLoaded(Me, (productID, name))
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب تفاصيل الوصفة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب تفاصيل الوصفة")
             End Try
         End Sub
 
@@ -534,7 +534,7 @@ Namespace ViewModels
                 LoadAllRecipes()
                 SelectedRecipe = Recipes.FirstOrDefault(Function(r) r.RecipeID = recipeID)
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الوصفة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الوصفة")
             End Try
         End Sub
 
@@ -551,7 +551,7 @@ Namespace ViewModels
                     ResetForm(Nothing)
                     LoadAllRecipes()
                 Catch ex As Exception
-                    MessageBox.Show("خطأ أثناء حذف الوصفة: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                    Helpers.SnackbarService.ShowError(ex, "تعذر حذف الوصفة")
                 End Try
             End If
         End Sub

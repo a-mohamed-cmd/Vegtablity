@@ -138,9 +138,11 @@ Namespace Controls
             Dim ctrl = TryCast(d, SearchableDropdown)
             If ctrl Is Nothing OrElse Not ctrl._isInitialized Then Return
             ctrl.UpdateListBox()
-            ' إذا كانت القائمة مفتوحة وفيها نتائج، ابقِها مفتوحة
-            If ctrl.ItemsList.Items.Count > 0 AndAlso ctrl.IsEnabled Then
+            ' إذا كانت القائمة مفتوحة وفيها نتائج، ابقِها مفتوحة، وإلا أغلقها (مثلاً عند إدخال اسم عميل غير مسجل)
+            If ctrl.ItemsList.Items.Count > 0 AndAlso ctrl.IsEnabled AndAlso (ctrl.SearchBox.IsKeyboardFocusWithin OrElse ctrl.DropPopup.IsOpen) Then
                 ctrl.DropPopup.IsOpen = True
+            ElseIf ctrl.ItemsList.Items.Count = 0 Then
+                ctrl.DropPopup.IsOpen = False
             End If
         End Sub
 
@@ -220,9 +222,9 @@ Namespace Controls
             ' أطلق حدث الفلترة
             RaiseEvent SearchChanged(Me, SearchBox.Text)
 
-            ' فتح القائمة المنسدلة تلقائياً بالنتائج عند إدخال نص بواسطة المستخدم
+            ' فتح القائمة المنسدلة تلقائياً بالنتائج عند إدخال نص بواسطة المستخدم (إذا وجدت عناصر مطابقة)
             If SearchBox.IsKeyboardFocused OrElse SearchBox.IsFocused OrElse SearchBox.IsKeyboardFocusWithin Then
-                If Not String.IsNullOrWhiteSpace(SearchBox.Text) Then
+                If Not String.IsNullOrWhiteSpace(SearchBox.Text) AndAlso ItemsList.Items.Count > 0 Then
                     DropPopup.IsOpen = True
                 Else
                     DropPopup.IsOpen = False
@@ -273,10 +275,13 @@ Namespace Controls
                         DropPopup.IsOpen = False
                         RaiseEvent ConfirmedAndMoveNext(Me, EventArgs.Empty)
                     Else
-                        ' لا يوجد اختيار — حاول تطابق جزئي
+                        ' لا يوجد اختيار — حاول تطابق جزئي، وإن كان نصاً حراً (عميل غير مسجل) انتقل للحقل التالي
                         Dim match = FindPartialMatch(SearchBox.Text)
                         If match IsNot Nothing Then
                             CommitSelection(match)
+                        Else
+                            DropPopup.IsOpen = False
+                            RaiseEvent ConfirmedAndMoveNext(Me, EventArgs.Empty)
                         End If
                     End If
 

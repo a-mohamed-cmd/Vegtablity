@@ -6,12 +6,7 @@ import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
 import '../core/localization/app_localizations.dart';
 import '../models/language_model.dart';
-import '../widgets/update_dialog.dart';
-import '../viewmodels/sync_viewmodel.dart';
-import '../widgets/sync_progress_widgets.dart';
-import '../providers/pos_provider.dart';
-import '../providers/voucher_provider.dart';
-import 'sync_center_screen.dart';
+import '../services/integrations/integration_service.dart';
 
 class GeneralSettingsScreen extends StatefulWidget {
   const GeneralSettingsScreen({super.key});
@@ -34,6 +29,9 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   bool _showDailyOrders = true;
   bool _showRecipes = true;
   bool _showBarcodePrinting = true;
+  bool _showPaymentGatewayInvoices = true;
+  bool _showTalabatOrders = true;
+  bool _isTalabatConfiguredOnServer = false;
   bool _allowEditUnpostedInvoices = false;
 
   @override
@@ -60,9 +58,17 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
         _showDailyOrders = prefs.getBool('show_daily_orders') ?? true;
         _showRecipes = prefs.getBool('show_recipes') ?? true;
         _showBarcodePrinting = prefs.getBool('show_barcode_printing') ?? true;
+        _showPaymentGatewayInvoices = prefs.getBool('show_payment_gateway_invoices') ?? true;
+        _showTalabatOrders = prefs.getBool('show_talabat_orders') ?? true;
         _allowEditUnpostedInvoices = prefs.getBool('pref_allow_edit_unposted_invoices') ?? false;
         _isLoading = false;
       });
+      final summary = await IntegrationPosService().fetchProvidersSummary();
+      if (mounted) {
+        setState(() {
+          _isTalabatConfiguredOnServer = summary['isTalabatConfigured'] == true;
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -108,6 +114,12 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
             break;
           case 'show_barcode_printing':
             _showBarcodePrinting = value;
+            break;
+          case 'show_payment_gateway_invoices':
+            _showPaymentGatewayInvoices = value;
+            break;
+          case 'show_talabat_orders':
+            _showTalabatOrders = value;
             break;
           case 'pref_allow_edit_unposted_invoices':
             _allowEditUnpostedInvoices = value;
@@ -291,6 +303,24 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     onChanged: (val) => _saveBoolSetting('show_barcode_printing', val),
                     activeColor: Colors.teal,
                   ),
+                  if (Provider.of<SettingsProvider>(context).hasAnyPaymentGatewayEnabled)
+                    SwitchListTile(
+                      secondary: const Icon(Icons.payment_rounded, color: Colors.indigo),
+                      title: Text(context.tr('settings_payment_gateways_title')),
+                      subtitle: Text(context.tr('settings_payment_gateways_desc')),
+                      value: _showPaymentGatewayInvoices,
+                      onChanged: (val) => _saveBoolSetting('show_payment_gateway_invoices', val),
+                      activeColor: Colors.indigo,
+                    ),
+                  if (Provider.of<SettingsProvider>(context).enableTalabatIntegration && _isTalabatConfiguredOnServer)
+                    SwitchListTile(
+                      secondary: const Icon(Icons.delivery_dining_rounded, color: Colors.deepOrange),
+                      title: Text(context.tr('settings_talabat_orders_title')),
+                      subtitle: Text(context.tr('settings_talabat_orders_desc')),
+                      value: _showTalabatOrders,
+                      onChanged: (val) => _saveBoolSetting('show_talabat_orders', val),
+                      activeColor: Colors.deepOrange,
+                    ),
                   const SizedBox(height: 16),
                   const Divider(),
                   const SizedBox(height: 8),
@@ -307,176 +337,6 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                     value: _allowEditUnpostedInvoices,
                     onChanged: (val) => _saveBoolSetting('pref_allow_edit_unposted_invoices', val),
                     activeColor: Colors.teal,
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.teal.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.system_update_rounded, color: Colors.teal),
-                    ),
-                    title: Text(
-                      context.tr('settings_check_updates'),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text(
-                      context.tr('settings_check_updates_desc'),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                    onTap: () => UpdateDialog.showIfAvailable(context, showNoUpdateToast: true),
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'إدارة المزامنة والعمليات المعلقة (Offline Sync)',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Consumer<SyncViewModel>(
-                    builder: (context, syncVm, _) {
-                      final int total = syncVm.totalPendingCount;
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (syncVm.isSyncing)
-                            LiveSyncProgressBarCard(syncVm: syncVm),
-                          Card(
-                            elevation: 1,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: total > 0
-                                    ? Colors.orange.shade300
-                                    : Colors.teal.shade200,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  leading: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: (total > 0
-                                              ? Colors.orange
-                                              : Colors.teal)
-                                          .withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      total > 0
-                                          ? Icons.cloud_upload_rounded
-                                          : Icons.cloud_done_rounded,
-                                      color: total > 0
-                                          ? Colors.orange.shade800
-                                          : Colors.teal,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    total > 0
-                                        ? 'مركز المزامنة ($total عملية معلقة)'
-                                        : 'مركز المزامنة (جميع العمليات متزامنة)',
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Text(
-                                    total > 0
-                                        ? 'الفواتير: ${syncVm.invoicesCount} | السندات: ${syncVm.vouchersCount} | الهالك: ${syncVm.wastagesCount} | الجرد: ${syncVm.stockTakesCount}'
-                                        : 'استعراض حالة المزامنة وتقارير العمليات المحفوظة بدون إنترنت',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.grey),
-                                  ),
-                                  trailing: const Icon(Icons.arrow_forward_ios,
-                                      size: 16, color: Colors.grey),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const SyncCenterScreen(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                if (total > 0)
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 0, 16, 12),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        OutlinedButton.icon(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    const SyncCenterScreen(),
-                                              ),
-                                            );
-                                          },
-                                          icon: const Icon(
-                                              Icons.list_alt_rounded,
-                                              size: 18),
-                                          label: const Text(
-                                              'عرض ومزامنة منفردة'),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ElevatedButton.icon(
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.teal,
-                                            foregroundColor: Colors.white,
-                                          ),
-                                          onPressed: syncVm.isSyncing
-                                              ? null
-                                              : () async {
-                                                  final posProv =
-                                                      Provider.of<PosProvider>(
-                                                          context,
-                                                          listen: false);
-                                                  final voucherProv = Provider
-                                                      .of<VoucherProvider>(
-                                                          context,
-                                                          listen: false);
-                                                  final report =
-                                                      await syncVm.syncAll(
-                                                    onQueuesUpdated: () async {
-                                                      await posProv
-                                                          .reloadOfflineQueueFromPrefs();
-                                                      await voucherProv
-                                                          .reloadOfflineQueueFromPrefs();
-                                                    },
-                                                  );
-                                                  if (context.mounted) {
-                                                    await SyncResultSummaryDialog
-                                                        .show(context, report);
-                                                  }
-                                                },
-                                          icon: const Icon(Icons.sync_rounded,
-                                              size: 18),
-                                          label: const Text('مزامنة الكل الآن'),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  if (false) ListTile(onTap: () {},
                   ),
                 ],
               ),

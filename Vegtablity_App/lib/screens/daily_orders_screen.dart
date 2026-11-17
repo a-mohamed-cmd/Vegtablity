@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
 import '../core/localization/app_localizations.dart';
+import '../core/utils/app_snackbar.dart';
 
 double _parseDouble(dynamic value) {
   if (value == null) return 0.0;
@@ -164,12 +165,7 @@ class _DailyOrdersScreenState extends State<DailyOrdersScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('فشلت الطباعة: $e', textDirection: TextDirection.rtl),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppSnackBar.showError(context, e, prefix: 'فشلت الطباعة');
       }
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/localization/app_localizations.dart';
 import '../models/sync_models.dart';
 import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
@@ -37,88 +38,85 @@ class LiveSyncProgressBarCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.6,
-                    color: Colors.teal,
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.6,
+                  color: Colors.teal,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    syncVm.currentStatusText.isNotEmpty
-                        ? syncVm.currentStatusText
-                        : 'جاري مزامنة العمليات مع قاعدة البيانات...',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.teal.shade900,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.teal.shade700,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$percent%',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: syncVm.progressFraction,
-                minHeight: 10,
-                backgroundColor: Colors.teal.shade100,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.teal.shade600),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  syncVm.currentStatusText.isNotEmpty
+                      ? syncVm.currentStatusText
+                      : context.tr('sync_progress_default'),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.teal.shade900,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade700,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '$percent%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: syncVm.progressFraction,
+              minHeight: 10,
+              backgroundColor: Colors.teal.shade100,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.teal.shade600),
             ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildCounterBadge(
-                  label: 'تمت مزامنته',
-                  count: syncVm.syncedCount,
-                  color: Colors.green.shade700,
-                  icon: Icons.check_circle_outline,
-                ),
-                _buildCounterBadge(
-                  label: 'المتبقي',
-                  count: syncVm.remainingCount,
-                  color: Colors.orange.shade800,
-                  icon: Icons.hourglass_bottom_rounded,
-                ),
-                _buildCounterBadge(
-                  label: 'الإجمالي',
-                  count: syncVm.totalToSyncCount,
-                  color: Colors.blueGrey.shade700,
-                  icon: Icons.layers_outlined,
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildCounterBadge(
+                label: context.tr('sync_counter_synced'),
+                count: syncVm.syncedCount,
+                color: Colors.green.shade700,
+                icon: Icons.check_circle_outline,
+              ),
+              _buildCounterBadge(
+                label: context.tr('sync_counter_remaining'),
+                count: syncVm.remainingCount,
+                color: Colors.orange.shade800,
+                icon: Icons.hourglass_bottom_rounded,
+              ),
+              _buildCounterBadge(
+                label: context.tr('sync_counter_total'),
+                count: syncVm.totalToSyncCount,
+                color: Colors.blueGrey.shade700,
+                icon: Icons.layers_outlined,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -179,203 +177,212 @@ class SyncResultSummaryDialog extends StatelessWidget {
     final synced = report.syncedItems;
     final failed = report.failedItems;
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-        contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: report.isAllSuccess
-                  ? Colors.green.shade100
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      title: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: report.isAllSuccess
+                ? Colors.green.shade100
+                : (synced.isNotEmpty
+                    ? Colors.orange.shade100
+                    : Colors.red.shade100),
+            child: Icon(
+              report.isAllSuccess
+                  ? Icons.cloud_done_rounded
                   : (synced.isNotEmpty
-                      ? Colors.orange.shade100
-                      : Colors.red.shade100),
-              child: Icon(
-                report.isAllSuccess
-                    ? Icons.cloud_done_rounded
-                    : (synced.isNotEmpty
-                        ? Icons.warning_amber_rounded
-                        : Icons.error_outline_rounded),
-                color: report.isAllSuccess
-                    ? Colors.green.shade800
-                    : (synced.isNotEmpty
-                        ? Colors.orange.shade800
-                        : Colors.red.shade800),
-              ),
+                      ? Icons.warning_amber_rounded
+                      : Icons.error_outline_rounded),
+              color: report.isAllSuccess
+                  ? Colors.green.shade800
+                  : (synced.isNotEmpty
+                      ? Colors.orange.shade800
+                      : Colors.red.shade800),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'تقرير نتائج المزامنة',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    'تمت مزامنة ${synced.length} من أصل ${report.totalAttempted} عملية',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 440),
-          child: SingleChildScrollView(
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (synced.isNotEmpty) ...[
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.check_circle,
-                            color: Colors.green.shade700, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'العمليات التي تم حفظها في قاعدة البيانات (${synced.length}):',
+                Text(
+                  context.tr('sync_report_title'),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  context
+                      .tr('sync_report_summary')
+                      .replaceAll('{synced}', '${synced.length}')
+                      .replaceAll('{total}', '${report.totalAttempted}'),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 440),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (synced.isNotEmpty) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle,
+                          color: Colors.green.shade700, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context
+                              .tr('sync_report_synced_header')
+                              .replaceAll('{count}', '${synced.length}'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.green.shade900,
                             fontSize: 13,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  ...synced.map((item) => Card(
-                        elevation: 0,
-                        margin: const EdgeInsets.only(bottom: 6),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(color: Colors.green.shade200),
+                ),
+                const SizedBox(height: 8),
+                ...synced.map((item) => Card(
+                      elevation: 0,
+                      margin: const EdgeInsets.only(bottom: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Colors.green.shade200),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(
+                          Icons.verified_rounded,
+                          color: Colors.green.shade600,
                         ),
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(
-                            Icons.verified_rounded,
-                            color: Colors.green.shade600,
-                          ),
-                          title: Text(
-                            item.title,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                          subtitle: Text(
-                            '${item.subtitle}  •  التاريخ: ${item.date}',
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
+                        title: Text(
+                          item.title,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        subtitle: Text(
+                          '${item.subtitle}  •  ${context.tr('sync_date_prefix')} ${item.date}',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              item.amount.toStringAsFixed(3),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal.shade800,
+                                fontSize: 13,
+                              ),
+                            ),
+                            if (item.serverReferenceId != null &&
+                                item.serverReferenceId! > 0)
                               Text(
-                                item.amount.toStringAsFixed(3),
+                                '${context.tr('sync_report_save_no')} #${item.serverReferenceId}',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal.shade800,
-                                  fontSize: 13,
+                                  fontSize: 11,
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              if (item.serverReferenceId != null &&
-                                  item.serverReferenceId! > 0)
-                                Text(
-                                  'رقم الحفظ: #${item.serverReferenceId}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.green.shade700,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                            ],
-                          ),
+                          ],
                         ),
-                      )),
-                  const SizedBox(height: 12),
-                ],
-                if (failed.isNotEmpty) ...[
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.error_outline,
-                            color: Colors.red.shade700, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'العمليات المتبقية التي تعذرت مزامنتها (${failed.length}):',
+                      ),
+                    )),
+                const SizedBox(height: 12),
+              ],
+              if (failed.isNotEmpty) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline,
+                          color: Colors.red.shade700, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          context
+                              .tr('sync_report_failed_header')
+                              .replaceAll('{count}', '${failed.length}'),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.red.shade900,
                             fontSize: 13,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  ...failed.map((item) => Card(
-                        elevation: 0,
-                        margin: const EdgeInsets.only(bottom: 6),
-                        color: Colors.red.shade50.withValues(alpha: 0.4),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          side: BorderSide(color: Colors.red.shade200),
+                ),
+                const SizedBox(height: 8),
+                ...failed.map((item) => Card(
+                      elevation: 0,
+                      margin: const EdgeInsets.only(bottom: 6),
+                      color: Colors.red.shade50.withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Colors.red.shade200),
+                      ),
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red.shade700,
                         ),
-                        child: ListTile(
-                          dense: true,
-                          leading: Icon(
-                            Icons.warning_amber_rounded,
-                            color: Colors.red.shade700,
-                          ),
-                          title: Text(
-                            '${item.title} (${item.amount.toStringAsFixed(3)})',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13),
-                          ),
-                          subtitle: Text(
-                            'السبب: ${item.errorMessage ?? 'خطأ غير معروف'}',
-                            style: TextStyle(
-                                fontSize: 11, color: Colors.red.shade800),
-                          ),
+                        title: Text(
+                          '${item.title} (${item.amount.toStringAsFixed(3)})',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 13),
                         ),
-                      )),
-                ],
+                        subtitle: Text(
+                          '${context.tr('sync_report_reason_prefix')} ${item.errorMessage ?? context.tr('sync_report_unknown_err')}',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.red.shade800),
+                        ),
+                      ),
+                    )),
               ],
-            ),
+            ],
           ),
         ),
-        actions: [
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.check, size: 18),
-            label: const Text('حسناً'),
-          ),
-        ],
       ),
+      actions: [
+        ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.check, size: 18),
+          label: Text(context.tr('sync_ok_btn')),
+        ),
+      ],
     );
   }
 }
@@ -421,101 +428,105 @@ class HomeSyncBannerWidget extends StatelessWidget {
                   border: Border.all(color: Colors.orange.shade300),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Directionality(
-                  textDirection: TextDirection.rtl,
-                  child: Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 12,
-                    runSpacing: 10,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.cloud_upload_rounded,
-                              color: Colors.orange.shade800),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'يوجد (${syncVm.totalPendingCount}) عمليات محفوظة محلياً بانتظار المزامنة',
-                                style: TextStyle(
-                                  color: Colors.orange.shade900,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  runSpacing: 10,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.cloud_upload_rounded,
+                            color: Colors.orange.shade800),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              context
+                                  .tr('sync_banner_title')
+                                  .replaceAll(
+                                      '{count}', '${syncVm.totalPendingCount}'),
+                              style: TextStyle(
+                                color: Colors.orange.shade900,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                              Text(
-                                [
-                                  if (syncVm.invoicesCount > 0)
-                                    '${syncVm.invoicesCount} فاتورة',
-                                  if (syncVm.vouchersCount > 0)
-                                    '${syncVm.vouchersCount} سند',
-                                  if (syncVm.wastagesCount > 0)
-                                    '${syncVm.wastagesCount} هالك',
-                                  if (syncVm.stockTakesCount > 0)
-                                    '${syncVm.stockTakesCount} جرد',
-                                ].join('  •  '),
-                                style: TextStyle(
-                                  color: Colors.orange.shade800,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange.shade900,
-                              side: BorderSide(color: Colors.orange.shade400),
                             ),
-                            onPressed: () {
-                              Navigator.push(
+                            Text(
+                              [
+                                if (syncVm.invoicesCount > 0)
+                                  '${syncVm.invoicesCount} ${context.tr('sync_banner_inv_unit')}',
+                                if (syncVm.vouchersCount > 0)
+                                  '${syncVm.vouchersCount} ${context.tr('sync_banner_vch_unit')}',
+                                if (syncVm.wastagesCount > 0)
+                                  '${syncVm.wastagesCount} ${context.tr('sync_banner_wst_unit')}',
+                                if (syncVm.stockTakesCount > 0)
+                                  '${syncVm.stockTakesCount} ${context.tr('sync_banner_stk_unit')}',
+                              ].join('  •  '),
+                              style: TextStyle(
+                                color: Colors.orange.shade800,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange.shade900,
+                            side: BorderSide(color: Colors.orange.shade400),
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SyncCenterScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.list_alt_rounded, size: 18),
+                          label: Text(context.tr('sync_btn_details')),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade700,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            final isAr =
+                                Localizations.localeOf(context).languageCode ==
+                                    'ar';
+                            syncVm.setLocaleIsAr(isAr, reload: false);
+                            final posProv = Provider.of<PosProvider>(context,
+                                listen: false);
+                            final voucherProv = Provider.of<VoucherProvider>(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (_) => const SyncCenterScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.list_alt_rounded, size: 18),
-                            label: const Text('عرض التفاصيل'),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange.shade700,
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () async {
-                              final posProv = Provider.of<PosProvider>(context,
-                                  listen: false);
-                              final voucherProv = Provider.of<VoucherProvider>(
-                                  context,
-                                  listen: false);
-                              final report = await syncVm.syncAll(
-                                onQueuesUpdated: () async {
-                                  await posProv.reloadOfflineQueueFromPrefs();
-                                  await voucherProv
-                                      .reloadOfflineQueueFromPrefs();
-                                },
-                              );
-                              if (context.mounted) {
-                                await SyncResultSummaryDialog.show(
-                                    context, report);
-                              }
-                            },
-                            icon: const Icon(Icons.sync_rounded, size: 18),
-                            label: const Text('مزامنة الكل'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                                listen: false);
+                            final report = await syncVm.syncAll(
+                              onQueuesUpdated: () async {
+                                await posProv.reloadOfflineQueueFromPrefs();
+                                await voucherProv
+                                    .reloadOfflineQueueFromPrefs();
+                              },
+                            );
+                            if (context.mounted) {
+                              await SyncResultSummaryDialog.show(
+                                  context, report);
+                            }
+                          },
+                          icon: const Icon(Icons.sync_rounded, size: 18),
+                          label: Text(context.tr('sync_banner_sync_all')),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
           ],

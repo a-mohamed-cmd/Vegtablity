@@ -9,6 +9,7 @@ import '../providers/shift_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
 import '../core/localization/app_localizations.dart';
+import '../core/utils/app_snackbar.dart';
 import 'pos_screen.dart';
 
 double _parseDouble(dynamic value) {
@@ -756,7 +757,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  netAmount.toStringAsFixed(2),
+                                  netAmount.toStringAsFixed(3),
                                   style: TextStyle(
                                     color: isCredit
                                         ? Colors.orangeAccent
@@ -769,7 +770,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                                 Text(
                                   paidAmount == netAmount
                                       ? 'مدفوع بالكامل'
-                                      : 'متبقي آجل: ${(netAmount - paidAmount).toStringAsFixed(2)}',
+                                      : 'متبقي آجل: ${(netAmount - paidAmount).toStringAsFixed(3)}',
                                   style: TextStyle(
                                     color: paidAmount == netAmount
                                         ? Colors.green[300]
@@ -809,7 +810,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
                   style: TextStyle(color: Colors.white54, fontSize: 12),
                 ),
                 Text(
-                  '${totalAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                  '${totalAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: TextStyle(
                     color: accentColor,
                     fontSize: 16,
@@ -1155,7 +1156,7 @@ class _DailyInvoicesScreenState extends State<DailyInvoicesScreen> {
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              value.toStringAsFixed(2),
+              value.toStringAsFixed(3),
               style: TextStyle(
                   color: color, fontWeight: FontWeight.bold, fontSize: 14),
             ),
@@ -1291,7 +1292,7 @@ class _InvoiceDetailsBottomSheetState
   void _showPaymentDialog(Map<String, dynamic> invoiceData) {
     final double remainder = _parseDouble(invoiceData['Remainder']);
     final int invId = invoiceData['InvID'] ?? 0;
-    final controller = TextEditingController(text: remainder.toStringAsFixed(2));
+    final controller = TextEditingController(text: remainder.toStringAsFixed(3));
 
     List<Map<String, dynamic>> paymentAccounts = [];
     int? selectedAccountId;
@@ -1383,7 +1384,7 @@ class _InvoiceDetailsBottomSheetState
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        context.tr('di_payment_remaining').replaceAll('{amount}', remainder.toStringAsFixed(2)),
+                        context.tr('di_payment_remaining').replaceAll('{amount}', remainder.toStringAsFixed(3)),
                         style: const TextStyle(color: Colors.white70, fontSize: 14),
                         textAlign: TextAlign.right,
                       ),
@@ -1449,7 +1450,7 @@ class _InvoiceDetailsBottomSheetState
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('${totalSplitPaid.toStringAsFixed(2)} / ${remainder.toStringAsFixed(2)} KWD',
+                              Text('${totalSplitPaid.toStringAsFixed(3)} / ${remainder.toStringAsFixed(3)} KWD',
                                   style: TextStyle(
                                       color: (totalSplitPaid > remainder) ? Colors.orangeAccent : Colors.tealAccent,
                                       fontWeight: FontWeight.bold,
@@ -1464,7 +1465,7 @@ class _InvoiceDetailsBottomSheetState
                           final s = entry.value;
                           if (s['controller'] == null) {
                             final initialAmt = (s['Amount'] as num?)?.toDouble() ?? 0.0;
-                            s['controller'] = TextEditingController(text: initialAmt > 0 ? initialAmt.toStringAsFixed(2) : '');
+                            s['controller'] = TextEditingController(text: initialAmt > 0 ? initialAmt.toStringAsFixed(3) : '');
                           }
                           final sController = s['controller'] as TextEditingController;
 
@@ -1606,6 +1607,9 @@ class _InvoiceDetailsBottomSheetState
                         }
                       } catch (e) {
                         setState(() => _isLoading = false);
+                        if (mounted) {
+                          AppSnackBar.showError(context, e);
+                        }
                       }
                     } else {
                       // SPLIT MODE SUBMISSION
@@ -1645,6 +1649,9 @@ class _InvoiceDetailsBottomSheetState
                         }
                       } catch (e) {
                         setState(() => _isLoading = false);
+                        if (mounted) {
+                          AppSnackBar.showError(context, e);
+                        }
                       }
                     }
                   },
@@ -1790,7 +1797,7 @@ class _InvoiceDetailsBottomSheetState
                       final String unitName = (item['UnitName'] ?? '').toString();
                       final String qtyStr = qty == qty.toInt()
                           ? '${unitName.isNotEmpty ? '$unitName ' : ''}${qty.toInt()}'
-                          : '${unitName.isNotEmpty ? '$unitName ' : ''}${qty.toStringAsFixed(1)}';
+                          : '${unitName.isNotEmpty ? '$unitName ' : ''}${qty.toStringAsFixed(3)}';
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1805,7 +1812,7 @@ class _InvoiceDetailsBottomSheetState
                                         color: Colors.white, fontSize: 13))),
                             Expanded(
                                 flex: 1,
-                                child: Text(price.toStringAsFixed(2),
+                                child: Text(price.toStringAsFixed(3),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                         color: Colors.white70, fontSize: 13))),
@@ -1817,7 +1824,7 @@ class _InvoiceDetailsBottomSheetState
                                         color: Colors.white70, fontSize: 13))),
                             Expanded(
                                 flex: 2,
-                                child: Text(total.toStringAsFixed(2),
+                                child: Text(total.toStringAsFixed(3),
                                     textAlign: TextAlign.end,
                                     style: const TextStyle(
                                         color: Colors.tealAccent,
@@ -1981,19 +1988,19 @@ class _InvoiceDetailsBottomSheetState
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: _buildSummaryRow(
-              'الإجمالي الكلي', '${totalAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', false),
+              'الإجمالي الكلي', '${totalAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', false),
         ),
         if (discount > 0)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: _buildSummaryRow(context.tr('di_discount').split(':').first,
-                '-${discount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', false,
+                '-${discount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', false,
                 textColor: Colors.redAccent),
           ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: _buildSummaryRow(
-              'الصافي الكلي', '${netAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', true),
+              'الصافي الكلي', '${netAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}', true),
         ),
         const SizedBox(height: 8),
         Row(
@@ -2014,7 +2021,7 @@ class _InvoiceDetailsBottomSheetState
                             color: Colors.white54, fontSize: 11)),
                     const SizedBox(height: 4),
                     Text(
-                      '${paidAmount.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                      '${paidAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                       style: const TextStyle(
                           color: Colors.greenAccent,
                           fontSize: 15,
@@ -2040,7 +2047,7 @@ class _InvoiceDetailsBottomSheetState
                             color: Colors.white54, fontSize: 11)),
                     const SizedBox(height: 4),
                     Text(
-                      '${remainder.toStringAsFixed(2)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                      '${remainder.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                       style: const TextStyle(
                           color: Colors.redAccent,
                           fontSize: 15,
@@ -2073,7 +2080,7 @@ class _InvoiceDetailsBottomSheetState
                   border: Border.all(color: Colors.teal.withValues(alpha: 0.4)),
                 ),
                 child: Text(
-                  '$name: ${amt.toStringAsFixed(2)} $symbol',
+                  '$name: ${amt.toStringAsFixed(3)} $symbol',
                   style: const TextStyle(color: Colors.tealAccent, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               );

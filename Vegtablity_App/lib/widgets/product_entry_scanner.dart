@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
+import '../core/utils/app_snackbar.dart';
 import '../providers/recipe_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
@@ -387,9 +388,7 @@ class _ProductEntryScannerState extends State<ProductEntryScanner> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('خطأ أثناء الحفظ السريع: $e'), backgroundColor: Colors.red),
-                        );
+                        AppSnackBar.showError(context, e, prefix: 'خطأ أثناء الحفظ السريع');
                       }
                     }
                   },

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/localization/app_localizations.dart';
+import '../core/utils/app_snackbar.dart';
+import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../services/printer_service.dart';
 import '../viewmodels/invoice_lookup_viewmodel.dart';
@@ -305,9 +307,63 @@ class InvoiceLookupScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmAndDeleteInvoice(
+      BuildContext context, InvoiceLookupViewModel vm, int invId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                context.tr('inv_lookup_delete_confirm_title'),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          context
+              .tr('inv_lookup_delete_confirm_body')
+              .replaceAll('{id}', invId.toString()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.tr('inv_lookup_btn_cancel')),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: Text(context.tr('inv_lookup_btn_confirm_delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    final res = await vm.deleteInvoice(invId);
+    if (!context.mounted) return;
+    final msg = res['message']?.toString() ?? '';
+    if (res['success'] == true) {
+      AppSnackBar.showSuccess(context, msg);
+    } else {
+      AppSnackBar.showError(context, msg);
+    }
+  }
+
   Widget _buildPhoneInvoicesListCard(
       BuildContext context, InvoiceLookupViewModel vm) {
     final invoices = vm.phoneInvoicesList;
+    final auth = context.watch<AuthProvider>();
 
     return Card(
       elevation: 4,
@@ -482,6 +538,11 @@ class InvoiceLookupScreen extends StatelessWidget {
                     ? inv['TempCustomerName'].toString()
                     : (inv['PartnerName']?.toString() ?? 'نقدي عام');
                 final bool isPaid = paidAmt > 0 && remAmt <= 0.001;
+                final bool isPosted =
+                    inv['IsPosted'] == true || inv['IsPosted'] == 1;
+                final String rowInvType = inv['InvType']?.toString() ?? 'Sales';
+                final bool hasDeletePerm =
+                    !readOnlyPrintOnly && auth.canDeleteInvoice(rowInvType);
 
                 return InkWell(
                   borderRadius: BorderRadius.circular(12),
@@ -590,7 +651,29 @@ class InvoiceLookupScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(width: 6),
+                        if (hasDeletePerm) ...[
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: isPosted ? () {} : null,
+                            child: Tooltip(
+                              message: isPosted
+                                  ? context
+                                      .tr('inv_lookup_delete_disabled_posted')
+                                  : context.tr('inv_lookup_delete_btn'),
+                              child: IconButton(
+                                icon: const Icon(Icons.delete_outline_rounded),
+                                color: Colors.red.shade600,
+                                disabledColor: Colors.grey.shade400,
+                                onPressed: (isPosted || vm.isDeleting)
+                                    ? null
+                                    : () => _confirmAndDeleteInvoice(
+                                        context, vm, invId),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 4),
                         const Icon(Icons.chevron_right_rounded,
                             color: Colors.teal),
                       ],
@@ -997,7 +1080,7 @@ class InvoiceLookupScreen extends StatelessWidget {
                             Expanded(
                               flex: 2,
                               child: Text(
-                                '${q.toStringAsFixed(2)} $unit',
+                                '${q.toStringAsFixed(3)} $unit',
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                     fontSize: 12, color: Colors.black87),
@@ -1112,6 +1195,53 @@ class InvoiceLookupScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
             ],
+
+            // Delete Invoice Button (Shown only for authorized users; disabled if posted)
+            Builder(builder: (ctx) {
+              final bool hasDeletePerm = !readOnlyPrintOnly &&
+                  ctx.watch<AuthProvider>().canDeleteInvoice(invType);
+              if (!hasDeletePerm) return const SizedBox.shrink();
+              final bool isPosted =
+                  inv['IsPosted'] == true || inv['IsPosted'] == 1;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: (isPosted || vm.isDeleting)
+                        ? null
+                        : () => _confirmAndDeleteInvoice(ctx, vm, invId),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: Text(
+                      context.tr('inv_lookup_delete_btn'),
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      disabledForegroundColor: Colors.grey.shade600,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  if (isPosted) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      context.tr('inv_lookup_delete_disabled_posted'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                ],
+              );
+            }),
 
             // Bottom Re-print Button (Always available)
             ElevatedButton.icon(

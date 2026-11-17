@@ -133,7 +133,7 @@ Namespace ViewModels
 
                 ApplyFilter()
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء فحص تنبيهات الوثائق: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر فحص تنبيهات الوثائق")
             End Try
         End Sub
 

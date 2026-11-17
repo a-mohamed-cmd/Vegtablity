@@ -90,7 +90,7 @@ Namespace ViewModels
                     EmployeesOnLeaveSummary = String.Empty
                 End If
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء جلب سجل الحضور: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر جلب سجل الحضور")
             End Try
         End Sub
 
@@ -102,7 +102,7 @@ Namespace ViewModels
                 _hrService.SaveAttendanceRecord(rec)
                 RaiseEvent RequestSnackbar($"💾 تم حفظ وتعديل حضور الموظف {rec.EmployeeName} بنجاح!")
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الحضور: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الحضور")
             End Try
         End Sub
 
@@ -114,7 +114,7 @@ Namespace ViewModels
                 Next
                 RaiseEvent RequestSnackbar("💾 تم حفظ وتحديث سجل الحضور والغياب وساعات الإضافي بنجاح 👌")
             Catch ex As Exception
-                MessageBox.Show("خطأ أثناء حفظ الحضور: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر حفظ الحضور")
             End Try
         End Sub
 

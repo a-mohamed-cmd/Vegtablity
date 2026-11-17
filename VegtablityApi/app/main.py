@@ -1,12 +1,40 @@
 import os
-from fastapi import FastAPI, APIRouter
-from fastapi.responses import FileResponse
+import pyodbc
+from fastapi import FastAPI, APIRouter, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import auth, invoices, partners, products, purchase_quotes, shifts, sales_quotes, security, settings, vouchers, accounts, inventory, license_control, recipes, discounts, updates, reports
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.core.db_errors import clean_db_error_message
+from app.routes import auth, invoices, partners, products, purchase_quotes, shifts, sales_quotes, security, settings, vouchers, accounts, inventory, license_control, recipes, discounts, updates, reports, integrations
 from app.routes.invoices import create_invoice
 
 app = FastAPI(title="Vegtablity POS & Management API", version="1.0.0")
+
+
+@app.exception_handler(pyodbc.Error)
+async def pyodbc_exception_handler(request: Request, exc: pyodbc.Error):
+    message, suggested_status = clean_db_error_message(exc)
+    return JSONResponse(status_code=suggested_status, content={"detail": message})
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    detail = exc.detail
+    if isinstance(detail, str):
+        cleaned_msg, _ = clean_db_error_message(detail)
+        detail = cleaned_msg
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": detail},
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    message, suggested_status = clean_db_error_message(exc)
+    return JSONResponse(status_code=suggested_status, content={"detail": message})
 
 # ... (Middleware stays same)
 app.add_middleware(
@@ -40,6 +68,7 @@ app.include_router(license_control.router, prefix="/ctrl", tags=["License Contro
 app.include_router(recipes.router, prefix="/recipes", tags=["Recipes"])
 app.include_router(discounts.router)
 app.include_router(updates.router)
+app.include_router(integrations.router)
 
 # Alias / Compatibility router for Flutter Mobile POS client (/sales/invoice)
 sales_compat_router = APIRouter(prefix="/sales", tags=["Sales Invoices Compatible"])

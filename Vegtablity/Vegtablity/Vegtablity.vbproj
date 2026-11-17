@@ -342,6 +342,8 @@
     <Compile Include="Helpers\BooleanInverterConverter.vb" />
     <Compile Include="Helpers\ReportExporter.vb" />
     <Compile Include="Helpers\StoredProcedures.vb" />
+    <Compile Include="Helpers\DatabaseErrorHelper.vb" />
+    <Compile Include="Helpers\SnackbarService.vb" />
     <Compile Include="Helpers\ValidationHelper.vb" />
     <Compile Include="Helpers\NullToVisibilityConverter.vb" />
     <Compile Include="Helpers\UIValueConverters.vb" />
@@ -542,6 +544,32 @@
     </Compile>
     <Compile Include="Views\HRSettingsPage.xaml.vb">
       <DependentUpon>HRSettingsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Models\Integrations\IntegrationModels.vb" />
+    <Compile Include="Services\Integrations\IPaymentGatewayProvider.vb" />
+    <Compile Include="Services\Integrations\TapPaymentProvider.vb" />
+    <Compile Include="Services\Integrations\MyFatoorahProvider.vb" />
+    <Compile Include="Services\Integrations\UPaymentsProvider.vb" />
+    <Compile Include="Services\Integrations\TalabatPlatformProvider.vb" />
+    <Compile Include="Services\Integrations\PaymentQrGeneratorService.vb" />
+    <Compile Include="Services\Integrations\IntegrationManagerService.vb" />
+    <Compile Include="ViewModels\Integrations\IntegrationSettingsViewModel.vb" />
+    <Compile Include="ViewModels\Integrations\PaymentGatewayInvoicesViewModel.vb" />
+    <Compile Include="ViewModels\Sales\TalabatOrdersViewModel.vb" />
+    <Compile Include="Controls\PaymentGatewayLinkRowControl.xaml.vb">
+      <DependentUpon>PaymentGatewayLinkRowControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Integrations\IntegrationSettingsPage.xaml.vb">
+      <DependentUpon>IntegrationSettingsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Integrations\PaymentGatewayInvoicesPage.xaml.vb">
+      <DependentUpon>PaymentGatewayInvoicesPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Integrations\SendPaymentLinkDialog.xaml.vb">
+      <DependentUpon>SendPaymentLinkDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Sales\TalabatOrdersPage.xaml.vb">
+      <DependentUpon>TalabatOrdersPage.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
@@ -754,6 +782,26 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\HRSettingsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\PaymentGatewayLinkRowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Integrations\IntegrationSettingsPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Integrations\PaymentGatewayInvoicesPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Integrations\SendPaymentLinkDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\Sales\TalabatOrdersPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

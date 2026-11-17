@@ -24,6 +24,12 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
   bool _enableDailyOrders = false;
   bool _enableSalesDiscounts = false;
   bool _enableHR = false;
+  bool _enableTapIntegration = false;
+  bool _enableMyFatoorahIntegration = false;
+  bool _enableUPaymentsIntegration = false;
+  bool _enableTalabatIntegration = false;
+  bool _enableJahezIntegration = false;
+  bool _promptSendPaymentLinkOnSave = false;
   String? _lastSyncedDb;
 
 
@@ -70,6 +76,12 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
       _enableDailyOrders = settings['EnableDailyOrders'] == true || settings['EnableDailyOrders'] == 1 || settings['EnableDailyOrders'] == '1';
       _enableSalesDiscounts = settings['EnableSalesDiscounts'] == true || settings['EnableSalesDiscounts'] == 1 || settings['EnableSalesDiscounts'] == '1';
       _enableHR = settings['EnableHR'] == true || settings['EnableHR'] == 1 || settings['EnableHR'] == '1';
+      _enableTapIntegration = settings['EnableTapIntegration'] == true || settings['EnableTapIntegration'] == 1 || settings['EnableTapIntegration'] == '1';
+      _enableMyFatoorahIntegration = settings['EnableMyFatoorahIntegration'] == true || settings['EnableMyFatoorahIntegration'] == 1 || settings['EnableMyFatoorahIntegration'] == '1';
+      _enableUPaymentsIntegration = settings['EnableUPaymentsIntegration'] == true || settings['EnableUPaymentsIntegration'] == 1 || settings['EnableUPaymentsIntegration'] == '1';
+      _enableTalabatIntegration = settings['EnableTalabatIntegration'] == true || settings['EnableTalabatIntegration'] == 1 || settings['EnableTalabatIntegration'] == '1';
+      _enableJahezIntegration = settings['EnableJahezIntegration'] == true || settings['EnableJahezIntegration'] == 1 || settings['EnableJahezIntegration'] == '1';
+      _promptSendPaymentLinkOnSave = settings['PromptSendPaymentLinkOnSave'] == true || settings['PromptSendPaymentLinkOnSave'] == 1 || settings['PromptSendPaymentLinkOnSave'] == '1';
       _deliverySystemModeController.text = settings['DeliverySystemMode']?.toString() ?? '';
 
       _lastSyncedDb = currentDb;
@@ -284,6 +296,90 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                                 value: _enableHR,
                                 onChanged: (val) => setState(() => _enableHR = val),
                               ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.greenAccent,
+                                title: const Text(
+                                  "تفعيل الربط مع بوابة الدفع Tap Payments (EnableTapIntegration)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إتاحة بوابة Tap في إعدادات الربط لإصدار روابط الدفع، باركود QR، واسترداد المبالغ",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableTapIntegration,
+                                onChanged: (val) => setState(() => _enableTapIntegration = val),
+                              ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.lightBlueAccent,
+                                title: const Text(
+                                  "تفعيل الربط مع بوابة الدفع MyFatoorah (EnableMyFatoorahIntegration)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إتاحة بوابة ماي فاتورة (MyFatoorah v2) لإصدار روابط الدفع والتحصيل الآلي",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableMyFatoorahIntegration,
+                                onChanged: (val) => setState(() => _enableMyFatoorahIntegration = val),
+                              ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.indigoAccent,
+                                title: const Text(
+                                  "تفعيل الربط مع بوابة الدفع UPayments (EnableUPaymentsIntegration)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إتاحة بوابة UPayments (KNET / Credit Cards) وإصدار الروابط واسترداد المبالغ",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableUPaymentsIntegration,
+                                onChanged: (val) => setState(() => _enableUPaymentsIntegration = val),
+                              ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.deepOrangeAccent,
+                                title: const Text(
+                                  "تفعيل الربط مع منصة طلبات Talabat (EnableTalabatIntegration)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "تفعيل عميل المبيعات (Talabat) وشاشات استقبال وتنفيذ وطباعة طلبات Talabat في النظام وتطبيق POS",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableTalabatIntegration,
+                                onChanged: (val) => setState(() => _enableTalabatIntegration = val),
+                              ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.redAccent,
+                                title: const Text(
+                                  "تفعيل الربط مع منصة جاهز Jahez (EnableJahezIntegration)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إتاحة إعدادات الربط مع منصة توصيل الطلبات Jahez",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _enableJahezIntegration,
+                                onChanged: (val) => setState(() => _enableJahezIntegration = val),
+                              ),
+                              const Divider(color: Colors.white10),
+                              SwitchListTile(
+                                activeColor: Colors.amberAccent,
+                                title: const Text(
+                                  "اقتراح إرسال رابط دفع تلقائياً عند حفظ فاتورة آجلة (PromptSendPaymentLinkOnSave)",
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
+                                subtitle: const Text(
+                                  "إظهار خيار إرسال رابط دفع إلكتروني عبر واتساب وطباعة QR عند حفظ فاتورة غير مسددة",
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                value: _promptSendPaymentLinkOnSave,
+                                onChanged: (val) => setState(() => _promptSendPaymentLinkOnSave = val),
+                              ),
                               const SizedBox(height: 12),
                               DropdownButtonFormField<String>(
                                 value: ['direct', 'temp_order'].contains(_deliverySystemModeController.text.trim())
@@ -391,6 +487,12 @@ class _CompanySettingsScreenState extends State<CompanySettingsScreen> {
                             'EnableDailyOrders': _enableDailyOrders,
                             'EnableSalesDiscounts': _enableSalesDiscounts,
                             'EnableHR': _enableHR,
+                            'EnableTapIntegration': _enableTapIntegration,
+                            'EnableMyFatoorahIntegration': _enableMyFatoorahIntegration,
+                            'EnableUPaymentsIntegration': _enableUPaymentsIntegration,
+                            'EnableTalabatIntegration': _enableTalabatIntegration,
+                            'EnableJahezIntegration': _enableJahezIntegration,
+                            'PromptSendPaymentLinkOnSave': _promptSendPaymentLinkOnSave,
                             'DeliverySystemMode': _deliverySystemModeController.text.trim(),
                           };
 

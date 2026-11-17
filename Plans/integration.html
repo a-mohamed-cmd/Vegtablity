@@ -372,6 +372,7 @@
             <li><a href="#sec-10">القسم 10: الإضافات الـ 6 القابلة للتخصيص والباركود (58/80/WPF) ⚙️</a></li>
             <li><a href="#sec-11">القسم 11: هندسة الـ Triggers لتخفيف الضغط ⚡</a></li>
             <li><a href="#sec-12">القسم 12: الفهرس المرجعي للـ SPs والـ Triggers والـ Classes</a></li>
+            <li><a href="#sec-13">القسم 13: توثيق ما تم تنفيذه فعلياً + مبادئ العمل المعمارية المعتمدة ✅</a></li>
         </ul>
     </nav>
 
@@ -381,8 +382,17 @@
             <h2><span class="sec-num">القسم 1</span> نظرة عامة وقواعد التنفيذ المرحلي (بوابةً ببوابة) دون المساس بالعمليات الحالية</h2>
             <p>تهدف هذه الخطة إلى بناء منظومة ربط مرنة ومعزولة تماماً عن الكود الأساسي للنظام، بحيث يتم التنفيذ <strong>بوابةً ببوابة (Gateway by Gateway)</strong> بناءً على التعليمات والكتيبات التي سيتم تزويدنا بها لكل بوابة جنباً إلى جنب مع الخبرة الفنية بأفضل ممارسات تلك البوابة، ودون أي تغيير أو تأثير يعطل أو يلغي أياً من العمليات الحالية في النظام.</p>
             <div class="alert">
-                <strong>🎯 القواعد الذهبية المعتمدة في هذه الخطة:</strong>
+                <strong>🎯 القواعد الذهبية ومبادئ العمل المعمارية المعتمدة في المشروع:</strong>
                 <ul>
+                    <li><strong>مبدأ معمارية MVVM الشامل على مستوى كافة اللغات وحتى في SQL:</strong>
+                        <ul>
+                            <li><code>View</code> (XAML / Flutter UI): مسؤولة عن العرض المرئي والحركات (Animations) والإشعارات السفلية (<code>SnapMessage / Snackbar</code>) فقط دون أي منطق أعمال أو استعلامات.</li>
+                            <li><code>ViewModel</code> (VB.NET ViewModels / Flutter Providers): تدير الحالة والأوامر (<code>RelayCommand</code>) والفلترة والترقيم وتتواصل مع طبقة الخدمات.</li>
+                            <li><code>Services &amp; Models</code>: تستدعي الإجراءات المخزنة (<code>Stored Procedures</code>) فقط عبر <code>StoredProcedures.vb</code> دون أي استعلامات SQL نصية مباشرة (No Inline SQL).</li>
+                            <li><code>SQL Layer (Stored Procedures &amp; Triggers)</code>: تفصل بين إجراءات الجلب والحفظ والترقيم (<code>Pagination</code>) وبين القيود المحاسبية التلقائية الذرية المحمية بـ <code>Transaction / Savepoint</code> ورسائل الإرشاد <code>RAISERROR</code>.</li>
+                        </ul>
+                    </li>
+                    <li><strong>منع التعديل المباشر على قاعدة البيانات — المصدر الوحيد للأكواد هو <code>SQLVegtablity.sql</code>:</strong> جميع الأكواد الخاصة بقاعدة البيانات (جداول، إجراءات مخزنة، Triggers) تتم حصراً وتُوثق داخل الملف المرجعي <code>d:\VB.NET\backup\Vegtablity\Vegtablity\Vegtablity\SQL\SQLVegtablity.sql</code>، ويُمنع تنفيذ أي تعديل مباشر أو استعلامات نصية خارج هذا الملف.</li>
                     <li><strong>التنفيذ المرحلي بوابةً ببوابة (Phased Per-Gateway Rollout):</strong> عند البدء في الإنشاء، يتم بناء واختبار كل بوابة على حدة بالكامل (قاعدة بيانات + API + WPF + Flutter) قبل الانتقال للبوابة التالية.</li>
                     <li><strong>العزل التام (Single Responsibility &amp; Strategy Pattern):</strong> كل بوابة دفع أو بوابة بيع لها <code>Class</code> مستقل خاص بها يرث من واجهة موحدة <code>IPaymentGatewayProvider</code> أو <code>IDeliveryPlatformProvider</code>.</li>
                     <li><strong>فصل التفعيل عن البيانات التفصيلية:</strong> جدول <code>[Settings].[CompanySettings]</code> يحتفظ فقط بأعمدة التفعيل وإيقاف التفعيل (<code>BIT</code>)، بينما تُحفظ أرقام الحسابات المحاسبية و<code>PartnerID</code> ومفاتيح الربط والإضافات الـ 6 لكل بوابة في جدول منفصل بشكل عرضي (صف مستقل لكل بوابة <code>[Settings].[IntegrationProviders]</code>).</li>
@@ -2087,17 +2097,30 @@ Vegtablity_App/lib/
                 <div class="provider-box amber">
                     <div class="provider-title">
                         <span>4. <code>[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]</code></span>
-                        <span class="tag">AFTER UPDATE (تسوية المنفرد والمجمع ⭐)</span>
+                        <span class="tag">AFTER UPDATE (تسوية المنفرد والمجمع + العمولة الفورية ⭐)</span>
                     </div>
                     <p><strong>الجدول:</strong> <code>[Sales].[InvoicePaymentLinks]</code></p>
                     <ul>
-                        <li><strong>شرط الحماية الصارم:</strong> <code>IF NOT UPDATE(PaymentStatus) RETURN;</code> ويعمل حصراً للصفوف التي تحولت من <code>d.PaymentStatus &lt;&gt; 'Paid'</code> إلى <code>i.PaymentStatus = 'Paid'</code> بشرط <code>i.JournalEntryNo IS NULL</code>.</li>
-                        <li><strong>المهام التلقائية داخل الترانزاكشن:</strong>
+                        <li><strong>شرط الحماية الصارم:</strong> <code>IF NOT UPDATE(LinkStatus) RETURN;</code> ويعمل حصراً للصفوف التي تحولت من <code>d.LinkStatus &lt;&gt; 'Paid'</code> إلى <code>i.LinkStatus = 'Paid'</code> بشرط <code>i.JournalEntryNo IS NULL</code>.</li>
+                        <li><strong>إدارة الـ Transaction والـ Savepoint ورسائل الخطأ الإرشادية:</strong>
+                            <ul>
+                                <li>محمي بالكامل بـ <code>@TranCounter = @@TRANCOUNT</code> مع <code>SAVE TRANSACTION</code> / <code>BEGIN TRANSACTION</code> و<code>COMMIT</code>.</li>
+                                <li>في حال وجود أي نقص في الحسابات أو البيانات، يتم التراجع (<code>ROLLBACK</code>) وإطلاق <code>RAISERROR</code> برسالة عربية واضحة تُعرض للمستخدم في <code>SnapMessage</code> أسفل شاشة روابط الدفع لتوضيح سبب إيقاف العملية.</li>
+                            </ul>
+                        </li>
+                        <li><strong>أولوية تحديد الحساب الدائن (<code>@CreditAccountID</code>) في قيد التحصيل:</strong>
                             <ol>
-                                <li>تحديث المبلغ المسدد والمتبقي للفاتورة المفردة (أو لجميع الفواتير المربوطة في <code>[Sales].[InvoicePaymentLinkAllocations]</code> إذا كان الرابط مجمعاً <code>IsConsolidated = 1</code>).</li>
-                                <li>توليد قيد التحصيل في <code>[Accounting].[JournalEntries]</code> في حساب البوابة (تحت الأب <code>AccountID = 10</code>).</li>
-                                <li>إذا كانت الإضافة رقم 3 (<code>EnableAutoCommissionEntry = 1</code>) مفعلة بتوقيت <code>OnLinkPaid</code>: يولّد قيد عمولة البوابة آلياً إلى حساب <code>CommissionExpenseAccountID</code> ويحفظ رقم القيد في <code>JournalEntryNo</code>.</li>
+                                <li><strong>الأولوية (1):</strong> الحساب الدائن المخصص في إعدادات البوابة (<code>DefaultCreditAccountID</code>).</li>
+                                <li><strong>الأولوية (2):</strong> حساب العميل المسجل (<code>Partner.AccountID</code>) المرتبط بالرابط أو الفاتورة (<code>ISNULL(i.PartnerID, inv.PartnerID)</code>).</li>
+                                <li><strong>الأولوية (3 - Fallback للعميل غير المسجل / النقدي):</strong> حساب <strong><code>1201 - مبيعات مباشره (AccountID = 13)</code></strong> من شجرة الحسابات.</li>
                             </ol>
+                        </li>
+                        <li><strong>تفاصيل القيد المحاسبي الفوري (مع إثبات مصروف عمولة البوابة في كل قيد تحصيل):</strong>
+                            <ul>
+                                <li><strong>مدين (1):</strong> حساب بوابة الدفع (<code>LinkedAccountID</code>) بالصافي <code>(@Amount - @FeeAmount)</code>.</li>
+                                <li><strong>مدين (2):</strong> حساب مصروف عمولات البوابة (<code>CommissionAccountID</code>) بقيمة العمولة <code>(@FeeAmount)</code> (مع كل قيد تحصيل وليس مجمعاً عند إغلاق الوردية).</li>
+                                <li><strong>دائن:</strong> حساب العميل (أو حساب <code>1201 - مبيعات مباشره</code>) بإجمالي مبلغ الرابط <code>(@Amount)</code>.</li>
+                            </ul>
                         </li>
                     </ul>
                 </div>
@@ -2110,11 +2133,12 @@ Vegtablity_App/lib/
                     </div>
                     <p><strong>الجدول:</strong> <code>[Sales].[InvoicePaymentLinks]</code></p>
                     <ul>
-                        <li><strong>شرط الحماية الصارم:</strong> <code>IF NOT UPDATE(RefundedAmount) RETURN;</code> ويعمل فقط عندما يزيد <code>i.RefundedAmount &gt; d.RefundedAmount</code> وتكون حالة الرابط <code>Refunded</code> أو <code>PartiallyRefunded</code>.</li>
-                        <li><strong>المهام التلقائية داخل الترانزاكشن:</strong>
+                        <li><strong>شرط الحماية الصارم:</strong> <code>IF NOT (UPDATE(LinkStatus) OR UPDATE(RefundedAmount)) RETURN;</code> ويعمل فقط عندما يزيد <code>i.RefundedAmount &gt; d.RefundedAmount</code> وتكون حالة الرابط <code>Refunded</code> أو <code>PartiallyRefunded</code>.</li>
+                        <li><strong>المهام التلقائية داخل الترانزاكشن (مع رسائل الإرشاد <code>RAISERROR</code>):</strong>
                             <ol>
-                                <li>حساب فرق المبلغ المسترجع الجديد <code>@DeltaRefund = i.RefundedAmount - ISNULL(d.RefundedAmount, 0)</code>.</li>
-                                <li>إذا كان خيار <code>AutoPostRefundJournalEntry = 1</code> مفعلاً للبوابة: ينشئ تلقائياً <strong>قيد استرجاع عكسي</strong> في <code>[Accounting].[JournalEntries]</code> (مدين: حساب العميل/المبيعات، دائن: حساب البوابة تحت الأب <code>AccountID = 10</code>) ويحفظ رقم القيد في <code>RefundJournalEntryNo</code>.</li>
+                                <li>حساب فرق المبلغ المسترجع الجديد <code>@DeltaRefund = i.RefundedAmount - ISNULL(d.RefundedAmount, 0)</code> وتخفيض <code>PaidAmount</code> وزيادة <code>Remainder</code> في الفاتورة.</li>
+                                <li>تحديد <strong>الطرف المدين لقيد الاسترداد (<code>@DebitAccountID</code>)</strong> بنفس الأولوية: (1) <code>RefundDebitAccountID</code> &larr; (2) <code>DefaultCreditAccountID</code> &larr; (3) <code>Partner.AccountID</code> &larr; (4) حساب <strong><code>1201 - مبيعات مباشره (AccountID = 13)</code></strong>.</li>
+                                <li>تحديد <strong>الطرف الدائن لقيد الاسترداد (<code>@FinalRefundCreditID</code>)</strong>: <code>ISNULL(RefundCreditAccountID, LinkedAccountID)</code>.</li>
                             </ol>
                         </li>
                     </ul>
@@ -2241,6 +2265,86 @@ Vegtablity_App/lib/
                 <strong>🗣️ جاهزون للانتقال إلى البوابة التالية:</strong>
                 تم تحديث الخطة بقاعدة <strong>عدم الحفظ إلا بعد نجاح اختبار الاتصال لكل بوابة على حدة</strong>، وإضافة شاشة طلبات <strong>Talabat</strong> أسفل قسم المبيعات في WPF وفي إعدادات وشاشات Flutter App. بانتظار رفع كتيب أو رابط البوابة التالية!
             </div>
+        </section>
+
+        <!-- القسم 13: سجل التنفيذ الفعلي والتحسينات المعمارية والمحاسبية -->
+        <section id="sec-13" class="card" style="border-color: var(--primary);">
+            <h2><span class="sec-num">القسم 13</span> ✅ توثيق ما تم تنفيذه فعلياً في النظام والقيود المحاسبية ومبادئ العمل المعمارية</h2>
+            <p>يوثق هذا القسم كافة التعديلات والتحسينات التي تم تنفيذها واعتمادها في قاعدة البيانات (<code>SQLVegtablity.sql</code>) وتطبيق سطح المكتب (<code>WPF - VB.NET</code>):</p>
+
+            <h3>أولاً: مبادئ العمل المعمارية الإلزامية على مستوى المشروع</h3>
+            <div class="alert">
+                <ul>
+                    <li><strong>تطبيق معمارية MVVM بالكامل (حتى على مستوى SQL):</strong> فصل تام بين طبقة العرض (<code>View</code>)، ومنطق العرض (<code>ViewModel</code>)، وطبقة الخدمات (<code>Services</code> التي تستدعي الإجراءات المخزنة حصراً عبر <code>StoredProcedures.vb</code>)، وطبقة قاعدة البيانات (<code>Stored Procedures &amp; Triggers</code>).</li>
+                    <li><strong>حظر التعديل المباشر على قاعدة البيانات أو كتابة استعلامات نصية داخل الكود:</strong> أي كود خاص بقاعدة البيانات (جداول، إجراءات مخزنة، Triggers) يُكتب ويُحفظ حصراً في الملف المرجعي <code>Vegtablity\SQL\SQLVegtablity.sql</code>.</li>
+                </ul>
+            </div>
+
+            <h3>ثانياً: تحسينات شاشة طلبات وفواتير بوابات الدفع في WPF (<code>PaymentGatewayInvoicesPage</code>)</h3>
+            <div class="grid-2">
+                <div class="provider-box">
+                    <div class="provider-title">
+                        <span>1. واجهة إصدار الروابط (مفرد / مجمع) والعملاء</span>
+                        <span class="tag">SearchableDropdown + Amount Inputs</span>
+                    </div>
+                    <ul>
+                        <li><strong>اختيار العميل (مسجل أو غير مسجل):</strong> استبدال حقل العميل بأداة المشروع الموحدة <code>Controls\SearchableDropdown</code> المحملة ببيانات العملاء، مع إمكانية كتابة اسم عميل غير مسجل، وعند اختيار عميل مسجل يتم تعبئة رقم الهاتف تلقائياً.</li>
+                        <li><strong>أدوات إدخال المبالغ الموحدة:</strong> استخدام نفس نمط وأدوات إدخال المبالغ العشرية المعتمدة في باقي المشروع (<code>ModernTextBoxStyle</code>, <code>StringFormat={}{0:N3}</code>, <code>DecimalBox_PreviewTextInput</code>) مع الجلب التلقائي لبيانات الفاتورة عبر الإجراء المخزن <code>[Sales].[sp_InvoicePaymentLink_GetInvoiceQuickInfo]</code>.</li>
+                        <li><strong>إخفاء أزرار طباعة 58mm و80mm في WPF:</strong> تم إخفاء خيارات وأزرار طباعة <code>58mm</code> و<code>80mm</code> من شاشة WPF (<code>Visibility="Collapsed"</code>) مع الاحتفاظ بالكود البرمجي الخاص بها كاملاً.</li>
+                    </ul>
+                </div>
+
+                <div class="provider-box blue">
+                    <div class="provider-title">
+                        <span>2. الفلترة، الترقيم السريع (Pagination)، وحركات الكروت</span>
+                        <span class="tag">Server-Side Pagination + Animations</span>
+                    </div>
+                    <ul>
+                        <li><strong>الترقيم على مستوى السيرفر (Server-Side Pagination):</strong> تقسيم صفحة الروابط والإجراء المخزن <code>[Sales].[sp_InvoicePaymentLink_GetFiltered]</code> إلى صفحات (<code>@PageNumber</code>, <code>@PageSize</code>) مع حساب مجاميع الـ KPIs وإجمالي السجلات لضمان أقصى سرعة في التحميل.</li>
+                        <li><strong>توحيد الفلترة والأزرار:</strong> الاكتفاء بقائمة <code>ComboBox</code> لفلترة حالات الروابط وإزالة أزرار الفلترة المكررة وأزرار الإجراءات العلوية المكررة، مع إبقاء أزرار الإجراءات داخل كارت كل فاتورة (<code>PaymentGatewayLinkRowControl</code>).</li>
+                        <li><strong>طي وفتح الكروت مع Animation + SnapMessage:</strong> إضافة ميزة غلق وفتح كارت إصدار الرابط وكارت البحث والفلترة بحركة انسيابية (<code>CubicEase Height &amp; Opacity Animation</code>) لتوسيع جدول البيانات، مع شريط إشعارات سفلي <code>SnapMessage (SnackbarBorder)</code> لعرض رسائل الإرشاد وأسباب إيقاف العمليات من الـ Trigger.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>ثالثاً: الدورة المحاسبية المعتمدة لفواتير وروابط بوابات الدفع (منع ازدواجية القيود)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>المرحلة</th>
+                        <th>الإجراء البرمجي / المحاسبي</th>
+                        <th>تفاصيل القيد المحاسبي في <code>[Accounting].[JournalEntries]</code></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1. إنشاء وترحيل فاتورة مبيعات بطريقة تحصيل بوابة دفع (مثل Tap)</strong></td>
+                        <td>تُحفظ الفاتورة بـ <code>PaidAmount = 0</code> و<code>Remainder = NetAmount</code> بانتظار سداد الرابط (دون المساس بـ <code>trg_Invoice_Post</code>)، مع فتح نافذة إرسال الرابط تلقائياً بالمبلغ المطلوب.</td>
+                        <td>
+                            <strong>قيد المبيعات فقط (دون قيد تحصيل مبكر مكرر):</strong><br/>
+                            • <strong>من حـ/</strong> العميل (أو حساب <code>1201 - مبيعات مباشره</code> إذا لم يوجد عميل)<br/>
+                            • <strong>إلى حـ/</strong> المبيعات
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>2. عند تحصيل الرابط فعلياً وتحول حالته إلى <code>Paid</code></strong></td>
+                        <td>ينطلق <code>[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]</code> داخل Transaction محمية لتسديد الفاتورة (أو الفواتير المجمعة) وإثبات قيد التحصيل وعمولة البوابة معاً.</td>
+                        <td>
+                            • <strong>من حـ/</strong> بوابة الدفع (<code>LinkedAccountID</code>) &larr; بالصافي <code>(@Amount - @FeeAmount)</code><br/>
+                            • <strong>من حـ/</strong> مصروف عمولات البوابة (<code>CommissionAccountID</code>) &larr; بقيمة العمولة <code>(@FeeAmount)</code><br/>
+                            • <strong>إلى حـ/</strong> الحساب الدائن المخصص أو حساب العميل أو حساب <code>1201 - مبيعات مباشره (AccountID = 13)</code> &larr; بإجمالي المبلغ <code>(@Amount)</code>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>3. عند استرداد المبلغ (<code>Refunded</code> / <code>PartiallyRefunded</code>)</strong></td>
+                        <td>ينطلق <code>[Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]</code> داخل Transaction محمية لعكس المبلغ المسدد على الفاتورة وإنشاء قيد الاسترداد العكسي.</td>
+                        <td>
+                            • <strong>من حـ/</strong> حساب مدين الاسترداد المخصص أو حساب العميل أو حساب <code>1201 - مبيعات مباشره (AccountID = 13)</code> &larr; بقيمة <code>@DeltaRefund</code><br/>
+                            • <strong>إلى حـ/</strong> حساب دائن الاسترداد المخصص أو حساب بوابة الدفع (<code>LinkedAccountID</code>) &larr; بقيمة <code>@DeltaRefund</code>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </section>
     </main>
 </div>

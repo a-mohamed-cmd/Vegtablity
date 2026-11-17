@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../core/localization/app_localizations.dart';
 import '../models/sync_models.dart';
 import '../providers/pos_provider.dart';
 import '../providers/voucher_provider.dart';
@@ -18,12 +19,27 @@ class SyncCenterScreen extends StatefulWidget {
 class _SyncCenterScreenState extends State<SyncCenterScreen> {
   SyncCategoryType? _selectedCategoryFilter;
 
+  bool get _isAr => Localizations.localeOf(context).languageCode == 'ar';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<SyncViewModel>(context, listen: false).loadAllQueues();
+        final vm = Provider.of<SyncViewModel>(context, listen: false);
+        vm.setLocaleIsAr(_isAr, reload: false);
+        vm.loadAllQueues();
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isAr = _isAr;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<SyncViewModel>(context, listen: false).setLocaleIsAr(isAr);
       }
     });
   }
@@ -48,8 +64,8 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
       SnackBar(
         content: Text(
           ok
-              ? 'تم إرسال الوثيقة للطباعة مع علامة (غير معتمدة / لم تتم مزامنتها)'
-              : 'تعذر الطباعة، يرجى التحقق من اتصال الطابعة في الإعدادات',
+              ? context.tr('sync_print_sent')
+              : context.tr('sync_print_failed'),
         ),
         backgroundColor: ok ? Colors.teal.shade700 : Colors.red.shade700,
       ),
@@ -86,38 +102,36 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
-        appBar: AppBar(
-          title: const Text(
-            'مركز المزامنة والعمليات المعلقة',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          centerTitle: true,
-          foregroundColor: Colors.white,
-          flexibleSpace: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.teal, Colors.green],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              ),
-            ),
-          ),
-          actions: [
-            Consumer<SyncViewModel>(
-              builder: (context, syncVm, _) => IconButton(
-                tooltip: 'تحديث القائمة',
-                onPressed:
-                    syncVm.isSyncing ? null : () => syncVm.loadAllQueues(),
-                icon: const Icon(Icons.refresh_rounded),
-              ),
-            ),
-          ],
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FA),
+      appBar: AppBar(
+        title: Text(
+          context.tr('sync_center_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        body: Consumer<SyncViewModel>(
+        centerTitle: true,
+        foregroundColor: Colors.white,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.teal, Colors.green],
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+            ),
+          ),
+        ),
+        actions: [
+          Consumer<SyncViewModel>(
+            builder: (context, syncVm, _) => IconButton(
+              tooltip: context.tr('sync_refresh_list'),
+              onPressed:
+                  syncVm.isSyncing ? null : () => syncVm.loadAllQueues(),
+              icon: const Icon(Icons.refresh_rounded),
+            ),
+          ),
+        ],
+      ),
+      body: Consumer<SyncViewModel>(
           builder: (context, syncVm, _) {
             final displayedItems = _selectedCategoryFilter == null
                 ? syncVm.allPendingItems
@@ -164,8 +178,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
             );
           },
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildTopSummaryCard(BuildContext context, SyncViewModel syncVm) {
@@ -217,8 +230,10 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                 children: [
                   Text(
                     total > 0
-                        ? 'إجمالي العمليات بانتظار المزامنة: $total عملية'
-                        : 'جميع العمليات متزامنة بالكامل مع قاعدة البيانات',
+                        ? context
+                            .tr('sync_pending_total')
+                            .replaceAll('{count}', '$total')
+                        : context.tr('sync_all_synced'),
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -226,7 +241,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'يمكنك عرض تفاصيل أي عملية، طباعتها كوثيقة غير معتمدة، حذفها، أو مزامنتها',
+                    context.tr('sync_summary_hint'),
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
@@ -239,7 +254,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
               if (syncVm.lastSyncReport != null &&
                   syncVm.lastSyncReport!.results.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsetsDirectional.only(end: 8),
                   child: OutlinedButton.icon(
                     onPressed: () => SyncResultSummaryDialog.show(
                       context,
@@ -247,7 +262,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                     ),
                     icon: const Icon(Icons.assignment_turned_in_outlined,
                         size: 18),
-                    label: const Text('آخر تقرير مزامنة'),
+                    label: Text(context.tr('sync_last_report_btn')),
                   ),
                 ),
               ElevatedButton.icon(
@@ -271,9 +286,9 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                         }
                       },
                 icon: const Icon(Icons.sync_rounded),
-                label: const Text(
-                  'مزامنة الكل الآن',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                label: Text(
+                  context.tr('sync_all_now_btn'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -289,7 +304,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
       runSpacing: 10,
       children: [
         _buildFilterChipCard(
-          title: 'الكل',
+          title: context.tr('sync_cat_all'),
           count: syncVm.totalPendingCount,
           icon: Icons.all_inbox_rounded,
           color: Colors.teal,
@@ -297,7 +312,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
           onTap: () => setState(() => _selectedCategoryFilter = null),
         ),
         _buildFilterChipCard(
-          title: 'الفواتير',
+          title: context.tr('sync_cat_invoices'),
           count: syncVm.invoicesCount,
           icon: Icons.receipt_long_rounded,
           color: Colors.blue.shade700,
@@ -306,7 +321,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
               () => _selectedCategoryFilter = SyncCategoryType.invoice),
         ),
         _buildFilterChipCard(
-          title: 'السندات',
+          title: context.tr('sync_cat_vouchers'),
           count: syncVm.vouchersCount,
           icon: Icons.payments_rounded,
           color: Colors.purple.shade700,
@@ -315,7 +330,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
               () => _selectedCategoryFilter = SyncCategoryType.voucher),
         ),
         _buildFilterChipCard(
-          title: 'الهالك',
+          title: context.tr('sync_cat_wastages'),
           count: syncVm.wastagesCount,
           icon: Icons.delete_sweep_rounded,
           color: Colors.deepOrange.shade700,
@@ -324,7 +339,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
               () => _selectedCategoryFilter = SyncCategoryType.wastage),
         ),
         _buildFilterChipCard(
-          title: 'الجرد المخزني',
+          title: context.tr('sync_cat_stocktakes'),
           count: syncVm.stockTakesCount,
           icon: Icons.inventory_2_rounded,
           color: Colors.indigo.shade700,
@@ -412,11 +427,13 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            '${category.arabicTitle} ($count)',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.teal.shade900,
+          Expanded(
+            child: Text(
+              '${category.localizedTitle(_isAr)} ($count)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.teal.shade900,
+              ),
             ),
           ),
           ElevatedButton.icon(
@@ -437,7 +454,9 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                     }
                   },
             icon: const Icon(Icons.sync_rounded, size: 16),
-            label: Text('مزامنة كل ${category.shortTitle}'),
+            label: Text(
+              '${context.tr('sync_sync_all_cat_prefix')} ${category.localizedShortTitle(_isAr)}',
+            ),
           ),
         ],
       ),
@@ -535,7 +554,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                'غير معتمدة',
+                                context.tr('sync_badge_unapproved'),
                                 style: TextStyle(
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
@@ -565,7 +584,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'التاريخ: ${item.date}',
+                          '${context.tr('sync_date_prefix')} ${item.date}',
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontSize: 11,
@@ -585,9 +604,9 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                           color: Colors.teal.shade800,
                         ),
                       ),
-                      const Text(
-                        'الإجمالي',
-                        style: TextStyle(fontSize: 10, color: Colors.grey),
+                      Text(
+                        context.tr('sync_total_word'),
+                        style: const TextStyle(fontSize: 10, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -611,7 +630,7 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'سبب تعذر المزامنة السابقة: ${item.lastError}',
+                          '${context.tr('sync_prev_error_prefix')} ${item.lastError}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.red.shade900,
@@ -649,9 +668,9 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                         onPressed: () =>
                             _openRichDetailsSheet(context, syncVm, item),
                         icon: const Icon(Icons.visibility_outlined, size: 16),
-                        label: const Text(
-                          'عرض التفاصيل',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('sync_btn_details'),
+                          style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -670,9 +689,9 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                             ? null
                             : () => _handlePrintItem(context, syncVm, item),
                         icon: const Icon(Icons.print_rounded, size: 16),
-                        label: const Text(
-                          'طباعة (غير معتمدة)',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('sync_btn_print_unapproved'),
+                          style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -697,9 +716,9 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                             : () => _confirmDeleteItem(context, syncVm, item),
                         icon:
                             const Icon(Icons.delete_outline_rounded, size: 16),
-                        label: const Text(
-                          'حذف العملية',
-                          style: TextStyle(
+                        label: Text(
+                          context.tr('sync_btn_delete_op'),
+                          style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -732,8 +751,8 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
                             : const Icon(Icons.cloud_upload_rounded, size: 16),
                         label: Text(
                           isThisItemSyncing
-                              ? 'جاري المزامنة...'
-                              : 'مزامنة العملية',
+                              ? context.tr('sync_btn_syncing')
+                              : context.tr('sync_btn_sync_op'),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -766,13 +785,13 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
             color: Colors.green.shade400,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'لا توجد عمليات معلقة بانتظار المزامنة',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Text(
+            context.tr('sync_empty_title'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
-            'جميع الفواتير والسندات وعمليات الهالك والجرد محفوظة في قاعدة البيانات بنجاح.',
+            context.tr('sync_empty_sub'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
@@ -788,42 +807,39 @@ class _SyncCenterScreenState extends State<SyncCenterScreen> {
   ) {
     showDialog(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: const Row(
-            children: [
-              Icon(Icons.warning_amber_rounded, color: Colors.red),
-              SizedBox(width: 8),
-              Text('تأكيد حذف العملية المعلقة'),
-            ],
-          ),
-          content: Text(
-            'هل أنت متأكد من حذف "${item.title}" نهائياً من طابور المزامنة؟\nلن يتم إرسال هذه العملية إلى قاعدة البيانات.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                Navigator.pop(ctx);
-                await syncVm.deleteQueueItem(
-                  item,
-                  onQueuesUpdated: _notifyLegacyProviders,
-                );
-              },
-              child: const Text('حذف نهائي'),
-            ),
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(child: Text(context.tr('sync_del_title'))),
           ],
         ),
+        content: Text(
+          context.tr('sync_del_msg').replaceAll('{title}', item.title),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.tr('sync_cancel_btn')),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await syncVm.deleteQueueItem(
+                item,
+                onQueuesUpdated: _notifyLegacyProviders,
+              );
+            },
+            child: Text(context.tr('sync_del_confirm_btn')),
+          ),
+        ],
       ),
     );
   }

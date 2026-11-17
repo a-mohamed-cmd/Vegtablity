@@ -97,15 +97,6 @@ Namespace Services
             Return sb.ToString()
         End Function
 
-        Public Sub DeleteInvoice(invID As Integer)
-            Using conn As IDbConnection = _dbHelper.GetConnection()
-                conn.Execute(
-                    Helpers.StoredProcedures.SP_INVOICE_DELETE,
-                    New With {.InvID = invID},
-                    commandType:=CommandType.StoredProcedure)
-            End Using
-        End Sub
-
         ''' <summary>Returns paged filtered invoice list plus total count for the dashboard.</summary>
         Public Function GetFilteredInvoices(
                 Optional invType As String = Nothing,
@@ -227,6 +218,18 @@ Namespace Services
             Using conn As IDbConnection = _dbHelper.GetConnection()
                 conn.Execute(
                     Helpers.StoredProcedures.SP_INVOICE_UNPOST,
+                    New With {.InvID = invID, .UserID = userID},
+                    commandType:=CommandType.StoredProcedure)
+            End Using
+        End Sub
+
+        ''' <summary>
+        ''' حذف فاتورة غير مرحّلة بناءً على رقم InvID مع تمرير رقم المستخدم للتحقق من الصلاحية
+        ''' </summary>
+        Public Sub DeleteInvoice(invID As Integer, userID As Integer)
+            Using conn As IDbConnection = _dbHelper.GetConnection()
+                conn.Execute(
+                    Helpers.StoredProcedures.SP_INVOICE_DELETE_BY_ID,
                     New With {.InvID = invID, .UserID = userID},
                     commandType:=CommandType.StoredProcedure)
             End Using

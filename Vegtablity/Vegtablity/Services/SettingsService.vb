@@ -34,7 +34,13 @@ Namespace Services
                         .EnableDailyOrders = info.EnableDailyOrders,
                         .DeliverySystemMode = info.DeliverySystemMode,
                         .EnableSalesDiscounts = info.EnableSalesDiscounts,
-                        .EnableHR = info.EnableHR
+                        .EnableHR = info.EnableHR,
+                        .EnableTapIntegration = info.EnableTapIntegration,
+                        .EnableMyFatoorahIntegration = info.EnableMyFatoorahIntegration,
+                        .EnableUPaymentsIntegration = info.EnableUPaymentsIntegration,
+                        .EnableTalabatIntegration = info.EnableTalabatIntegration,
+                        .EnableJahezIntegration = info.EnableJahezIntegration,
+                        .PromptSendPaymentLinkOnSave = info.PromptSendPaymentLinkOnSave
                     },
                     commandType:=CommandType.StoredProcedure
                 )

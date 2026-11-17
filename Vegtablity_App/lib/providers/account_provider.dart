@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/utils/app_snackbar.dart';
 import '../services/api_service.dart';
 
 class AccountProvider extends ChangeNotifier {
@@ -37,7 +38,7 @@ class AccountProvider extends ChangeNotifier {
         _errorMessage = "خطأ في جلب حسابات الإيرادات";
       }
     } catch (e) {
-      _errorMessage = "تعذر الاتصال بالخادم: $e";
+      _errorMessage = DbErrorHelper.format(e);
     }
 
     _isLoadingRevenues = false;
@@ -57,7 +58,7 @@ class AccountProvider extends ChangeNotifier {
         _errorMessage = "خطأ في جلب حسابات المصروفات";
       }
     } catch (e) {
-      _errorMessage = "تعذر الاتصال بالخادم: $e";
+      _errorMessage = DbErrorHelper.format(e);
     }
 
     _isLoadingExpenses = false;

@@ -201,6 +201,18 @@ class InvoicePrintDesigner {
       if (remainder > 0.001) {
         await SunmiPrinter.printText(isArabic ? 'المتبقي آجل: ${PrinterBase.formatCurrency(remainder)} $cSymbol' : 'Balance Due: ${PrinterBase.formatCurrency(remainder)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
       }
+      final String paymentUrl = (invoice['PaymentUrl'] ?? invoice['payment_url'] ?? '').toString().trim();
+      final bool allowPrintQr = invoice['AllowPrintQr'] != false;
+      if (paymentUrl.isNotEmpty && allowPrintQr) {
+        await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+        await SunmiPrinter.printText(isArabic ? 'امسح رمز QR للدفع الإلكتروني الآمن' : 'Scan QR Code to Pay Online', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+        try {
+          await SunmiPrinter.printQRCode(paymentUrl, style: SunmiQrcodeStyle(qrcodeSize: paperSize == 58 ? 4 : 6, align: SunmiPrintAlign.CENTER));
+        } catch (_) {}
+        await SunmiPrinter.printText(paymentUrl, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      }
+      if (false) {
+      }
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       if (invoice['is_offline_unapproved'] == true) {
         await SunmiPrinter.printText(isArabic ? '*** تنبيه: هذه الوثيقة غير معتمدة ولم تتم مزامنتها ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DOCUMENT ***', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
@@ -377,6 +389,17 @@ class InvoicePrintDesigner {
     bytes.addAll(isArabic ? 'إجمالي المدفوع: ${PrinterBase.formatCurrency(paidAmount)} $cSymbol\n'.codeUnits : 'Total Paid: ${PrinterBase.formatCurrency(paidAmount)} $cSymbol\n'.codeUnits);
     if (remainder > 0.001) {
       bytes.addAll(isArabic ? 'المتبقي آجل: ${PrinterBase.formatCurrency(remainder)} $cSymbol\n'.codeUnits : 'Balance Due: ${PrinterBase.formatCurrency(remainder)} $cSymbol\n'.codeUnits);
+    }
+    final String paymentUrl = (invoice['PaymentUrl'] ?? invoice['payment_url'] ?? '').toString().trim();
+    final bool allowPrintQr = invoice['AllowPrintQr'] != false;
+    if (paymentUrl.isNotEmpty && allowPrintQr) {
+      bytes.addAll('$dSep\n'.codeUnits);
+      bytes.addAll([0x1B, 0x61, 0x01]);
+      bytes.addAll(isArabic ? 'امسح رمز QR للدفع الإلكتروني الآمن\n'.codeUnits : 'Scan QR Code to Pay Online\n'.codeUnits);
+      bytes.addAll(PrinterBase.buildEscPosQrCodeBytes(paymentUrl, moduleSize: paperSize == 58 ? 4 : 6));
+      bytes.addAll('$paymentUrl\n'.codeUnits);
+    }
+    if (false) {
     }
 
     bytes.addAll('$sep\n'.codeUnits);
@@ -646,6 +669,21 @@ class InvoicePrintDesigner {
       addText(isArabic ? '*** تنبيه: هذه الفاتورة غير معتمدة ولم تتم مزامنتها بعد ***' : '*** NOTICE: UNAPPROVED & UNSYNCED DRAFT ***', bold: true, fontSize: bodySize, align: ui.TextAlign.center);
       addDivider();
     }
+    final String canvasPaymentUrl = (invoice['PaymentUrl'] ?? invoice['payment_url'] ?? '').toString().trim();
+    final bool canvasAllowPrintQr = invoice['AllowPrintQr'] != false;
+    final bool canvasHasQrFooter = canvasPaymentUrl.isNotEmpty && canvasAllowPrintQr;
+
+    if (canvasHasQrFooter) {
+      addDivider(dashed: true);
+      addText(
+        isArabic ? 'امسح رمز QR للدفع الإلكتروني الآمن' : 'Scan QR Code to Pay Online',
+        bold: true,
+        fontSize: bodySize,
+        align: ui.TextAlign.center,
+      );
+      currentY += 6.0;
+    }
+
     addText(isArabic ? 'شكراً لزيارتكم! طُبعت عبر نظام POS' : 'Thank you for your visit! Printed via POS System', fontSize: bodySize, align: ui.TextAlign.center);
     addDivider();
     currentY += 15.0;
@@ -675,6 +713,28 @@ class InvoicePrintDesigner {
 
     final ByteData? byteData = await renderedImage.toByteData(format: ui.ImageByteFormat.rawRgba);
     if (byteData == null) return [];
+
+    if (canvasHasQrFooter) {
+      final List<int> rasterBytes = PrinterBase.convertRgbaToRasterBytes(
+        byteData.buffer.asUint8List(),
+        canvasWidth,
+        finalHeight,
+        cutPaper: false,
+      );
+      final List<int> qrBytes = PrinterBase.buildEscPosQrCodeBytes(
+        canvasPaymentUrl,
+        moduleSize: paperSize == 58 ? 4 : 6,
+      );
+      return [
+        ...PrinterBase.getDrawerKickBytes(),
+        ...rasterBytes,
+        ...qrBytes,
+        0x1B, 0x61, 0x01,
+        ...('$canvasPaymentUrl\n').codeUnits,
+        0x1B, 0x64, 0x04,
+        0x1D, 0x56, 0x42, 0x00,
+      ];
+    }
 
     final List<int> rasterBytes = PrinterBase.convertRgbaToRasterBytes(byteData.buffer.asUint8List(), canvasWidth, finalHeight);
     return [...PrinterBase.getDrawerKickBytes(), ...rasterBytes];

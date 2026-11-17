@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/localization/app_localizations.dart';
 import '../models/sync_models.dart';
 
 class OfflineOperationDetailsSheet extends StatefulWidget {
@@ -26,14 +27,11 @@ class OfflineOperationDetailsSheet extends StatefulWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: OfflineOperationDetailsSheet(
-          item: item,
-          onPrint: onPrint,
-          onSyncSingle: onSyncSingle,
-          onDelete: onDelete,
-        ),
+      builder: (_) => OfflineOperationDetailsSheet(
+        item: item,
+        onPrint: onPrint,
+        onSyncSingle: onSyncSingle,
+        onDelete: onDelete,
       ),
     );
   }
@@ -137,16 +135,16 @@ class _OfflineOperationDetailsSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'وثيقة غير معتمدة (لم تتم مزامنتها مع الخادم)',
-                        style: TextStyle(
+                        context.tr('sync_sheet_warn_title'),
+                        style: const TextStyle(
                           color: Colors.amberAccent,
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Text(
-                        'هذه العملية محفوظة محلياً على الجهاز فقط لحين توفر الاتصال بالإنترنت واعتمادها.',
-                        style: TextStyle(
+                        context.tr('sync_sheet_warn_sub'),
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 11,
                         ),
@@ -185,8 +183,8 @@ class _OfflineOperationDetailsSheetState
                         ),
                       ),
                       Text(
-                        'التاريخ والوقت: ${item.date}',
-                        style: TextStyle(
+                        '${context.tr('sync_sheet_dt_prefix')} ${item.date}',
+                        style: const TextStyle(
                           color: Colors.white54,
                           fontSize: 12,
                         ),
@@ -205,8 +203,8 @@ class _OfflineOperationDetailsSheetState
                     ),
                   ),
                   child: Text(
-                    'غير متزامنة',
-                    style: TextStyle(
+                    context.tr('sync_sheet_unsynced_badge'),
+                    style: const TextStyle(
                       color: Colors.orangeAccent,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
@@ -225,7 +223,7 @@ class _OfflineOperationDetailsSheetState
           const Divider(color: Colors.white10, height: 1),
 
           // Error Banner if previous sync attempt failed
-          if (item.lastError != null && item.lastError!.isNotEmpty)
+          if (item.hasError)
             Container(
               width: double.infinity,
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -247,7 +245,7 @@ class _OfflineOperationDetailsSheetState
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'سبب تعذر آخر محاولة مزامنة: ${item.lastError}',
+                      '${context.tr('sync_sheet_last_err_prefix')} ${item.lastError}',
                       style: TextStyle(
                         color: Colors.red.shade200,
                         fontSize: 11.5,
@@ -309,9 +307,9 @@ class _OfflineOperationDetailsSheetState
                             : const Icon(Icons.print_rounded, size: 19),
                         label: Text(
                           _isPrinting
-                              ? 'جاري الطباعة...'
-                              : 'طباعة (وثيقة غير معتمدة)',
-                          style: TextStyle(
+                              ? context.tr('sync_sheet_printing')
+                              : context.tr('sync_sheet_print_btn'),
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12.5,
                           ),
@@ -340,8 +338,8 @@ class _OfflineOperationDetailsSheetState
                               },
                         icon: const Icon(Icons.cloud_upload_rounded, size: 18),
                         label: Text(
-                          'مزامنة الآن',
-                          style: TextStyle(
+                          context.tr('sync_sheet_sync_now_btn'),
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12.5,
                           ),
@@ -376,7 +374,7 @@ class _OfflineOperationDetailsSheetState
                           size: 19,
                         ),
                         label: Text(
-                          'حذف هذه العملية نهائياً من الطابور',
+                          context.tr('sync_sheet_del_btn'),
                           style: TextStyle(
                             color: Colors.redAccent,
                             fontWeight: FontWeight.bold,
@@ -422,18 +420,24 @@ class _OfflineOperationDetailsSheetState
   // ===========================================================================
   Widget _buildInvoiceDetailsBody() {
     final bool isPurchase = raw['InvType'] == 'Purchase';
-    final String partnerLabel = isPurchase ? 'المورد' : 'العميل';
+    final String partnerLabel = isPurchase
+        ? context.tr('sync_sheet_supplier')
+        : context.tr('sync_sheet_customer');
     final String partnerName = raw['_resolvedPartnerName']?.toString() ??
         raw['_partnerName']?.toString() ??
         raw['TempCustomerName']?.toString() ??
         (raw['PartnerID'] != null
-            ? 'شريك #${raw['PartnerID']}'
-            : (isPurchase ? 'مورد نقدي' : 'عميل نقدي'));
+            ? '${context.tr('sync_sheet_partner_prefix')} #${raw['PartnerID']}'
+            : (isPurchase
+                ? context.tr('sync_sheet_cash_supplier')
+                : context.tr('sync_sheet_cash_customer')));
 
     final String paymentMethod = raw['PaymentMethod']?.toString() ?? 'Cash';
     final String paymentAccName =
         raw['_resolvedPaymentAccountName']?.toString() ??
-            (paymentMethod == 'Credit' ? 'آجل (ذمم)' : 'نقدي / شبكة');
+            (paymentMethod == 'Credit'
+                ? context.tr('sync_sheet_credit')
+                : context.tr('sync_sheet_cash_card'));
 
     final List<dynamic> details =
         (raw['Details'] is List) ? raw['Details'] : [];
@@ -448,8 +452,8 @@ class _OfflineOperationDetailsSheetState
         ((raw['NetAmount'] ?? totalAmount) as num).toDouble();
     final double paidAmount = ((raw['PaidAmount'] ?? 0) as num).toDouble();
     final double remainder = ((raw['Remainder'] ??
-            ((netAmount - paidAmount) > 0 ? (netAmount - paidAmount) : 0.0))
-        as num)
+                ((netAmount - paidAmount) > 0 ? (netAmount - paidAmount) : 0.0))
+            as num)
         .toDouble();
 
     final String? tempCustomerName = raw['TempCustomerName']?.toString();
@@ -481,8 +485,8 @@ class _OfflineOperationDetailsSheetState
             children: [
               _buildInfoRow(
                 Icons.badge_outlined,
-                'حالة الفاتورة:',
-                'محفوظة محلياً (بانتظار المزامنة والاعتماد)',
+                context.tr('sync_sheet_inv_status_lbl'),
+                context.tr('sync_sheet_inv_status_val'),
                 valueColor: Colors.amberAccent,
               ),
               const Divider(color: Colors.white10, height: 16),
@@ -494,22 +498,22 @@ class _OfflineOperationDetailsSheetState
               const Divider(color: Colors.white10, height: 16),
               _buildInfoRow(
                 Icons.account_balance_wallet_outlined,
-                'طريقة الدفع:',
+                context.tr('sync_sheet_pay_method_lbl'),
                 paymentAccName,
               ),
               if (raw['WarehouseID'] != null) ...[
                 const Divider(color: Colors.white10, height: 16),
                 _buildInfoRow(
                   Icons.warehouse_outlined,
-                  'المستودع:',
-                  'مستودع #${raw['WarehouseID']}',
+                  context.tr('sync_sheet_warehouse_lbl'),
+                  '${context.tr('sync_sheet_warehouse_prefix')} #${raw['WarehouseID']}',
                 ),
               ],
               if (raw['ShiftID'] != null) ...[
                 const Divider(color: Colors.white10, height: 16),
                 _buildInfoRow(
                   Icons.point_of_sale_rounded,
-                  'رقم الوردية:',
+                  context.tr('sync_sheet_shift_lbl'),
                   '#${raw['ShiftID']}',
                 ),
               ],
@@ -517,7 +521,7 @@ class _OfflineOperationDetailsSheetState
                 const Divider(color: Colors.white10, height: 16),
                 _buildInfoRow(
                   Icons.notes_rounded,
-                  'ملاحظات:',
+                  context.tr('sync_sheet_notes_lbl'),
                   tempNotes,
                 ),
               ],
@@ -547,8 +551,8 @@ class _OfflineOperationDetailsSheetState
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'بيانات التوصيل والشحن',
-                      style: TextStyle(
+                      context.tr('sync_sheet_delivery_title'),
+                      style: const TextStyle(
                         color: Colors.orangeAccent,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
@@ -558,16 +562,18 @@ class _OfflineOperationDetailsSheetState
                 ),
                 const SizedBox(height: 8),
                 if (tempCustomerName != null && tempCustomerName.isNotEmpty)
-                  _buildInfoRow(
-                      Icons.person, 'اسم المستلم:', tempCustomerName),
+                  _buildInfoRow(Icons.person,
+                      context.tr('sync_sheet_recipient'), tempCustomerName),
                 if (tempPhone != null && tempPhone.isNotEmpty)
-                  _buildInfoRow(Icons.phone, 'الهاتف:', tempPhone),
+                  _buildInfoRow(
+                      Icons.phone, context.tr('sync_sheet_phone'), tempPhone),
                 if (tempAddress != null && tempAddress.isNotEmpty)
-                  _buildInfoRow(Icons.location_on, 'العنوان:', tempAddress),
+                  _buildInfoRow(Icons.location_on,
+                      context.tr('sync_sheet_address'), tempAddress),
                 if (tempDeliveryDate != null && tempDeliveryDate.isNotEmpty)
                   _buildInfoRow(
                     Icons.calendar_today,
-                    'موعد التسليم:',
+                    context.tr('sync_sheet_delivery_time'),
                     '$tempDeliveryDate ${tempDeliveryTime ?? ''}',
                   ),
               ],
@@ -589,8 +595,8 @@ class _OfflineOperationDetailsSheetState
               Expanded(
                 flex: 3,
                 child: Text(
-                  'الصنف (${details.length})',
-                  style: TextStyle(
+                  '${context.tr('sync_sheet_col_item')} (${details.length})',
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -599,9 +605,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'السعر',
+                  context.tr('sync_sheet_col_price'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -610,9 +616,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'الكمية',
+                  context.tr('sync_sheet_col_qty'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -621,9 +627,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'الإجمالي',
+                  context.tr('sync_sheet_col_total'),
                   textAlign: TextAlign.end,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -647,8 +653,8 @@ class _OfflineOperationDetailsSheetState
                   padding: const EdgeInsets.all(20),
                   child: Center(
                     child: Text(
-                      'لا توجد أصناف مسجلة',
-                      style: TextStyle(color: Colors.white54),
+                      context.tr('sync_sheet_no_items'),
+                      style: const TextStyle(color: Colors.white54),
                     ),
                   ),
                 )
@@ -664,7 +670,7 @@ class _OfflineOperationDetailsSheetState
                     final String pName = d['ProductName']?.toString() ??
                         d['product_name']?.toString() ??
                         d['name']?.toString() ??
-                        'صنف رقم #$pid';
+                        '${context.tr('sync_sheet_item_prefix')} #$pid';
                     final String unitName = d['UnitName']?.toString() ??
                         d['unit_name']?.toString() ??
                         '';
@@ -698,7 +704,8 @@ class _OfflineOperationDetailsSheetState
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (unitName.isNotEmpty || pid.toString().isNotEmpty)
+                                if (unitName.isNotEmpty ||
+                                    pid.toString().isNotEmpty)
                                   Text(
                                     [
                                       if (pid.toString().isNotEmpty) '#$pid',
@@ -768,8 +775,8 @@ class _OfflineOperationDetailsSheetState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'تفاصيل طرق الدفع المتعددة:',
-                  style: TextStyle(
+                  context.tr('sync_sheet_splits_title'),
+                  style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12.5,
                     fontWeight: FontWeight.bold,
@@ -778,10 +785,9 @@ class _OfflineOperationDetailsSheetState
                 const SizedBox(height: 8),
                 ...splits.map((s) {
                   final sm = Map<String, dynamic>.from(s as Map);
-                  final double sAmt =
-                      ((sm['Amount'] ?? 0) as num).toDouble();
+                  final double sAmt = ((sm['Amount'] ?? 0) as num).toDouble();
                   final String sAcc = sm['AccountName']?.toString() ??
-                      'حساب #${sm['AccountID'] ?? ''}';
+                      '${context.tr('sync_sheet_acc_prefix')} #${sm['AccountID'] ?? ''}';
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3),
                     child: Row(
@@ -789,14 +795,14 @@ class _OfflineOperationDetailsSheetState
                       children: [
                         Text(
                           '• $sAcc',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 12,
                           ),
                         ),
                         Text(
                           sAmt.toStringAsFixed(3),
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
@@ -824,34 +830,34 @@ class _OfflineOperationDetailsSheetState
             children: [
               if (discount > 0) ...[
                 _buildSummaryRow(
-                  'الإجمالي قبل الخصم:',
+                  context.tr('sync_sheet_before_disc'),
                   (netAmount + discount).toStringAsFixed(3),
                   Colors.white70,
                 ),
                 const SizedBox(height: 6),
                 _buildSummaryRow(
-                  'قيمة الخصم:',
+                  context.tr('sync_sheet_disc_val'),
                   '-${discount.toStringAsFixed(3)}',
                   Colors.orangeAccent,
                 ),
                 const Divider(color: Colors.white10, height: 18),
               ],
               _buildSummaryRow(
-                'الصافي الكلي:',
+                context.tr('sync_sheet_net_total'),
                 netAmount.toStringAsFixed(3),
                 _themeColor,
                 isLarge: true,
               ),
               const SizedBox(height: 8),
               _buildSummaryRow(
-                'المدفوع:',
+                context.tr('sync_sheet_paid_lbl'),
                 paidAmount.toStringAsFixed(3),
                 const Color(0xFF3B82F6),
               ),
               if (remainder > 0.001) ...[
                 const SizedBox(height: 6),
                 _buildSummaryRow(
-                  'المتبقي (آجل):',
+                  context.tr('sync_sheet_rem_lbl'),
                   remainder.toStringAsFixed(3),
                   Colors.redAccent,
                   isBold: true,
@@ -871,16 +877,19 @@ class _OfflineOperationDetailsSheetState
     final bool isReceipt = raw['VoucherType'] == 'Receipt';
     final bool isGeneral = raw['IsGeneral'] == true;
     final String targetLabel = isGeneral
-        ? 'الحساب المستهدف:'
-        : (isReceipt ? 'العميل:' : 'المورد:');
+        ? context.tr('sync_sheet_vch_target_acc')
+        : (isReceipt
+            ? '${context.tr('sync_sheet_customer')}:'
+            : '${context.tr('sync_sheet_supplier')}:');
     final String targetName = raw['_resolvedTargetName']?.toString() ??
         raw['PartnerName']?.toString() ??
         (isGeneral
-            ? 'حساب #${raw['AccountID'] ?? ''}'
-            : 'شريك #${raw['PartnerID'] ?? ''}');
+            ? '${context.tr('sync_sheet_acc_prefix')} #${raw['AccountID'] ?? ''}'
+            : '${context.tr('sync_sheet_partner_prefix')} #${raw['PartnerID'] ?? ''}');
     final String cashAccName = raw['_resolvedCashAccountName']?.toString() ??
-        'حساب نقدية #${raw['AccountID'] ?? 1}';
-    final String description = raw['Description']?.toString() ?? 'بدون بيان';
+        '${context.tr('sync_sheet_vch_cash_prefix')} #${raw['AccountID'] ?? 1}';
+    final String description =
+        raw['Description']?.toString() ?? context.tr('sync_sheet_no_desc');
     final List<dynamic> allocations =
         (raw['Allocations'] is List) ? raw['Allocations'] : [];
 
@@ -898,14 +907,14 @@ class _OfflineOperationDetailsSheetState
             children: [
               _buildInfoRow(
                 Icons.badge_outlined,
-                'حالة السند:',
-                'غير معتمد (بانتظار المزامنة)',
+                context.tr('sync_sheet_vch_status_lbl'),
+                context.tr('sync_sheet_vch_status_val'),
                 valueColor: Colors.amberAccent,
               ),
               const Divider(color: Colors.white10, height: 18),
               _buildInfoRow(
                 Icons.category_outlined,
-                'نوع السند:',
+                context.tr('sync_sheet_vch_type_lbl'),
                 item.title,
               ),
               const Divider(color: Colors.white10, height: 18),
@@ -917,32 +926,31 @@ class _OfflineOperationDetailsSheetState
               const Divider(color: Colors.white10, height: 18),
               _buildInfoRow(
                 Icons.account_balance_wallet_outlined,
-                'حساب الخزينة / الدفع:',
+                context.tr('sync_sheet_vch_treasury_lbl'),
                 cashAccName,
               ),
               if (raw['ShiftID'] != null) ...[
                 const Divider(color: Colors.white10, height: 18),
                 _buildInfoRow(
                   Icons.point_of_sale_rounded,
-                  'رقم الوردية:',
+                  context.tr('sync_sheet_shift_lbl'),
                   '#${raw['ShiftID']}',
                 ),
               ],
               const Divider(color: Colors.white10, height: 18),
               _buildInfoRow(
                 Icons.notes_rounded,
-                'البيان / الملاحظات:',
+                context.tr('sync_sheet_vch_notes_lbl'),
                 description,
               ),
             ],
           ),
         ),
-
         if (allocations.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
-            'الفواتير المسددة ضمن هذا السند (${allocations.length}):',
-            style: TextStyle(
+            '${context.tr('sync_sheet_vch_allocs_title')} (${allocations.length}):',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 13.5,
               fontWeight: FontWeight.bold,
@@ -974,8 +982,8 @@ class _OfflineOperationDetailsSheetState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'فاتورة رقم #$invId',
-                        style: TextStyle(
+                        '${context.tr('sync_sheet_inv_no_prefix')} #$invId',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -983,8 +991,8 @@ class _OfflineOperationDetailsSheetState
                       ),
                       Text(
                         allocAmt.toStringAsFixed(3),
-                        style: TextStyle(
-                          color: const Color(0xFF10B981),
+                        style: const TextStyle(
+                          color: Color(0xFF10B981),
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
@@ -996,7 +1004,6 @@ class _OfflineOperationDetailsSheetState
             ),
           ),
         ],
-
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(18),
@@ -1006,7 +1013,9 @@ class _OfflineOperationDetailsSheetState
             border: Border.all(color: _themeColor.withValues(alpha: 0.4)),
           ),
           child: _buildSummaryRow(
-            isReceipt ? 'إجمالي المبلغ المقبوض:' : 'إجمالي المبلغ المصروف:',
+            isReceipt
+                ? context.tr('sync_sheet_vch_total_rcpt')
+                : context.tr('sync_sheet_vch_total_pay'),
             item.amount.toStringAsFixed(3),
             _themeColor,
             isLarge: true,
@@ -1038,14 +1047,14 @@ class _OfflineOperationDetailsSheetState
             children: [
               _buildInfoRow(
                 Icons.warehouse_outlined,
-                'المستودع:',
-                'مستودع #${raw['WarehouseID'] ?? 1}',
+                context.tr('sync_sheet_warehouse_lbl'),
+                '${context.tr('sync_sheet_warehouse_prefix')} #${raw['WarehouseID'] ?? 1}',
               ),
               if (notes.isNotEmpty) ...[
                 const Divider(color: Colors.white10, height: 16),
                 _buildInfoRow(
                   Icons.notes_rounded,
-                  'السبب / الملاحظات:',
+                  context.tr('sync_sheet_wst_reason_lbl'),
                   notes,
                 ),
               ],
@@ -1064,8 +1073,8 @@ class _OfflineOperationDetailsSheetState
               Expanded(
                 flex: 3,
                 child: Text(
-                  'الصنف (${details.length})',
-                  style: TextStyle(
+                  '${context.tr('sync_sheet_col_item')} (${details.length})',
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1074,9 +1083,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'الكمية',
+                  context.tr('sync_sheet_col_qty'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1085,9 +1094,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'التكلفة',
+                  context.tr('sync_sheet_col_cost'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1096,9 +1105,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'الإجمالي',
+                  context.tr('sync_sheet_col_total'),
                   textAlign: TextAlign.end,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1124,8 +1133,8 @@ class _OfflineOperationDetailsSheetState
             itemBuilder: (context, i) {
               final d = Map<String, dynamic>.from(details[i] as Map);
               final pid = d['ProductID'] ?? '';
-              final String pName =
-                  d['ProductName']?.toString() ?? 'صنف رقم #$pid';
+              final String pName = d['ProductName']?.toString() ??
+                  '${context.tr('sync_sheet_item_prefix')} #$pid';
               final double qty = ((d['Quantity'] ?? 0) as num).toDouble();
               final double cost = ((d['CostPrice'] ?? 0) as num).toDouble();
               final double tot = qty * cost;
@@ -1192,7 +1201,7 @@ class _OfflineOperationDetailsSheetState
             border: Border.all(color: _themeColor.withValues(alpha: 0.4)),
           ),
           child: _buildSummaryRow(
-            'إجمالي تكلفة الهالك:',
+            context.tr('sync_sheet_wst_total_lbl'),
             item.amount.toStringAsFixed(3),
             _themeColor,
             isLarge: true,
@@ -1224,14 +1233,14 @@ class _OfflineOperationDetailsSheetState
             children: [
               _buildInfoRow(
                 Icons.warehouse_outlined,
-                'المستودع:',
-                'مستودع #${raw['WarehouseID'] ?? 1}',
+                context.tr('sync_sheet_warehouse_lbl'),
+                '${context.tr('sync_sheet_warehouse_prefix')} #${raw['WarehouseID'] ?? 1}',
               ),
               if (notes.isNotEmpty) ...[
                 const Divider(color: Colors.white10, height: 16),
                 _buildInfoRow(
                   Icons.notes_rounded,
-                  'ملاحظات الجرد:',
+                  context.tr('sync_sheet_stk_notes_lbl'),
                   notes,
                 ),
               ],
@@ -1250,8 +1259,8 @@ class _OfflineOperationDetailsSheetState
               Expanded(
                 flex: 3,
                 child: Text(
-                  'الصنف (${details.length})',
-                  style: TextStyle(
+                  '${context.tr('sync_sheet_col_item')} (${details.length})',
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1260,9 +1269,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'الدفتري',
+                  context.tr('sync_sheet_col_book'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1271,9 +1280,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'الفعلي',
+                  context.tr('sync_sheet_col_actual'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1282,9 +1291,9 @@ class _OfflineOperationDetailsSheetState
               ),
               Expanded(
                 child: Text(
-                  'الفرق',
+                  context.tr('sync_sheet_col_diff'),
                   textAlign: TextAlign.end,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1310,8 +1319,8 @@ class _OfflineOperationDetailsSheetState
             itemBuilder: (context, i) {
               final d = Map<String, dynamic>.from(details[i] as Map);
               final pid = d['ProductID'] ?? '';
-              final String pName =
-                  d['ProductName']?.toString() ?? 'صنف رقم #$pid';
+              final String pName = d['ProductName']?.toString() ??
+                  '${context.tr('sync_sheet_item_prefix')} #$pid';
               final double sysQty =
                   ((d['SystemQuantity'] ?? 0) as num).toDouble();
               final double actQty =
@@ -1382,7 +1391,7 @@ class _OfflineOperationDetailsSheetState
             border: Border.all(color: _themeColor.withValues(alpha: 0.4)),
           ),
           child: _buildSummaryRow(
-            'إجمالي قيمة فروقات الجرد:',
+            context.tr('sync_sheet_stk_total_lbl'),
             item.amount.toStringAsFixed(3),
             _themeColor,
             isLarge: true,
@@ -1457,4 +1466,3 @@ class _OfflineOperationDetailsSheetState
     );
   }
 }
-

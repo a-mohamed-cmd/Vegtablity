@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/utils/app_snackbar.dart';
 import '../services/api_service.dart';
 import '../models/recipe_model.dart';
 
@@ -32,7 +33,7 @@ class RecipeProvider extends ChangeNotifier {
         _recipes = data.map((json) => RecipeHeader.fromJson(json)).toList();
       }
     } catch (e) {
-      _errorMessage = 'خطأ في جلب الوصفات: $e';
+      _errorMessage = 'تعذر جلب الوصفات: ${DbErrorHelper.format(e)}';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -118,7 +119,7 @@ class RecipeProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _errorMessage = 'فشل حفظ الوصفة: $e';
+      _errorMessage = 'تعذر حفظ الوصفة: ${DbErrorHelper.format(e)}';
       return false;
     } finally {
       _isLoading = false;
@@ -139,7 +140,7 @@ class RecipeProvider extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _errorMessage = 'فشل حذف الوصفة: $e';
+      _errorMessage = 'تعذر حذف الوصفة: ${DbErrorHelper.format(e)}';
       return false;
     } finally {
       _isLoading = false;

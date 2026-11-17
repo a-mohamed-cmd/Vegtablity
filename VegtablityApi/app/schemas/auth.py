@@ -11,3 +11,15 @@ class TokenResponse(BaseModel):
     username: str
     user_id: int
     role_name: Optional[str] = "admin"
+    can_refund_payment_gateway: bool = False
+    can_delete_sales_invoice: bool = False
+    can_delete_purchase_invoice: bool = False
+
+
+class CurrentUserResponse(BaseModel):
+    user_id: int
+    username: str
+    role_name: Optional[str] = "admin"
+    can_refund_payment_gateway: bool = False
+    can_delete_sales_invoice: bool = False
+    can_delete_purchase_invoice: bool = False

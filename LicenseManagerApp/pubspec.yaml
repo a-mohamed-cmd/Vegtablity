@@ -1,7 +1,7 @@
 name: license_manager_app
 description: Standard standalone license manager application for Vegtablity server.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.2+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   provider: ^6.1.1
   dio: ^5.4.0
+  path_provider: ^2.1.2
+  open_filex: ^4.5.0
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:

@@ -315,6 +315,21 @@ Namespace ViewModels
         Private Sub LoadMenuItems()
             Dim allItems As New List(Of MenuItem)()
 
+            Dim settingsService As New Services.SettingsService()
+            Dim compInfo = settingsService.GetCompanyInfo()
+            Dim isProductionMode As Boolean = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
+            Dim hasAnyIntegration As Boolean = (compInfo IsNot Nothing AndAlso compInfo.HasAnyIntegrationEnabled)
+            Dim hasPaymentGateways As Boolean = (compInfo IsNot Nothing AndAlso (compInfo.EnableTapIntegration OrElse compInfo.EnableMyFatoorahIntegration OrElse compInfo.EnableUPaymentsIntegration))
+            Dim isTalabatReady As Boolean = False
+            If compInfo IsNot Nothing AndAlso compInfo.EnableTalabatIntegration Then
+                Try
+                    Dim intSvc As New Services.Integrations.IntegrationManagerService()
+                    isTalabatReady = intSvc.IsTalabatConfiguredAndActive()
+                Catch
+                    isTalabatReady = False
+                End Try
+            End If
+
             ' Define all navigation sections
             allItems.Add(New MenuItem With {.Title = "الرئيسية", .Icon = "🏠", .FormName = "Dashboard", .IsVisible = True})
             
@@ -322,6 +337,12 @@ Namespace ViewModels
             salesChildren.Add(New MenuItem With {.Title = "فاتورة مبيعات", .Icon = "🛒", .FormName = "Sales", .IsVisible = True})
             salesChildren.Add(New MenuItem With {.Title = "عروض الأسعار", .Icon = "📜", .FormName = "Quotes", .IsVisible = True})
             salesChildren.Add(New MenuItem With {.Title = "خصومات المبيعات", .Icon = "🏷️", .FormName = "SalesDiscounts", .IsVisible = True})
+            If hasPaymentGateways Then
+                salesChildren.Add(New MenuItem With {.Title = "طلبات وفواتير بوابات الدفع", .Icon = "💳", .FormName = "PaymentGatewayInvoices", .IsVisible = True})
+            End If
+            If isTalabatReady Then
+                salesChildren.Add(New MenuItem With {.Title = "طلبات Talabat", .Icon = "🛵", .FormName = "TalabatOrders", .IsVisible = True})
+            End If
 
             allItems.Add(New MenuItem With {
                 .Title = "المبيعات",
@@ -349,9 +370,6 @@ Namespace ViewModels
                 .IsExpanded = False,
                 .Children = purchaseChildren
             })
-            Dim settingsService As New Services.SettingsService()
-            Dim compInfo = settingsService.GetCompanyInfo()
-            Dim isProductionMode As Boolean = (compInfo IsNot Nothing AndAlso compInfo.ProductionMode)
 
             Dim inventoryChildren As New ObservableCollection(Of MenuItem)()
             inventoryChildren.Add(New MenuItem With {.Title = "المنتجات والمخزون", .Icon = "📦", .FormName = "Inventory", .IsVisible = True})
@@ -425,6 +443,9 @@ Namespace ViewModels
             Dim settingsChildren As New ObservableCollection(Of MenuItem)()
             settingsChildren.Add(New MenuItem With {.Title = "إعدادات عامة", .Icon = "⚙", .FormName = "Settings", .IsVisible = True})
             settingsChildren.Add(New MenuItem With {.Title = "بيانات الشركة", .Icon = "🏢", .FormName = "CompanySettings", .IsVisible = True})
+            If hasAnyIntegration Then
+                settingsChildren.Add(New MenuItem With {.Title = "إعدادات الربط وبوابات الدفع", .Icon = "🔗", .FormName = "IntegrationSettings", .IsVisible = True})
+            End If
             settingsChildren.Add(New MenuItem With {.Title = "تحديث قاعدة البيانات", .Icon = "🛠️", .FormName = "DbUpdater", .IsVisible = True})
 
             allItems.Add(New MenuItem With {
@@ -546,7 +567,7 @@ Namespace ViewModels
                 Next
                 
             Catch ex As Exception
-                MessageBox.Show("خطأ في تحميل بيانات لوحة المعلومات: " & ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل بيانات لوحة المعلومات")
             End Try
         End Sub
 
@@ -715,6 +736,18 @@ Namespace ViewModels
 
                     Case "HRSettings"
                         CurrentPage = New Views.HRSettingsPage()
+                        IsHomePage = False
+
+                    Case "IntegrationSettings"
+                        CurrentPage = New Views.IntegrationSettingsPage()
+                        IsHomePage = False
+
+                    Case "PaymentGatewayInvoices"
+                        CurrentPage = New Views.PaymentGatewayInvoicesPage()
+                        IsHomePage = False
+
+                    Case "TalabatOrders"
+                        CurrentPage = New Views.TalabatOrdersPage()
                         IsHomePage = False
 
                     Case Else
