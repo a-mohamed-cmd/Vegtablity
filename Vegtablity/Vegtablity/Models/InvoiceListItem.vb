@@ -16,6 +16,10 @@ Namespace Models
         Public Property IsPosted As Boolean
         Public Property ReferenceNo As String
         Public Property Notes As String
+        Public Property ArchiveID As Integer?
+        Public Property CancelledAt As DateTime?
+        Public Property CancelledByUserName As String
+        Public Property IsCancelled As Boolean
 
         ''' <summary>Human-readable label for InvType</summary>
         Public ReadOnly Property InvTypeLabel As String
@@ -27,7 +31,7 @@ Namespace Models
         ''' <summary>True when invoice is posted and has remaining balance</summary>
         Public ReadOnly Property CanAddPayment As Boolean
             Get
-                Return IsPosted AndAlso Remainder > 0
+                Return (Not IsCancelled) AndAlso IsPosted AndAlso Remainder > 0
             End Get
         End Property
 
@@ -44,7 +48,7 @@ Namespace Models
         ''' <summary>Visible only when invoice is unposted and user has delete permission</summary>
         Public ReadOnly Property CanDeleteUnposted As Boolean
             Get
-                Return (Not IsPosted) AndAlso InvID > 0 AndAlso _canUserDeletePermission
+                Return (Not IsCancelled) AndAlso (Not IsPosted) AndAlso InvID > 0 AndAlso _canUserDeletePermission
             End Get
         End Property
     End Class

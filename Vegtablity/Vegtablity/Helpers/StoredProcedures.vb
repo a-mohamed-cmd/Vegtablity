@@ -168,6 +168,8 @@ Namespace Helpers
         Public Const SP_INVOICE_SAVE_XML As String = "[Sales].[sp_Invoice_Save_XML]"
         Public Const SP_INVOICE_DELETE_BY_ID As String = "[Sales].[sp_Invoice_DeleteByID]"
         Public Const SP_INVOICE_GETPAGED As String = "[Sales].[sp_Invoice_GetPaged]"
+        Public Const SP_CANCELLED_INVOICE_GET_PAGED As String = "[Sales].[sp_CancelledInvoice_GetPaged]"
+        Public Const SP_CANCELLED_INVOICE_GET_BY_ID As String = "[Sales].[sp_CancelledInvoice_GetByID]"
         Public Const SP_SALES_GETPRODUCTPRICING_INVOICE As String = "[Sales].[sp_GetProductPricingForInvoice]"
         
         Public Const SP_INVOICEDETAIL_GETBYINVID As String = "[Sales].[sp_InvoiceDetails_GetByInvID]"

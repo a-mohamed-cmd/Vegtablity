@@ -19862,8 +19862,299 @@ END
 GO
 
 -- =========================================================================
+-- جدول أرشيف الفواتير المحذوفة / الملغاة [Sales].[CancelledInvoicesArchive]
+-- جدول منفصل تماماً يحفظ نسخة JSON شاملة لكل بيانات الفاتورة قبل حذفها نهائياً
+-- =========================================================================
+IF OBJECT_ID('[Sales].[CancelledInvoicesArchive]', 'U') IS NULL
+BEGIN
+    CREATE TABLE [Sales].[CancelledInvoicesArchive] (
+        [ArchiveID]           INT            IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [OriginalInvID]       INT            NOT NULL,
+        [InvType]             NVARCHAR(20)   NOT NULL,
+        [InvDate]             DATETIME       NOT NULL,
+        [PartnerID]           INT            NULL,
+        [PartnerName]         NVARCHAR(200)  NULL,
+        [WarehouseID]         INT            NULL,
+        [WarehouseName]       NVARCHAR(200)  NULL,
+        [TotalAmount]         DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        [Discount]            DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        [NetAmount]           DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        [PaidAmount]          DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        [Remainder]           DECIMAL(18, 3) NOT NULL DEFAULT 0,
+        [ReferenceNo]         NVARCHAR(100)  NULL,
+        [Notes]               NVARCHAR(500)  NULL,
+        [OriginalUserID]      INT            NULL,
+        [OriginalUserName]    NVARCHAR(150)  NULL,
+        [CancelledByUserID]   INT            NULL,
+        [CancelledByUserName] NVARCHAR(150)  NULL,
+        [CancelledAt]         DATETIME       NOT NULL DEFAULT GETDATE(),
+        [InvoiceSnapshotJson] NVARCHAR(MAX)  NOT NULL
+    );
+
+    CREATE NONCLUSTERED INDEX [IX_CancelledInvoicesArchive_Type_Date]
+        ON [Sales].[CancelledInvoicesArchive] ([InvType], [CancelledAt] DESC)
+        INCLUDE ([OriginalInvID], [PartnerName], [NetAmount], [PaidAmount], [Remainder]);
+
+    CREATE NONCLUSTERED INDEX [IX_CancelledInvoicesArchive_OriginalInvID]
+        ON [Sales].[CancelledInvoicesArchive] ([OriginalInvID] DESC);
+
+    PRINT N'=== Created [Sales].[CancelledInvoicesArchive] successfully ===';
+END
+GO
+
+-- =========================================================================
+-- SP الأرشفة التلقائية للفاتورة المحذوفة بصيغة JSON
+-- يُستدعى من داخل [Sales].[trg_InvoiceHeader_DeleteCascade] ويقرأ #TrgDeletedInvoices
+-- قبل تنظيف الجداول المرتبطة لضمان أخذ نسخة كاملة 100% داخل نفس Transaction
+-- =========================================================================
+IF OBJECT_ID('[Sales].[sp_CancelledInvoice_ArchiveSnapshot]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_CancelledInvoice_ArchiveSnapshot];
+GO
+CREATE PROCEDURE [Sales].[sp_CancelledInvoice_ArchiveSnapshot]
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF OBJECT_ID('tempdb..#TrgDeletedInvoices') IS NULL
+        RETURN;
+
+    DECLARE @CancelledByUserID INT = TRY_CAST(SESSION_CONTEXT(N'DeletedByUserID') AS INT);
+    DECLARE @CancelledByUserName NVARCHAR(150) = NULL;
+    IF @CancelledByUserID IS NOT NULL
+    BEGIN
+        SELECT @CancelledByUserName = FullName
+        FROM [Security].[Users]
+        WHERE UserID = @CancelledByUserID;
+    END
+
+    DECLARE @InvID INT,
+            @InvType NVARCHAR(20),
+            @InvDate DATETIME,
+            @PartnerID INT,
+            @PartnerName NVARCHAR(200),
+            @WarehouseID INT,
+            @WarehouseName NVARCHAR(200),
+            @TotalAmount DECIMAL(18, 3),
+            @Discount DECIMAL(18, 3),
+            @NetAmount DECIMAL(18, 3),
+            @PaidAmount DECIMAL(18, 3),
+            @Remainder DECIMAL(18, 3),
+            @ReferenceNo NVARCHAR(100),
+            @Notes NVARCHAR(500),
+            @OriginalUserID INT,
+            @OriginalUserName NVARCHAR(150),
+            @OriginalIsPosted BIT;
+
+    DECLARE cur_archive CURSOR LOCAL FAST_FORWARD FOR
+        SELECT
+            d.InvID,
+            d.InvType,
+            ISNULL(d.InvDate, GETDATE()),
+            d.PartnerID,
+            ISNULL(p.PartnerName, N'—'),
+            d.WarehouseID,
+            ISNULL(w.WarehouseName, N'—'),
+            ISNULL(d.TotalAmount, 0),
+            ISNULL(d.Discount, 0),
+            ISNULL(d.NetAmount, 0),
+            ISNULL(d.PaidAmount, 0) + ISNULL(d.VoucherPaidAmount, 0),
+            ISNULL(d.Remainder, 0),
+            d.ReferenceNo,
+            d.Notes,
+            d.UserID,
+            u.FullName,
+            ISNULL(d.IsPosted, 0)
+        FROM #TrgDeletedInvoices d
+        LEFT JOIN [Sales].[Partners]      p ON p.PartnerID   = d.PartnerID
+        LEFT JOIN [Settings].[Warehouses] w ON w.WarehouseID = d.WarehouseID
+        LEFT JOIN [Security].[Users]      u ON u.UserID      = d.UserID;
+
+    OPEN cur_archive;
+    FETCH NEXT FROM cur_archive INTO
+        @InvID, @InvType, @InvDate, @PartnerID, @PartnerName,
+        @WarehouseID, @WarehouseName, @TotalAmount, @Discount,
+        @NetAmount, @PaidAmount, @Remainder, @ReferenceNo, @Notes,
+        @OriginalUserID, @OriginalUserName, @OriginalIsPosted;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        DECLARE @HeaderJson      NVARCHAR(MAX) = N'{}',
+                @DetailsJson     NVARCHAR(MAX) = N'[]',
+                @TempOrderJson   NVARCHAR(MAX) = NULL,
+                @SplitsJson      NVARCHAR(MAX) = N'[]',
+                @LinksJson       NVARCHAR(MAX) = N'[]',
+                @AllocationsJson NVARCHAR(MAX) = N'[]',
+                @TalabatJson     NVARCHAR(MAX) = N'[]',
+                @AuditJson       NVARCHAR(MAX) = N'{}',
+                @SnapshotJson    NVARCHAR(MAX);
+
+        -- 1. رأس الفاتورة مع الأسماء المرجعية
+        SELECT @HeaderJson = (
+            SELECT
+                h.*,
+                ISNULL(p.PartnerName, N'—')   AS PartnerName,
+                p.Phone                        AS PartnerPhone,
+                ISNULL(w.WarehouseName, N'—') AS WarehouseName,
+                u.FullName                     AS UserName,
+                acc.AccountName                AS PaymentAccountName,
+                acc.AccountCode                AS PaymentAccountCode
+            FROM #TrgDeletedInvoices h
+            LEFT JOIN [Sales].[Partners]              p   ON p.PartnerID   = h.PartnerID
+            LEFT JOIN [Settings].[Warehouses]         w   ON w.WarehouseID = h.WarehouseID
+            LEFT JOIN [Security].[Users]              u   ON u.UserID      = h.UserID
+            LEFT JOIN [Accounting].[ChartOfAccounts]  acc ON acc.AccountID = h.PaymentAccountID
+            WHERE h.InvID = @InvID
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        );
+
+        -- 2. تفاصيل الأصناف
+        SELECT @DetailsJson = ISNULL((
+            SELECT
+                det.*,
+                pr.ProductName,
+                pr.ProductNameEn,
+                pr.Barcode,
+                un.UnitName
+            FROM [Sales].[InvoiceDetails] det
+            LEFT JOIN [Inventory].[Products] pr ON pr.ProductID = det.ProductID
+            LEFT JOIN [Settings].[Units]    un ON un.UnitID    = pr.UnitID
+            WHERE det.InvID = @InvID
+            ORDER BY det.DetID
+            FOR JSON PATH
+        ), N'[]');
+
+        -- 3. بيانات التوصيل TempOrderInfo
+        IF OBJECT_ID('[Sales].[TempOrderInfo]', 'U') IS NOT NULL
+        BEGIN
+            SELECT @TempOrderJson = (
+                SELECT t.*
+                FROM [Sales].[TempOrderInfo] t
+                WHERE t.InvID = @InvID
+                FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+            );
+        END
+
+        -- 4. تقسيمات طرق الدفع InvoicePaymentSplits
+        IF OBJECT_ID('[Sales].[InvoicePaymentSplits]', 'U') IS NOT NULL
+        BEGIN
+            SELECT @SplitsJson = ISNULL((
+                SELECT
+                    s.*,
+                    acc.AccountName,
+                    acc.AccountCode
+                FROM [Sales].[InvoicePaymentSplits] s
+                LEFT JOIN [Accounting].[ChartOfAccounts] acc ON acc.AccountID = s.PaymentAccountID
+                WHERE s.InvID = @InvID
+                ORDER BY s.SplitID
+                FOR JSON PATH
+            ), N'[]');
+        END
+
+        -- 5. روابط الدفع الإلكتروني InvoicePaymentLinks
+        IF OBJECT_ID('[Sales].[InvoicePaymentLinks]', 'U') IS NOT NULL
+        BEGIN
+            SELECT @LinksJson = ISNULL((
+                SELECT
+                    l.*,
+                    ip.ProviderNameAr,
+                    ip.ProviderNameEn
+                FROM [Sales].[InvoicePaymentLinks] l
+                LEFT JOIN [Settings].[IntegrationProviders] ip ON ip.ProviderID = l.ProviderID
+                WHERE l.InvID = @InvID
+                ORDER BY l.LinkID
+                FOR JSON PATH
+            ), N'[]');
+        END
+
+        -- 6. توزيعات روابط الدفع InvoicePaymentLinkAllocations
+        IF OBJECT_ID('[Sales].[InvoicePaymentLinkAllocations]', 'U') IS NOT NULL
+        BEGIN
+            SELECT @AllocationsJson = ISNULL((
+                SELECT
+                    a.*,
+                    l.ProviderCode,
+                    l.LinkStatus,
+                    l.Amount AS LinkTotalAmount,
+                    l.ExternalChargeID
+                FROM [Sales].[InvoicePaymentLinkAllocations] a
+                LEFT JOIN [Sales].[InvoicePaymentLinks] l ON l.LinkID = a.LinkID
+                WHERE a.InvID = @InvID
+                ORDER BY a.AllocationID
+                FOR JSON PATH
+            ), N'[]');
+        END
+
+        -- 7. طلبات منصة TalabatOrders المرتبطة
+        IF OBJECT_ID('[Sales].[TalabatOrders]', 'U') IS NOT NULL
+        BEGIN
+            SELECT @TalabatJson = ISNULL((
+                SELECT t.*
+                FROM [Sales].[TalabatOrders] t
+                WHERE t.InvID = @InvID
+                ORDER BY t.TalabatOrderID
+                FOR JSON PATH
+            ), N'[]');
+        END
+
+        -- 8. بيانات التدقيق
+        SELECT @AuditJson = (
+            SELECT
+                @InvID                 AS OriginalInvID,
+                GETDATE()              AS CancelledAt,
+                @CancelledByUserID     AS CancelledByUserID,
+                @CancelledByUserName   AS CancelledByUserName,
+                @OriginalIsPosted      AS OriginalIsPosted,
+                1                      AS ArchiveSchemaVersion
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        );
+
+        SET @SnapshotJson = (
+            SELECT
+                JSON_QUERY(ISNULL(@HeaderJson, N'{}'))      AS [InvoiceHeader],
+                JSON_QUERY(ISNULL(@DetailsJson, N'[]'))     AS [InvoiceDetails],
+                JSON_QUERY(NULLIF(@TempOrderJson, N''))     AS [TempOrderInfo],
+                JSON_QUERY(ISNULL(@SplitsJson, N'[]'))      AS [InvoicePaymentSplits],
+                JSON_QUERY(ISNULL(@LinksJson, N'[]'))       AS [InvoicePaymentLinks],
+                JSON_QUERY(ISNULL(@AllocationsJson, N'[]')) AS [InvoicePaymentLinkAllocations],
+                JSON_QUERY(ISNULL(@TalabatJson, N'[]'))     AS [TalabatOrders],
+                JSON_QUERY(ISNULL(@AuditJson, N'{}'))       AS [AuditMeta]
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER, INCLUDE_NULL_VALUES
+        );
+
+        INSERT INTO [Sales].[CancelledInvoicesArchive] (
+            OriginalInvID, InvType, InvDate,
+            PartnerID, PartnerName, WarehouseID, WarehouseName,
+            TotalAmount, Discount, NetAmount, PaidAmount, Remainder,
+            ReferenceNo, Notes,
+            OriginalUserID, OriginalUserName,
+            CancelledByUserID, CancelledByUserName,
+            CancelledAt, InvoiceSnapshotJson
+        )
+        VALUES (
+            @InvID, @InvType, @InvDate,
+            @PartnerID, @PartnerName, @WarehouseID, @WarehouseName,
+            @TotalAmount, @Discount, @NetAmount, @PaidAmount, @Remainder,
+            @ReferenceNo, @Notes,
+            @OriginalUserID, @OriginalUserName,
+            @CancelledByUserID, @CancelledByUserName,
+            GETDATE(), @SnapshotJson
+        );
+
+        FETCH NEXT FROM cur_archive INTO
+            @InvID, @InvType, @InvDate, @PartnerID, @PartnerName,
+            @WarehouseID, @WarehouseName, @TotalAmount, @Discount,
+            @NetAmount, @PaidAmount, @Remainder, @ReferenceNo, @Notes,
+            @OriginalUserID, @OriginalUserName, @OriginalIsPosted;
+    END
+
+    CLOSE cur_archive;
+    DEALLOCATE cur_archive;
+END
+GO
+
+-- =========================================================================
 -- Trigger: [Sales].[trg_InvoiceHeader_DeleteCascade] (INSTEAD OF DELETE)
--- المسؤول الوحيد والكامل عن حذف الفاتورة وتنظيف كافة الجداول المرتبطة بأمان
+-- المسؤول الوحيد والكامل عن أرشفة الفاتورة بصيغة JSON ثم تنظيف كافة الجداول المرتبطة بأمان
 -- داخل Transaction / Savepoint (sp_InvDelByID_SP) مع منع حذف المرحّل أو المدفوع إلكترونياً
 -- =========================================================================
 IF OBJECT_ID('[Sales].[trg_InvoiceHeader_DeleteCascade]', 'TR') IS NOT NULL
@@ -19923,6 +20214,11 @@ BEGIN
         BEGIN TRANSACTION;
 
     BEGIN TRY
+        -- 0. أخذ نسخة JSON كاملة من الفاتورة وكل الجداول المرتبطة قبل حذف أي سجل
+        SELECT * INTO #TrgDeletedInvoices FROM deleted;
+        EXEC [Sales].[sp_CancelledInvoice_ArchiveSnapshot];
+        DROP TABLE #TrgDeletedInvoices;
+
         -- 1. حذف توزيعات روابط الدفع المرتبطة
         IF OBJECT_ID('[Sales].[InvoicePaymentLinkAllocations]', 'U') IS NOT NULL
             DELETE a
@@ -20048,13 +20344,22 @@ BEGIN
         END
     END
 
-    -- تنفيذ الحذف الفعلي على InvoiceHeader؛ يتولى [Sales].[trg_InvoiceHeader_DeleteCascade] التحقق والحذف التراكمي والـ Savepoint
+    -- تنفيذ الحذف الفعلي على InvoiceHeader؛ يتولى [Sales].[trg_InvoiceHeader_DeleteCascade] الأرشفة والحذف التراكمي والـ Savepoint
     BEGIN TRY
+        IF @UserID IS NOT NULL
+            EXEC sys.sp_set_session_context @key = N'DeletedByUserID', @value = @UserID;
+
         DELETE FROM [Sales].[InvoiceHeader] WHERE InvID = @InvID;
+
+        IF @UserID IS NOT NULL
+            EXEC sys.sp_set_session_context @key = N'DeletedByUserID', @value = NULL;
 
         SELECT 1 AS Success, @InvID AS DeletedInvID;
     END TRY
     BEGIN CATCH
+        IF @UserID IS NOT NULL AND XACT_STATE() <> -1
+            EXEC sys.sp_set_session_context @key = N'DeletedByUserID', @value = NULL;
+
         DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(),
                 @ErrSev INT = ERROR_SEVERITY(),
                 @ErrState INT = ERROR_STATE();
@@ -20240,5 +20545,114 @@ BEGIN
             AND ip.LinkedAccountID IS NOT NULL
             AND ip.LinkedAccountID = i.PaymentAccountID
       );
+END
+GO
+
+-- =========================================================================
+-- عرض الفواتير المحذوفة / الملغاة (Cancel) مع الترقيم والبحث — منفصل كلياً عن sp_Invoice_GetFiltered
+-- يلتزم بنفس هيكل أعمدة Result Set لوحة الفواتير لضمان عدم تغيير جدول العرض
+-- =========================================================================
+IF OBJECT_ID('[Sales].[sp_CancelledInvoice_GetPaged]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_CancelledInvoice_GetPaged];
+GO
+CREATE PROCEDURE [Sales].[sp_CancelledInvoice_GetPaged]
+    @InvType    NVARCHAR(20)  = NULL,
+    @DateFrom   DATE          = NULL,
+    @DateTo     DATE          = NULL,
+    @SearchText NVARCHAR(100) = NULL,
+    @PageNumber INT           = 0,
+    @PageSize   INT           = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Result Set 1: بنفس هيكل عرض InvoiceListItem في لوحة الفواتير + حقول وصفية للإلغاء
+    SELECT
+        a.OriginalInvID                          AS InvID,
+        a.InvType,
+        CONVERT(DATE, a.InvDate)                 AS InvDate,
+        a.PartnerID,
+        ISNULL(a.PartnerName, N'—')              AS PartnerName,
+        a.WarehouseID,
+        ISNULL(a.WarehouseName, N'—')            AS WarehouseName,
+        a.TotalAmount,
+        a.Discount,
+        a.NetAmount,
+        a.PaidAmount,
+        a.Remainder,
+        CAST(0 AS BIT)                           AS IsPosted,
+        a.ReferenceNo,
+        a.Notes,
+        a.ArchiveID,
+        a.CancelledAt,
+        a.CancelledByUserName,
+        CAST(1 AS BIT)                           AS IsCancelled
+    FROM [Sales].[CancelledInvoicesArchive] a
+    WHERE
+        (@InvType    IS NULL OR a.InvType = @InvType)
+        AND (@DateFrom   IS NULL OR CONVERT(DATE, a.InvDate) >= @DateFrom)
+        AND (@DateTo     IS NULL OR CONVERT(DATE, a.InvDate) <= @DateTo)
+        AND (@SearchText IS NULL OR
+             a.PartnerName LIKE N'%' + @SearchText + N'%'
+          OR CAST(a.OriginalInvID AS NVARCHAR) LIKE N'%' + @SearchText + N'%'
+          OR a.ReferenceNo LIKE N'%' + @SearchText + N'%')
+    ORDER BY a.ArchiveID DESC
+    OFFSET (@PageNumber * @PageSize) ROWS
+    FETCH NEXT @PageSize ROWS ONLY;
+
+    -- Result Set 2: Total count
+    SELECT COUNT(*) AS TotalCount
+    FROM [Sales].[CancelledInvoicesArchive] a
+    WHERE
+        (@InvType    IS NULL OR a.InvType = @InvType)
+        AND (@DateFrom   IS NULL OR CONVERT(DATE, a.InvDate) >= @DateFrom)
+        AND (@DateTo     IS NULL OR CONVERT(DATE, a.InvDate) <= @DateTo)
+        AND (@SearchText IS NULL OR
+             a.PartnerName LIKE N'%' + @SearchText + N'%'
+          OR CAST(a.OriginalInvID AS NVARCHAR) LIKE N'%' + @SearchText + N'%'
+          OR a.ReferenceNo LIKE N'%' + @SearchText + N'%');
+END
+GO
+
+-- =========================================================================
+-- جلب تفاصيل الفاتورة المحذوفة / الملغاة كاملة (مع JSON Snapshot) للعرض والطباعة فقط
+-- منفصل كلياً عن sp_Invoice_GetByID
+-- =========================================================================
+IF OBJECT_ID('[Sales].[sp_CancelledInvoice_GetByID]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_CancelledInvoice_GetByID];
+GO
+CREATE PROCEDURE [Sales].[sp_CancelledInvoice_GetByID]
+    @ArchiveID     INT = NULL,
+    @OriginalInvID INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT TOP 1
+        a.ArchiveID,
+        a.OriginalInvID,
+        a.InvType,
+        a.InvDate,
+        a.PartnerID,
+        a.PartnerName,
+        a.WarehouseID,
+        a.WarehouseName,
+        a.TotalAmount,
+        a.Discount,
+        a.NetAmount,
+        a.PaidAmount,
+        a.Remainder,
+        a.ReferenceNo,
+        a.Notes,
+        a.OriginalUserID,
+        a.OriginalUserName,
+        a.CancelledByUserID,
+        a.CancelledByUserName,
+        a.CancelledAt,
+        a.InvoiceSnapshotJson
+    FROM [Sales].[CancelledInvoicesArchive] a
+    WHERE (@ArchiveID IS NOT NULL AND a.ArchiveID = @ArchiveID)
+       OR (@ArchiveID IS NULL AND @OriginalInvID IS NOT NULL AND a.OriginalInvID = @OriginalInvID)
+    ORDER BY a.ArchiveID DESC;
 END
 GO

@@ -11,6 +11,7 @@ Namespace ViewModels
         Inherits BaseViewModel
 
         Private ReadOnly _invoiceService As InvoiceService
+        Private ReadOnly _cancelledInvoiceService As CancelledInvoiceService
         Private ReadOnly _accountingService As AccountingService
 
         ' ── Debounce timer for search ──
@@ -18,6 +19,7 @@ Namespace ViewModels
 
         ' ── Events for View ──
         Public Event RequestOpenInvoice As Action(Of Integer, String) ' (InvID, InvType)
+        Public Event RequestOpenCancelledInvoice As Action(Of Integer?, Integer) ' (ArchiveID, OriginalInvID)
         Public Event RequestSnackbar As Action(Of String)
 
         ' ── Dashboard Stats ──
@@ -257,6 +259,7 @@ Namespace ViewModels
             If System.ComponentModel.DesignerProperties.GetIsInDesignMode(New System.Windows.DependencyObject()) Then Return
 
             _invoiceService = New InvoiceService()
+            _cancelledInvoiceService = New CancelledInvoiceService()
             _accountingService = New AccountingService()
 
             Invoices = New ObservableCollection(Of InvoiceListItem)()
@@ -338,18 +341,27 @@ Namespace ViewModels
                 IsLoading = True
 
                 Dim invType = If(FilterType = "All", Nothing, FilterType)
-                Dim isPosted As Boolean? = Nothing
-                If FilterStatus = "Posted" Then isPosted = True
-                If FilterStatus = "Draft" Then isPosted = False
                 Dim search = If(String.IsNullOrWhiteSpace(SearchText), Nothing, SearchText.Trim())
+                Dim result As (Items As List(Of InvoiceListItem), TotalCount As Integer)
 
-                Dim result = _invoiceService.GetFilteredInvoices(
-                    invType:=invType, isPosted:=isPosted, searchText:=search,
-                    pageNumber:=CurrentPage, pageSize:=PAGE_SIZE)
+                If FilterStatus = "Cancelled" Then
+                    ' مسار و SP منفصل تماماً لفواتير Cancel المؤرشفة
+                    result = _cancelledInvoiceService.GetCancelledInvoicesPaged(
+                        invType:=invType, searchText:=search,
+                        pageNumber:=CurrentPage, pageSize:=PAGE_SIZE)
+                Else
+                    Dim isPosted As Boolean? = Nothing
+                    If FilterStatus = "Posted" Then isPosted = True
+                    If FilterStatus = "Draft" Then isPosted = False
+
+                    result = _invoiceService.GetFilteredInvoices(
+                        invType:=invType, isPosted:=isPosted, searchText:=search,
+                        pageNumber:=CurrentPage, pageSize:=PAGE_SIZE)
+                End If
 
                 Invoices.Clear()
                 For Each item In result.Items
-                    item.CanUserDeletePermission = If(item.InvType = "Purchase",
+                    item.CanUserDeletePermission = (Not item.IsCancelled) AndAlso If(item.InvType = "Purchase",
                         (_canDeletePurchasesPerm OrElse _canDeleteDashboardPerm),
                         (_canDeleteSalesPerm OrElse _canDeleteDashboardPerm))
                     Invoices.Add(item)
@@ -357,7 +369,7 @@ Namespace ViewModels
                 TotalCount = result.TotalCount
 
             Catch ex As Exception
-                RaiseEvent RequestSnackbar("❌ " & ex.Message)
+                Helpers.SnackbarService.ShowError(ex, "تعذر تحميل الفواتير")
             Finally
                 IsLoading = False
             End Try
@@ -373,7 +385,11 @@ Namespace ViewModels
             Dim item = TryCast(parameter, InvoiceListItem)
             If item Is Nothing AndAlso SelectedInvoice IsNot Nothing Then item = SelectedInvoice
             If item IsNot Nothing Then
-                RaiseEvent RequestOpenInvoice(item.InvID, item.InvType)
+                If item.IsCancelled Then
+                    RaiseEvent RequestOpenCancelledInvoice(item.ArchiveID, item.InvID)
+                Else
+                    RaiseEvent RequestOpenInvoice(item.InvID, item.InvType)
+                End If
             End If
         End Sub
 

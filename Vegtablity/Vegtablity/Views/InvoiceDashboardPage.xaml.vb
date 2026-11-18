@@ -19,7 +19,13 @@ Namespace Views
         Private Sub Page_Loaded(sender As Object, e As RoutedEventArgs)
             ' Wire ViewModel events
             If VM IsNot Nothing Then
+                RemoveHandler VM.RequestOpenInvoice, AddressOf OnRequestOpenInvoice
                 AddHandler VM.RequestOpenInvoice, AddressOf OnRequestOpenInvoice
+
+                RemoveHandler VM.RequestOpenCancelledInvoice, AddressOf OnRequestOpenCancelledInvoice
+                AddHandler VM.RequestOpenCancelledInvoice, AddressOf OnRequestOpenCancelledInvoice
+
+                RemoveHandler VM.RequestSnackbar, AddressOf ShowSnackbar
                 AddHandler VM.RequestSnackbar, AddressOf ShowSnackbar
             End If
 
@@ -95,6 +101,17 @@ Namespace Views
             End If
         End Sub
 
+        ''' <summary>Navigate to the isolated read-only Cancelled Invoice page</summary>
+        Private Sub OnRequestOpenCancelledInvoice(archiveID As Integer?, originalInvID As Integer)
+            Dim parent = FindParentWindow()
+            If parent Is Nothing Then Return
+
+            Dim page = New CancelledInvoiceDetailsPage()
+            Dim vm = TryCast(page.DataContext, CancelledInvoiceDetailsViewModel)
+            vm?.LoadCancelledInvoice(archiveID, originalInvID)
+            parent.NavigateTo(page, keepCurrentInStack:=True)
+        End Sub
+
         ''' <summary>Find the parent DashboardWindow</summary>
         Private Function FindParentWindow() As DashboardWindow
             Dim parent = Window.GetWindow(Me)
@@ -117,6 +134,10 @@ Namespace Views
             If btn Is Nothing OrElse VM Is Nothing Then Return
             ' Toggle: if already same status, revert to All
             VM.FilterStatus = If(VM.FilterStatus = CStr(btn.Tag), "All", CStr(btn.Tag))
+
+            BtnStatusPosted.Background = New System.Windows.Media.SolidColorBrush(DirectCast(System.Windows.Media.ColorConverter.ConvertFromString(If(VM.FilterStatus = "Posted", "#10B981", "#94A3B8")), System.Windows.Media.Color))
+            BtnStatusDraft.Background = New System.Windows.Media.SolidColorBrush(DirectCast(System.Windows.Media.ColorConverter.ConvertFromString(If(VM.FilterStatus = "Draft", "#F59E0B", "#94A3B8")), System.Windows.Media.Color))
+            BtnStatusCancelled.Background = New System.Windows.Media.SolidColorBrush(DirectCast(System.Windows.Media.ColorConverter.ConvertFromString(If(VM.FilterStatus = "Cancelled", "#DC2626", "#94A3B8")), System.Windows.Media.Color))
         End Sub
 
         ' ── Invoice actions ──
