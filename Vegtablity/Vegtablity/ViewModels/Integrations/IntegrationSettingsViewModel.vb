@@ -19,6 +19,11 @@ Namespace ViewModels.Integrations
 
         Public Property EnabledProviders As New ObservableCollection(Of IntegrationProviderConfig)()
         Public Property AvailableAccounts As New ObservableCollection(Of GatewayAccountOption)()
+        Public Property AvailableDebitAccounts As New ObservableCollection(Of GatewayAccountOption)()
+        Public Property AvailableCreditAccounts As New ObservableCollection(Of GatewayAccountOption)()
+        Public Property AvailableCommissionAccounts As New ObservableCollection(Of GatewayAccountOption)()
+        Public Property AvailableRefundDebitAccounts As New ObservableCollection(Of GatewayAccountOption)()
+        Public Property AvailableRefundCreditAccounts As New ObservableCollection(Of GatewayAccountOption)()
 
         Private _selectedProvider As IntegrationProviderConfig
         Public Property SelectedProvider As IntegrationProviderConfig
@@ -40,18 +45,18 @@ Namespace ViewModels.Integrations
             End Set
         End Property
 
-        Private Function FindAccountOption(accId As Integer?) As GatewayAccountOption
-            If AvailableAccounts Is Nothing OrElse AvailableAccounts.Count = 0 Then Return Nothing
+        Private Function FindAccountOption(options As ObservableCollection(Of GatewayAccountOption), accId As Integer?) As GatewayAccountOption
+            If options Is Nothing OrElse options.Count = 0 Then Return Nothing
             If Not accId.HasValue OrElse accId.Value <= 0 Then
-                Return AvailableAccounts.FirstOrDefault(Function(a) Not a.AccountID.HasValue)
+                Return options.FirstOrDefault(Function(a) Not a.AccountID.HasValue)
             End If
-            Return AvailableAccounts.FirstOrDefault(Function(a) a.AccountID.HasValue AndAlso a.AccountID.Value = accId.Value)
+            Return options.FirstOrDefault(Function(a) a.AccountID.HasValue AndAlso a.AccountID.Value = accId.Value)
         End Function
 
         Public Property SelectedDebitAccount As GatewayAccountOption
             Get
                 If SelectedProvider Is Nothing Then Return Nothing
-                Return FindAccountOption(SelectedProvider.LinkedAccountID)
+                Return FindAccountOption(AvailableDebitAccounts, SelectedProvider.LinkedAccountID)
             End Get
             Set(value As GatewayAccountOption)
                 If SelectedProvider IsNot Nothing Then
@@ -64,7 +69,7 @@ Namespace ViewModels.Integrations
         Public Property SelectedCreditAccount As GatewayAccountOption
             Get
                 If SelectedProvider Is Nothing Then Return Nothing
-                Return FindAccountOption(SelectedProvider.DefaultCreditAccountID)
+                Return FindAccountOption(AvailableCreditAccounts, SelectedProvider.DefaultCreditAccountID)
             End Get
             Set(value As GatewayAccountOption)
                 If SelectedProvider IsNot Nothing Then
@@ -77,7 +82,7 @@ Namespace ViewModels.Integrations
         Public Property SelectedCommissionAccount As GatewayAccountOption
             Get
                 If SelectedProvider Is Nothing Then Return Nothing
-                Return FindAccountOption(SelectedProvider.CommissionAccountID)
+                Return FindAccountOption(AvailableCommissionAccounts, SelectedProvider.CommissionAccountID)
             End Get
             Set(value As GatewayAccountOption)
                 If SelectedProvider IsNot Nothing Then
@@ -90,7 +95,7 @@ Namespace ViewModels.Integrations
         Public Property SelectedRefundDebitAccount As GatewayAccountOption
             Get
                 If SelectedProvider Is Nothing Then Return Nothing
-                Return FindAccountOption(SelectedProvider.RefundDebitAccountID)
+                Return FindAccountOption(AvailableRefundDebitAccounts, SelectedProvider.RefundDebitAccountID)
             End Get
             Set(value As GatewayAccountOption)
                 If SelectedProvider IsNot Nothing Then
@@ -103,7 +108,7 @@ Namespace ViewModels.Integrations
         Public Property SelectedRefundCreditAccount As GatewayAccountOption
             Get
                 If SelectedProvider Is Nothing Then Return Nothing
-                Return FindAccountOption(SelectedProvider.RefundCreditAccountID)
+                Return FindAccountOption(AvailableRefundCreditAccounts, SelectedProvider.RefundCreditAccountID)
             End Get
             Set(value As GatewayAccountOption)
                 If SelectedProvider IsNot Nothing Then
@@ -113,13 +118,31 @@ Namespace ViewModels.Integrations
             End Set
         End Property
 
-        Public Function GetFilteredAccounts(searchText As String) As System.Collections.Generic.List(Of GatewayAccountOption)
-            If AvailableAccounts Is Nothing Then Return New System.Collections.Generic.List(Of GatewayAccountOption)()
+        Public Function GetAccountsCollectionForDropdown(dropdownName As String) As ObservableCollection(Of GatewayAccountOption)
+            Select Case If(dropdownName, "")
+                Case "DdDebitAccount"
+                    Return AvailableDebitAccounts
+                Case "DdCreditAccount"
+                    Return AvailableCreditAccounts
+                Case "DdCommissionAccount"
+                    Return AvailableCommissionAccounts
+                Case "DdRefundDebitAccount"
+                    Return AvailableRefundDebitAccounts
+                Case "DdRefundCreditAccount"
+                    Return AvailableRefundCreditAccounts
+                Case Else
+                    Return AvailableAccounts
+            End Select
+        End Function
+
+        Public Function GetFilteredAccounts(searchText As String, Optional dropdownName As String = "") As System.Collections.Generic.List(Of GatewayAccountOption)
+            Dim source = GetAccountsCollectionForDropdown(dropdownName)
+            If source Is Nothing Then Return New System.Collections.Generic.List(Of GatewayAccountOption)()
             If String.IsNullOrWhiteSpace(searchText) Then
-                Return AvailableAccounts.ToList()
+                Return source.ToList()
             End If
             Dim q = searchText.Trim()
-            Return AvailableAccounts.Where(Function(a) _
+            Return source.Where(Function(a) _
                 (a.DisplayText IsNot Nothing AndAlso a.DisplayText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
                 (a.AccountCode IsNot Nothing AndAlso a.AccountCode.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0) OrElse
                 (a.AccountName IsNot Nothing AndAlso a.AccountName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
@@ -240,25 +263,33 @@ Namespace ViewModels.Integrations
             LoadEnabledProviders()
         End Sub
 
+        Private Sub PopulateOptionsCollection(target As ObservableCollection(Of GatewayAccountOption), autoDisplayText As String, accounts As System.Collections.Generic.List(Of Models.Account))
+            target.Clear()
+            target.Add(New GatewayAccountOption With {
+                .AccountID = Nothing,
+                .AccountCode = "AUTO",
+                .AccountName = "تلقائي",
+                .DisplayText = autoDisplayText
+            })
+            For Each acc In accounts
+                target.Add(New GatewayAccountOption With {
+                    .AccountID = acc.AccountID,
+                    .AccountCode = acc.AccountCode,
+                    .AccountName = acc.AccountName,
+                    .DisplayText = $"{acc.AccountCode}  —  {acc.AccountName}"
+                })
+            Next
+        End Sub
+
         Public Sub LoadAvailableAccounts()
             Try
-                AvailableAccounts.Clear()
-                AvailableAccounts.Add(New GatewayAccountOption With {
-                    .AccountID = Nothing,
-                    .AccountCode = "AUTO",
-                    .AccountName = "تلقائي",
-                    .DisplayText = "🔄 تلقائي (الافتراضي: حساب البوابة / حساب العميل في الفاتورة)"
-                })
-
                 Dim list = _integrationService.GetTransactionalAccounts()
-                For Each acc In list
-                    AvailableAccounts.Add(New GatewayAccountOption With {
-                        .AccountID = acc.AccountID,
-                        .AccountCode = acc.AccountCode,
-                        .AccountName = acc.AccountName,
-                        .DisplayText = $"{acc.AccountCode}  —  {acc.AccountName}"
-                    })
-                Next
+                PopulateOptionsCollection(AvailableAccounts, "🔄 تلقائي (الافتراضي: حساب البوابة / حساب العميل في الفاتورة)", list)
+                PopulateOptionsCollection(AvailableDebitAccounts, "🔄 تلقائي (يُولّد تلقائياً تحت حساب 11 باسم البوابة)", list)
+                PopulateOptionsCollection(AvailableCreditAccounts, "🔄 تلقائي (الافتراضي: حساب العميل في الفاتورة / 1201)", list)
+                PopulateOptionsCollection(AvailableCommissionAccounts, "🔄 تلقائي (يُولّد تلقائياً تحت حساب 65: مصروف عمولات البوابة)", list)
+                PopulateOptionsCollection(AvailableRefundDebitAccounts, "🔄 تلقائي (الافتراضي: حساب العميل)", list)
+                PopulateOptionsCollection(AvailableRefundCreditAccounts, "🔄 تلقائي (الافتراضي: حساب البوابة)", list)
                 NotifyAccountSelectionsChanged()
             Catch
             End Try
@@ -374,14 +405,14 @@ Namespace ViewModels.Integrations
             Try
                 IsBusy = True
                 Dim saved = _integrationService.SaveProviderConfiguration(SelectedProvider)
+                LoadAvailableAccounts()
                 LoadEnabledProviders()
 
                 Dim extraMsg As String = If(saved.IsDeliveryPlatform,
                     "تم إنشاء وربط عميل المبيعات (Talabat) في شجرة الحسابات وتفعيل شاشة طلبات Talabat في قسم المبيعات وتطبيق الكاشير.",
-                    "تم إنشاء وربط الحساب الفرعي للبوابة في شجرة الحسابات وتفعيل إصدار روابط الدفع ورموز QR.")
+                    "تم إنشاء وربط الحساب الفرعي للبوابة تحت حساب 11 وحساب مصروف العمولات تحت حساب 65 وتفعيل إصدار روابط الدفع ورموز QR.")
 
                 GuidanceMessageAr = $"✅ تم حفظ إعدادات ({saved.ProviderNameAr}) بنجاح! {extraMsg}"
-                LoadAvailableAccounts()
                 MessageBox.Show(GuidanceMessageAr, "تم الحفظ والتفعيل بنجاح", MessageBoxButton.OK, MessageBoxImage.Information)
             Catch ex As Exception
                 Helpers.SnackbarService.ShowError(ex, "تعذر حفظ إعدادات البوابة")

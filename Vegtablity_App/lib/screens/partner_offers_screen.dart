@@ -180,10 +180,13 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
       // Navigate to Billing Screen or Temporary Order Screen with the quote details
       if (mounted) {
         if (widget.type == 'Sales') {
-          final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+          final settingsProvider =
+              Provider.of<SettingsProvider>(context, listen: false);
           final dbMode = settingsProvider.deliverySystemMode;
           final prefs = await SharedPreferences.getInstance();
-          final mode = (dbMode != null && dbMode.isNotEmpty) ? dbMode : (prefs.getString('cash_sale_mode') ?? 'direct');
+          final mode = (dbMode != null && dbMode.isNotEmpty)
+              ? dbMode
+              : (prefs.getString('cash_sale_mode') ?? 'direct');
           if (mode == 'temp_order') {
             Navigator.push(
               context,
@@ -225,19 +228,24 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
     final title = widget.type == 'Sales'
         ? context.tr('po_sales_partners_title')
         : context.tr('po_purchases_partners_title');
-    final primaryColor =
-        widget.type == 'Sales' ? Colors.blue[700]! : Colors.orange[800]!;
+    final primaryColor = widget.type == 'Sales'
+        ? const Color(0xFF2563EB)
+        : const Color(0xFFD97706);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FA),
       appBar: AppBar(
-        title: Text(title),
+        elevation: 0,
+        foregroundColor: Colors.white,
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: widget.type == 'Sales'
-                  ? [Colors.blue, Colors.teal]
-                  : [Colors.orange, Colors.red],
+                  ? const [Color(0xFF1D4ED8), Color(0xFF0D9488)]
+                  : const [Color(0xFFB45309), Color(0xFFEA580C)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -250,12 +258,14 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
           children: [
             // Modern Elegant Search Area
             Container(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(14.0),
               decoration: BoxDecoration(
                 color: Colors.white,
+                border:
+                    const Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -266,10 +276,11 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                 onChanged: _filterPartners,
                 decoration: InputDecoration(
                   hintText: context.tr('po_search_hint'),
-                  prefixIcon: Icon(Icons.search, color: primaryColor),
+                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                  prefixIcon: Icon(Icons.search_rounded, color: primaryColor),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear),
+                          icon: const Icon(Icons.clear_rounded),
                           onPressed: () {
                             _searchController.clear();
                             _filterPartners('');
@@ -277,19 +288,19 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                         )
                       : null,
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: const Color(0xFFF1F5F9),
                   contentPadding: const EdgeInsets.symmetric(
-                      vertical: 0.0, horizontal: 16.0),
+                      vertical: 10.0, horizontal: 16.0),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+                    borderRadius: BorderRadius.circular(14.0),
                     borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+                    borderRadius: BorderRadius.circular(14.0),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30.0),
+                    borderRadius: BorderRadius.circular(14.0),
                     borderSide: BorderSide(color: primaryColor, width: 1.5),
                   ),
                 ),
@@ -299,32 +310,45 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
             // Loading / Error / Content
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Colors.teal))
+                  ? Center(
+                      child: CircularProgressIndicator(color: primaryColor))
                   : _errorMessage.isNotEmpty
                       ? Center(
                           child: Padding(
                             padding: const EdgeInsets.all(24.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.error_outline,
-                                    size: 60, color: Colors.red),
-                                const SizedBox(height: 16),
-                                Text(_errorMessage,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                        fontSize: 16, color: Colors.grey)),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: _fetchActivePartners,
-                                  icon: const Icon(Icons.refresh),
-                                  label: Text(context.tr('po_retry')),
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white),
-                                ),
-                              ],
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border:
+                                    Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.error_outline_rounded,
+                                      size: 52, color: Color(0xFFE11D48)),
+                                  const SizedBox(height: 12),
+                                  Text(_errorMessage,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          fontSize: 15,
+                                          color: Color(0xFF475569))),
+                                  const SizedBox(height: 14),
+                                  ElevatedButton.icon(
+                                    onPressed: _fetchActivePartners,
+                                    icon: const Icon(Icons.refresh_rounded),
+                                    label: Text(context.tr('po_retry')),
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryColor,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12))),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         )
@@ -333,13 +357,14 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.people_outline_rounded,
-                                      size: 70, color: Colors.grey[400]),
-                                  const SizedBox(height: 16),
+                                  const Icon(Icons.people_outline_rounded,
+                                      size: 64, color: Color(0xFF94A3B8)),
+                                  const SizedBox(height: 14),
                                   Text(
                                     context.tr('po_no_partners_found'),
                                     style: const TextStyle(
-                                        fontSize: 16, color: Colors.grey),
+                                        fontSize: 15.5,
+                                        color: Color(0xFF64748B)),
                                     textAlign: TextAlign.center,
                                   ),
                                 ],
@@ -360,98 +385,138 @@ class _PartnerOffersScreenState extends State<PartnerOffersScreen> {
                                     ? name.substring(0, 1)
                                     : '?';
 
-                                return Card(
+                                return Container(
                                   margin: const EdgeInsets.only(bottom: 12.0),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(16.0)),
-                                  elevation: 2,
-                                  child: InkWell(
-                                    onTap: () => _selectPartner(
-                                        Map<String, dynamic>.from(partner)),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
                                     borderRadius: BorderRadius.circular(16.0),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Row(
-                                        children: [
-                                          // Avatar
-                                          CircleAvatar(
-                                            radius: 28,
-                                            backgroundColor:
-                                                primaryColor.withOpacity(0.1),
-                                            child: Text(
-                                              initials,
-                                              style: TextStyle(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.bold,
-                                                color: primaryColor,
+                                    border: Border.all(
+                                        color: const Color(0xFFE2E8F0)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: primaryColor.withValues(
+                                            alpha: 0.06),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16.0),
+                                    child: InkWell(
+                                      onTap: () => _selectPartner(
+                                          Map<String, dynamic>.from(partner)),
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(14.0),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 48,
+                                              height: 48,
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    primaryColor.withValues(
+                                                        alpha: 0.16),
+                                                    primaryColor.withValues(
+                                                        alpha: 0.06),
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                                border: Border.all(
+                                                  color: primaryColor
+                                                      .withValues(alpha: 0.2),
+                                                ),
+                                              ),
+                                              alignment: Alignment.center,
+                                              child: Text(
+                                                initials,
+                                                style: TextStyle(
+                                                  fontSize: 19,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: primaryColor,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          // Info
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  name,
-                                                  style: const TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black87,
+                                            const SizedBox(width: 14),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    name,
+                                                    style: const TextStyle(
+                                                      fontSize: 15.5,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF0F172A),
+                                                    ),
                                                   ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Row(
-                                                  children: [
-                                                    const Icon(Icons.phone,
-                                                        size: 14,
-                                                        color: Colors.grey),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      phone,
-                                                      style: TextStyle(
-                                                          fontSize: 13,
-                                                          color:
-                                                              Colors.grey[600]),
-                                                    ),
-                                                    const SizedBox(width: 16),
-                                                    const Icon(
-                                                        Icons.location_on,
-                                                        size: 14,
-                                                        color: Colors.grey),
-                                                    const SizedBox(width: 4),
-                                                    Expanded(
-                                                      child: Text(
-                                                        address,
-                                                        style: TextStyle(
-                                                            fontSize: 13,
-                                                            color: Colors
-                                                                .grey[600]),
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
+                                                  const SizedBox(height: 6),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.phone_outlined,
+                                                          size: 13.5,
+                                                          color: Color(
+                                                              0xFF64748B)),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        phone,
+                                                        style: const TextStyle(
+                                                            fontSize: 12.5,
+                                                            color: Color(
+                                                                0xFF475569)),
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
+                                                      const SizedBox(width: 14),
+                                                      const Icon(
+                                                          Icons
+                                                              .location_on_outlined,
+                                                          size: 13.5,
+                                                          color: Color(
+                                                              0xFF64748B)),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          address,
+                                                          style: const TextStyle(
+                                                              fontSize: 12.5,
+                                                              color: Color(
+                                                                  0xFF64748B)),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                          // Navigation arrow
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.end,
-                                            children: [
-                                              Icon(
-                                                  Icons
-                                                      .arrow_forward_ios_rounded,
-                                                  size: 16,
-                                                  color: Colors.grey[400]),
-                                            ],
-                                          ),
-                                        ],
+                                            Container(
+                                              width: 30,
+                                              height: 30,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF8FAFC),
+                                                borderRadius:
+                                                    BorderRadius.circular(9),
+                                                border: Border.all(
+                                                    color: const Color(
+                                                        0xFFE2E8F0)),
+                                              ),
+                                              child: const Icon(
+                                                Icons.arrow_forward_ios_rounded,
+                                                size: 12,
+                                                color: Color(0xFF64748B),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),

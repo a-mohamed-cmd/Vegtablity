@@ -321,7 +321,7 @@ Namespace ViewModels
         End Sub
 
         Private Sub LoadCashAccounts()
-            Dim list = _accountingService.GetCashAccounts()
+            Dim list = _accountingService.GetCashAccounts(includePaymentGateways:=False)
             CashAccounts.Clear()
             For Each a In list : CashAccounts.Add(a) : Next
         End Sub

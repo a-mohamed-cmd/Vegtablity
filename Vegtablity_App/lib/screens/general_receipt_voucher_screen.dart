@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/account_provider.dart';
 import '../providers/voucher_provider.dart';
 import '../services/api_service.dart';
+import '../services/integrations/integration_service.dart';
 import '../services/offline_sync_service.dart';
 import '../viewmodels/sync_viewmodel.dart';
 import '../providers/shift_provider.dart';
@@ -51,23 +52,36 @@ class _GeneralReceiptVoucherScreenState
 
   Future<void> _loadCashAccounts() async {
     final voucherProv = Provider.of<VoucherProvider>(context, listen: false);
-    setState(() {
-      _cashAccounts = voucherProv.cachedAccounts;
-      if (_cashAccounts.isNotEmpty) {
-        _selectedCashAccountId = _cashAccounts.first['AccountID'];
-      }
-    });
+    final filteredCached = await IntegrationPosService.filterOutGatewayAccounts(
+      List<Map<String, dynamic>>.from(voucherProv.cachedAccounts),
+    );
+    if (mounted) {
+      setState(() {
+        _cashAccounts = filteredCached;
+        if (_cashAccounts.isNotEmpty &&
+            !_cashAccounts.any((a) => a['AccountID'] == _selectedCashAccountId)) {
+          _selectedCashAccountId = _cashAccounts.first['AccountID'];
+        }
+      });
+    }
 
     final api = Provider.of<ApiService>(context, listen: false);
     try {
       final resp = await api.getVoucherAccounts();
       if (resp.statusCode == 200) {
-        setState(() {
-          _cashAccounts = List<Map<String, dynamic>>.from(resp.data);
-          if (_cashAccounts.isNotEmpty && _selectedCashAccountId == null) {
-            _selectedCashAccountId = _cashAccounts.first['AccountID'];
-          }
-        });
+        final filtered = await IntegrationPosService.filterOutGatewayAccounts(
+          List<Map<String, dynamic>>.from(resp.data),
+        );
+        if (mounted) {
+          setState(() {
+            _cashAccounts = filtered;
+            if (_cashAccounts.isNotEmpty &&
+                (_selectedCashAccountId == null ||
+                    !_cashAccounts.any((a) => a['AccountID'] == _selectedCashAccountId))) {
+              _selectedCashAccountId = _cashAccounts.first['AccountID'];
+            }
+          });
+        }
       }
     } catch (e) {
       // Use cached

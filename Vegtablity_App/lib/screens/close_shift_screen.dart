@@ -38,18 +38,32 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
   double get _endingCash => double.tryParse(_cashController.text.trim()) ?? 0.0;
   double get _startingCash => _parseD(_summary?['StartingCash']);
   double get _totalSales => _parseD(_summary?['TotalSales']);
-  double get _totalCashSales => _parseD(_summary?['TotalCashSales'] ?? _summary?['CashSales'] ?? _summary?['TotalPaidSales']);
-  double get _totalKnetSales => _parseD(_summary?['TotalKnetSales'] ?? _summary?['KnetSales'] ?? _summary?['TotalNonCashSales']);
+  double get _totalCashSales => _parseD(_summary?['TotalCashSales'] ??
+      _summary?['CashSales'] ??
+      _summary?['TotalPaidSales']);
+  double get _totalKnetSales => _parseD(_summary?['TotalKnetSales'] ??
+      _summary?['KnetSales'] ??
+      _summary?['TotalNonCashSales']);
   double get _totalRemainder => _parseD(_summary?['TotalRemainder']);
   double get _totalPurchases => _parseD(_summary?['TotalPurchases']);
-  double get _totalCashPurchases => _parseD(_summary?['TotalCashPurchases'] ?? _summary?['CashPurchases'] ?? _summary?['TotalPaidPurchases']);
-  double get _totalNonCashPurchases => _parseD(_summary?['TotalNonCashPurchases']);
-  double get _totalPurchasesRemainder => _parseD(_summary?['TotalPurchasesRemainder']);
-  double get _totalReceiptVouchers => _parseD(_summary?['TotalReceiptVouchers']);
-  double get _totalPaymentVouchers => _parseD(_summary?['TotalPaymentVouchers']);
+  double get _totalCashPurchases => _parseD(_summary?['TotalCashPurchases'] ??
+      _summary?['CashPurchases'] ??
+      _summary?['TotalPaidPurchases']);
+  double get _totalNonCashPurchases =>
+      _parseD(_summary?['TotalNonCashPurchases']);
+  double get _totalPurchasesRemainder =>
+      _parseD(_summary?['TotalPurchasesRemainder']);
+  double get _totalReceiptVouchers =>
+      _parseD(_summary?['TotalReceiptVouchers']);
+  double get _totalPaymentVouchers =>
+      _parseD(_summary?['TotalPaymentVouchers']);
   // معادلة الكاش النقدية الفعلية بالدرج: عهدة الافتتاح + مبيعات كاش محصلة - مشتريات كاش مدفوعة + سندات قبض كاش - سندات صرف كاش
-  double get _expectedCash => _startingCash + _totalCashSales - _totalCashPurchases
-      + _totalReceiptVouchers - _totalPaymentVouchers;
+  double get _expectedCash =>
+      _startingCash +
+      _totalCashSales -
+      _totalCashPurchases +
+      _totalReceiptVouchers -
+      _totalPaymentVouchers;
   double get _difference => _endingCash - _expectedCash;
 
   @override
@@ -93,8 +107,10 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
 
       setState(() {
         _summary = summaryData;
-        _salesInvoices = (results[0].statusCode == 200) ? (results[0].data ?? []) : [];
-        _purchaseInvoices = (results[1].statusCode == 200) ? (results[1].data ?? []) : [];
+        _salesInvoices =
+            (results[0].statusCode == 200) ? (results[0].data ?? []) : [];
+        _purchaseInvoices =
+            (results[1].statusCode == 200) ? (results[1].data ?? []) : [];
         _isLoadingSummary = false;
       });
     } catch (e) {
@@ -112,14 +128,17 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
 
     if (shiftId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('cs_no_open_shift')), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(context.tr('cs_no_open_shift')),
+            backgroundColor: Colors.red),
       );
       return;
     }
 
     final posProvider = Provider.of<PosProvider>(context, listen: false);
-    final voucherProvider = Provider.of<VoucherProvider>(context, listen: false);
-    
+    final voucherProvider =
+        Provider.of<VoucherProvider>(context, listen: false);
+
     final offlineInvoices = posProvider.offlineInvoicesCount;
     final offlineVouchers = voucherProvider.offlineVouchersCount;
 
@@ -128,14 +147,17 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1E2A38),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             context.tr('cs_unsynced_data_title'),
-            style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                color: Colors.orangeAccent, fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
           content: Text(
-            context.tr('cs_unsynced_data_msg')
+            context
+                .tr('cs_unsynced_data_msg')
                 .replaceAll('{invoices}', offlineInvoices.toString())
                 .replaceAll('{vouchers}', offlineVouchers.toString()),
             style: const TextStyle(color: Colors.white70),
@@ -144,7 +166,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(context.tr('cs_cancel'), style: const TextStyle(color: Colors.grey)),
+              child: Text(context.tr('cs_cancel'),
+                  style: const TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
@@ -160,23 +183,27 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
 
       if (syncConfirmed == true) {
         setState(() => _isClosing = true);
-        
+
         bool successInvoices = true;
         if (offlineInvoices > 0) {
           successInvoices = await posProvider.syncOfflineInvoices();
         }
-        
+
         bool successVouchers = true;
         if (offlineVouchers > 0) {
           successVouchers = await voucherProvider.syncOfflineVouchers();
         }
-        
+
         setState(() => _isClosing = false);
-        
-        if (!successInvoices || !successVouchers || posProvider.offlineInvoicesCount > 0 || voucherProvider.offlineVouchersCount > 0) {
+
+        if (!successInvoices ||
+            !successVouchers ||
+            posProvider.offlineInvoicesCount > 0 ||
+            voucherProvider.offlineVouchersCount > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.tr('cs_sync_failed'), textAlign: TextAlign.right),
+              content: Text(context.tr('cs_sync_failed'),
+                  textAlign: TextAlign.right),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -184,7 +211,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(context.tr('cs_sync_success'), textAlign: TextAlign.right),
+              content: Text(context.tr('cs_sync_success'),
+                  textAlign: TextAlign.right),
               backgroundColor: Colors.green,
             ),
           );
@@ -202,7 +230,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           context.tr('cs_confirm_close_title'),
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           textAlign: TextAlign.right,
         ),
         content: SingleChildScrollView(
@@ -211,19 +240,27 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                context.tr('cs_entered_cash').replaceAll('{amount}', endingCash.toStringAsFixed(3)),
+                context
+                    .tr('cs_entered_cash')
+                    .replaceAll('{amount}', endingCash.toStringAsFixed(3)),
                 style: const TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 8),
               Text(
-                context.tr('cs_expected_cash_msg').replaceAll('{amount}', _expectedCash.toStringAsFixed(3)),
+                context
+                    .tr('cs_expected_cash_msg')
+                    .replaceAll('{amount}', _expectedCash.toStringAsFixed(3)),
                 style: const TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 8),
               Text(
-                context.tr('cs_difference_msg').replaceAll('{amount}', _difference.toStringAsFixed(3)),
+                context
+                    .tr('cs_difference_msg')
+                    .replaceAll('{amount}', _difference.toStringAsFixed(3)),
                 style: TextStyle(
-                  color: _difference.abs() < 0.001 ? Colors.greenAccent : Colors.orangeAccent,
+                  color: _difference.abs() < 0.001
+                      ? Colors.greenAccent
+                      : Colors.orangeAccent,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -239,7 +276,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.tr('cs_cancel'), style: const TextStyle(color: Colors.grey)),
+            child: Text(context.tr('cs_cancel'),
+                style: const TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -258,7 +296,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
     // 1. طباعة تقرير اليومية
     setState(() => _isPrinting = true);
     try {
-      final printerService = Provider.of<PrinterService>(context, listen: false);
+      final printerService =
+          Provider.of<PrinterService>(context, listen: false);
       await printerService.printDailyReport(
         summary: _summary!,
         salesInvoices: _salesInvoices,
@@ -276,7 +315,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
     try {
       await shiftProvider.closeShift(shiftId, endingCash);
       if (mounted) {
-        AppSnackBar.showSuccess(context, '${context.tr('cs_close_success_msg')} ✓');
+        AppSnackBar.showSuccess(
+            context, '${context.tr('cs_close_success_msg')} ✓');
         // الانتقال لشاشة فتح وردية جديدة
         Navigator.pushAndRemoveUntil(
           context,
@@ -330,7 +370,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
     );
   }
 
-  Widget _buildCard({required String title, required Widget child, Color? titleColor}) {
+  Widget _buildCard(
+      {required String title, required Widget child, Color? titleColor}) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
@@ -345,7 +386,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.05),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
             ),
             child: Text(
               title,
@@ -397,10 +439,12 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
+                        const Icon(Icons.error_outline,
+                            size: 64, color: Colors.redAccent),
                         const SizedBox(height: 16),
                         Text(_errorMessage,
-                            style: const TextStyle(color: Colors.white70, fontSize: 16),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 16),
                             textAlign: TextAlign.center),
                         const SizedBox(height: 20),
                         ElevatedButton.icon(
@@ -408,7 +452,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                           icon: const Icon(Icons.refresh),
                           label: Text(context.tr('cs_retry')),
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                              backgroundColor: Colors.teal,
+                              foregroundColor: Colors.white),
                         ),
                       ],
                     ),
@@ -423,9 +468,12 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                         title: context.tr('cs_shift_info'),
                         child: Column(
                           children: [
-                            _buildInfoRow(context.tr('cs_cashier'), _summary?['UserName'] ?? '-'),
-                            _buildInfoRow(context.tr('cs_open_time'), _formatDateTime(_summary?['StartTime'])),
-                            _buildInfoRow(context.tr('cs_status'), _summary?['Status'] ?? '-',
+                            _buildInfoRow(context.tr('cs_cashier'),
+                                _summary?['UserName'] ?? '-'),
+                            _buildInfoRow(context.tr('cs_open_time'),
+                                _formatDateTime(_summary?['StartTime'])),
+                            _buildInfoRow(context.tr('cs_status'),
+                                _summary?['Status'] ?? '-',
                                 valueColor: Colors.greenAccent),
                           ],
                         ),
@@ -439,21 +487,19 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                           children: [
                             _buildInfoRow(
                                 context.tr('cs_invoices_count'),
-                                context.tr('cs_invoice_count').replaceAll('{count}', (_summary?['SalesCount'] ?? 0).toString())),
-                            _buildInfoRow(
-                                context.tr('cs_total_sales_label'),
+                                context.tr('cs_invoice_count').replaceAll(
+                                    '{count}',
+                                    (_summary?['SalesCount'] ?? 0).toString())),
+                            _buildInfoRow(context.tr('cs_total_sales_label'),
                                 '${_totalSales.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.blue[300]),
-                            _buildInfoRow(
-                                context.tr('cs_cash_sales_label'),
+                            _buildInfoRow(context.tr('cs_cash_sales_label'),
                                 '${_totalCashSales.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.greenAccent),
-                            _buildInfoRow(
-                                context.tr('cs_knet_sales_label'),
+                            _buildInfoRow(context.tr('cs_knet_sales_label'),
                                 '${_totalKnetSales.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.cyanAccent),
-                            _buildInfoRow(
-                                context.tr('cs_credit_sales_label'),
+                            _buildInfoRow(context.tr('cs_credit_sales_label'),
                                 '${_totalRemainder.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.orangeAccent),
                           ],
@@ -468,13 +514,15 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                           children: [
                             _buildInfoRow(
                                 context.tr('cs_invoices_count'),
-                                context.tr('cs_invoice_count').replaceAll('{count}', (_summary?['PurchasesCount'] ?? 0).toString())),
+                                context.tr('cs_invoice_count').replaceAll(
+                                    '{count}',
+                                    (_summary?['PurchasesCount'] ?? 0)
+                                        .toString())),
                             _buildInfoRow(
                                 context.tr('cs_total_purchases_label'),
                                 '${_totalPurchases.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.orange[300]),
-                            _buildInfoRow(
-                                context.tr('cs_cash_purchases_label'),
+                            _buildInfoRow(context.tr('cs_cash_purchases_label'),
                                 '${_totalCashPurchases.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.redAccent[100]),
                             if (_totalNonCashPurchases > 0)
@@ -496,12 +544,10 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                         titleColor: Colors.purple[300],
                         child: Column(
                           children: [
-                            _buildInfoRow(
-                                context.tr('cs_total_receipts'),
+                            _buildInfoRow(context.tr('cs_total_receipts'),
                                 '${_totalReceiptVouchers.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.greenAccent[200]),
-                            _buildInfoRow(
-                                context.tr('cs_total_payments'),
+                            _buildInfoRow(context.tr('cs_total_payments'),
                                 '${_totalPaymentVouchers.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.orangeAccent),
                           ],
@@ -515,13 +561,22 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                           title: 'تفاصيل طرق الدفع في الوردية',
                           titleColor: Colors.tealAccent,
                           child: Column(
-                            children: (_summary!['PaymentTotals'] as List).map<Widget>((pt) {
-                              final name = pt['PaymentMethodName'] ?? 'طريقة دفع';
+                            children: (_summary!['PaymentTotals'] as List)
+                                .map<Widget>((pt) {
+                              final name =
+                                  pt['PaymentMethodName'] ?? 'طريقة دفع';
                               final amt = _parseD(pt['TotalAmount']);
-                              final isIncome = pt['InvType'] == 'Sales' || pt['InvType'] == 'Receipt';
-                              final labelType = isIncome ? 'تحصيل / مبيعات' : 'سداد / مشتريات';
-                              final color = isIncome ? Colors.greenAccent : Colors.orangeAccent;
-                              return _buildInfoRow('$name ($labelType)', '${amt.toStringAsFixed(3)} KWD', valueColor: color);
+                              final isIncome = pt['InvType'] == 'Sales' ||
+                                  pt['InvType'] == 'Receipt';
+                              final labelType = isIncome
+                                  ? 'تحصيل / مبيعات'
+                                  : 'سداد / مشتريات';
+                              final color = isIncome
+                                  ? Colors.greenAccent
+                                  : Colors.orangeAccent;
+                              return _buildInfoRow('$name ($labelType)',
+                                  '${amt.toStringAsFixed(3)} KWD',
+                                  valueColor: color);
                             }).toList(),
                           ),
                         ),
@@ -533,37 +588,35 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            _buildInfoRow(
-                                context.tr('cs_starting_cash'),
+                            _buildInfoRow(context.tr('cs_starting_cash'),
                                 '${_startingCash.toStringAsFixed(3)} KWD'),
-                            _buildInfoRow(
-                                context.tr('cs_add_cash_sales'),
+                            _buildInfoRow(context.tr('cs_add_cash_sales'),
                                 '${_totalCashSales.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.greenAccent),
-                            _buildInfoRow(
-                                context.tr('cs_sub_cash_purchases'),
+                            _buildInfoRow(context.tr('cs_sub_cash_purchases'),
                                 '${_totalCashPurchases.toStringAsFixed(3)} KWD',
                                 valueColor: Colors.redAccent[100]),
                             if (_totalReceiptVouchers > 0)
-                              _buildInfoRow(
-                                  context.tr('cs_add_receipts'),
+                              _buildInfoRow(context.tr('cs_add_receipts'),
                                   '${_totalReceiptVouchers.toStringAsFixed(3)} KWD',
                                   valueColor: Colors.greenAccent[200]),
                             if (_totalPaymentVouchers > 0)
-                              _buildInfoRow(
-                                  context.tr('cs_subtract_payments'),
+                              _buildInfoRow(context.tr('cs_subtract_payments'),
                                   '${_totalPaymentVouchers.toStringAsFixed(3)} KWD',
                                   valueColor: Colors.orangeAccent),
                             Container(
                               margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: Colors.teal.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.teal.withOpacity(0.3)),
+                                border: Border.all(
+                                    color: Colors.teal.withOpacity(0.3)),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     '${_expectedCash.toStringAsFixed(3)} KWD',
@@ -575,9 +628,12 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Text('= ${context.tr('cs_expected_cash')}',
+                                    child: Text(
+                                        '= ${context.tr('cs_expected_cash')}',
                                         textAlign: TextAlign.right,
-                                        style: const TextStyle(color: Colors.white60, fontSize: 14)),
+                                        style: const TextStyle(
+                                            color: Colors.white60,
+                                            fontSize: 14)),
                                   ),
                                 ],
                               ),
@@ -585,20 +641,25 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                             Text(
                               context.tr('cs_enter_actual_cash_hint'),
                               textAlign: TextAlign.right,
-                              style: const TextStyle(color: Colors.white60, fontSize: 13),
+                              style: const TextStyle(
+                                  color: Colors.white60, fontSize: 13),
                             ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _cashController,
                               keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               textAlign: TextAlign.right,
-                              style: const TextStyle(color: Colors.white, fontSize: 18),
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 18),
                               decoration: InputDecoration(
                                 hintText: '0.000',
-                                hintStyle: const TextStyle(color: Colors.white30),
+                                hintStyle:
+                                    const TextStyle(color: Colors.white30),
                                 prefixText: 'KWD  ',
-                                prefixStyle: const TextStyle(color: Colors.white38),
+                                prefixStyle:
+                                    const TextStyle(color: Colors.white38),
                                 filled: true,
                                 fillColor: Colors.white.withOpacity(0.08),
                                 border: OutlineInputBorder(
@@ -607,7 +668,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.teal, width: 1.5),
+                                  borderSide: const BorderSide(
+                                      color: Colors.teal, width: 1.5),
                                 ),
                               ),
                               onChanged: (_) => setState(() {}),
@@ -625,7 +687,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     '${_difference >= 0 ? '+' : ''}${_difference.toStringAsFixed(3)} KWD',
@@ -642,7 +705,8 @@ class _CloseShiftScreenState extends State<CloseShiftScreen> {
                                     child: Text(context.tr('cs_difference'),
                                         textAlign: TextAlign.right,
                                         style: const TextStyle(
-                                            color: Colors.white60, fontSize: 14)),
+                                            color: Colors.white60,
+                                            fontSize: 14)),
                                   ),
                                 ],
                               ),

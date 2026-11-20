@@ -152,13 +152,18 @@ async def payment_gateway_webhook(provider_code: str, request: Request):
         elif st in ("FAILED", "DECLINED"):
             target_status = "Failed"
     elif code == "MYFATOORAH":
-        d_obj = data.get("Data", data)
-        ext_id = str(d_obj.get("InvoiceId", ""))
-        st = str(d_obj.get("TransactionStatus", d_obj.get("InvoiceStatus", ""))).upper()
-        if st in ("SUCCESS", "PAID", "CAPTURED"):
-            target_status = "Paid"
-        elif st in ("FAILED", "ERROR"):
-            target_status = "Failed"
+        from app.services.integrations.myfatoorah_gateway import MyFatoorahGateway
+
+        mf_cfg = next(
+            (p for p in service.get_providers(only_enabled=False) if str(p.get("ProviderCode", "")).upper() == "MYFATOORAH"),
+            {},
+        )
+        webhook_secret = str(mf_cfg.get("WebhookSecret") or "").strip()
+        sig_header = request.headers.get("myfatoorah-signature") or request.headers.get("MyFatoorah-Signature")
+        if webhook_secret and not MyFatoorahGateway.verify_webhook_signature(webhook_secret, data, sig_header):
+            raise HTTPException(status_code=401, detail="Invalid MyFatoorah-Signature")
+
+        ext_id, target_status = MyFatoorahGateway.parse_webhook_event(data)
     elif code == "UPAYMENTS":
         ext_id = data.get("trackId") or data.get("orderId")
         st = str(data.get("result", "")).upper()

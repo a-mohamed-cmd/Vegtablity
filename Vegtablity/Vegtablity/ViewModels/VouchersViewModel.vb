@@ -254,12 +254,19 @@ Namespace ViewModels
                 Dim allPartners = _partnerService.GetAllPartners("All")
                 Partners = New ObservableCollection(Of Partner)(allPartners)
 
-                ' تحميل الحسابات القابلة للقيد فقط (IsTransactional = 1)
+                ' تحميل الحسابات القابلة للقيد فقط مع استبعاد حسابات بوابات الدفع لتفادي التضارب مع روابط الدفع
                 Dim allAccounts = _accountingService.GetAllAccounts()
-                Accounts = New ObservableCollection(Of Account)(allAccounts.Where(Function(a) a.IsTransactional))
+                Dim cashWithoutGateways = _accountingService.GetCashAccounts(includePaymentGateways:=False)
+                Dim cashWithGateways = _accountingService.GetCashAccounts(includePaymentGateways:=True)
+                Dim nonGatewayIds As New HashSet(Of Integer)(cashWithoutGateways.Select(Function(a) a.AccountID))
+                Dim gatewayAccountIds As New HashSet(Of Integer)(
+                    cashWithGateways.Where(Function(a) Not nonGatewayIds.Contains(a.AccountID)).Select(Function(a) a.AccountID))
 
-                ' تحميل حسابات طريقة الدفع (النقدية والبنوك AccountCode = 11)
-                PaymentMethods = New ObservableCollection(Of Account)(allAccounts.Where(Function(a) a.IsTransactional AndAlso a.AccountCode.StartsWith("11")))
+                Accounts = New ObservableCollection(Of Account)(
+                    allAccounts.Where(Function(a) a.IsTransactional AndAlso Not gatewayAccountIds.Contains(a.AccountID)))
+
+                ' تحميل حسابات طريقة الدفع (النقدية والبنوك بدون حسابات بوابات الدفع)
+                PaymentMethods = New ObservableCollection(Of Account)(cashWithoutGateways)
                 
                 EnrichPaymentMethodNames(Receipts)
                 EnrichPaymentMethodNames(Payments)

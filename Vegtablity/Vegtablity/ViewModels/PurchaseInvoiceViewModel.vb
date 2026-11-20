@@ -243,7 +243,7 @@ Namespace ViewModels
                 Products.Add(p)
             Next
 
-            Dim cashList = _accountingService.GetCashAccounts()
+            Dim cashList = _accountingService.GetCashAccounts(includePaymentGateways:=False)
             CashAccounts.Clear()
             For Each a In cashList
                 CashAccounts.Add(a)

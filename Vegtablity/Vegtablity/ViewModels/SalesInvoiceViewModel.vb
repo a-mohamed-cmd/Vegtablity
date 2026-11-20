@@ -283,7 +283,7 @@ Namespace ViewModels
                 Warehouses = New ObservableCollection(Of Warehouse)(warehouseList)
                 OnPropertyChanged(NameOf(Warehouses))
 
-                Dim cashList = _accountingService.GetCashAccounts()
+                Dim cashList = _accountingService.GetCashAccounts(includePaymentGateways:=True)
                 CashAccounts = New ObservableCollection(Of Account)(cashList)
                 OnPropertyChanged(NameOf(CashAccounts))
 

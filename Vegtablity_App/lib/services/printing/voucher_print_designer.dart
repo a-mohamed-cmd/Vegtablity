@@ -10,6 +10,61 @@ class VoucherPrintDesigner {
     if (rawName == null) return '';
     return rawName.toString().trim();
   }
+
+  static bool _isReceiptVoucher(Map<String, dynamic> voucher) {
+    final String rawType =
+        (voucher['type'] ?? voucher['VoucherType'] ?? 'receipt')
+            .toString()
+            .trim()
+            .toLowerCase();
+    return rawType == 'receipt' || rawType.contains('قبض');
+  }
+
+  static String _resolvePaidInvoiceNo(Map<String, dynamic> inv) {
+    final dynamic id = inv['InvID'] ??
+        inv['InvoiceID'] ??
+        inv['inv_id'] ??
+        inv['invoice_id'] ??
+        inv['id'];
+    return (id != null && id.toString().trim().isNotEmpty)
+        ? id.toString().trim()
+        : '--';
+  }
+
+  static double _resolvePaidInvoiceAmount(Map<String, dynamic> inv) {
+    final dynamic raw = inv['Amount'] ??
+        inv['PaidAmount'] ??
+        inv['AllocatedAmount'] ??
+        inv['amount'] ??
+        inv['paid'] ??
+        0;
+    return double.tryParse(raw.toString()) ?? 0.0;
+  }
+
+  static double _resolveVoucherAmount(Map<String, dynamic> voucher) {
+    final dynamic raw = voucher['Amount'] ??
+        voucher['amount'] ??
+        voucher['TotalAmount'] ??
+        voucher['totalAmount'] ??
+        0;
+    return double.tryParse(raw.toString()) ?? 0.0;
+  }
+
+  static String _resolveVoucherNotes(Map<String, dynamic> voucher) {
+    return (voucher['Notes'] ??
+            voucher['notes'] ??
+            voucher['Description'] ??
+            voucher['description'] ??
+            '')
+        .toString();
+  }
+
+  static String _amountLabel(bool isReceipt, bool isArabic) {
+    if (isReceipt) {
+      return isArabic ? 'المبلغ المستلم' : 'Received Amount';
+    }
+    return isArabic ? 'المبلغ المدفوع' : 'Paid Amount';
+  }
   // =========================================================================
   // SECTION 1: DEFAULT & BLUETOOTH MODE (النص المباشر والبلوتوث - الوضع التلقائي)
   // =========================================================================
@@ -31,8 +86,7 @@ class VoucherPrintDesigner {
       final String cSymbol = PrinterBase.getCurrencySymbol(companySettings, isArabic: isArabic);
 
       final String companyName = companySettings?['CompanyName'] ?? (isArabic ? 'شركه الضحي للمنتجات الزراعيه' : 'Al-Doha Agricultural Products');
-      final String type = voucher['type'] ?? voucher['VoucherType'] ?? 'receipt';
-      final bool isReceipt = type == 'receipt' || type.toString().contains('قبض');
+      final bool isReceipt = _isReceiptVoucher(voucher);
       final String voucherTitle = isReceipt ? (isArabic ? '*** سند قبض ***' : '*** RECEIPT VOUCHER ***') : (isArabic ? '*** سند صرف ***' : '*** PAYMENT VOUCHER ***');
 
       await SunmiPrinter.printText(sep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
@@ -54,14 +108,14 @@ class VoucherPrintDesigner {
       await SunmiPrinter.printText(isArabic ? 'التاريخ والوقت: $dateStr' : 'Date & Time: $dateStr', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 
-      final double amount = double.tryParse(voucher['Amount']?.toString() ?? voucher['amount']?.toString() ?? '0') ?? 0.0;
-      await SunmiPrinter.printText(isArabic ? 'المبلغ المستلم: ${PrinterBase.formatCurrency(amount)} $cSymbol' : 'Amount: ${PrinterBase.formatCurrency(amount)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
+      final double amount = _resolveVoucherAmount(voucher);
+      await SunmiPrinter.printText('${_amountLabel(isReceipt, isArabic)}: ${PrinterBase.formatCurrency(amount)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
 
       final String rawMethod = (voucher['payment_method'] ?? voucher['PaymentMethod'] ?? voucher['account_name'] ?? voucher['AccountName'] ?? '').toString();
       final String method = rawMethod.isNotEmpty ? _formatPaymentAccountName(rawMethod, isArabic) : (isArabic ? 'نقداً' : 'Cash');
       await SunmiPrinter.printText(isArabic ? 'طريقة الدفع: $method' : 'Payment Method: $method', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
 
-      final String notes = voucher['Notes'] ?? voucher['notes'] ?? voucher['description'] ?? '';
+      final String notes = _resolveVoucherNotes(voucher);
       if (notes.isNotEmpty) {
         await SunmiPrinter.printText(isArabic ? 'البيان: $notes' : 'Description: $notes', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       }
@@ -70,9 +124,14 @@ class VoucherPrintDesigner {
       if (paidInvoices.isNotEmpty) {
         await SunmiPrinter.printText(isArabic ? 'الفواتير المسددة بالسند:' : 'Paid Invoices:', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT, bold: true));
         for (var inv in paidInvoices) {
-          final dynamic invNo = inv['InvoiceID'] ?? inv['id'] ?? '--';
-          final double paidAmt = double.tryParse(inv['PaidAmount']?.toString() ?? inv['paid']?.toString() ?? '0') ?? 0.0;
-          await SunmiPrinter.printText(isArabic ? '• فاتورة #$invNo : ${PrinterBase.formatCurrency(paidAmt)} $cSymbol' : '• Invoice #$invNo: ${PrinterBase.formatCurrency(paidAmt)} $cSymbol', style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+          final String invNo = _resolvePaidInvoiceNo(inv);
+          final double paidAmt = _resolvePaidInvoiceAmount(inv);
+          await SunmiPrinter.printText(
+            isArabic
+                ? '• فاتورة #$invNo : ${PrinterBase.formatCurrency(paidAmt)} $cSymbol'
+                : '• Invoice #$invNo: ${PrinterBase.formatCurrency(paidAmt)} $cSymbol',
+            style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT),
+          );
         }
         await SunmiPrinter.printText(dSep, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
       }
@@ -164,13 +223,45 @@ class VoucherPrintDesigner {
     final List<int> bytes = [];
     final String sep = PrinterBase.getSeparator(paperSize);
     final String dSep = PrinterBase.getDashedSeparator(paperSize);
+    final String cSymbol = PrinterBase.getCurrencySymbol(companySettings, isArabic: isArabic);
+    final bool isReceipt = _isReceiptVoucher(voucher);
+    final String companyName = companySettings?['CompanyName'] ?? (isArabic ? 'شركه الضحي للمنتجات الزراعيه' : 'Al-Doha Agricultural Products');
+    final String voucherTitle = isReceipt ? (isArabic ? '*** سند قبض ***' : '*** RECEIPT VOUCHER ***') : (isArabic ? '*** سند صرف ***' : '*** PAYMENT VOUCHER ***');
+    final dynamic voucherId = voucher['VoucherID'] ?? voucher['id'] ?? '--';
+    final String partnerName = (voucher['PartnerName'] ?? voucher['partner_name'] ?? '--').toString();
+    final String dateStr = (voucher['date'] ?? voucher['VoucherDate'] ?? DateTime.now().toString().split(' ').first).toString();
+    final double amount = _resolveVoucherAmount(voucher);
+    final String rawMethod = (voucher['payment_method'] ?? voucher['PaymentMethod'] ?? voucher['account_name'] ?? voucher['AccountName'] ?? '').toString();
+    final String method = rawMethod.isNotEmpty ? _formatPaymentAccountName(rawMethod, isArabic) : (isArabic ? 'نقداً' : 'Cash');
+    final String notes = _resolveVoucherNotes(voucher);
 
     bytes.addAll(PrinterBase.getDrawerKickBytes());
     bytes.addAll([0x1B, 0x40]);
     bytes.addAll([0x1B, 0x61, 0x01]);
-    bytes.addAll('$sep\n'.codeUnits);
-    bytes.addAll(isArabic ? '  سند مالية\n'.codeUnits : '  Voucher Receipt\n'.codeUnits);
-    bytes.addAll('$dSep\n'.codeUnits);
+    bytes.addAll(utf8.encode('$sep\n$companyName\n$voucherTitle\n$dSep\n'));
+    bytes.addAll([0x1B, 0x61, 0x02]);
+    bytes.addAll(utf8.encode(isArabic ? 'رقم السند: #$voucherId\n' : 'Voucher No: #$voucherId\n'));
+    bytes.addAll(utf8.encode(isArabic ? 'العميل/المورد: $partnerName\n' : 'Partner: $partnerName\n'));
+    bytes.addAll(utf8.encode(isArabic ? 'التاريخ: $dateStr\n' : 'Date: $dateStr\n'));
+    bytes.addAll(utf8.encode('${_amountLabel(isReceipt, isArabic)}: ${PrinterBase.formatCurrency(amount)} $cSymbol\n'));
+    bytes.addAll(utf8.encode(isArabic ? 'طريقة الدفع: $method\n' : 'Payment Method: $method\n'));
+    if (notes.isNotEmpty) {
+      bytes.addAll(utf8.encode(isArabic ? 'البيان: $notes\n' : 'Notes: $notes\n'));
+    }
+    if (paidInvoices.isNotEmpty) {
+      bytes.addAll(utf8.encode('$dSep\n'));
+      bytes.addAll(utf8.encode(isArabic ? 'الفواتير المسددة بالسند:\n' : 'Paid Invoices:\n'));
+      for (final inv in paidInvoices) {
+        final String invNo = _resolvePaidInvoiceNo(inv);
+        final double paidAmt = _resolvePaidInvoiceAmount(inv);
+        bytes.addAll(utf8.encode(
+          isArabic
+              ? '* فاتورة #$invNo : ${PrinterBase.formatCurrency(paidAmt)} $cSymbol\n'
+              : '* Invoice #$invNo : ${PrinterBase.formatCurrency(paidAmt)} $cSymbol\n',
+        ));
+      }
+    }
+    bytes.addAll(utf8.encode('$sep\n\n\n'));
     bytes.addAll([0x1D, 0x56, 0x42, 0x00]);
     return bytes;
   }
@@ -273,6 +364,62 @@ class VoucherPrintDesigner {
       addText(lineStr, fontSize: smallSize, align: ui.TextAlign.center);
     }
 
+    void addTwoColumnRow(
+      String rightLabel,
+      String leftValue, {
+      double? fontSize,
+      bool bold = false,
+    }) {
+      final double rowFontSize = fontSize ?? (paperSize == 80 ? bodySize : 15.0);
+      final double rightColWidth = textWidth * (paperSize == 80 ? 0.56 : 0.54);
+      final double leftColWidth = textWidth - rightColWidth - 6.0;
+
+      final ui.ParagraphBuilder rightBuilder = ui.ParagraphBuilder(
+        ui.ParagraphStyle(
+          textAlign: isArabic ? ui.TextAlign.right : ui.TextAlign.left,
+          textDirection: isArabic ? ui.TextDirection.rtl : ui.TextDirection.ltr,
+          maxLines: 2,
+        ),
+      )..pushStyle(ui.TextStyle(
+          color: const ui.Color(0xFF000000),
+          fontSize: rowFontSize,
+          fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal,
+        ))
+        ..addText(rightLabel);
+      final ui.Paragraph rightPara = rightBuilder.build()
+        ..layout(ui.ParagraphConstraints(width: rightColWidth));
+
+      final ui.ParagraphBuilder leftBuilder = ui.ParagraphBuilder(
+        ui.ParagraphStyle(
+          textAlign: isArabic ? ui.TextAlign.left : ui.TextAlign.right,
+          textDirection: isArabic ? ui.TextDirection.ltr : ui.TextDirection.rtl,
+          maxLines: 2,
+        ),
+      )..pushStyle(ui.TextStyle(
+          color: const ui.Color(0xFF000000),
+          fontSize: rowFontSize,
+          fontWeight: bold ? ui.FontWeight.bold : ui.FontWeight.normal,
+        ))
+        ..addText(leftValue);
+      final ui.Paragraph leftPara = leftBuilder.build()
+        ..layout(ui.ParagraphConstraints(width: leftColWidth));
+
+      if (isArabic) {
+        paragraphs.add(rightPara);
+        offsets.add(ui.Offset(10.0 + leftColWidth + 6.0, currentY));
+        paragraphs.add(leftPara);
+        offsets.add(ui.Offset(10.0, currentY));
+      } else {
+        paragraphs.add(rightPara);
+        offsets.add(ui.Offset(10.0, currentY));
+        paragraphs.add(leftPara);
+        offsets.add(ui.Offset(10.0 + rightColWidth + 6.0, currentY));
+      }
+
+      final double rowHeight = rightPara.height > leftPara.height ? rightPara.height : leftPara.height;
+      currentY += rowHeight + 4.0;
+    }
+
     if (logoImage != null) {
       final double maxLogoW = canvasWidth * 0.45;
       final double logoW = logoImage.width > maxLogoW ? maxLogoW : logoImage.width.toDouble();
@@ -294,8 +441,7 @@ class VoucherPrintDesigner {
     if (phone.isNotEmpty) addText(isArabic ? 'الهاتف: $phone' : 'Phone: $phone', fontSize: bodySize, align: ui.TextAlign.center);
     addDivider();
 
-    final String type = voucher['type'] ?? voucher['VoucherType'] ?? 'receipt';
-    final bool isReceipt = type == 'receipt' || type.toString().contains('قبض');
+    final bool isReceipt = _isReceiptVoucher(voucher);
     final String voucherTitle = isReceipt ? (isArabic ? '*** سند قبض ***' : '*** RECEIPT VOUCHER ***') : (isArabic ? '*** سند صرف ***' : '*** PAYMENT VOUCHER ***');
 
     if (voucher['is_offline_unapproved'] == true) {
@@ -319,15 +465,15 @@ class VoucherPrintDesigner {
     addText(isArabic ? 'التاريخ والوقت: $dateStr' : 'Date & Time: $dateStr', fontSize: smallSize);
     addDivider(dashed: true);
 
-    final double amount = double.tryParse(voucher['Amount']?.toString() ?? voucher['amount']?.toString() ?? '0') ?? 0.0;
+    final double amount = _resolveVoucherAmount(voucher);
     final String cSymbol = PrinterBase.getCurrencySymbol(companySettings, isArabic: isArabic);
 
-    addText(isArabic ? 'المبلغ المستلم: ${PrinterBase.formatCurrency(amount)} $cSymbol' : 'Amount: ${PrinterBase.formatCurrency(amount)} $cSymbol', bold: true, fontSize: headerSize);
+    addText('${_amountLabel(isReceipt, isArabic)}: ${PrinterBase.formatCurrency(amount)} $cSymbol', bold: true, fontSize: headerSize);
     final String rawMethod = (voucher['payment_method'] ?? voucher['PaymentMethod'] ?? voucher['account_name'] ?? voucher['AccountName'] ?? '').toString();
     final String method = rawMethod.isNotEmpty ? _formatPaymentAccountName(rawMethod, isArabic) : (isArabic ? 'نقداً' : 'Cash');
     addText(isArabic ? 'طريقة الدفع: $method' : 'Payment Method: $method', fontSize: bodySize);
 
-    final String notes = voucher['Notes'] ?? voucher['notes'] ?? voucher['description'] ?? '';
+    final String notes = _resolveVoucherNotes(voucher);
     if (notes.isNotEmpty) {
       addText(isArabic ? 'البيان: $notes' : 'Description: $notes', fontSize: bodySize);
     }
@@ -335,10 +481,22 @@ class VoucherPrintDesigner {
 
     if (paidInvoices.isNotEmpty) {
       addText(isArabic ? 'الفواتير المسددة بالسند:' : 'Paid Invoices:', bold: true, fontSize: bodySize);
+      addTwoColumnRow(
+        isArabic ? 'رقم الفاتورة' : 'Invoice #',
+        isArabic ? 'المبلغ المسدد' : 'Amount',
+        fontSize: paperSize == 80 ? smallSize : 14.0,
+        bold: true,
+      );
+      addDivider(dashed: true);
       for (var inv in paidInvoices) {
-        final dynamic invNo = inv['InvoiceID'] ?? inv['id'] ?? '--';
-        final double paidAmt = double.tryParse(inv['PaidAmount']?.toString() ?? inv['paid']?.toString() ?? '0') ?? 0.0;
-        addText(isArabic ? '• فاتورة #$invNo : ${PrinterBase.formatCurrency(paidAmt)} $cSymbol' : '• Invoice #$invNo: ${PrinterBase.formatCurrency(paidAmt)} $cSymbol', fontSize: bodySize);
+        final String invNo = _resolvePaidInvoiceNo(inv);
+        final double paidAmt = _resolvePaidInvoiceAmount(inv);
+        addTwoColumnRow(
+          isArabic ? 'فاتورة #$invNo' : 'Invoice #$invNo',
+          '${PrinterBase.formatCurrency(paidAmt)} $cSymbol',
+          fontSize: paperSize == 80 ? bodySize : 15.0,
+          bold: true,
+        );
       }
       addDivider(dashed: true);
     }

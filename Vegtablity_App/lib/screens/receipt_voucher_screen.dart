@@ -8,6 +8,10 @@ import '../providers/shift_provider.dart';
 import '../services/printer_service.dart';
 import '../core/localization/app_localizations.dart';
 import '../core/utils/app_snackbar.dart';
+import '../models/integration_models.dart';
+import '../providers/auth_provider.dart';
+import '../services/integrations/integration_service.dart';
+import '../widgets/payment_link_issue_dialog.dart';
 
 /// شاشة سند القبض - تحصيل مديونيات من العملاء
 class ReceiptVoucherScreen extends StatefulWidget {
@@ -31,6 +35,7 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
   final Map<int, double> _payAmountMap = {};
 
   List<Map<String, dynamic>> _accounts = [];
+  List<IntegrationProviderModel> _configuredGateways = [];
   int? _selectedAccountId;
 
   final _searchCtrl = TextEditingController();
@@ -75,28 +80,124 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
 
   Future<void> _loadAccounts() async {
     final voucherProv = Provider.of<VoucherProvider>(context, listen: false);
-    setState(() {
-      _accounts = voucherProv.cachedAccounts;
-      if (_accounts.isNotEmpty) {
-        _selectedAccountId = _accounts.first['AccountID'];
-      }
-    });
+    final baseCached = await IntegrationPosService.filterOutGatewayAccounts(
+      List<Map<String, dynamic>>.from(voucherProv.cachedAccounts),
+    );
+    if (mounted) {
+      setState(() {
+        _accounts = baseCached;
+        if (_accounts.isNotEmpty &&
+            !_accounts.any((a) => a['AccountID'] == _selectedAccountId)) {
+          _selectedAccountId = _accounts.first['AccountID'];
+        }
+      });
+    }
 
     final api = Provider.of<ApiService>(context, listen: false);
     try {
       final resp = await api.getVoucherAccounts();
       if (resp.statusCode == 200) {
-        setState(() {
-          _accounts = List<Map<String, dynamic>>.from(resp.data);
-          if (_accounts.isNotEmpty && _selectedAccountId == null) {
-            _selectedAccountId = _accounts.first['AccountID'];
-          }
-        });
+        final filtered = await IntegrationPosService.filterOutGatewayAccounts(
+          List<Map<String, dynamic>>.from(resp.data),
+        );
+        if (mounted) {
+          setState(() {
+            _accounts = filtered;
+            _mergeConfiguredGatewayAccountsIntoDropdown();
+            if (_accounts.isNotEmpty &&
+                (_selectedAccountId == null ||
+                    !_accounts
+                        .any((a) => a['AccountID'] == _selectedAccountId))) {
+              _selectedAccountId = _accounts.first['AccountID'];
+            }
+          });
+        }
       }
     } catch (e) {
       // Use cached data
     }
+
+    try {
+      final summary = await IntegrationPosService().fetchProvidersSummary();
+      final providers =
+          (summary['providers'] as List<IntegrationProviderModel>?) ?? [];
+      if (mounted) {
+        setState(() {
+          _configuredGateways = providers
+              .where((p) =>
+                  p.isPaymentGateway &&
+                  p.isEnabledInCompany &&
+                  (p.isConfigured || p.isConnectionVerified))
+              .toList();
+          _mergeConfiguredGatewayAccountsIntoDropdown();
+        });
+      }
+    } catch (_) {}
   }
+
+  void _mergeConfiguredGatewayAccountsIntoDropdown() {
+    if (_configuredGateways.isEmpty) return;
+    for (final gw in _configuredGateways) {
+      if (gw.linkedAccountId != null && gw.linkedAccountId! > 0) {
+        final exists = _accounts.any((a) {
+          final id = a['AccountID'] is int
+              ? a['AccountID'] as int
+              : int.tryParse(a['AccountID']?.toString() ?? '');
+          return id == gw.linkedAccountId;
+        });
+        if (!exists) {
+          _accounts.add({
+            'AccountID': gw.linkedAccountId,
+            'AccountName': gw.linkedAccountName.isNotEmpty
+                ? gw.linkedAccountName
+                : gw.providerNameAr,
+            'AccountCode': gw.linkedAccountCode,
+          });
+        }
+      }
+    }
+  }
+
+  IntegrationProviderModel? _matchGatewayForAccount(
+      int? accId, String? accName) {
+    if (_configuredGateways.isEmpty) return null;
+    if (accId != null) {
+      for (final g in _configuredGateways) {
+        if (g.linkedAccountId != null && g.linkedAccountId == accId) {
+          return g;
+        }
+      }
+    }
+    final lower = (accName ?? '').toLowerCase().trim();
+    if (lower.isEmpty) return null;
+    for (final g in _configuredGateways) {
+      final code = g.providerCode.toLowerCase();
+      final nameAr = g.providerNameAr.toLowerCase();
+      final nameEn = g.providerNameEn.toLowerCase();
+      final linkedName = g.linkedAccountName.toLowerCase().trim();
+      if ((code.isNotEmpty && lower.contains(code)) ||
+          (code == 'myfatoorah' && lower.contains('my fatoorah')) ||
+          (nameAr.isNotEmpty && lower.contains(nameAr)) ||
+          (nameEn.isNotEmpty && lower.contains(nameEn)) ||
+          (linkedName.isNotEmpty && lower == linkedName)) {
+        return g;
+      }
+    }
+    return null;
+  }
+
+  String? _getAccountNameById(int? accId) {
+    if (accId == null) return null;
+    for (final acc in _accounts) {
+      if (acc['AccountID'] == accId) {
+        return acc['AccountName']?.toString();
+      }
+    }
+    return null;
+  }
+
+  IntegrationProviderModel? get _selectedGateway => _matchGatewayForAccount(
+      _selectedAccountId, _getAccountNameById(_selectedAccountId));
 
   Future<void> _loadUnpaidInvoices(int partnerId) async {
     setState(() => _isLoading = true);
@@ -196,7 +297,51 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
     if (_selectedAccountId == null)
       return _showError(context.tr('rv_account_required'));
 
+    final selectedGateway = _selectedGateway;
     final shift = Provider.of<ShiftProvider>(context, listen: false);
+
+    // عند اختيار بوابة دفع إلكتروني في شاشة تحصيلات العملاء:
+    // يتم إصدار رابط دفع مجمع للفواتير المحددة وحفظه في صفحة اللينكات فقط دون إنشاء سند قبض
+    if (selectedGateway != null) {
+      final bool isAr = Localizations.localeOf(context).languageCode == 'ar';
+      if (_selectedAllocations.isEmpty || _totalSelected <= 0) {
+        return _showError(isAr
+            ? '⚠️ لإصدار رابط دفع عبر البوابة، يرجى تحديد فاتورة واحدة على الأقل.'
+            : '⚠️ Please select at least one invoice to issue a gateway payment link.');
+      }
+      final int createdByUserId =
+          Provider.of<AuthProvider>(context, listen: false).userId ?? 1;
+      final String partnerName =
+          (_selectedPartner!['PartnerName'] ?? '').toString();
+      final String partnerPhone =
+          (_selectedPartner!['Phone'] ?? _selectedPartner!['Mobile'] ?? '')
+              .toString();
+
+      final createdLink = await showConsolidatedPaymentLinkDialog(
+        context: context,
+        configuredGateways: _configuredGateways,
+        initialGateway: selectedGateway,
+        partnerId: (_selectedPartner!['PartnerID'] as num).toInt(),
+        customerName: partnerName,
+        customerPhone: partnerPhone,
+        allocations: _selectedAllocationsForPrint,
+        initialNotes: _descCtrl.text.trim(),
+        shiftId: shift.shiftId,
+        createdByUserId: createdByUserId,
+      );
+
+      if (createdLink != null && mounted) {
+        setState(() {
+          _selectedMap.updateAll((_, __) => false);
+          _descCtrl.clear();
+        });
+        _showSuccess(isAr
+            ? '✅ تم إصدار وحفظ رابط الدفع (#${createdLink.linkId}) في صفحة اللينكات بنجاح (دون تسجيل سند قبض).'
+            : '✅ Payment link (#${createdLink.linkId}) issued and saved in Payment Links without creating a receipt voucher.');
+      }
+      return;
+    }
+
     if (shift.shiftId == null)
       return _showError(context.tr('rv_no_shift_open'));
 
@@ -314,11 +459,23 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
           }
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFF12121E),
+          backgroundColor: const Color(0xFFF4F7FA),
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1E1E2C),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF059669), Color(0xFF0D9488)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white, size: 20),
               onPressed: () {
                 if (_selectedPartner != null) {
                   setState(() {
@@ -334,46 +491,66 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
             ),
             title: Row(
               children: [
-                const Icon(Icons.arrow_circle_down, color: Colors.greenAccent),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.arrow_circle_down_rounded,
+                      color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 10),
                 Text(context.tr('rv_screen_title'),
                     style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18)),
               ],
             ),
             bottom: _selectedPartner != null
                 ? PreferredSize(
-                    preferredSize: const Size.fromHeight(50),
+                    preferredSize: const Size.fromHeight(54),
                     child: Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                            horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
-                          color: Colors.greenAccent.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: Colors.greenAccent.withOpacity(0.4)),
+                              color: Colors.white.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.person,
-                                color: Colors.greenAccent, size: 18),
+                            const Icon(Icons.person_rounded,
+                                color: Colors.white, size: 18),
                             const SizedBox(width: 8),
-                            Text(
+                            Expanded(
+                              child: Text(
                                 '${context.tr('rv_customer_label')}${_selectedPartner!['PartnerName']}',
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    color: Colors.greenAccent,
-                                    fontWeight: FontWeight.bold)),
-                            const Spacer(),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
                             GestureDetector(
                               onTap: () => setState(() {
                                 _selectedPartner = null;
                                 _unpaidInvoices = [];
                               }),
-                              child: const Icon(Icons.close,
-                                  color: Colors.white54, size: 18),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close_rounded,
+                                    color: Colors.white, size: 16),
+                              ),
                             ),
                           ],
                         ),
@@ -387,7 +564,7 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
               constraints: const BoxConstraints(maxWidth: 800),
               child: voucherProv.isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: Colors.greenAccent))
+                      child: CircularProgressIndicator(color: Color(0xFF0D9488)))
                   : _selectedPartner == null
                       ? _buildPartnerSelector()
                       : _buildInvoiceList(),
@@ -407,47 +584,126 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(12),
-          child: TextField(
-            controller: _searchCtrl,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: context.tr('rv_search_hint'),
-              hintStyle: const TextStyle(color: Colors.white38),
-              prefixIcon: const Icon(Icons.search, color: Colors.greenAccent),
-              filled: true,
-              fillColor: const Color(0xFF1E1E2C),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            onChanged: _filterPartners,
+            child: TextField(
+              controller: _searchCtrl,
+              style: const TextStyle(color: Color(0xFF0F172A)),
+              decoration: InputDecoration(
+                hintText: context.tr('rv_search_hint'),
+                hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    color: Color(0xFF059669)),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF0D9488), width: 1.5)),
+              ),
+              onChanged: _filterPartners,
+            ),
           ),
         ),
         Expanded(
           child: _filteredPartners.isEmpty
               ? Center(
-                  child: Text(context.tr('rv_no_customers'),
-                      style: const TextStyle(color: Colors.white38)))
-              : ListView.builder(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.person_search_rounded,
+                          size: 56, color: Color(0xFFCBD5E1)),
+                      const SizedBox(height: 10),
+                      Text(context.tr('rv_no_customers'),
+                          style: const TextStyle(
+                              color: Color(0xFF64748B), fontSize: 15)),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                   itemCount: _filteredPartners.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (ctx, i) {
                     final p = _filteredPartners[i];
-                    return ListTile(
-                      leading: const CircleAvatar(
-                        backgroundColor: Color(0xFF2A2A3C),
-                        child: Icon(Icons.person_outline,
-                            color: Colors.greenAccent),
+                    final name = (p['PartnerName'] ?? '-').toString();
+                    final initial =
+                        name.isNotEmpty ? name.characters.first.toUpperCase() : '?';
+                    return Material(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () => _selectPartner(p),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A)
+                                    .withValues(alpha: 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 22,
+                                backgroundColor: const Color(0xFFECFDF5),
+                                child: Text(
+                                  initial,
+                                  style: const TextStyle(
+                                      color: Color(0xFF059669),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(name,
+                                        style: const TextStyle(
+                                            color: Color(0xFF0F172A),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15)),
+                                    if ((p['Phone'] ?? '').toString().isNotEmpty)
+                                      Text(p['Phone'] ?? '',
+                                          style: const TextStyle(
+                                              color: Color(0xFF64748B),
+                                              fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded,
+                                  color: Color(0xFF94A3B8), size: 22),
+                            ],
+                          ),
+                        ),
                       ),
-                      title: Text(p['PartnerName'] ?? '-',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-                      subtitle: Text(p['Phone'] ?? '',
-                          style: const TextStyle(color: Colors.white38)),
-                      trailing: const Icon(Icons.arrow_forward_ios,
-                          color: Colors.white38, size: 14),
-                      onTap: () => _selectPartner(p),
                     );
                   },
                 ),
@@ -462,11 +718,21 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.check_circle_outline,
-                color: Colors.greenAccent, size: 64),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Color(0xFFECFDF5),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline_rounded,
+                  color: Color(0xFF059669), size: 56),
+            ),
+            const SizedBox(height: 14),
             Text(context.tr('rv_no_dues'),
-                style: const TextStyle(color: Colors.white54, fontSize: 16)),
+                style: const TextStyle(
+                    color: Color(0xFF475569),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       );
@@ -476,53 +742,128 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
       children: [
         // حقل الحساب والملاحظة
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           child: Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<int>(
                   isExpanded: true,
                   value: _selectedAccountId,
-                  dropdownColor: const Color(0xFF1E1E2C),
+                  dropdownColor: Colors.white,
                   decoration: InputDecoration(
                     labelText: context.tr('rv_account_label'),
-                    labelStyle: const TextStyle(color: Colors.white54),
+                    labelStyle: const TextStyle(color: Color(0xFF64748B)),
                     filled: true,
-                    fillColor: const Color(0xFF1E1E2C),
+                    fillColor: Colors.white,
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none),
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: Color(0xFFE2E8F0))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                            color: Color(0xFF0D9488), width: 1.5)),
                   ),
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(
+                      color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
                   items: _accounts
-                      .map((a) => DropdownMenuItem<int>(
-                            value: a['AccountID'],
-                            child: Text(a['AccountName'] ?? '',
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 13)),
-                          ))
-                      .toList(),
+                      .map((a) {
+                        final accId = a['AccountID'] is int
+                            ? a['AccountID'] as int
+                            : int.tryParse(a['AccountID']?.toString() ?? '');
+                        final accName = a['AccountName']?.toString() ?? '';
+                        final isGw =
+                            _matchGatewayForAccount(accId, accName) != null;
+                        return DropdownMenuItem<int>(
+                          value: a['AccountID'],
+                          child: Row(
+                            children: [
+                              if (isGw) ...[
+                                const Icon(Icons.add_link,
+                                    color: Color(0xFF0D9488), size: 16),
+                                const SizedBox(width: 6),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  isGw ? '$accName (بوابة دفع)' : accName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      color: isGw
+                                          ? const Color(0xFF0F766E)
+                                          : const Color(0xFF0F172A),
+                                      fontWeight: isGw
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                   onChanged: (v) => setState(() => _selectedAccountId = v),
                 ),
               ),
             ],
           ),
         ),
+        if (_selectedGateway != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDFA),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.35)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.add_link,
+                      color: Color(0xFF0F766E), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      Localizations.localeOf(context).languageCode == 'ar'
+                          ? 'عند اختيار بوابة الدفع (${_selectedGateway!.providerNameAr}) سيتم إصدار رابط دفع مجمع للفواتير المحددة وحفظه في صفحة اللينكات دون إنشاء سند قبض لتجنب ازدواجية القيود.'
+                          : 'Selecting payment gateway (${_selectedGateway!.providerNameEn.isNotEmpty ? _selectedGateway!.providerNameEn : _selectedGateway!.providerCode}) will issue a consolidated payment link saved in Payment Links without creating a receipt voucher.',
+                      style: const TextStyle(
+                          color: Color(0xFF0F766E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: TextField(
             controller: _descCtrl,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Color(0xFF0F172A)),
             decoration: InputDecoration(
               hintText: context.tr('rv_note_hint'),
-              hintStyle: const TextStyle(color: Colors.white38),
+              hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
               filled: true,
-              fillColor: const Color(0xFF1E1E2C),
+              fillColor: Colors.white,
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none),
-              prefixIcon:
-                  const Icon(Icons.note_alt_outlined, color: Colors.white38),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: Color(0xFF0D9488), width: 1.5)),
+              prefixIcon: const Icon(Icons.note_alt_outlined,
+                  color: Color(0xFF64748B)),
             ),
           ),
         ),
@@ -531,15 +872,27 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
           Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const Icon(Icons.wifi_off,
-                      color: Colors.orangeAccent, size: 48),
-                  const SizedBox(height: 12),
-                  Text(context.tr('rv_no_invoices'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.orangeAccent)),
-                ],
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: const Color(0xFFD97706).withValues(alpha: 0.25)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.wifi_off_rounded,
+                        color: Color(0xFFD97706), size: 42),
+                    const SizedBox(height: 10),
+                    Text(context.tr('rv_no_invoices'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Color(0xFFB45309),
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -550,20 +903,29 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(
-                  color: Colors.greenAccent,
+                  color: Color(0xFF0F766E),
                   fontWeight: FontWeight.bold,
                   fontSize: 18),
               onChanged: (v) => setState(() {}),
               decoration: InputDecoration(
                 labelText: context.tr('rv_free_payment_label'),
-                labelStyle: const TextStyle(color: Colors.white54),
+                labelStyle: const TextStyle(color: Color(0xFF64748B)),
                 filled: true,
-                fillColor: const Color(0xFF1E1E2C),
-                suffixText: ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
-                suffixStyle: const TextStyle(color: Colors.white54),
+                fillColor: Colors.white,
+                suffixText:
+                    ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                suffixStyle: const TextStyle(
+                    color: Color(0xFF475569), fontWeight: FontWeight.w600),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF0D9488), width: 1.5)),
               ),
             ),
           )
@@ -590,19 +952,30 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: selected ? const Color(0xFF1A2E20) : const Color(0xFF1E1E2C),
-        borderRadius: BorderRadius.circular(14),
+        color: selected ? const Color(0xFFF0FDFA) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color:
-              selected ? Colors.greenAccent.withOpacity(0.6) : Colors.white12,
+          color: selected
+              ? const Color(0xFF0D9488)
+              : const Color(0xFFE2E8F0),
           width: selected ? 1.5 : 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: (selected
+                    ? const Color(0xFF0D9488)
+                    : const Color(0xFF0F172A))
+                .withValues(alpha: selected ? 0.08 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => setState(() => _selectedMap[id] = !selected),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -610,8 +983,10 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                 children: [
                   Checkbox(
                     value: selected,
-                    activeColor: Colors.greenAccent,
-                    checkColor: Colors.black,
+                    activeColor: const Color(0xFF0D9488),
+                    checkColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5)),
                     onChanged: (v) =>
                         setState(() => _selectedMap[id] = v ?? false),
                   ),
@@ -621,12 +996,14 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                       children: [
                         Text('${context.tr('rv_sales_invoice_label')}$id',
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
+                                color: Color(0xFF0F172A),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15)),
+                        const SizedBox(height: 2),
                         Text(
                           _formatDate(inv['InvDate']),
                           style: const TextStyle(
-                              color: Colors.white38, fontSize: 12),
+                              color: Color(0xFF64748B), fontSize: 12),
                         ),
                       ],
                     ),
@@ -637,24 +1014,37 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                       Text(
                           '${context.tr('rv_total_label')}${net.toStringAsFixed(3)}',
                           style: const TextStyle(
-                              color: Colors.white54, fontSize: 12)),
-                      Text(
-                          context.tr('rv_remainder_label').replaceAll(
-                              '{amount}', remainder.toStringAsFixed(3)),
-                          style: const TextStyle(
-                              color: Colors.orangeAccent,
-                              fontWeight: FontWeight.bold)),
+                              color: Color(0xFF64748B), fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                            context.tr('rv_remainder_label').replaceAll(
+                                '{amount}', remainder.toStringAsFixed(3)),
+                            style: const TextStyle(
+                                color: Color(0xFFD97706),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                      ),
                     ],
                   ),
                 ],
               ),
               if (selected)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8, right: 12, left: 12),
+                  padding: const EdgeInsets.only(top: 10, right: 8, left: 8),
                   child: Row(
                     children: [
                       Text(context.tr('rv_receipt_amount_label'),
-                          style: const TextStyle(color: Colors.white70)),
+                          style: const TextStyle(
+                              color: Color(0xFF475569),
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextFormField(
                           initialValue: payAmount.toStringAsFixed(3),
@@ -664,18 +1054,29 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                             FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
                           ],
                           style: const TextStyle(
-                              color: Colors.greenAccent,
-                              fontWeight: FontWeight.bold),
+                              color: Color(0xFF059669),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15),
                           decoration: InputDecoration(
                             isDense: true,
-                            suffixText: ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                            suffixText:
+                                ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                             suffixStyle: const TextStyle(
-                                color: Colors.white38, fontSize: 12),
+                                color: Color(0xFF64748B), fontSize: 12),
                             filled: true,
-                            fillColor: const Color(0xFF12121E),
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none),
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFCBD5E1))),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFCBD5E1))),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFF0D9488), width: 1.5)),
                           ),
                           onChanged: (v) {
                             final parsed = double.tryParse(v) ?? 0;
@@ -700,10 +1101,14 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
         : (double.tryParse(_freePaymentCtrl.text) ?? 0.0);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E1E2C),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
         boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, -2))
+          BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -3))
         ],
       ),
       child: SafeArea(
@@ -716,28 +1121,40 @@ class _ReceiptVoucherScreenState extends State<ReceiptVoucherScreen> {
                 Text(
                     context.tr('rv_selected_invoices').replaceAll(
                         '{count}', _selectedAllocations.length.toString()),
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 12)),
+                    style: const TextStyle(
+                        color: Color(0xFF64748B), fontSize: 12)),
                 Text(
                     '${context.tr('rv_total_label')}${total.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                     style: const TextStyle(
-                        color: Colors.greenAccent,
+                        color: Color(0xFF059669),
                         fontWeight: FontWeight.bold,
-                        fontSize: 16)),
+                        fontSize: 17)),
               ],
             ),
             const Spacer(),
             ElevatedButton.icon(
-              icon: const Icon(Icons.check_circle_outline),
-              label: Text(context.tr('rv_submit_button'),
+              icon: Icon(
+                  _selectedGateway != null
+                      ? Icons.add_link
+                      : Icons.check_circle_outline_rounded,
+                  size: 19),
+              label: Text(
+                  _selectedGateway != null
+                      ? (Localizations.localeOf(context).languageCode == 'ar'
+                          ? 'إصدار رابط دفع مجمع'
+                          : 'Issue Payment Link')
+                      : context.tr('rv_submit_button'),
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.greenAccent,
-                foregroundColor: Colors.black,
+                backgroundColor: _selectedGateway != null
+                    ? const Color(0xFF0284C7)
+                    : const Color(0xFF059669),
+                foregroundColor: Colors.white,
+                elevation: 0,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(14)),
               ),
               onPressed: _isLoading ? null : _submitPayment,
             ),

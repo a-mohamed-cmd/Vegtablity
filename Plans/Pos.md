@@ -89,6 +89,8 @@
     *   [PrinterSettingsScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/printer_settings_screen.dart) - خيار نمط طباعة الشبكة (Direct Text vs HD Canvas Raster) وعدد النسخ وحفظ الإعدادات محلياً في SharedPreferences.
     *   [UpdateDialog](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/update_dialog.dart) - نافذة حوار التحديث التلقائي للموبايل لتنزيل الـ APK وتثبيته بـ `open_filex`.
     *   [SyncCenterScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/sync_center_screen.dart) & [SyncViewModel](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/viewmodels/sync_viewmodel.dart) & [OfflineSyncService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/offline_sync_service.dart) - منظومة مركز المزامنة المستقلة بنمط MVVM لإدارة ومزامنة العمليات المحفوظة بدون إنترنت (فواتير، سندات، هالك، جرد مخزني) بشكل جماعي أو منفرد لكل عملية مع شريط مؤشر تقدم مباشر وتقرير تفصيلي لما تم مزامنته.
+    *   [payment_link_issue_dialog.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/payment_link_issue_dialog.dart) - أداة حوار مستقلة (`showConsolidatedPaymentLinkDialog`) لإصدار روابط الدفع المنفردة والمجمعة لعدة فواتير غير محصلة مع اختيار البوابة وتعبئة بيانات العميل ومشاركة الرابط عبر WhatsApp وعرض وطباعة QR.
+    *   [ReceiptVoucherScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/receipt_voucher_screen.dart) & [PaymentVoucherScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/payment_voucher_screen.dart) & [GeneralReceiptVoucherScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_receipt_voucher_screen.dart) & [GeneralPaymentVoucherScreen](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_payment_voucher_screen.dart) - عزل حسابات بوابات الدفع عن سندات الصرف والقبض والمشتريات، ودعم إصدار رابط دفع مجمع في شاشة تحصيلات العملاء دون إنشاء سند قبض لمنع ازدواجية القيود، مع ترقية التصميم البصري (Modern Light Theme & Gradient AppBar) وإصلاح توازن الأقواس البرمجية في قائمة الحسابات بشاشة سند القبض.
 
 ---
 
@@ -108,6 +110,7 @@
     *   [license_control_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/license_control_service.py) & [db_procedures_controls.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/core/db_procedures_controls.py) - إدارة إعدادات المنشآت والتراخيص بالـ API وتمرير باراميتر `@EnableHR` و `@ProductionMode`.
     *   [update_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/update_service.py) & [updates_manifest.json](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/data/updates_manifest.json) - محرك إدارة التحديثات التلقائية ودعم نكهة تطبيق الإدارة `license_manager`.
     *   [shift_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/shift_service.py) & [shift.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/schemas/shift.py) - دعم تفصيل الكاش والشبكة وحساب النقدية المتوقعة بالدرج وتصفير كاش الوردية عند الإغلاق.
+    *   [myfatoorah_gateway.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/integrations/myfatoorah_gateway.py) & [integration_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/integrations/integration_service.py) & [integrations.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/integrations.py) - الكلاس المعزول `MyFatoorahGateway` لبوابة MyFatoorah API v2 (`InitiatePayment`, `SendPayment`, `ExecutePayment`, `GetPaymentStatus`, `MakeRefund`, `GetRefundStatus`) مع استخلاص `ValidationErrors`/`FieldsErrors` والتحقق الأمني من توقيع `MyFatoorah-Signature` (HMAC-SHA256 Base64) في Webhook V2.
 
 *   **متحكمات ونماذج الموارد البشرية والرواتب (WPF ViewModels & Models):**
     *   [PartnersViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PartnersViewModel.vb) - إدارة البطاقات الشبكية للعملاء والموردين وربط عروض الأسعار المجمعة `PartnerQuoteSummaryItem` لسرعة العرض دون استعلامات متكررة.
@@ -135,6 +138,9 @@
     *   [InvoicePrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/invoice_print_designer.dart) & [ReceiptDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/receipt_designer.dart) - محركات وتصاميم الطباعة الحرارية والمصورة وطباعة بطاقات الوصفات بجميع المقاسات (58mm و 80mm).
     *   [PrinterService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printer_service.dart) - طباعة أحدث مستند `printLastAddedDocument()` وتكرار النسخ وقصر الإعدادات على الذاكرة المحلية للجهاز.
     *   [PosProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/pos_provider.dart) & [ShiftProvider](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/shift_provider.dart) - حفظ واسترجاع `ShiftID` تلقائياً وحساب الخصم والمدفوع والمتبقي.
+    *   [MyFatoorahProvider.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/Integrations/MyFatoorahProvider.vb) & [MyFatoorahGatewayService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/integrations/myfatoorah_gateway_service.dart) & [IntegrationPosService](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/integrations/integration_service.dart) - العزل الكامل لبوابة MyFatoorah API v2 في كلاسات مستقلة على مستوى WPF و Flutter (`SendOrExecutePaymentAsync`, `GetPaymentStatus`, `MakeRefund`, `GetRefundStatus`)، مع آلية `cacheGatewayAccountIds` و `filterOutGatewayAccounts` لعزل حسابات البوابات عن السندات والمشتريات.
+    *   [IntegrationSettingsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/Integrations/IntegrationSettingsViewModel.vb) & [IntegrationSettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/Integrations/IntegrationSettingsPage.xaml) - فصل قوائم الحسابات المتاحة لكل قائمة منسدلة (`AvailableDebitAccounts`, `AvailableCreditAccounts`, `AvailableCommissionAccounts`, `AvailableRefundDebitAccounts`, `AvailableRefundCreditAccounts`) وإعادة ربطها ديناميكياً عند البحث والاختيار.
+    *   [VoucherPrintDesigner](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/voucher_print_designer.dart) - تحسين طباعة جدول الفواتير المسددة بالسند باستخدام عمودين (`addTwoColumnRow`) في القوالب الحرارية.
 
 ---
 
@@ -160,6 +166,10 @@
     *   `[Inventory].[sp_Recipe_Save_XML]` & `[Inventory].[sp_Recipe_GetByProduct]` - حفظ واسترجاع تفاصيل ومكونات الوصفة بالربط مع `@WarehouseID`.
 *   **المخطط المتكامل للموارد البشرية [HR] في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql):**
     *   جداول الموظفين، الحقول المرنة EAV، الإجازات، الحضور والانصراف، مسيرات الرواتب والاعتماد المالي، وتصفية نهاية الخدمة، مع 12 إجراءً مخزناً مخصصاً لمخطط `[HR]`.
+*   **إجراءات بوابات الدفع، عزل حسابات الدفع، وضبط إغلاق الوردية في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql):**
+    *   `[Accounting].[sp_GetPaymentAccounts]` — جلب حسابات الصندوق والبنوك (`AccountCode LIKE '11%'`) مع استبعاد حسابات بوابات الدفع افتراضياً (`@IncludePaymentGateways = 0` للسندات والمشتريات، و `= 1` للمبيعات).
+    *   `[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]` — التوليد التلقائي لحساب البوابة الفرعي تحت الحساب الرئيسي `'11'` وحساب مصروف العمولات الفرعي تحت `'65'` (`مصروف عمولات - <اسم البوابة>`).
+    *   `[Sales].[sp_Shift_Close]` — إزالة إنشاء قيد فرق الكاش المكرر من الإجراء والاكتفاء بالتوليد التلقائي عبر التريجر `[Sales].[trg_Shifts_StatusChange]` عند تحول الحالة إلى `'Closed'`.
 
 ---
 
@@ -258,6 +268,8 @@
 | **89** | [استبدال ComboBox بأداة SearchableDropdown في صفحة التقارير [ReportsPage]](#81-استبدال-combobox-بأداة-searchabledropdown-في-صفحة-التقارير-reportspage-بنفس-المنطق-دون-التأثير-على-أداء-التقرير) | بحث وتصفية فورية بالعملاء والأصناف والمستودعات |
 | **90** | [التطوير الشامل لصفحة التقارير: تقرير مبيعات الفروع، شريط الإجماليات، وأداة ReportRowControl](#82-التطوير-الشامل-لصفحة-التقارير-تقرير-مبيعات-الفروع-والمخازن-شريط-الإجماليات-وأداة-reportrowcontrol-وطي-القائمة-الجانبية) | تقرير مبيعات الفروع + شريط الإجماليات + إحلال DataGrid |
 | **91** | [عرض الأرقام في صفحة كشف الحساب بـ 3 أرقام عشرية بدون تقريب كما في قاعدة البيانات](#83-عرض-الأرقام-في-صفحة-كشف-الحساب-بـ-3-أرقام-عشرية-بدون-تقريب-كما-في-قاعدة-البيانات-accountstatementpage) | دقة 3 خانات عشرية بدون تقريب في الشاشة و PDF و CSV و SQL |
+| **92** | [العزل المعماري لبوابة MyFatoorah، شجرة حسابات البوابات (11/65)، وإصدار الروابط المجمعة من سند القبض ومنع تكرار قيد الوردية](#92-العزل-المعماري-لبوابة-myfatoorah-api-v2-شجرة-حسابات-البوابات-1165-وإصدار-الروابط-المجمعة-من-سند-القبض) | عزل MyFatoorah (WPF/FastAPI/Flutter) + `sp_GetPaymentAccounts` + `payment_link_issue_dialog` + `sp_Shift_Close` |
+| **93** | [توثيق القواعد الهندسية المعمارية (`Plans/rolles.md`) وترقية واجهات `Vegtablity_App` وطباعة السندات](#93-توثيق-القواعد-الهندسية-المعمارية-plansrollesmd-وترقية-واجهات-vegtablity_app-وطباعة-السندات) | توثيق MVVM/SQL Rules + Modern Light UI + طباعة جدول الفواتير بالسندات |
 
 ---
 
@@ -3437,40 +3449,6 @@
 ### ب- شريط الإجماليات العلوي أعلى كل تقرير (`SummaryMetrics`):
 * تم تزويد جميع التقارير الـ 15 (من التبويب `0` إلى `14`) بشريط بطاقات إجماليات ديناميكي (`SummaryMetrics As ObservableCollection(Of ReportSummaryMetric)`) يظهر أعلى جدول النتائج مباشرة في [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml).
 * يعرض الشريط أهم 3 إلى 4 مؤشرات إجمالية مخصصة لكل تقرير (مثل: عدد السجلات/الفواتير، صافي المبيعات، إجمالي التكلفة، صافي الربح وهامشه، إجمالي المحصل والآجل، تقييم المخزون، أو تكلفة الهالك) مع أيقونات وألوان دلالية واضحة.
-* **تحديث لحظي مع البحث والتصدير:** تتحدث قيم شريط الإجماليات تلقائياً عند إجراء بحث فوري داخل نتائج التقرير، كما يتم تضمين ملخص الإجماليات تلقائياً في ترويسة ملفات التصدير `PDF` و `CSV / Excel`.
-
----
-
-### ج- استبدال `DataGrid` بأداة العرض المخصصة [ReportRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/ReportRowControl.xaml):
-* تم الاستغناء بالكامل عن جداول `DataGrid` الـ 14 الثقيلة في [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml) واستبدالها بأداة `UserControl` مخصصة وخفيفة [ReportRowControl.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/ReportRowControl.xaml) و [ReportRowControl.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Controls/ReportRowControl.vb) داخل `ItemsControl` مفعل به `VirtualizingStackPanel` (`VirtualizationMode="Recycling"`).
-* **مزايا الأداة الجديدة:**
-  - ترويسة أعمدة ديناميكية متزامنة (`ReportHeadersGrid`) تتطابق بنسبة `Star (*)` مع خلايا كل صف (`ReportRowItem` و `ReportCellInfo`).
-  - شارة رقم تسلسلي `#` لكل سطر، وتناوب لوني مريح للصفوف الزوجية والفردية (`IsEvenRow`) مع تأثير إضاءة انسيابي عند مرور الفأرة (`MouseEnter`/`MouseLeave`).
-  - شارات ملونة (`Badges`) للأرباح والخسائر، ونسب المساهمة، وحالات الترحيل، والفئات العمرية للديون.
-  - دعم كامل لتصدير كافة صفوف التقرير المفلترة إلى `PDF` و `Excel (CSV)` عبر الدالتين الجديدتين `ExportReportRowsToPdf` و `ExportReportRowsToCsv` في [ReportExporter.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/ReportExporter.vb).
-
----
-
-### د- طي القائمة الجانبية بـ Animation انسيابي وتطويرات إضافية لتجربة المستخدم:
-1. **طي وفتح القائمة الجانبية (`SidebarBorder`):**
-   * إضافة زر طي القائمة `❯` داخل ترويسة القائمة الجانبية وزر تبديل `☰ طي القائمة / إظهار التقارير` في الشريط العلوي، مع حركة انسيابية ناعمة (`DoubleAnimation` على `MaxWidth` و `Opacity` باستخدام `CubicEase` خلال `260ms`) لمنح جدول التقرير مساحة عرض كاملة عند الحاجة.
-2. **أزرار الفترات الزمنية السريعة (Quick Date Range Presets):**
-   * إضافة أزرار اختصار فورية (`اليوم`، `هذا الأسبوع`، `هذا الشهر`، `هذا العام`) تضبط تاريخي البداية والنهاية وتحدث التقرير بضغطة واحدة.
-3. **الفلاتر السياقية الذكية (`Contextual SearchableDropdowns`):**
-   * إظهار فلتر الفرع/المخزن أو العميل أو الصنف تلقائياً في شريط الفلاتر العلوي بحسب التقرير النشط (`ShowWarehouseFilter`, `ShowPartnerFilter`, `ShowProductFilter`) مع إعادة تحميل التقرير تلقائياً فور اختيار العنصر.
-4. **البحث الفوري داخل نتائج التقرير (`ReportQuickSearch`):**
-   * إضافة حقل `🔍 بحث فوري داخل نتائج التقرير...` لتصفية السطور المعروضة وإعادة احتساب شريط الإجماليات لحظياً في الذاكرة دون الحاجة لإعادة الاستعلام من قاعدة البيانات.
-
-
----
-
-## 83. عرض الأرقام في صفحة كشف الحساب بـ 3 أرقام عشرية بدون تقريب كما في قاعدة البيانات (`AccountStatementPage`)
-
-* **معالجة سبب التقريب في قاعدة البيانات والاستعلام (`AccountingService.vb` & `SQLVegtablity.sql`):**
-  - كان المتغير `@OpeningBalance` في الإجراء المخزن `[Accounting].[sp_Report_AccountStatement]` بملف [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) معرّفاً كـ `DECIMAL(18, 2)` مما يؤدي إلى تقريب الرصيد الافتتاحي والرصيد التراكمي لكل حركة إلى رقمين عشريين.
-  - تم تحديث `[Accounting].[sp_Report_AccountStatement]` في [SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql) وكذلك دالة [`GetAccountStatement`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb#L82-L112) في [AccountingService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb) لاستخدام `DECIMAL(18, 3)` مع دالة القطع دون تقريب `ROUND(..., 3, 1)` في SQL ودالة `AccountStatementReport.TruncateTo3Decimals` في VB.NET لضمان جلب وحساب الأرقام بـ 3 أرقام عشرية مطابقة تماماً لقاعدة البيانات دون أي تقريب.
-
-* **دوال القطع والتنسيق النصي الصارم بدون تقريب (`ReportModels.vb`):**
   - إضافة الدالتين المشتركتين [`TruncateTo3Decimals`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L283-L285) (`Math.Truncate(val * 1000D) / 1000D`) و [`FormatExact3Decimals`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L287-L290) في الكلاس [`AccountStatementReport`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L277-L355) والكلاس [`AccountStatementItem`](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Models/ReportModels.vb#L357-L413).
   - توفير خصائص العرض النصية الجاهزة بدون تقريب: `DebitAmountText`, `CreditAmountText`, `BalanceText`, `OpeningBalanceText`, `TotalDebitText`, `TotalCreditText`, و `EndingBalanceText`.
 
@@ -3718,6 +3696,60 @@
 ### د. الربط مع شاشة التقارير الشاملة ([ReportsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/ReportsViewModel.vb) & [ReportsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/ReportsPage.xaml))
 - إضافة التبويب رقم 16 (**`⏳ أعمار ديون العملاء (القيود)`**) في القائمة الجانبية دون المساس بالتقرير القديم الخاص بالفواتير (التبويب رقم 4).
 - تفعيل فلتر العملاء (`ShowPartnerFilter`) وفلاتر الفترة الزمنية والبحث الفوري وأزرار التصدير العلوية (`تصدير PDF` و `تصدير Excel`) للتكامل الكامل مع `JournalDebtAgingVM`.
+
+
+---
+
+## 92. العزل المعماري لبوابة MyFatoorah (API v2)، شجرة حسابات البوابات (`11`/`65`)، وإصدار الروابط المجمعة من سند القبض
+
+### أ. قاعدة البيانات ([SQLVegtablity.sql](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/SQL/SQLVegtablity.sql))
+- **`[Accounting].[sp_GetPaymentAccounts]`**:
+  - إجراء مخزن جديد يجلب حسابات الصندوق والبنوك (`AccountCode LIKE '11%' AND IsTransactional = 1`) مع معامل `@IncludePaymentGateways BIT = 0`:
+    - عند `@IncludePaymentGateways = 0` (الافتراضي للسندات والمشتريات): يستبعد حسابات بوابات الدفع المرتبطة في `[Settings].[IntegrationProviders]` (`ProviderCategory = 'PAYMENT_GATEWAY'`) لمنع اختيارها في سندات الصرف أو المشتريات.
+    - عند `@IncludePaymentGateways = 1` (فواتير المبيعات): يُدرج حسابات البوابات لإصدار روابط التحصيل.
+- **`[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]`**:
+  - تحديث آلية إنشاء الحسابات تلقائياً للبوابات المفعلة والمتحققة (`ConnectionStatus IN ('SandboxVerified', 'LiveVerified')`):
+    1. **حساب البوابة الفرعي (`LinkedAccountID`)**: يُنشأ تحت الحساب الرئيسي `'11'` بالرقم التسلسلي التالي وباسم البوابة.
+    2. **حساب مصروف العمولات (`CommissionAccountID`)**: ينشئ الحساب الرئيسي التجميعي `'65'` (`مصروف عمولات بوابات الدفع الإلكتروني`، `IsTransactional = 0`) إن لم يوجد، ثم ينشئ تحته حساباً فرعياً خاصاً بكل بوابة باسم `مصروف عمولات - <اسم البوابة>` بالرقم التسلسلي التالي.
+  - تطبيق ترقية تلقائية (`Migration Cursor`) على البوابات المعتمدة مسبقاً وتأكيد اسم `بوابة الدفع MyFatoorah` وعملتها الافتراضية `KWD`.
+- **`[Sales].[sp_Shift_Close]`**:
+  - إزالة إنشاء قيد تسوية فرق الكاش المكرر من داخل الإجراء المخزن، والاكتفاء بتحديث `Status = 'Closed'` ليقوم التريجر `[Sales].[trg_Shifts_StatusChange]` بإنشاء قيد عجز/زيادة الكاش **مرة واحدة فقط** وترحيل فواتير وسندات الوردية، مع إرجاع ملخص الإغلاق للعرض فقط.
+
+### ب. العزل التام لبوابة MyFatoorah (API v2) في الطبقات الثلاث
+1. **الخادم الخلفي (`VegtablityApi`)**:
+   - إنشاء الكلاس المعزول **[myfatoorah_gateway.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/integrations/myfatoorah_gateway.py)** (`MyFatoorahGateway`) بالتطابق المعماري مع Tap Payments ليدعم:
+     - `initiate_payment` (`POST /v2/InitiatePayment`), `create_payment_link` (`POST /v2/SendPayment` و `POST /v2/ExecutePayment` عند تمرير `PaymentMethodId`), `get_payment_status` (`POST /v2/GetPaymentStatus` مع فحص `InvoiceStatus` ومصفوفة `InvoiceTransactions`), `make_refund` (`POST /v2/MakeRefund`), و `get_refund_status` (`POST /v2/GetRefundStatus`).
+     - استخلاص رسائل أخطاء MyFatoorah المنظمة (`ValidationErrors` و `FieldsErrors`) عبر `extract_error_details`.
+     - التحقق من توقيع Webhook V2 (`MyFatoorah-Signature` via `HMAC-SHA256 Base64`) وتحليل أحداث `PAYMENT_STATUS_CHANGED` و `REFUND_STATUS_CHANGED` داخل **[integrations.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/routes/integrations.py)** و **[integration_service.py](file:///d:/VB.NET/backup/Vegtablity/VegtablityApi/app/services/integrations/integration_service.py)**.
+2. **تطبيق سطح المكتب WPF (`Vegtablity`)**:
+   - تحديث **[MyFatoorahProvider.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/Integrations/MyFatoorahProvider.vb)** لدعم `SendOrExecutePaymentAsync` و `GetPaymentStatus` و `MakeRefund` و `GetRefundStatus` وتحليل `ValidationErrors` / `FieldsErrors` عبر `JavaScriptSerializer`.
+   - إضافة الثابت `SP_GET_PAYMENT_ACCOUNTS` في **[StoredProcedures.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Helpers/StoredProcedures.vb)** وتحديث **[AccountingService.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Services/AccountingService.vb)** (`GetCashAccounts(Optional includePaymentGateways As Boolean = False)`) لاستدعائه دون أي Inline SQL.
+   - تمرير `includePaymentGateways:=False` في **[InvoiceDashboardViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/InvoiceDashboardViewModel.vb)** و **[PurchaseInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/PurchaseInvoiceViewModel.vb)** و **[VouchersViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/VouchersViewModel.vb)**، وتمرير `includePaymentGateways:=True` في **[SalesInvoiceViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/SalesInvoiceViewModel.vb)**.
+   - فصل قوائم الحسابات المتاحة لكل قائمة منسدلة في **[IntegrationSettingsViewModel.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/ViewModels/Integrations/IntegrationSettingsViewModel.vb)** و **[IntegrationSettingsPage.xaml](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/Integrations/IntegrationSettingsPage.xaml)** و **[IntegrationSettingsPage.xaml.vb](file:///d:/VB.NET/backup/Vegtablity/Vegtablity/Vegtablity/Views/Integrations/IntegrationSettingsPage.xaml.vb)** (`AvailableDebitAccounts`, `AvailableCreditAccounts`, `AvailableCommissionAccounts`, `AvailableRefundDebitAccounts`, `AvailableRefundCreditAccounts`).
+   - تحديث الكتيب المرجعي **[myfatoorah_manual.html](file:///d:/VB.NET/backup/Vegtablity/Plans/integration/myfatoorah_manual.html)** ليعكس كافة العقود ونقاط النهاية والكلاسات المعزولة.
+3. **تطبيق نقاط البيع والموبايل (`Vegtablity_App`)**:
+   - إنشاء الخدمة المعزولة **[myfatoorah_gateway_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/integrations/myfatoorah_gateway_service.dart)** (`MyFatoorahGatewayService`) وربطها في **[integration_service.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/integrations/integration_service.dart)**.
+   - إضافة دوال التخزين والتصفية `cacheGatewayAccountIds` و `filterOutGatewayAccounts` في `IntegrationPosService` لتطبيق استبعاد حسابات بوابات الدفع في **[voucher_provider.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/providers/voucher_provider.dart)** و **[payment_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/payment_voucher_screen.dart)** و **[general_payment_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_payment_voucher_screen.dart)** و **[general_receipt_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/general_receipt_voucher_screen.dart)** و **[pos_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/pos_screen.dart)** (عند `widget.type != 'Sales'`).
+
+### ج. نافذة إصدار روابط الدفع المجمعة والمنفردة والتكامل مع سند القبض
+- إنشاء أداة الحوار المشتركة **[payment_link_issue_dialog.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/widgets/payment_link_issue_dialog.dart)** (`showConsolidatedPaymentLinkDialog`) لعرض الفواتير المحددة وإجماليها، اختيار بوابة الدفع المفعلة، تعديل اسم العميل وهاتفه والملاحظات، إصدار الرابط المجمع/المنفرد، مشاركته عبر WhatsApp، وعرض وطباعة رمز QR.
+- تحديث **[receipt_voucher_screen.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/screens/receipt_voucher_screen.dart)**:
+  - دمج حسابات بوابات الدفع المهيأة داخل قائمة حسابات التحصيل في شاشة سندات قبض العملاء (بشارة `(بوابة دفع)`).
+  - عند اختيار بوابة دفع، يتحول زر التنفيذ إلى **«إصدار رابط دفع مجمع»** ويفتح `showConsolidatedPaymentLinkDialog` لإصدار وحفظ الرابط في شاشة روابط الدفع **دون إنشاء سند قبض** (منعاً لازدواجية القيد المحاسبي قبل التحصيل الفعلي).
+  - إصلاح خطأ أقواس زائدة في بناء عناصر القائمة المنسدلة `DropdownMenuItem` داخل `_buildInvoiceList`.
+
+
+---
+
+## 93. توثيق القواعد الهندسية المعمارية (`Plans/rolles.md`) وترقية واجهات `Vegtablity_App` وطباعة السندات
+
+- **توثيق القواعد الهندسية الإلزامية ([Plans/rolles.md](file:///d:/VB.NET/backup/Vegtablity/Plans/rolles.md))**:
+  - إنشاء ملف القواعد الهندسية المرجعي الموثّق بالعربية بالتوازي مع `.agents/rules/architecture-principles.md`، شاملاً: معمارية MVVM عبر اللغات الأربع (`WPF`, `FastAPI`, `Flutter`, `T-SQL`)، اعتماد `SQLVegtablity.sql` كمصدر وحيد لقاعدة البيانات، تقسيم التريجرات إلى `Event SPs`، قوالب `Transaction / Savepoint` الإلزامية، النهج الهجين لـ `JSON` (`OPENJSON` / `FOR JSON PATH`)، وقائمة التحقق قبل التسليم.
+- **الترقية البصرية لشاشات تطبيق Flutter (`Vegtablity_App`)**:
+  - توحيد المظهر العصري الفاتح (Modern Light Theme `#F4F7FA`، ترويسات `AppBar` بتدرجات لونية `LinearGradient`، وبطاقات نظيفة بظلال ناعمة) عبر الشاشات: `home_screen.dart`, `pos_screen.dart`, `close_shift_screen.dart`, `payment_gateway_invoices_screen.dart`, `receipt_voucher_screen.dart`, `payment_voucher_screen.dart`, `general_receipt_voucher_screen.dart`, `general_payment_voucher_screen.dart`, `daily_orders_screen.dart`, `partner_billing_screen.dart`, `partner_offers_screen.dart`, `supplier_selection_screen.dart`, `stocktake_screen.dart`, `wastage_screen.dart` مع تحديثات `printer_base.dart` و `barcode_print_viewmodel.dart`.
+- **تحسين طباعة السندات الحرارية ([voucher_print_designer.dart](file:///d:/VB.NET/backup/Vegtablity/Vegtablity_App/lib/services/printing/voucher_print_designer.dart))**:
+  - إضافة دالة `addTwoColumnRow` لعرض جدول الفواتير المسددة بالسند بشكل منسق في عمودين (`رقم الفاتورة` | `المبلغ المسدد`) مع توحيد استخلاص المبالغ والملاحظات والبيان.
+
 
 
 

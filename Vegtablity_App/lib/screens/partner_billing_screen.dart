@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
+import '../services/integrations/integration_service.dart';
 import '../services/offline_sync_service.dart';
 import '../viewmodels/sync_viewmodel.dart';
 import '../services/printer_service.dart';
@@ -68,9 +69,12 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       final String? cachedAccJson = prefs.getString('cached_accounts');
       if (cachedAccJson != null) {
         final List<dynamic> decoded = json.decode(cachedAccJson);
+        final filtered = await IntegrationPosService.filterOutGatewayAccounts(
+          List<Map<String, dynamic>>.from(decoded),
+        );
         if (mounted) {
           setState(() {
-            _accounts = List<Map<String, dynamic>>.from(decoded);
+            _accounts = filtered;
             _updateSelectedAccountId();
           });
         }
@@ -79,7 +83,9 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       final apiService = Provider.of<ApiService>(context, listen: false);
       final res = await apiService.getPaymentAccounts();
       if (res.statusCode == 200 && res.data is List) {
-        final List<Map<String, dynamic>> fetched = List<Map<String, dynamic>>.from(res.data);
+        final fetched = await IntegrationPosService.filterOutGatewayAccounts(
+          List<Map<String, dynamic>>.from(res.data),
+        );
         if (fetched.isNotEmpty && mounted) {
           setState(() {
             _accounts = fetched;
@@ -94,7 +100,9 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
   void _updateSelectedAccountId() {
     if (_accounts.isNotEmpty && _selectedAccountId == null) {
       final cashAcc = _accounts.firstWhere(
-        (acc) => (acc['AccountName']?.toString() ?? '').contains('صندوق') || (acc['AccountName']?.toString() ?? '').contains('كاش'),
+        (acc) =>
+            (acc['AccountName']?.toString() ?? '').contains('صندوق') ||
+            (acc['AccountName']?.toString() ?? '').contains('كاش'),
         orElse: () => _accounts.first,
       );
       _selectedAccountId = cashAcc['AccountID'];
@@ -290,7 +298,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               _addOrIncrementProduct(prod);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('تمت إضافة: ${prod['ProductName'] ?? prod['name']}'),
+                  content:
+                      Text('تمت إضافة: ${prod['ProductName'] ?? prod['name']}'),
                   backgroundColor: Colors.teal,
                   duration: const Duration(seconds: 1),
                 ),
@@ -319,7 +328,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               backgroundColor: Colors.grey[900],
               title: const Text(
                 'تأكيد السداد النقدي',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.right,
               ),
               content: Column(
@@ -328,7 +338,10 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                 children: [
                   Text(
                     'المبلغ المطلوب: ${_netAmount.toStringAsFixed(3)} د.ك',
-                    style: const TextStyle(color: Colors.tealAccent, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        color: Colors.tealAccent,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold),
                     textAlign: TextAlign.right,
                   ),
                   const SizedBox(height: 15),
@@ -344,7 +357,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                       dropdownColor: Colors.grey[850],
                       value: dialogSelectedAccountId,
                       decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         border: OutlineInputBorder(),
                         fillColor: Colors.white,
                         filled: true,
@@ -354,7 +368,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           value: acc['AccountID'],
                           child: Text(
                             acc['AccountName']?.toString() ?? '',
-                            style: const TextStyle(color: Colors.black, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.black, fontSize: 14),
                           ),
                         );
                       }).toList(),
@@ -370,15 +385,18 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('إلغاء', style: TextStyle(color: Colors.red)),
+                  child:
+                      const Text('إلغاء', style: TextStyle(color: Colors.red)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
                   onPressed: () {
                     Navigator.pop(ctx);
-                    _submitInvoice(true, paymentAccountId: dialogSelectedAccountId);
+                    _submitInvoice(true,
+                        paymentAccountId: dialogSelectedAccountId);
                   },
-                  child: const Text('تأكيد وحفظ', style: TextStyle(color: Colors.white)),
+                  child: const Text('تأكيد وحفظ',
+                      style: TextStyle(color: Colors.white)),
                 ),
               ],
             );
@@ -402,15 +420,19 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         return StatefulBuilder(
           builder: (dialogCtx, setDialogState) {
             final double totalAmount = _netAmount;
-            final double totalPaid = splits.fold(0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
-            final double remainder = totalAmount > totalPaid ? totalAmount - totalPaid : 0.0;
+            final double totalPaid = splits.fold(0.0,
+                (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+            final double remainder =
+                totalAmount > totalPaid ? totalAmount - totalPaid : 0.0;
 
             return AlertDialog(
               backgroundColor: Colors.grey[900],
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: const Text(
                 'تقسيم وسائل الدفع (Split Payment)',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.right,
               ),
               content: SizedBox(
@@ -425,7 +447,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                         decoration: BoxDecoration(
                           color: Colors.teal.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.teal.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: Colors.teal.withValues(alpha: 0.3)),
                         ),
                         child: Column(
                           children: [
@@ -433,8 +456,12 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${totalAmount.toStringAsFixed(3)} د.ك',
-                                    style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 16)),
-                                const Text('إجمالي الصافي:', style: TextStyle(color: Colors.white70)),
+                                    style: const TextStyle(
+                                        color: Colors.tealAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16)),
+                                const Text('إجمالي الصافي:',
+                                    style: TextStyle(color: Colors.white70)),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -442,18 +469,29 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${totalPaid.toStringAsFixed(3)} د.ك',
-                                    style: const TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 14)),
-                                Text(context.tr('split_paid_now'), style: const TextStyle(color: Colors.white70)),
+                                    style: const TextStyle(
+                                        color: Colors.greenAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14)),
+                                Text(context.tr('split_paid_now'),
+                                    style:
+                                        const TextStyle(color: Colors.white70)),
                               ],
                             ),
                             if (remainder > 0) ...[
                               const SizedBox(height: 4),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text('${remainder.toStringAsFixed(3)} د.ك',
-                                      style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold, fontSize: 14)),
-                                  Text(context.tr('split_remainder_credit'), style: const TextStyle(color: Colors.white70)),
+                                      style: const TextStyle(
+                                          color: Colors.orangeAccent,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14)),
+                                  Text(context.tr('split_remainder_credit'),
+                                      style: const TextStyle(
+                                          color: Colors.white70)),
                                 ],
                               ),
                             ],
@@ -465,10 +503,15 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                         final index = entry.key;
                         final split = entry.value;
                         if (split['controller'] == null) {
-                          final initialAmt = (split['Amount'] as num?)?.toDouble() ?? 0.0;
-                          split['controller'] = TextEditingController(text: initialAmt > 0 ? initialAmt.toStringAsFixed(3) : '');
+                          final initialAmt =
+                              (split['Amount'] as num?)?.toDouble() ?? 0.0;
+                          split['controller'] = TextEditingController(
+                              text: initialAmt > 0
+                                  ? initialAmt.toStringAsFixed(3)
+                                  : '');
                         }
-                        final controller = split['controller'] as TextEditingController;
+                        final controller =
+                            split['controller'] as TextEditingController;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
@@ -485,11 +528,15 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                                 children: [
                                   if (splits.length > 1)
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle, color: Colors.redAccent),
+                                      icon: const Icon(Icons.remove_circle,
+                                          color: Colors.redAccent),
                                       onPressed: () {
                                         setDialogState(() {
-                                          final removed = splits.removeAt(index);
-                                          (removed['controller'] as TextEditingController?)?.dispose();
+                                          final removed =
+                                              splits.removeAt(index);
+                                          (removed['controller']
+                                                  as TextEditingController?)
+                                              ?.dispose();
                                         });
                                       },
                                     ),
@@ -498,26 +545,42 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                                       isExpanded: true,
                                       value: split['PaymentAccountID'],
                                       dropdownColor: Colors.grey[800],
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold),
                                       decoration: InputDecoration(
-                                        labelText: context.tr('split_payment_account'),
-                                        labelStyle: const TextStyle(color: Colors.white54),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                                        focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                                        labelText:
+                                            context.tr('split_payment_account'),
+                                        labelStyle: const TextStyle(
+                                            color: Colors.white54),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 4),
+                                        enabledBorder: const OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                                color: Colors.white24)),
+                                        focusedBorder: const OutlineInputBorder(
+                                            borderSide:
+                                                BorderSide(color: Colors.teal)),
                                       ),
                                       items: _accounts.map((acc) {
                                         return DropdownMenuItem<int>(
                                           value: acc['AccountID'],
-                                          child: Text(acc['AccountName'] ?? '', textDirection: TextDirection.rtl),
+                                          child: Text(acc['AccountName'] ?? '',
+                                              textDirection: TextDirection.rtl),
                                         );
                                       }).toList(),
                                       onChanged: (val) {
                                         if (val != null) {
                                           setDialogState(() {
                                             split['PaymentAccountID'] = val;
-                                            final matchedAcc = _accounts.firstWhere((a) => a['AccountID'] == val, orElse: () => {});
-                                            split['PaymentMethodName'] = matchedAcc['AccountName'] ?? '';
+                                            final matchedAcc =
+                                                _accounts.firstWhere(
+                                                    (a) =>
+                                                        a['AccountID'] == val,
+                                                    orElse: () => {});
+                                            split['PaymentMethodName'] =
+                                                matchedAcc['AccountName'] ?? '';
                                           });
                                         }
                                       },
@@ -528,17 +591,29 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                               const SizedBox(height: 8),
                               TextField(
                                 controller: controller,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: const TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold, fontSize: 16),
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true),
+                                style: const TextStyle(
+                                    color: Colors.tealAccent,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16),
                                 decoration: InputDecoration(
                                   labelText: context.tr('split_amount_paid'),
-                                  labelStyle: const TextStyle(color: Colors.white54),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-                                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.teal)),
+                                  labelStyle:
+                                      const TextStyle(color: Colors.white54),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  enabledBorder: const OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.white24)),
+                                  focusedBorder: const OutlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.teal)),
                                 ),
                                 onChanged: (val) {
-                                  final double parsed = double.tryParse(val) ?? 0.0;
+                                  final double parsed =
+                                      double.tryParse(val) ?? 0.0;
                                   split['Amount'] = parsed;
                                   setDialogState(() {});
                                 },
@@ -550,8 +625,12 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                       ElevatedButton.icon(
                         onPressed: () {
                           setDialogState(() {
-                            final nextAcc = _accounts.length > splits.length ? _accounts[splits.length]['AccountID'] : _accounts.first['AccountID'];
-                            final nextName = _accounts.length > splits.length ? _accounts[splits.length]['AccountName'] : _accounts.first['AccountName'];
+                            final nextAcc = _accounts.length > splits.length
+                                ? _accounts[splits.length]['AccountID']
+                                : _accounts.first['AccountID'];
+                            final nextName = _accounts.length > splits.length
+                                ? _accounts[splits.length]['AccountName']
+                                : _accounts.first['AccountName'];
                             splits.add({
                               'PaymentAccountID': nextAcc,
                               'PaymentMethodName': nextName,
@@ -565,7 +644,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           backgroundColor: Colors.teal[800],
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
                     ],
@@ -588,12 +668,14 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                       }
                     });
                   },
-                  child: Text(context.tr('split_cancel'), style: const TextStyle(color: Colors.white54)),
+                  child: Text(context.tr('split_cancel'),
+                      style: const TextStyle(color: Colors.white54)),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     final validSplits = splits
-                        .where((s) => ((s['Amount'] as num?)?.toDouble() ?? 0.0) > 0)
+                        .where((s) =>
+                            ((s['Amount'] as num?)?.toDouble() ?? 0.0) > 0)
                         .map((s) => {
                               'PaymentAccountID': s['PaymentAccountID'],
                               'PaymentMethodName': s['PaymentMethodName'],
@@ -603,7 +685,11 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
                     if (validSplits.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(context.tr('split_valid_amounts_warn'), textAlign: TextAlign.right), backgroundColor: Colors.orange),
+                        SnackBar(
+                            content: Text(
+                                context.tr('split_valid_amounts_warn'),
+                                textAlign: TextAlign.right),
+                            backgroundColor: Colors.orange),
                       );
                       return;
                     }
@@ -625,8 +711,11 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
                     _submitInvoice(true, paymentSplits: validSplits);
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green[700], foregroundColor: Colors.white),
-                  child: Text(context.tr('split_confirm_and_save'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white),
+                  child: Text(context.tr('split_confirm_and_save'),
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             );
@@ -636,7 +725,9 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     );
   }
 
-  Future<void> _submitInvoice(bool isCash, {int? paymentAccountId, List<Map<String, dynamic>>? paymentSplits}) async {
+  Future<void> _submitInvoice(bool isCash,
+      {int? paymentAccountId,
+      List<Map<String, dynamic>>? paymentSplits}) async {
     if (_cartItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -662,7 +753,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
     double remainder = isCash ? 0.0 : net;
 
     if (paymentSplits != null && paymentSplits.isNotEmpty) {
-      paid = paymentSplits.fold<double>(0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
+      paid = paymentSplits.fold<double>(
+          0.0, (sum, s) => sum + ((s['Amount'] as num?)?.toDouble() ?? 0.0));
       remainder = net > paid ? net - paid : 0.0;
     }
 
@@ -671,7 +763,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       return {
         'ProductID': item['ProductID'],
         'ProductName': item['name'] ?? item['ProductName'] ?? '',
-        'UnitName': item['UnitName'] ?? item['unitName'] ?? item['unit_name'] ?? '',
+        'UnitName':
+            item['UnitName'] ?? item['unitName'] ?? item['unit_name'] ?? '',
         'UnitPrice': item['price'],
         'Quantity': item['quantity'],
         'TotalPrice': item['total'],
@@ -691,7 +784,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
       'NetAmount': net,
       'PaidAmount': paid,
       'Remainder': remainder,
-      'Notes': '${context.tr('pb_offer_notes')}${widget.quoteId}${widget.tempNotes != null && widget.tempNotes!.isNotEmpty ? " | " + widget.tempNotes! : ""}',
+      'Notes':
+          '${context.tr('pb_offer_notes')}${widget.quoteId}${widget.tempNotes != null && widget.tempNotes!.isNotEmpty ? " | " + widget.tempNotes! : ""}',
       'IsPosted': false,
       'Details': details,
       if ((paymentAccountId ?? _selectedAccountId) != null)
@@ -712,13 +806,17 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
-      final printerService = Provider.of<PrinterService>(context, listen: false);
+      final printerService =
+          Provider.of<PrinterService>(context, listen: false);
       final response = await apiService.savePartnerInvoice(payload);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final dynamic respData = response.data;
         final dynamic rawSavedId = respData is Map
-            ? (respData['InvID'] ?? respData['id'] ?? respData['InvoiceID'] ?? respData['inv_id'])
+            ? (respData['InvID'] ??
+                respData['id'] ??
+                respData['InvoiceID'] ??
+                respData['inv_id'])
             : null;
         final int newInvId = (rawSavedId is int
                 ? rawSavedId
@@ -751,13 +849,15 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           'type': widget.type == 'Sales' ? 'Sales' : 'Purchase',
           'created_at': DateTime.now().toIso8601String(),
           'total_amount': net,
-          'paid_amount':  paid,
-          'remainder':    remainder,
-          if (paymentSplits != null && paymentSplits.isNotEmpty) 'PaymentSplits': paymentSplits,
-          if (paymentAccountName != null && paymentAccountName.isNotEmpty) 'PaymentAccountName': paymentAccountName,
+          'paid_amount': paid,
+          'remainder': remainder,
+          if (paymentSplits != null && paymentSplits.isNotEmpty)
+            'PaymentSplits': paymentSplits,
+          if (paymentAccountName != null && paymentAccountName.isNotEmpty)
+            'PaymentAccountName': paymentAccountName,
           'temp_customer_name': widget.tempCustomerName,
-          'temp_phone':        widget.tempPhone,
-          'temp_address':      widget.tempAddress,
+          'temp_phone': widget.tempPhone,
+          'temp_address': widget.tempAddress,
           'temp_delivery_date': widget.tempDeliveryDate,
           'temp_delivery_time': widget.tempDeliveryTime,
           'items': _cartItems
@@ -766,12 +866,17 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                     'price': c['price'],
                     'quantity': (c['quantity'] as num).toDouble(),
                     'total': c['total'],
-                    'UnitName': c['UnitName'] ?? c['unitName'] ?? c['unit_name'] ?? c['unit'] ?? '',
+                    'UnitName': c['UnitName'] ??
+                        c['unitName'] ??
+                        c['unit_name'] ??
+                        c['unit'] ??
+                        '',
                   })
               .toList(),
         };
 
-        final successMsg = pbSaveSuccessTpl.replaceAll('{id}', newInvId.toString());
+        final successMsg =
+            pbSaveSuccessTpl.replaceAll('{id}', newInvId.toString());
 
         await printerService.printReceipt(printInvoiceData);
 
@@ -816,16 +921,20 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           '_partnerName': widget.partner['PartnerName']?.toString() ?? '',
         });
         if (mounted) {
-          await Provider.of<SyncViewModel>(context, listen: false).loadAllQueues();
+          await Provider.of<SyncViewModel>(context, listen: false)
+              .loadAllQueues();
           nav.pop();
         }
-        if (false) messenger.showSnackBar(const SnackBar(content: Text(
-              '',
-              textAlign: TextAlign.right,
+        if (false)
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                '',
+                textAlign: TextAlign.right,
+              ),
+              backgroundColor: Colors.red,
             ),
-            backgroundColor: Colors.red,
-          ),
-        );
+          );
       }
     } finally {
       if (mounted) {
@@ -853,19 +962,26 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         }
       },
       child: Scaffold(
+        backgroundColor: const Color(0xFFF4F7FA),
         appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
           title: Column(
             children: [
               Text(
                 widget.type == 'Sales'
                     ? context.tr('pb_sales_offer_invoice')
                     : context.tr('pb_purchase_offer_invoice'),
-                style: const TextStyle(fontSize: 16),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               Text(
                 '${context.tr('pb_partner_name')}${widget.partner['PartnerName']}',
                 style: const TextStyle(
-                    fontSize: 12, fontWeight: FontWeight.normal),
+                    fontSize: 12,
+                    fontWeight: FontWeight.normal,
+                    color: Colors.white70),
               )
             ],
           ),
@@ -874,8 +990,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: widget.type == 'Sales'
-                    ? [Colors.blue, Colors.teal]
-                    : [Colors.orange, Colors.red],
+                    ? [const Color(0xFF1D4ED8), const Color(0xFF0D9488)]
+                    : [const Color(0xFFB45309), const Color(0xFFD97706)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -885,24 +1001,29 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             Consumer<PrinterService>(
               builder: (context, printerService, child) {
                 return IconButton(
-                  icon: const Icon(Icons.print),
+                  icon: const Icon(Icons.print_rounded),
                   tooltip: 'طباعة أحدث إضافة بالنظام',
                   onPressed: () async {
                     if (printerService.lastAddedDocument == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('لا يوجد مستند سابق مضاف حالياً لطباعته', textAlign: TextAlign.right),
+                          content: Text(
+                              'لا يوجد مستند سابق مضاف حالياً لطباعته',
+                              textAlign: TextAlign.right),
                           backgroundColor: Colors.orange,
                         ),
                       );
                       return;
                     }
-                    final success = await printerService.printLastAddedDocument();
+                    final success =
+                        await printerService.printLastAddedDocument();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            success ? 'تمت طباعة أحدث إضافة بنجاح' : 'فشلت عملية طباعة أحدث إضافة',
+                            success
+                                ? 'تمت طباعة أحدث إضافة بنجاح'
+                                : 'فشلت عملية طباعة أحدث إضافة',
                             textAlign: TextAlign.right,
                           ),
                           backgroundColor: success ? Colors.green : Colors.red,
@@ -914,7 +1035,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.qr_code_scanner, size: 28),
+              icon: const Icon(Icons.qr_code_scanner_rounded, size: 26),
               tooltip: context.tr('pb_scan_tooltip'),
               onPressed: _openCameraScanner,
             )
@@ -923,8 +1044,11 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
         body: Directionality(
           textDirection: TextDirection.rtl,
           child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.teal))
+              ? Center(
+                  child: CircularProgressIndicator(
+                      color: widget.type == 'Sales'
+                          ? const Color(0xFF0D9488)
+                          : const Color(0xFFD97706)))
               : isTablet
                   ? Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -947,25 +1071,34 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                         _buildSearchBar(primaryColor),
                         // Small stats
                         Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 12),
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          color: Colors.grey[100],
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                   '${context.tr('pb_items_in_cart')}${_cartItems.length}',
                                   style: const TextStyle(
+                                      color: Color(0xFF0F172A),
                                       fontWeight: FontWeight.bold)),
                               Text(
                                   context.tr('pb_total_kd').replaceAll(
                                       '{total}', _subtotal.toStringAsFixed(3)),
-                                  style: const TextStyle(
-                                      color: Colors.green,
+                                  style: TextStyle(
+                                      color: widget.type == 'Sales'
+                                          ? const Color(0xFF059669)
+                                          : const Color(0xFFB45309),
                                       fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
+                        const SizedBox(height: 6),
                         // Allowed Items List (Tap to add)
                         Expanded(
                           child: _buildMobileCatalogList(),
@@ -983,33 +1116,57 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   Widget _buildSearchBar(Color primaryColor) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _searchController,
               onChanged: _filterAllowedItems,
+              style: const TextStyle(color: Color(0xFF0F172A)),
               decoration: InputDecoration(
                 hintText: context.tr('pb_search_hint'),
-                prefixIcon: Icon(Icons.search, color: primaryColor),
-                border: const OutlineInputBorder(),
+                hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                prefixIcon: Icon(Icons.search_rounded, color: primaryColor),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: primaryColor, width: 1.5)),
                 contentPadding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               ),
             ),
           ),
           const SizedBox(width: 8),
           // Quick Barcode Manual Field
-          Container(
-            width: 160,
+          SizedBox(
+            width: 155,
             child: TextField(
               controller: _barcodeInputController,
+              style: const TextStyle(color: Color(0xFF0F172A)),
               decoration: InputDecoration(
                 hintText: context.tr('pb_barcode_hint'),
-                border: const OutlineInputBorder(),
+                hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: primaryColor, width: 1.5)),
                 contentPadding:
-                    EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
               ),
               onSubmitted: (val) {
                 _handleBarcodeScanned(val);
@@ -1024,17 +1181,19 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   Widget _buildCatalogPanel(Color primaryColor) {
     return Container(
-      color: Colors.grey[50],
+      color: const Color(0xFFF4F7FA),
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildSearchBar(primaryColor),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             context.tr('pb_approved_items_title'),
             style: const TextStyle(
-                fontWeight: FontWeight.bold, color: Colors.grey),
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF475569),
+                fontSize: 13),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -1043,7 +1202,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                 crossAxisCount: 3,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: 1.1,
+                childAspectRatio: 1.08,
               ),
               itemCount: _filteredAllowedItems.length,
               itemBuilder: (context, index) {
@@ -1055,25 +1214,45 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                 final unitName =
                     item['UnitName'] ?? context.tr('pb_item_piece');
 
-                return Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                return Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     onTap: () => _addOrIncrementProduct(item),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(10.0),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFF0F172A).withValues(alpha: 0.04),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shopping_bag_outlined,
-                              color: primaryColor, size: 28),
-                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.shopping_bag_outlined,
+                                color: primaryColor, size: 24),
+                          ),
+                          const SizedBox(height: 8),
                           Text(
                             name,
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13),
+                                color: Color(0xFF0F172A),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13),
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -1082,7 +1261,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           Text(
                             '${price.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol} / $unitName',
                             style: const TextStyle(
-                                color: Colors.green,
+                                color: Color(0xFF059669),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12),
                           ),
@@ -1090,7 +1269,7 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                           Text(
                             barcode,
                             style: const TextStyle(
-                                color: Colors.grey, fontSize: 10),
+                                color: Color(0xFF94A3B8), fontSize: 10),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           )
@@ -1109,44 +1288,65 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   Widget _buildCartPanel(Color primaryColor) {
     return Container(
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: Colors.grey[300]!)),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(left: BorderSide(color: Color(0xFFE2E8F0))),
       ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
-            color: primaryColor.withOpacity(0.05),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: primaryColor.withValues(alpha: 0.06),
+              border:
+                  const Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
             child: Row(
               children: [
-                const Icon(Icons.shopping_cart, color: Colors.teal),
+                Icon(Icons.shopping_cart_rounded, color: primaryColor),
                 const SizedBox(width: 8),
                 Text(context.tr('pb_cart_title'),
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                        color: Color(0xFF0F172A),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16)),
               ],
             ),
           ),
           Expanded(
             child: _cartItems.isEmpty
                 ? Center(
-                    child: Text(context.tr('pb_cart_empty'),
-                        style: const TextStyle(color: Colors.grey),
-                        textAlign: TextAlign.center),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.remove_shopping_cart_outlined,
+                            size: 48, color: Color(0xFFCBD5E1)),
+                        const SizedBox(height: 8),
+                        Text(context.tr('pb_cart_empty'),
+                            style: const TextStyle(color: Color(0xFF64748B)),
+                            textAlign: TextAlign.center),
+                      ],
+                    ),
                   )
-                : ListView.builder(
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     itemCount: _cartItems.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     itemBuilder: (context, index) {
                       final item = _cartItems[index];
                       return ListTile(
                         title: Text(item['name'],
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
+                            style: const TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontWeight: FontWeight.bold)),
                         subtitle: Wrap(
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             Text(
-                                '${context.tr('pb_item_price')}${item['price'].toStringAsFixed(3)}${context.tr('pb_item_quantity')}'),
+                                '${context.tr('pb_item_price')}${item['price'].toStringAsFixed(3)}${context.tr('pb_item_quantity')}',
+                                style:
+                                    const TextStyle(color: Color(0xFF64748B))),
                             _QuantityEditor(
                               initialQuantity: item['quantity'],
                               onChanged: (newQty) => _updateCartQuantity(
@@ -1161,12 +1361,13 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                               '${item['total'].toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green,
+                                  color: Color(0xFF059669),
                                   fontSize: 15),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 8),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              icon: const Icon(Icons.delete_outline_rounded,
+                                  color: Color(0xFFE11D48)),
                               onPressed: () =>
                                   _updateCartQuantity(item['ProductID'], 0),
                             ),
@@ -1184,7 +1385,10 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   Widget _buildCheckoutSummaryPanel(Color primaryColor) {
     return Container(
-      color: Colors.grey[200],
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1193,10 +1397,14 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(context.tr('pb_subtotal'),
-                  style: const TextStyle(fontSize: 15)),
-              Text('${_subtotal.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF475569))),
+              Text(
+                  '${_subtotal.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.bold)),
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A))),
             ],
           ),
           const SizedBox(height: 8),
@@ -1204,18 +1412,26 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(context.tr('pb_discount_value'),
-                  style: const TextStyle(fontSize: 15)),
-              Container(
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFF475569))),
+              SizedBox(
                 width: 100,
-                height: 35,
+                height: 36,
                 child: TextField(
                   controller: _discountController,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   textAlign: TextAlign.center,
-                  decoration: const InputDecoration(
+                  style: const TextStyle(
+                      color: Color(0xFF0F172A), fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
                     contentPadding: EdgeInsets.zero,
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                     fillColor: Colors.white,
                     filled: true,
                   ),
@@ -1226,14 +1442,17 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               ),
             ],
           ),
-          const Divider(height: 20),
+          const Divider(height: 20, color: Color(0xFFE2E8F0)),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(context.tr('pb_net_amount'),
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-              Text('${_netAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A))),
+              Text(
+                  '${_netAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -1246,18 +1465,22 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed:
-                      _cartItems.isEmpty ? null : () => _showCashPaymentDialog(),
-                  icon: const Icon(Icons.payment),
+                  onPressed: _cartItems.isEmpty
+                      ? null
+                      : () => _showCashPaymentDialog(),
+                  icon: const Icon(Icons.payment_rounded, size: 18),
                   label: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12.0),
                     child: Text(context.tr('pb_pay_cash'),
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold)),
+                            fontSize: 13.5, fontWeight: FontWeight.bold)),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
+                    backgroundColor: const Color(0xFF059669),
                     foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -1274,15 +1497,21 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                             _showSplitPaymentDialog();
                           }
                         },
-                  icon: const Icon(Icons.call_split, color: Colors.teal),
+                  icon: const Icon(Icons.call_split_rounded,
+                      color: Color(0xFF0D9488), size: 18),
                   label: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12.0),
                     child: Text(context.tr('pos_split_payment'),
                         style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.bold, color: Colors.teal)),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0D9488))),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.teal, width: 1.5),
+                    side:
+                        const BorderSide(color: Color(0xFF0D9488), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -1291,16 +1520,19 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                 child: ElevatedButton.icon(
                   onPressed:
                       _cartItems.isEmpty ? null : () => _submitInvoice(false),
-                  icon: const Icon(Icons.timer_outlined),
+                  icon: const Icon(Icons.timer_outlined, size: 18),
                   label: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12.0),
                     child: Text(context.tr('pb_pay_credit'),
                         style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold)),
+                            fontSize: 13.5, fontWeight: FontWeight.bold)),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange[800],
+                    backgroundColor: const Color(0xFFD97706),
                     foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -1315,9 +1547,13 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   Widget _buildMobileCatalogList() {
     return _filteredAllowedItems.isEmpty
-        ? Center(child: Text(context.tr('pb_no_results')))
-        : ListView.builder(
+        ? Center(
+            child: Text(context.tr('pb_no_results'),
+                style: const TextStyle(color: Color(0xFF64748B))))
+        : ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
             itemCount: _filteredAllowedItems.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final item = _filteredAllowedItems[index];
               final price =
@@ -1331,20 +1567,41 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
               final cartQty =
                   cartIndex != -1 ? _cartItems[cartIndex]['quantity'] : 0.0;
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              return Container(
+                decoration: BoxDecoration(
+                  color: cartQty > 0 ? const Color(0xFFF0FDFA) : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                      color: cartQty > 0
+                          ? const Color(0xFF0D9488)
+                          : const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
                 child: ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                   title: Text(name,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                      style: const TextStyle(
+                          color: Color(0xFF0F172A),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15)),
                   subtitle: Text(
-                      '$barcode | السعر: ${price.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol} / $unitName'),
+                      '$barcode | السعر: ${price.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol} / $unitName',
+                      style: const TextStyle(
+                          color: Color(0xFF64748B), fontSize: 12)),
                   trailing: cartQty > 0
                       ? Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.remove_circle,
-                                  color: Colors.red),
+                              icon: const Icon(Icons.remove_circle_rounded,
+                                  color: Color(0xFFE11D48)),
                               onPressed: () =>
                                   _decrementOrRemoveProduct(item['ProductID']),
                             ),
@@ -1354,8 +1611,8 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                                   item['ProductID'], newQty),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.add_circle,
-                                  color: Colors.green),
+                              icon: const Icon(Icons.add_circle_rounded,
+                                  color: Color(0xFF059669)),
                               onPressed: () => _addOrIncrementProduct(item),
                             ),
                           ],
@@ -1363,9 +1620,16 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                       : ElevatedButton(
                           onPressed: () => _addOrIncrementProduct(item),
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal),
+                            backgroundColor: const Color(0xFF0D9488),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
                           child: Text(context.tr('pb_add_btn'),
-                              style: const TextStyle(color: Colors.white)),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
                         ),
                 ),
               );
@@ -1375,13 +1639,14 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
 
   Widget _buildMobileCheckoutBar(Color primaryColor) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+            blurRadius: 12,
             offset: const Offset(0, -3),
           )
         ],
@@ -1393,14 +1658,20 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('الإجمالي: ${_netAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+              Text(
+                  'الإجمالي: ${_netAmount.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A))),
               TextButton.icon(
-                icon: const Icon(Icons.shopping_cart),
-                label: Text(context
-                    .tr('pb_view_cart')
-                    .replaceAll('{count}', _cartItems.length.toString())),
+                icon: Icon(Icons.shopping_cart_rounded, color: primaryColor),
+                label: Text(
+                    context
+                        .tr('pb_view_cart')
+                        .replaceAll('{count}', _cartItems.length.toString()),
+                    style: TextStyle(
+                        color: primaryColor, fontWeight: FontWeight.bold)),
                 onPressed: _showCartDetailsBottomSheet,
               )
             ],
@@ -1420,27 +1691,38 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                             _showSplitPaymentDialog();
                           }
                         },
-                  icon: const Icon(Icons.call_split, color: Colors.teal, size: 16),
+                  icon: const Icon(Icons.call_split_rounded,
+                      color: Color(0xFF0D9488), size: 16),
                   label: Text(context.tr('pos_split_payment'),
                       style: const TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal)),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0D9488))),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.teal, width: 1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    side:
+                        const BorderSide(color: Color(0xFF0D9488), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: ElevatedButton(
-                  onPressed:
-                      _cartItems.isEmpty ? null : () => _showCashPaymentDialog(),
+                  onPressed: _cartItems.isEmpty
+                      ? null
+                      : () => _showCashPaymentDialog(),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: const Color(0xFF059669),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 8)),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 10)),
                   child: Text(context.tr('pb_pay_cash'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ),
               const SizedBox(width: 6),
@@ -1449,11 +1731,15 @@ class _PartnerBillingScreenState extends State<PartnerBillingScreen> {
                   onPressed:
                       _cartItems.isEmpty ? null : () => _submitInvoice(false),
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange[800],
+                      backgroundColor: const Color(0xFFD97706),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 8)),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 10)),
                   child: Text(context.tr('pb_pay_credit'),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ),
             ],

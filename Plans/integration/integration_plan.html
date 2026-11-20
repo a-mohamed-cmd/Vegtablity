@@ -464,6 +464,8 @@
                 <li><a href="#sec-13">القسم 13: توثيق ما تم تنفيذه فعلياً + مبادئ العمل المعمارية المعتمدة ✅</a></li>
                 <li><a href="#sec-14">القسم 14: التحديثات المعتمدة (صلاحيات الأدوار، واجهة Flutter، وسلامة SQL) 🔄</a>
                 </li>
+                <li><a href="#sec-15">القسم 15: عزل MyFatoorah، شجرة الحسابات (11/65)، والربط مع سند القبض 🆕</a>
+                </li>
             </ul>
         </nav>
 
@@ -3560,6 +3562,90 @@ Vegtablity_App/lib/
                         <code>py_compile</code>، وفحص ملفات Flutter المعدلة عبر <code>flutter analyze</code> دون أي
                         أخطاء.
                     </li>
+                </ul>
+            </section>
+
+            <!-- القسم 15 -->
+            <section id="sec-15" class="card" style="border-color: var(--primary);">
+                <h2><span class="sec-num">القسم 15</span> 🆕 العزل المعماري لـ MyFatoorah (API v2)، هيكلة حسابات البوابات (11/65)، والروابط المجمعة من سند القبض</h2>
+                <p>يوثق هذا القسم التعديلات المعمارية والتنفيذية المضافة لضمان العزل التام لبوابة <strong>MyFatoorah</strong> في كافة المنصات، وضبط التوليد التلقائي لحسابات البوابات في شجرة الحسابات، وعزلها عن سندات الصرف والمشتريات، مع إتاحة إصدار رابط دفع مجمع مباشرة من شاشة سندات قبض العملاء، وتوثيق القواعد الهندسية المعتمدة في <code>Plans/rolles.md</code>.</p>
+
+                <h3>أولاً: العزل الكامل لبوابة MyFatoorah API v2 عبر الطبقات الثلاث</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>المنصة / الطبقة</th>
+                            <th>الملفات المنشأة أو المحدّثة</th>
+                            <th>تفاصيل التنفيذ والعقود المعتمدة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>FastAPI (<code>VegtablityApi</code>)</strong></td>
+                            <td>
+                                <code>app/services/integrations/myfatoorah_gateway.py</code> (جديد)<br>
+                                <code>app/services/integrations/integration_service.py</code><br>
+                                <code>app/routes/integrations.py</code>
+                            </td>
+                            <td>
+                                <ul>
+                                    <li>إنشاء كلاس <code>MyFatoorahGateway</code> معزولاً بالكامل لتنفيذ: <code>initiate_payment</code>، <code>create_payment_link</code> (<code>SendPayment</code> / <code>ExecutePayment</code>)، <code>get_payment_status</code>، <code>make_refund</code>، و<code>get_refund_status</code>.</li>
+                                    <li>استخلاص رسائل التحقق من <code>ValidationErrors</code> و<code>FieldsErrors</code>، والتحقق من توقيع Webhook V2 (<code>MyFatoorah-Signature</code> عبر <code>HMAC-SHA256 Base64</code>) وتحليل أحداث <code>PAYMENT_STATUS_CHANGED</code> و<code>REFUND_STATUS_CHANGED</code>.</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>WPF Desktop (<code>Vegtablity</code>)</strong></td>
+                            <td>
+                                <code>Services/Integrations/MyFatoorahProvider.vb</code><br>
+                                <code>Plans/integration/myfatoorah_manual.html</code>
+                            </td>
+                            <td>
+                                <ul>
+                                    <li>تحديث <code>MyFatoorahProvider.vb</code> لدعم <code>SendOrExecutePaymentAsync</code> و<code>GetPaymentStatus</code> و<code>MakeRefund</code> و<code>GetRefundStatus</code> مع تحليل <code>ValidationErrors</code> و<code>FieldsErrors</code> عبر <code>JavaScriptSerializer</code>.</li>
+                                    <li>تحديث الكتيب المرجعي <code>myfatoorah_manual.html</code> ليعكس عقود API v2 وتوزيع الكلاسات والإجراءات المخزنة.</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Flutter POS (<code>Vegtablity_App</code>)</strong></td>
+                            <td>
+                                <code>lib/services/integrations/myfatoorah_gateway_service.dart</code> (جديد)<br>
+                                <code>lib/services/integrations/integration_service.dart</code>
+                            </td>
+                            <td>
+                                <ul>
+                                    <li>إنشاء كلاس <code>MyFatoorahGatewayService</code> لتنفيذ <code>initiatePayment</code> و<code>createPaymentLink</code> و<code>checkPaymentStatus</code> و<code>getRefundStatus</code> بمعزل تام عن بقية البوابات.</li>
+                                </ul>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>ثانياً: هيكلة حسابات البوابات في الشجرة (11 و 65) وعزلها عن السندات والمشتريات ومنع تكرار قيد الوردية</h3>
+                <div class="grid-2">
+                    <div class="provider-box">
+                        <h4>🏦 قاعدة البيانات (<code>SQLVegtablity.sql</code>)</h4>
+                        <ul>
+                            <li><strong><code>[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]</code>:</strong> إنشاء حساب البوابة الفرعي (<code>LinkedAccountID</code>) تحت الحساب الرئيسي <code>11</code> بالرقم التالي وباسم البوابة، وإنشاء الحساب الرئيسي لعمولات البوابات <code>65</code> (إن لم يوجد) ثم إنشاء حساب مصروف عمولات فرعي خاص بالبوابة باسم <code>مصروف عمولات - &lt;اسم البوابة&gt;</code> (<code>CommissionAccountID</code>).</li>
+                            <li><strong><code>[Accounting].[sp_GetPaymentAccounts]</code>:</strong> إجراء جديد يجلب حسابات <code>11%</code> القابلة للقيد مع معامل <code>@IncludePaymentGateways BIT = 0</code> لاستبعاد حسابات بوابات الدفع في السندات والمشتريات وإظهارها في فواتير المبيعات فقط.</li>
+                            <li><strong><code>[Sales].[sp_Shift_Close]</code>:</strong> إيقاف توليد قيد فرق الكاش المكرر داخل الإجراء والاكتفاء بالتوليد التلقائي الأحادي عبر التريجر <code>[Sales].[trg_Shifts_StatusChange]</code> عند إغلاق الوردية.</li>
+                        </ul>
+                    </div>
+                    <div class="provider-box blue">
+                        <h4>🖥️ تصفية الحسابات في WPF و Flutter</h4>
+                        <ul>
+                            <li><strong>WPF:</strong> تسجيل <code>SP_GET_PAYMENT_ACCOUNTS</code> في <code>StoredProcedures.vb</code>، وتحديث <code>AccountingService.GetCashAccounts(includePaymentGateways)</code> (مع تمرير <code>False</code> في <code>InvoiceDashboardViewModel</code> و<code>PurchaseInvoiceViewModel</code> و<code>VouchersViewModel</code>، و<code>True</code> في <code>SalesInvoiceViewModel</code>)، وفصل قوائم الحسابات الخمسة في <code>IntegrationSettingsViewModel</code> و<code>IntegrationSettingsPage.xaml</code>.</li>
+                            <li><strong>Flutter:</strong> إضافة <code>cacheGatewayAccountIds</code> و<code>filterOutGatewayAccounts</code> في <code>IntegrationPosService</code> لاستبعاد حسابات البوابات من <code>VoucherProvider</code> وشاشات الصرف والقبض والمشتريات.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>ثالثاً: نافذة إصدار الروابط المجمعة والتكامل مع شاشة سندات القبض والقواعد المعمارية</h3>
+                <ul>
+                    <li><strong>حوار إصدار الرابط المجمع/المنفرد (<code>lib/widgets/payment_link_issue_dialog.dart</code>):</strong> دالة <code>showConsolidatedPaymentLinkDialog</code> لعرض الفواتير المحددة، اختيار البوابة، تعديل بيانات العميل، إصدار الرابط وحفظه، ومشاركته عبر WhatsApp وطباعة QR.</li>
+                    <li><strong>الربط في شاشة سندات قبض العملاء (<code>lib/screens/receipt_voucher_screen.dart</code>):</strong> دمج حسابات بوابات الدفع المهيأة داخل قائمة حسابات التحصيل؛ وعند اختيار بوابة دفع يتم إصدار رابط دفع مجمع للفواتير المحددة وحفظه في صفحة اللينكات <strong>دون إنشاء سند قبض</strong> لتفادي ازدواجية القيود المحاسبية (مع إصلاح توازن الأقواس في قائمة الحسابات).</li>
+                    <li><strong>توثيق القواعد الهندسية المعمارية (<code>Plans/rolles.md</code>) والترقية البصرية لـ Flutter:</strong> توثيق قواعد MVVM و<code>SQLVegtablity.sql</code> و<code>Transaction / Savepoint</code> و<code>Hybrid JSON</code>، وتطبيق المظهر الفاتح الحديث وتصميم جدول الفواتير ثنائي الأعمدة في <code>voucher_print_designer.dart</code>.</li>
                 </ul>
             </section>
         </main>

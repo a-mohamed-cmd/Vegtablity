@@ -212,9 +212,9 @@
                                 <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,8,0">
                                     <StackPanel>
                                         <TextBlock Text="🟢 الجانب المدين عند التحصيل (Debit Account):" FontSize="12" FontWeight="Bold" Foreground="#1E40AF" Margin="0,0,0,4"/>
-                                        <TextBlock Text="حساب إيداع البوابة / البنك (يُولّد تلقائياً للبوابة)" FontSize="10.5" Foreground="#475569" Margin="0,0,0,6"/>
+                                        <TextBlock Text="حساب إيداع البوابة تحت حساب 11 (يُولّد تلقائياً باسم البوابة)" FontSize="10.5" Foreground="#475569" Margin="0,0,0,6"/>
                                         <controls:SearchableDropdown x:Name="DdDebitAccount"
-                                                                     ItemsSource="{Binding AvailableAccounts}"
+                                                                     ItemsSource="{Binding AvailableDebitAccounts}"
                                                                      DisplayMemberPath="DisplayText"
                                                                      SelectedItem="{Binding SelectedDebitAccount, Mode=TwoWay}"
                                                                      Watermark="ابحث برقم أو اسم حساب المدين..."
@@ -229,7 +229,7 @@
                                         <TextBlock Text="🔵 الجانب الدائن عند التحصيل (Credit Account):" FontSize="12" FontWeight="Bold" Foreground="#166534" Margin="0,0,0,4"/>
                                         <TextBlock Text="حساب العميل في الفاتورة تلقائياً أو حساب مبيعات مخصص" FontSize="10.5" Foreground="#475569" Margin="0,0,0,6"/>
                                         <controls:SearchableDropdown x:Name="DdCreditAccount"
-                                                                     ItemsSource="{Binding AvailableAccounts}"
+                                                                     ItemsSource="{Binding AvailableCreditAccounts}"
                                                                      DisplayMemberPath="DisplayText"
                                                                      SelectedItem="{Binding SelectedCreditAccount, Mode=TwoWay}"
                                                                      Watermark="ابحث برقم أو اسم حساب الدائن..."
@@ -242,9 +242,9 @@
                                 <Border Background="#FFFBEB" BorderBrush="#FDE68A" BorderThickness="1" CornerRadius="8" Padding="10">
                                     <StackPanel>
                                         <TextBlock Text="🟠 حساب مصروف عمولة البوابة (الفرعي):" FontSize="12" FontWeight="Bold" Foreground="#92400E" Margin="0,0,0,4"/>
-                                        <TextBlock Text="تحت رئيسي: مصروف عمولات بوابات الدفع الإلكتروني" FontSize="10.5" Foreground="#475569" Margin="0,0,0,6"/>
+                                        <TextBlock Text="تحت رئيسي 65: مصروف عمولات - باسم البوابة" FontSize="10.5" Foreground="#475569" Margin="0,0,0,6"/>
                                         <controls:SearchableDropdown x:Name="DdCommissionAccount"
-                                                                     ItemsSource="{Binding AvailableAccounts}"
+                                                                     ItemsSource="{Binding AvailableCommissionAccounts}"
                                                                      DisplayMemberPath="DisplayText"
                                                                      SelectedItem="{Binding SelectedCommissionAccount, Mode=TwoWay}"
                                                                      Watermark="ابحث برقم أو اسم حساب العمولة..."
@@ -331,9 +331,9 @@
                                             <TextBlock Text="⚙️ تخصيص طرفي قيد الاسترداد العكسي (الجانب المدين والجانب الدائن عند إرجاع المبلغ):" FontSize="12.5" FontWeight="Bold" Foreground="#991B1B" Margin="0,0,0,8"/>
                                             <UniformGrid Columns="2">
                                                 <StackPanel Margin="0,0,10,0">
-                                                    <TextBlock Text="الجانب المدين لقيد الاسترداد (Refund Debit Account):" FontSize="11.5" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
+                                                    <TextBlock Text="الجانب المدين لقيد الاسترداد (الافتراضي: حساب العميل):" FontSize="11.5" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
                                                     <controls:SearchableDropdown x:Name="DdRefundDebitAccount"
-                                                                                 ItemsSource="{Binding AvailableAccounts}"
+                                                                                 ItemsSource="{Binding AvailableRefundDebitAccounts}"
                                                                                  DisplayMemberPath="DisplayText"
                                                                                  SelectedItem="{Binding SelectedRefundDebitAccount, Mode=TwoWay}"
                                                                                  Watermark="ابحث برقم أو اسم حساب المدين..."
@@ -342,9 +342,9 @@
                                                                                  ItemSelected="AccountDropdown_ItemSelected"/>
                                                 </StackPanel>
                                                 <StackPanel>
-                                                    <TextBlock Text="الجانب الدائن لقيد الاسترداد (Refund Credit Account):" FontSize="11.5" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
+                                                    <TextBlock Text="الجانب الدائن لقيد الاسترداد (الافتراضي: حساب البوابة):" FontSize="11.5" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,4"/>
                                                     <controls:SearchableDropdown x:Name="DdRefundCreditAccount"
-                                                                                 ItemsSource="{Binding AvailableAccounts}"
+                                                                                 ItemsSource="{Binding AvailableRefundCreditAccounts}"
                                                                                  DisplayMemberPath="DisplayText"
                                                                                  SelectedItem="{Binding SelectedRefundCreditAccount, Mode=TwoWay}"
                                                                                  Watermark="ابحث برقم أو اسم حساب الدائن..."

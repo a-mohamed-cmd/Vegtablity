@@ -11,7 +11,7 @@
             color: #f8fafc;
             line-height: 1.75;
             padding: 32px;
-            max-width: 1120px;
+            max-width: 1180px;
             margin: 0 auto;
         }
         h1, h2, h3 { color: #38bdf8; margin-top: 22px; }
@@ -22,6 +22,16 @@
             padding: 24px;
             margin-bottom: 22px;
         }
+        .badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.15);
+            color: #7dd3fc;
+            border: 1px solid #0284c7;
+            border-radius: 8px;
+            padding: 2px 10px;
+            font-size: 13px;
+            margin-left: 6px;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -31,6 +41,7 @@
             border: 1px solid #334155;
             padding: 10px 14px;
             text-align: right;
+            vertical-align: top;
         }
         th { background: #090d16; color: #7dd3fc; }
         pre {
@@ -44,7 +55,7 @@
             overflow-x: auto;
         }
         code {
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.85);
             color: #fcd34d;
             padding: 2px 6px;
             border-radius: 5px;
@@ -53,124 +64,238 @@
 </head>
 <body>
     <h1>📘 الكتيب المرجعي الفني لربط بوابة MyFatoorah (API v2 — الكويت KWD)</h1>
-    <p>تم إعداد هذا المرجع بناءً على فحص التوثيق الرسمي لبوابة MyFatoorah (<code>https://docs.myfatoorah.com/docs/choose-your-payment-integration</code>) لتنفيذه في كلاس <code>MyFatoorahProvider</code> ضمن منظومة Vegtablity.</p>
+    <p>تم إعداد وتحديث هذا المرجع استناداً إلى التوثيق الرسمي لبوابة MyFatoorah (<a href="https://docs.myfatoorah.com/docs/choose-your-payment-integration" style="color:#7dd3fc;">docs.myfatoorah.com</a>) وبالتطابق المعماري الكامل مع بوابة <strong>Tap Payments</strong> داخل منظومة <strong>Vegtablity ERP &amp; POS</strong> عبر كلاسات معزولة تماماً في جميع الطبقات (WPF / FastAPI / Flutter) دون استعلامات SQL نصية.</p>
 
     <div class="card">
-        <h2>1. روابط البيئة والمصادقة (Base URLs &amp; Authentication)</h2>
+        <h2>1. عناوين الاتصال الإقليمية والمصادقة (Base URLs &amp; Authentication)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>البيئة / الدولة</th>
+                    <th>Base URL</th>
+                    <th>ملاحظات التشغيل في Vegtablity</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>الاختبار (Sandbox — جميع الدول)</td>
+                    <td><code>https://apitest.myfatoorah.com</code></td>
+                    <td>الوضع الافتراضي عندما <code>EnvironmentMode = 'Sandbox'</code> (يتطلب Token تجريبي من Sandbox Portal).</td>
+                </tr>
+                <tr>
+                    <td>الإنتاج — الكويت والبحرين والأردن وعمان</td>
+                    <td><code>https://api.myfatoorah.com</code></td>
+                    <td>الوضع الافتراضي عندما <code>EnvironmentMode = 'Live'</code> لعملاء الكويت (<code>KWD</code>).</td>
+                </tr>
+                <tr>
+                    <td>الإنتاج — السعودية / الإمارات / قطر / مصر</td>
+                    <td><code>https://api-sa.myfatoorah.com</code> / <code>api-ae</code> / <code>api-qa</code> / <code>api-eg</code></td>
+                    <td>يتم احترام <code>BaseUrl</code> المحفوظ في <code>[Settings].[IntegrationProviders]</code> إذا حدده المستخدم يدوياً.</td>
+                </tr>
+            </tbody>
+        </table>
         <ul>
-            <li><strong>بيئة الاختبار (Test / Sandbox — <code>IsLiveMode = 0</code>):</strong> <code>https://apitest.myfatoorah.com</code></li>
-            <li><strong>بيئة الإنتاج الفعلي للكويت (Live Kuwait — <code>IsLiveMode = 1</code>):</strong> <code>https://api.myfatoorah.com</code> (أو النطاق الإقليمي <code>https://api-kw.myfatoorah.com</code>)</li>
             <li><strong>الترويسات الإلزامية (HTTP Headers):</strong>
-                <pre>Authorization: Bearer {API_Token_Key}
+                <pre>Authorization: Bearer {YOUR_MYFATOORAH_API_TOKEN}
 Content-Type: application/json
 Accept: application/json</pre>
             </li>
-            <li><strong>الحساب المحاسبي (يُنشأ فقط بعد حفظ إعدادات البوابة في WPF):</strong> حساب حركي باسم <code>MyFatoorah</code> تحت الحساب الأب <code>AccountID = 10</code> (الكود <code>11</code>).</li>
+            <li><strong>الدقة العشرية للعملة:</strong> جميع المبالغ تُمرر بدقة <strong>3 خانات عشرية</strong> (<code>DECIMAL(18, 3)</code>) للعملة الكويتية <code>KWD</code>.</li>
         </ul>
     </div>
 
     <div class="card">
-        <h2>2. خيارات وطرق التكامل في MyFatoorah API v2</h2>
-        <p>وفق دليل <code>choose-your-payment-integration</code>، يدعم كلاس <code>MyFatoorahProvider</code> طريقتين مرنتين لإصدار روابط الدفع:</p>
-        <ol>
-            <li><strong>طريقة الفاتورة الذكية (Invoice Link — <code>POST /v2/SendPayment</code>):</strong>
-                <ul>
-                    <li>تُنشئ رابط فاتورة شامل (<code>InvoiceURL</code>) ورقم مرجع (<code>InvoiceId</code>) يتيح للعميل اختيار وسيلة الدفع (KNET، Apple Pay، Visa/MasterCard).</li>
-                    <li>تدعم خاصية <code>NotificationOption</code>:
-                        <ul>
-                            <li><code>"LNK"</code>: إرجاع الرابط فقط لنظام Vegtablity لطباعته كـ QR Code على الفواتير (<code>58mm</code> / <code>80mm</code> / <code>WPF</code>) وإرساله عبر WhatsApp.</li>
-                            <li><code>"SMS"</code> أو <code>"ALL"</code>: قيام خوادم MyFatoorah بإرسال رسالة SMS مباشرة لهاتف العميل تحتوي على رابط الدفع بالإضافة لإرجاع الرابط للنظام.</li>
-                        </ul>
-                    </li>
-                </ul>
-            </li>
-            <li><strong>طريقة التوجيه المباشر لوسيلة دفع محددة (Direct Gateway Execution — <code>POST /v2/InitiatePayment</code> + <code>POST /v2/ExecutePayment</code>):</strong>
-                <ul>
-                    <li>تتيح تمرير <code>PaymentMethodId</code> (مثلاً <code>1</code> لبوابة <strong>KNET</strong> في الكويت) ليتم تحويل العميل مباشرة إلى شاشة الدفع البنكي KNET دون المرور بصفحة اختيار الوسيلة، مع معرفة عمولة كل وسيلة دفع مسبقاً (<code>ServiceCharge</code>).</li>
-                </ul>
-            </li>
-        </ol>
-    </div>
-
-    <div class="card">
-        <h2>3. جدول نقاط النهاية المعتمدة (MyFatoorah API v2 Endpoints)</h2>
+        <h2>2. نقاط النهاية المعتمدة (MyFatoorah API v2 Endpoints)</h2>
+        <p>جميع نقاط نهاية MyFatoorah API v2 تعمل عبر <code>HTTP POST</code> وتُعيد غلاف الاستجابة القياسي <code>{"IsSuccess": true|false, "Message": "...", "ValidationErrors": [...], "Data": {...}}</code>:</p>
         <table>
             <thead>
                 <tr>
                     <th>العملية</th>
                     <th>Endpoint</th>
-                    <th>الوصف والحقول الأساسية</th>
+                    <th>الدور في Vegtablity (بالتطابق مع Tap)</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>فحص الاتصال وجلب وسائل الدفع وعمولاتها</td>
+                    <td>1. اختبار الاتصال وجلب وسائل الدفع</td>
                     <td><code>POST /v2/InitiatePayment</code></td>
-                    <td>يرسل <code>{"InvoiceAmount": 1.000, "CurrencyIso": "KWD"}</code> ويعيد قائمة <code>PaymentMethods</code> شاملة <code>PaymentMethodId</code> و<code>ServiceCharge</code>. يُستخدم أيضاً لزر <strong>اختبار الاتصال (Test Connection)</strong>.</td>
+                    <td>التحقق من صحة <code>API Token</code> وتوافق البيئة (Sandbox/Live)، وجلب قائمة وسائل الدفع المتاحة مثل <code>KNET</code> (<code>PaymentMethodId</code>) ورسوم الخدمة.</td>
                 </tr>
                 <tr>
-                    <td>إنشاء رابط دفع فاتورة (منفرد أو مجمع)</td>
+                    <td>2. إنشاء فاتورة وإصدار رابط الدفع</td>
                     <td><code>POST /v2/SendPayment</code></td>
-                    <td>يعيد <code>Data.InvoiceId</code> و <code>Data.InvoiceURL</code> مع دعم <code>ExpiryDate</code> و <code>CustomerReference</code> و <code>UserDefinedField</code>.</td>
+                    <td>الآلية الأساسية المكافئة لـ <code>POST /v2/charges</code> في Tap لإصدار <code>InvoiceURL</code> و<code>InvoiceId</code> عبر خيار <code>NotificationOption: "LNK"</code> (أو <code>"SMS"</code> / <code>"ALL"</code>) مع دعم <code>ExpiryDate</code> و<code>UserDefinedField</code>.</td>
                 </tr>
                 <tr>
-                    <td>تنفيذ دفع مباشر على KNET / وسيلة محددة</td>
+                    <td>3. تنفيذ دفع موجه لوسيلة محددة (اختياري)</td>
                     <td><code>POST /v2/ExecutePayment</code></td>
-                    <td>يرسل <code>PaymentMethodId</code> و <code>InvoiceValue</code> ويعيد <code>Data.PaymentURL</code> و <code>Data.InvoiceId</code>.</td>
+                    <td>توجيه العميل مباشرةً لوسيلة دفع محددة مثل <code>KNET</code> باستخدام <code>PaymentMethodId</code> المستخرج من <code>InitiatePayment</code> لإرجاع <code>PaymentURL</code> مباشرة دون شاشة اختيار الوسيلة.</td>
                 </tr>
                 <tr>
-                    <td>الاستعلام عن حالة الفاتورة / الدفع</td>
+                    <td>4. الاستعلام عن حالة الفاتورة والمعاملات</td>
                     <td><code>POST /v2/GetPaymentStatus</code></td>
-                    <td>يرسل <code>{"Key": "...", "KeyType": "InvoiceId" | "PaymentId"}</code> ويعيد <code>Data.InvoiceStatus</code> (<code>Paid</code>, <code>Pending</code>, <code>Canceled</code>) وتفاصيل <code>InvoiceTransactions</code>.</td>
+                    <td>مكافئ <code>GET /v2/charges/{id}</code> في Tap؛ يفحص <code>Data.InvoiceStatus</code> وكذلك مصفوفة <code>Data.InvoiceTransactions</code> (<code>Succss</code> / <code>Failed</code> / <code>InProgress</code>) لتحديد الحالة النهائية بدقة.</td>
                 </tr>
                 <tr>
-                    <td>إرجاع المبلغ للعميل (Refund — كلي أو جزئي) ↩️</td>
+                    <td>5. إرجاع المبلغ للعميل (كلي أو جزئي — Refund) ↩️</td>
                     <td><code>POST /v2/MakeRefund</code></td>
-                    <td>يرسل <code>KeyType</code>، <code>Key</code>، <code>Amount</code>، <code>Comment</code>، مع خياري <code>RefundChargeOnCustomer</code> و <code>ServiceChargeOnCustomer</code>.</td>
+                    <td>مكافئ <code>POST /v2/refunds</code> في Tap؛ يرجع المبلغ المحصل كلياً أو جزئياً باستخدام <code>KeyType: "InvoiceId"</code> مع قراءة <code>Data.RefundId</code> و<code>Data.RefundReference</code> ورسائل <code>ValidationErrors</code>.</td>
                 </tr>
                 <tr>
-                    <td>الاستعلام عن حالة الاسترجاع</td>
+                    <td>6. التحقق من حالة الاسترداد ↩️</td>
                     <td><code>POST /v2/GetRefundStatus</code></td>
-                    <td>يرسل <code>{"Key": "...", "KeyType": "InvoiceId" | "RefundId"}</code> لمتابعة حالة الإرجاع البنكي للعميل.</td>
+                    <td>فحص حالة طلب الاسترداد (<code>REFUNDED</code> / <code>PENDING</code> / <code>CANCELED</code>) برقم <code>InvoiceId</code> أو <code>RefundId</code> والتأكد من الرصيد المسترد.</td>
+                </tr>
+                <tr>
+                    <td>7. استقبال الإشعارات الفورية (Webhook V2)</td>
+                    <td><code>POST /api/integrations/webhooks/myfatoorah</code></td>
+                    <td>التحقق من ترويسة التوقيع <code>MyFatoorah-Signature</code> (HMAC-SHA256 Base64) ومعالجة أحداث <code>PAYMENT_STATUS_CHANGED</code> و<code>REFUND_STATUS_CHANGED</code>.</td>
                 </tr>
             </tbody>
         </table>
     </div>
 
     <div class="card">
-        <h2>4. نموذج طلب إنشاء رابط الدفع (<code>POST /v2/SendPayment</code>)</h2>
+        <h2>3. تفاصيل الطلبات والاستجابات الأساسية (Request / Response Contracts)</h2>
+
+        <h3>أ. اختبار الاتصال وجلب الوسائل — <code>POST /v2/InitiatePayment</code></h3>
+        <pre>{
+  "InvoiceAmount": 1.000,
+  "CurrencyIso": "KWD"
+}</pre>
+        <p>يعيد <code>Data.PaymentMethods[]</code> محتوياً على <code>PaymentMethodId</code> (مثلاً <code>1</code> لـ KNET، <code>2</code> لـ VISA/MASTER)، <code>PaymentMethodCode</code>، <code>ServiceCharge</code>، <code>TotalAmount</code>.</p>
+
+        <h3>ب. إصدار رابط دفع — <code>POST /v2/SendPayment</code></h3>
         <pre>{
   "NotificationOption": "LNK",
-  "InvoiceValue": 14.750,
   "CustomerName": "عميل نقدي",
   "DisplayCurrencyIso": "KWD",
   "MobileCountryCode": "+965",
-  "CustomerMobile": "55000000",
+  "CustomerMobile": "50000000",
+  "InvoiceValue": 24.750,
   "Language": "ar",
-  "ExpiryDate": "2026-11-09T21:30:00",
   "CustomerReference": "INV_10452",
-  "UserDefinedField": "InvID=10452;IsConsolidated=0;ShiftID=12",
-  "CallBackUrl": "https://your-server-domain/api/integrations/redirect/myfatoorah/success",
-  "ErrorUrl": "https://your-server-domain/api/integrations/redirect/myfatoorah/error"
+  "UserDefinedField": "INV_10452",
+  "ExpiryDate": "2026-11-21T23:59:59",
+  "CallBackUrl": "https://your-domain/api/integrations/webhooks/myfatoorah",
+  "ErrorUrl": "https://your-domain/api/integrations/webhooks/myfatoorah",
+  "CustomerCivilId": ""
 }</pre>
-    </div>
+        <p>تُعيد MyFatoorah الحقلين <code>Data.InvoiceId</code> (يُحفظ في <code>ExternalChargeID</code> و<code>ExternalInvoiceID</code>) و<code>Data.InvoiceURL</code> (يُحفظ في <code>PaymentUrl</code>). وعند استخدام <code>ExecutePayment</code> يُمرر نفس الحقول إضافةً إلى <code>PaymentMethodId</code> ليُرجع <code>Data.PaymentURL</code>.</p>
 
-    <div class="card">
-        <h2>5. نموذج طلب إرجاع المبلغ الكلي أو الجزئي (<code>POST /v2/MakeRefund</code>) ↩️</h2>
+        <h3>ج. الاستعلام عن الحالة — <code>POST /v2/GetPaymentStatus</code></h3>
+        <pre>{
+  "Key": "3849201",
+  "KeyType": "InvoiceId"
+}</pre>
+        <p>قواعد ربط الحالة في Vegtablity (بالتطابق مع Tap):</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>قيمة MyFatoorah (<code>InvoiceStatus</code> / <code>TransactionStatus</code>)</th>
+                    <th>حالة النظام الموحدة في <code>InvoicePaymentLinks</code></th>
+                    <th>الأثر التلقائي عبر SQL Trigger</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>Paid</code> أو معاملة <code>Succss</code> / <code>SUCCESS</code></td>
+                    <td><code>Paid</code></td>
+                    <td>تفعيل <code>[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]</code> لتوليد قيد التحصيل واحتساب العمولة وترحيل/سداد الفواتير المرتبطة.</td>
+                </tr>
+                <tr>
+                    <td><code>Refunded</code> أو إجمالي الاسترداد = مبلغ الفاتورة</td>
+                    <td><code>Refunded</code></td>
+                    <td>تفعيل <code>[Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]</code> لتوليد القيد العكسي الكامل وتحديث <code>PaidAmount</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>PartiallyRefunded</code> أو استرداد &lt; مبلغ الفاتورة</td>
+                    <td><code>PartiallyRefunded</code></td>
+                    <td>توليد قيد عكسي بقيمة الجزء المسترد وتحديث الرصيد المتبقي.</td>
+                </tr>
+                <tr>
+                    <td><code>Canceled</code> / <code>Cancelled</code> / <code>Expired</code></td>
+                    <td><code>Expired</code> أو <code>Failed</code></td>
+                    <td>تحديث الحالة دون توليد قيود تحصيل.</td>
+                </tr>
+                <tr>
+                    <td><code>Pending</code> مع وجود معاملة أخيرة <code>Failed</code> دون أي معاملة ناجحة</td>
+                    <td><code>Failed</code></td>
+                    <td>تنبيه الكاشير بفشل محاولة الدفع للرابط.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>د. إرجاع المبلغ وفحص الاسترداد — <code>POST /v2/MakeRefund</code> &amp; <code>POST /v2/GetRefundStatus</code> ↩️</h3>
         <pre>{
   "KeyType": "InvoiceId",
-  "Key": "2948104",
-  "Amount": 14.750,
+  "Key": "3849201",
   "RefundChargeOnCustomer": false,
   "ServiceChargeOnCustomer": false,
-  "Comment": "إرجاع فاتورة رقم #10452 بناءً على طلب العميل"
+  "Amount": 24.750,
+  "Comment": "استرجاع فاتورة رقم #10452 - طلب عميل"
 }</pre>
+        <p>تُعيد الاستجابة الناجحة <code>Data.RefundId</code> و<code>Data.RefundReference</code> و<code>Data.Amount</code>. وعند وجود خطأ تحقق تُعيد <code>ValidationErrors: [{"Name":"...","Error":"..."}]</code> حيث يتم استخراجها وترجمتها برسالة عربية واضحة للمستخدم.</p>
     </div>
 
     <div class="card">
-        <h2>6. التحقق من التوقيع الأمني للـ Webhook v2 (<code>MyFatoorah-Signature</code>)</h2>
-        <p>ترسل MyFatoorah إشعارات Webhook v2 (مثل <code>TransactionsStatusChanged</code> و <code>RefundStatusChanged</code>) إلى <code>POST /api/integrations/webhook/myfatoorah</code> مرفقة بترويسة <code>MyFatoorah-Signature</code> المشفرة بـ <code>HMAC-SHA256</code> باستخدام مفتاح <code>WebhookSecretKey</code> الخاص بالبوابة.</p>
+        <h2>4. Webhook V2 والتحقق من التوقيع الأمني (<code>MyFatoorah-Signature</code>)</h2>
+        <p>تستقبل نقطة النهاية <code>POST /api/integrations/webhooks/myfatoorah</code> أحداث MyFatoorah V2 (<code>PAYMENT_STATUS_CHANGED</code> / EventType <code>1</code>، و<code>REFUND_STATUS_CHANGED</code> / EventType <code>2</code>) مع دعم الحمولات المسطحة (Flat Payloads) أو المتداخلة:</p>
+        <ol>
+            <li>قراءة الترويسة <code>myfatoorah-signature</code> ومقارنتها بتوقيع <code>HMAC-SHA256</code> (Base64 Binary) باستخدام <code>WebhookSecret</code> عند ضبطه في الإعدادات.</li>
+            <li>بناء سلسلة التوقيع بترتيب الحقول القياسي (<code>key=value,key2=value2</code> مع استبدال <code>null</code> بسلسلة فارغة <code>""</code>):
+                <ul>
+                    <li>حدث الدفع: <code>Invoice.Id=...,Invoice.Status=...,Transaction.Status=...,Invoice.Reference=...</code> (وفق الحقول المرسلة في الحدث).</li>
+                    <li>حدث الاسترداد: <code>Refund.Id=...,Refund.Status=...,Amount.ValueInBaseCurrency=...,ReferencedInvoice.Id=...</code>.</li>
+                </ul>
+            </li>
+            <li>تحديث حالة الرابط تلقائياً عبر <code>[Sales].[sp_InvoicePaymentLink_UpdateStatus]</code>.</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>5. توزيع الكلاسات المعزولة والإجراءات المخزنة (Architecture &amp; SQL Mapping)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>الطبقة / المنصة</th>
+                    <th>الكلاس المعزول الجديد / المحدّث</th>
+                    <th>الإجراءات المخزنة المستخدمة (<code>SQLVegtablity.sql</code>)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>WPF (VB.NET)</strong></td>
+                    <td><code>Vegtablity\Services\Integrations\MyFatoorahProvider.vb</code><br />(يطبق <code>IPaymentGatewayProvider</code> بمعزل عن <code>TapPaymentProvider</code> ويسجل في <code>IntegrationManagerService</code>)</td>
+                    <td>
+                        <code>[Settings].[sp_Integration_SaveProviderConfig]</code><br />
+                        <code>[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]</code><br />
+                        <code>[Sales].[sp_InvoicePaymentLink_Save]</code><br />
+                        <code>[Sales].[sp_InvoicePaymentLink_UpdateStatus]</code><br />
+                        <code>[Sales].[sp_InvoicePaymentLink_RecordRefund]</code>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>FastAPI (Python)</strong></td>
+                    <td><code>VegtablityApi\app\services\integrations\myfatoorah_gateway.py</code> (كلاس <code>MyFatoorahGateway</code>)<br />مربوط عبر <code>integration_service.py</code> و<code>routes/integrations.py</code></td>
+                    <td>نفس الإجراءات المخزنة أعلاه بدون أي SQL نصي داخل بايثون، مع فصل منطق Webhook والتوقيع والاسترداد الخاص بـ MyFatoorah بالكامل في الكلاس الجديد.</td>
+                </tr>
+                <tr>
+                    <td><strong>Flutter (Dart)</strong></td>
+                    <td><code>Vegtablity_App\lib\services\integrations\myfatoorah_gateway_service.dart</code> (كلاس <code>MyFatoorahGatewayService</code>)<br />مربوط من <code>integration_service.dart</code></td>
+                    <td>يتواصل مع <code>POST /v2/SendPayment</code> و<code>POST /v2/GetPaymentStatus</code> أو عبر نقاط نهاية FastAPI <code>/integrations/...</code> بنفس تدفق وأخطاء Tap Payments.</td>
+                </tr>
+                <tr>
+                    <td><strong>SQL Server (T-SQL Triggers)</strong></td>
+                    <td><code>SQLVegtablity.sql</code></td>
+                    <td>
+                        <code>[Sales].[trg_InvoicePaymentLinks_OnInsert_Init]</code><br />
+                        <code>[Sales].[trg_InvoicePaymentLinks_OnStatusPaid]</code><br />
+                        <code>[Sales].[trg_InvoicePaymentLinks_OnStatusRefunded]</code>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </body>
 </html>
-

@@ -1,4 +1,4 @@
-Imports System.Data
+﻿Imports System.Data
 Imports Dapper
 Imports Vegtablity.Models
 
@@ -71,12 +71,13 @@ Namespace Services
             End Using
         End Function
 
-        ''' <summary>Returns transactional cash/bank accounts (AccountCode LIKE '11%') for payment ComboBox</summary>
-        Public Function GetCashAccounts() As List(Of Account)
+        ''' <summary>Returns transactional cash/bank accounts via [Accounting].[sp_GetPaymentAccounts]</summary>
+        Public Function GetCashAccounts(Optional includePaymentGateways As Boolean = False) As List(Of Account)
             Using conn As IDbConnection = _dbHelper.GetConnection()
-                Dim sql = "SELECT AccountID, AccountCode, AccountName FROM [Accounting].[ChartOfAccounts] " &
-                          "WHERE AccountCode LIKE '11%' AND IsTransactional = 1 ORDER BY AccountCode"
-                Return conn.Query(Of Account)(sql).AsList()
+                Return conn.Query(Of Account)(
+                    Helpers.StoredProcedures.SP_GET_PAYMENT_ACCOUNTS,
+                    New With {.IncludePaymentGateways = includePaymentGateways},
+                    commandType:=CommandType.StoredProcedure).AsList()
             End Using
         End Function
         Public Function GetAccountStatement(accountID As Integer, startDate As Date, endDate As Date) As AccountStatementReport

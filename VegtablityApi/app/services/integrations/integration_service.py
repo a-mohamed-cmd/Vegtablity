@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Optional, Dict, Any, List
 from app.core.database import get_db_connection
 from app.core.db_procedures import StoredProcedures as SP
+from app.services.integrations.myfatoorah_gateway import MyFatoorahGateway
 
 
 def _extract_db_error_message(ex: Exception) -> str:
@@ -278,43 +279,16 @@ class IntegrationService:
                 }
 
         elif code == "MYFATOORAH":
-            env_mode = str(provider_cfg.get("EnvironmentMode", "Sandbox")).lower()
-            default_base = "https://api.myfatoorah.com" if env_mode == "live" else "https://apitest.myfatoorah.com"
-            url = f"{base_url or default_base}/v2/SendPayment"
-            body = {
-                "NotificationOption": "LNK",
-                "CustomerName": cust_name,
-                "DisplayCurrencyIso": currency or "KWD",
-                "MobileCountryCode": "+965",
-                "CustomerMobile": phone_digits,
-                "InvoiceValue": round(float(amount), 3),
-                "Language": "ar",
-                "CallBackUrl": callback_url,
-                "ErrorUrl": callback_url,
-                "CustomerReference": f"INV_{inv_id}",
-            }
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(body).encode("utf-8"),
-                headers={
-                    "Authorization": f"Bearer {secret}",
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                method="POST",
+            return MyFatoorahGateway().create_payment_link(
+                provider_cfg=provider_cfg,
+                inv_id=inv_id,
+                amount=amount,
+                currency=currency or "KWD",
+                customer_name=cust_name,
+                phone_digits=phone_digits,
+                description=description or f"Invoice #{inv_id}",
+                callback_url=callback_url,
             )
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                raw_text = resp.read().decode("utf-8", errors="ignore")
-                data = json.loads(raw_text) if raw_text else {}
-                d_obj = data.get("Data") or {}
-                inv_ext_id = str(d_obj.get("InvoiceId") or "")
-                pay_url = d_obj.get("InvoiceURL")
-                return {
-                    "ExternalChargeID": inv_ext_id,
-                    "ExternalInvoiceID": inv_ext_id,
-                    "PaymentUrl": pay_url,
-                    "RawJson": raw_text,
-                }
 
         elif code == "UPAYMENTS":
             env_mode = str(provider_cfg.get("EnvironmentMode", "Sandbox")).lower()
@@ -544,24 +518,8 @@ class IntegrationService:
                     return "Pending"
 
             elif code == "MYFATOORAH":
-                default_base = "https://api.myfatoorah.com" if env_mode == "live" else "https://apitest.myfatoorah.com"
-                url = f"{base_url or default_base}/v2/GetPaymentStatus"
-                payload = {"Key": external_id, "KeyType": "InvoiceId"}
-                req = urllib.request.Request(
-                    url,
-                    data=json.dumps(payload).encode("utf-8"),
-                    headers={"Authorization": f"Bearer {secret}", "Content-Type": "application/json", "Accept": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=20) as resp:
-                    data = json.loads(resp.read().decode("utf-8", errors="ignore") or "{}")
-                    d_obj = data.get("Data") or {}
-                    inv_st = str(d_obj.get("InvoiceStatus") or data.get("InvoiceStatus") or "").upper()
-                    if inv_st == "PAID":
-                        return "Paid"
-                    if inv_st in ("CANCELED", "EXPIRED"):
-                        return "Expired"
-                    return "Pending"
+                status, _ = MyFatoorahGateway().get_payment_status(provider_cfg, external_id)
+                return status
 
             elif code == "UPAYMENTS":
                 default_base = "https://uapi.upayments.com/api/v1" if env_mode == "live" else "https://sandboxapi.upayments.com/api/v1"
@@ -804,29 +762,7 @@ class IntegrationService:
                     return str(data.get("id") or f"TAP_REF_{link.get('LinkID')}")
 
             elif code == "MYFATOORAH":
-                default_base = "https://api.myfatoorah.com" if env_mode == "live" else "https://apitest.myfatoorah.com"
-                url = f"{base_url or default_base}/v2/MakeRefund"
-                payload = {
-                    "KeyType": "InvoiceId",
-                    "Key": ext_id,
-                    "RefundChargeOnCustomer": bool(provider_cfg.get("RefundChargeOnCustomer")),
-                    "ServiceChargeOnCustomer": bool(provider_cfg.get("ServiceChargeOnCustomer")),
-                    "Amount": round(float(refund_amount), 3),
-                    "Comment": reason or "إرجاع مبلغ للعميل",
-                }
-                req = urllib.request.Request(
-                    url,
-                    data=json.dumps(payload).encode("utf-8"),
-                    headers={"Authorization": f"Bearer {secret}", "Content-Type": "application/json", "Accept": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=20) as resp:
-                    raw_resp = resp.read().decode("utf-8", errors="ignore")
-                    data = json.loads(raw_resp or "{}")
-                    if not data.get("IsSuccess", False):
-                        raise ValueError(self._translate_gateway_refund_error(code, resp.status, raw_resp))
-                    d_obj = data.get("Data") or {}
-                    return str(d_obj.get("RefundId") or data.get("RefundId") or f"MF_REF_{link.get('LinkID')}")
+                return MyFatoorahGateway().make_refund(provider_cfg, link, refund_amount, reason)
 
             elif code == "UPAYMENTS":
                 default_base = "https://uapi.upayments.com/api/v1" if env_mode == "live" else "https://sandboxapi.upayments.com/api/v1"

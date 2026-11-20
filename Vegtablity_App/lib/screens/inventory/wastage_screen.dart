@@ -25,7 +25,8 @@ class _WastageScreenState extends State<WastageScreen> {
     if (provider.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.tr('wt_empty_cart_error'), textAlign: TextAlign.right),
+          content: Text(context.tr('wt_empty_cart_error'),
+              textAlign: TextAlign.right),
           backgroundColor: Colors.orange,
         ),
       );
@@ -75,8 +76,12 @@ class _WastageScreenState extends State<WastageScreen> {
           SnackBar(
             content: Text(
               showWarning
-                  ? context.tr('wt_save_success_print_failed').replaceAll('{id}', id.toString())
-                  : context.tr('wt_save_success_printing').replaceAll('{id}', id.toString()),
+                  ? context
+                      .tr('wt_save_success_print_failed')
+                      .replaceAll('{id}', id.toString())
+                  : context
+                      .tr('wt_save_success_printing')
+                      .replaceAll('{id}', id.toString()),
               textAlign: TextAlign.right,
             ),
             backgroundColor: showWarning ? Colors.orange : Colors.green,
@@ -107,13 +112,30 @@ class _WastageScreenState extends State<WastageScreen> {
         items.isNotEmpty; // Lock warehouse selection if items exist
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FA),
       appBar: AppBar(
-        title: Text(context.tr('wt_screen_title'),
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
         centerTitle: true,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFB45309), Color(0xFFD97706)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        title: Text(context.tr('wt_screen_title'),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 18)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_sweep, color: Colors.red),
+            icon: Icon(Icons.delete_sweep_rounded,
+                color: items.isEmpty ? Colors.white38 : Colors.white),
             tooltip: context.tr('wt_clear_tooltip'),
             onPressed: items.isEmpty ? null : () => provider.clear(),
           )
@@ -123,205 +145,227 @@ class _WastageScreenState extends State<WastageScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
           child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 16),
             child: Column(
-          children: [
-            // Warehouse Header (Automatically from SharedPreferences)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: Colors.teal.withOpacity(0.08),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.store, color: Colors.teal),
-                      const SizedBox(width: 8),
-                      Text(
-                        context.tr('wt_warehouse_label'),
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              children: [
+                // Warehouse Header (Automatically from SharedPreferences)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.teal,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              const Color(0xFF0F172A).withValues(alpha: 0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      provider.selectedWarehouseName,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.warehouse_rounded,
+                                  color: Color(0xFFB45309), size: 20),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              context.tr('wt_warehouse_label'),
+                              style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD97706),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            provider.selectedWarehouseName,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Unified Entry Component
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: SizedBox(
-                height: 380,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: ProductEntryScanner(
-                    searchMode: CatalogSearchMode.ingredients,
-                    onBarcodeSubmitted: (barcode) =>
-                        provider.searchAndAddProductByBarcode(barcode),
-                    onProductSelected: (prod) {
-                      // Find stock cost for this product in current warehouse
-                      double cost =
-                          (prod['PurchasePrice'] as num?)?.toDouble() ?? 0.0;
-                      provider.addProductDirectly(prod, cost);
-                      // Dynamically load average cost and stock level in background
-                      provider.apiService
-                          .getProductStockCost(prod['ProductID'] as int,
-                              provider.selectedWarehouseId)
-                          .then((res) {
-                        if (res.statusCode == 200) {
-                          final dynamic costVal = res.data['CostPrice'];
-                          final dynamic stockQty = res.data['StockQuantity'];
-                          if (costVal != null) {
-                            provider.updateCostPrice(prod['ProductID'] as int,
-                                (costVal as num).toDouble());
-                          }
-                          if (stockQty != null) {
-                            provider.updateStockBefore(prod['ProductID'] as int,
-                                (stockQty as num).toDouble());
-                          }
-                        }
-                      }).catchError((_) {});
-                    },
                   ),
                 ),
-              ),
-            ),
 
-            if (provider.isLoading)
-              const LinearProgressIndicator(color: Colors.green),
+                // Unified Entry Component
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                  child: Container(
+                    height: 380,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              const Color(0xFF0F172A).withValues(alpha: 0.04),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: ProductEntryScanner(
+                        searchMode: CatalogSearchMode.ingredients,
+                        onBarcodeSubmitted: (barcode) =>
+                            provider.searchAndAddProductByBarcode(barcode),
+                        onProductSelected: (prod) {
+                          // Find stock cost for this product in current warehouse
+                          double cost =
+                              (prod['PurchasePrice'] as num?)?.toDouble() ??
+                                  0.0;
+                          provider.addProductDirectly(prod, cost);
+                          // Dynamically load average cost and stock level in background
+                          provider.apiService
+                              .getProductStockCost(prod['ProductID'] as int,
+                                  provider.selectedWarehouseId)
+                              .then((res) {
+                            if (res.statusCode == 200) {
+                              final dynamic costVal = res.data['CostPrice'];
+                              final dynamic stockQty =
+                                  res.data['StockQuantity'];
+                              if (costVal != null) {
+                                provider.updateCostPrice(
+                                    prod['ProductID'] as int,
+                                    (costVal as num).toDouble());
+                              }
+                              if (stockQty != null) {
+                                provider.updateStockBefore(
+                                    prod['ProductID'] as int,
+                                    (stockQty as num).toDouble());
+                              }
+                            }
+                          }).catchError((_) {});
+                        },
+                      ),
+                    ),
+                  ),
+                ),
 
-            // Items Cart Table List
-            items.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32.0),
-                    child: Center(
-                        child: Text(context.tr('wt_cart_empty_hint'))),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              // Product Name & Delete
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(
-                                        Icons.remove_circle_outline,
-                                        color: Colors.red),
-                                    onPressed: () =>
-                                        provider.removeItem(item.productID),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      item.productName,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
-                                      textAlign: TextAlign.right,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              // Barcode & Unit
-                              Text(
-                                '${context.tr('wt_item_barcode')}${item.barcode}${context.tr('wt_item_unit')}${item.unitName}',
+                if (provider.isLoading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    child: LinearProgressIndicator(color: Color(0xFFD97706)),
+                  ),
+
+                // Items Cart Table List
+                items.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 28.0),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.delete_outline_rounded,
+                                size: 48, color: Color(0xFFCBD5E1)),
+                            const SizedBox(height: 8),
+                            Text(context.tr('wt_cart_empty_hint'),
                                 style: const TextStyle(
-                                    color: Colors.grey, fontSize: 12),
-                              ),
-                              const SizedBox(height: 8),
-                              // Inputs Row: Quantity & Cost Price
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                    color: Color(0xFF64748B), fontSize: 14)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border:
+                                  Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A)
+                                      .withValues(alpha: 0.04),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  // Cost Price Input
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                  // Product Name & Delete
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(context.tr('wt_cost_price'),
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.delete_outline_rounded,
+                                            color: Color(0xFFE11D48)),
+                                        onPressed: () =>
+                                            provider.removeItem(item.productID),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          item.productName,
                                           style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 11)),
-                                      const SizedBox(height: 4),
-                                      SizedBox(
-                                        width: 90,
-                                        height: 35,
-                                        child: TextField(
-                                          keyboardType: const TextInputType
-                                              .numberWithOptions(decimal: true),
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold),
-                                          decoration: const InputDecoration(
-                                            contentPadding:
-                                                EdgeInsets.symmetric(
-                                                    horizontal: 4),
-                                            border: OutlineInputBorder(),
-                                          ),
-                                          controller: TextEditingController(
-                                              text: item.costPrice
-                                                  .toStringAsFixed(3)),
-                                          onSubmitted: (val) {
-                                            final double? price =
-                                                double.tryParse(val);
-                                            if (price != null) {
-                                              provider.updateCostPrice(
-                                                  item.productID, price);
-                                            }
-                                          },
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0F172A),
+                                              fontSize: 16),
+                                          textAlign: TextAlign.right,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  // Quantity Input
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                  // Barcode & Unit
+                                  Text(
+                                    '${context.tr('wt_item_barcode')}${item.barcode}${context.tr('wt_item_unit')}${item.unitName}',
+                                    style: const TextStyle(
+                                        color: Color(0xFF64748B), fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Inputs Row: Quantity & Cost Price
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(context.tr('wt_quantity'),
-                                          style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 11)),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
+                                      // Cost Price Input
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          IconButton(
-                                            icon: const Icon(Icons.remove,
-                                                size: 18),
-                                            onPressed: () =>
-                                                provider.updateQuantity(
-                                                    item.productID,
-                                                    item.quantity - 1),
-                                            constraints: const BoxConstraints(),
-                                            padding: const EdgeInsets.all(4),
-                                          ),
+                                          Text(context.tr('wt_cost_price'),
+                                              style: const TextStyle(
+                                                  color: Color(0xFF64748B),
+                                                  fontSize: 11)),
+                                          const SizedBox(height: 4),
                                           SizedBox(
-                                            width: 70,
-                                            height: 35,
+                                            width: 96,
+                                            height: 38,
                                             child: TextField(
                                               keyboardType: const TextInputType
                                                   .numberWithOptions(
@@ -329,130 +373,284 @@ class _WastageScreenState extends State<WastageScreen> {
                                               textAlign: TextAlign.center,
                                               style: const TextStyle(
                                                   fontSize: 14,
+                                                  color: Color(0xFF0F172A),
                                                   fontWeight: FontWeight.bold),
-                                              decoration: const InputDecoration(
+                                              decoration: InputDecoration(
+                                                filled: true,
+                                                fillColor:
+                                                    const Color(0xFFF8FAFC),
                                                 contentPadding:
-                                                    EdgeInsets.symmetric(
-                                                        horizontal: 4),
-                                                border: OutlineInputBorder(),
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 6),
+                                                border: OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(
+                                                      color: Color(0xFFE2E8F0)),
+                                                ),
+                                                enabledBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(
+                                                      color: Color(0xFFE2E8F0)),
+                                                ),
+                                                focusedBorder:
+                                                    OutlineInputBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  borderSide: const BorderSide(
+                                                      color: Color(0xFFD97706),
+                                                      width: 1.5),
+                                                ),
                                               ),
                                               controller: TextEditingController(
-                                                  text:
-                                                      item.quantity.toString()),
+                                                  text: item.costPrice
+                                                      .toStringAsFixed(3)),
                                               onSubmitted: (val) {
-                                                final double? qty =
+                                                final double? price =
                                                     double.tryParse(val);
-                                                if (qty != null) {
-                                                  provider.updateQuantity(
-                                                      item.productID, qty);
+                                                if (price != null) {
+                                                  provider.updateCostPrice(
+                                                      item.productID, price);
                                                 }
                                               },
                                             ),
                                           ),
-                                          IconButton(
-                                            icon:
-                                                const Icon(Icons.add, size: 18),
-                                            onPressed: () =>
-                                                provider.updateQuantity(
-                                                    item.productID,
-                                                    item.quantity + 1),
-                                            constraints: const BoxConstraints(),
-                                            padding: const EdgeInsets.all(4),
+                                        ],
+                                      ),
+                                      // Quantity Input
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(context.tr('wt_quantity'),
+                                              style: const TextStyle(
+                                                  color: Color(0xFF64748B),
+                                                  fontSize: 11)),
+                                          const SizedBox(height: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 4, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF8FAFC),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                  color:
+                                                      const Color(0xFFE2E8F0)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons.remove_rounded,
+                                                      color: Color(0xFFB45309),
+                                                      size: 18),
+                                                  onPressed: () =>
+                                                      provider.updateQuantity(
+                                                          item.productID,
+                                                          item.quantity - 1),
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  padding:
+                                                      const EdgeInsets.all(6),
+                                                ),
+                                                SizedBox(
+                                                  width: 70,
+                                                  height: 34,
+                                                  child: TextField(
+                                                    keyboardType:
+                                                        const TextInputType
+                                                            .numberWithOptions(
+                                                            decimal: true),
+                                                    textAlign: TextAlign.center,
+                                                    style: const TextStyle(
+                                                        fontSize: 14,
+                                                        color:
+                                                            Color(0xFF0F172A),
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                    decoration:
+                                                        const InputDecoration(
+                                                      contentPadding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: 4),
+                                                      border: InputBorder.none,
+                                                    ),
+                                                    controller:
+                                                        TextEditingController(
+                                                            text: item.quantity
+                                                                .toString()),
+                                                    onSubmitted: (val) {
+                                                      final double? qty =
+                                                          double.tryParse(val);
+                                                      if (qty != null) {
+                                                        provider.updateQuantity(
+                                                            item.productID,
+                                                            qty);
+                                                      }
+                                                    },
+                                                  ),
+                                                ),
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons.add_rounded,
+                                                      color: Color(0xFFB45309),
+                                                      size: 18),
+                                                  onPressed: () =>
+                                                      provider.updateQuantity(
+                                                          item.productID,
+                                                          item.quantity + 1),
+                                                  constraints:
+                                                      const BoxConstraints(),
+                                                  padding:
+                                                      const EdgeInsets.all(6),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ],
                                   ),
+                                  const Divider(
+                                      height: 20, color: Color(0xFFE2E8F0)),
+                                  // Row 2: Total Cost Output
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(context.tr('wt_total_cost'),
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF475569),
+                                              fontSize: 14)),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFFFBEB),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                            '${item.totalCost.toStringAsFixed(3)} ',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFFB45309),
+                                                fontSize: 16)),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
-                              const Divider(height: 16),
-                              // Row 2: Total Cost Output
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(context.tr('wt_total_cost'),
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14)),
-                                  Text('${item.totalCost.toStringAsFixed(3)} ',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.green,
-                                          fontSize: 16)),
-                                ],
-                              ),
-                            ],
+                            ),
+                          );
+                        },
+                      ),
+
+                // Total Value, Notes & Submit Bar at Bottom
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              const Color(0xFF0F172A).withValues(alpha: 0.05),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${provider.totalCost.toStringAsFixed(3)} ',
+                              style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFB45309)),
+                            ),
+                            Text(
+                              context.tr('wt_total_wastage_value'),
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _notesController,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(color: Color(0xFF0F172A)),
+                          decoration: InputDecoration(
+                            hintText: context.tr('wt_notes_hint'),
+                            hintStyle:
+                                const TextStyle(color: Color(0xFF94A3B8)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                  color: Color(0xFFD97706), width: 1.5),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
                           ),
                         ),
-                      );
-                    },
-                  ),
-
-            // Total Value, Notes & Submit Bar at Bottom
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${provider.totalCost.toStringAsFixed(3)} ',
-                        style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green),
-                      ),
-                      Text(
-                        context.tr('wt_total_wastage_value'),
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _notesController,
-                    textAlign: TextAlign.right,
-                    decoration: InputDecoration(
-                      hintText: context.tr('wt_notes_hint'),
-                      border: const OutlineInputBorder(),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        const SizedBox(height: 14),
+                        ElevatedButton.icon(
+                          onPressed: items.isEmpty || provider.isLoading
+                              ? null
+                              : () => _handleSaveAndPrint(provider),
+                          icon: const Icon(Icons.print_rounded),
+                          label: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 13.0),
+                            child: Text(context.tr('wt_save_print_btn'),
+                                style: const TextStyle(
+                                    fontSize: 17, fontWeight: FontWeight.bold)),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFB45309),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFFCBD5E1),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: items.isEmpty || provider.isLoading
-                        ? null
-                        : () => _handleSaveAndPrint(provider),
-                    icon: const Icon(Icons.print),
-                    label: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text(context.tr('wt_save_print_btn'),
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

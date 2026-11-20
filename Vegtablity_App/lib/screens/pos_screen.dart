@@ -336,7 +336,8 @@ class _PosScreenState extends State<PosScreen> {
       }
     } catch (e) {
       setState(() {
-        _productsError = 'تعذر تحميل قائمة المنتجات: ${DbErrorHelper.format(e)}';
+        _productsError =
+            'تعذر تحميل قائمة المنتجات: ${DbErrorHelper.format(e)}';
         _isLoadingProducts = false;
       });
     }
@@ -348,9 +349,14 @@ class _PosScreenState extends State<PosScreen> {
       final String? cachedAccJson = prefs.getString('cached_accounts');
       if (cachedAccJson != null) {
         final List<dynamic> decoded = json.decode(cachedAccJson);
+        var accountsList = List<Map<String, dynamic>>.from(decoded);
+        if (widget.type != 'Sales') {
+          accountsList = await IntegrationPosService.filterOutGatewayAccounts(
+              accountsList);
+        }
         if (mounted) {
           setState(() {
-            _accounts = List<Map<String, dynamic>>.from(decoded);
+            _accounts = accountsList;
             _mergeConfiguredGatewayAccountsIntoDropdown();
             _updateSelectedAccountId();
           });
@@ -360,8 +366,11 @@ class _PosScreenState extends State<PosScreen> {
       final apiService = Provider.of<ApiService>(context, listen: false);
       final res = await apiService.getPaymentAccounts();
       if (res.statusCode == 200 && res.data is List) {
-        final List<Map<String, dynamic>> fetched =
-            List<Map<String, dynamic>>.from(res.data);
+        var fetched = List<Map<String, dynamic>>.from(res.data);
+        if (widget.type != 'Sales') {
+          fetched =
+              await IntegrationPosService.filterOutGatewayAccounts(fetched);
+        }
         if (fetched.isNotEmpty && mounted) {
           setState(() {
             _accounts = fetched;
@@ -919,34 +928,47 @@ class _PosScreenState extends State<PosScreen> {
         }
       },
       child: Scaffold(
+        backgroundColor: const Color(0xFFF4F7FA),
         appBar: AppBar(
-          title: Text(widget.editingInvoice != null
-              ? (widget.type == 'Sales'
-                  ? context.tr('pos_editing_invoice_sales').replaceAll(
-                      '{id}', widget.editingInvoice!['InvID']?.toString() ?? '')
-                  : context.tr('pos_editing_invoice_purchase').replaceAll(
-                      '{id}',
-                      widget.editingInvoice!['InvID']?.toString() ?? ''))
-              : (widget.type == 'Sales'
-                  ? (_selectedPartner != null
-                      ? context.tr('pos_sales_title_with_partner').replaceAll(
-                          '{name}',
-                          _selectedPartner!['PartnerName']?.toString() ?? '')
-                      : context.tr('pos_sales_title'))
-                  : (_selectedPartner != null
-                      ? context
-                          .tr('pos_purchase_title_with_partner')
-                          .replaceAll(
-                              '{name}',
-                              _selectedPartner!['PartnerName']?.toString() ??
-                                  '')
-                      : context.tr('pos_purchase_title')))),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          title: Text(
+              widget.editingInvoice != null
+                  ? (widget.type == 'Sales'
+                      ? context.tr('pos_editing_invoice_sales').replaceAll(
+                          '{id}',
+                          widget.editingInvoice!['InvID']?.toString() ?? '')
+                      : context.tr('pos_editing_invoice_purchase').replaceAll(
+                          '{id}',
+                          widget.editingInvoice!['InvID']?.toString() ?? ''))
+                  : (widget.type == 'Sales'
+                      ? (_selectedPartner != null
+                          ? context
+                              .tr('pos_sales_title_with_partner')
+                              .replaceAll(
+                                  '{name}',
+                                  _selectedPartner!['PartnerName']
+                                          ?.toString() ??
+                                      '')
+                          : context.tr('pos_sales_title'))
+                      : (_selectedPartner != null
+                          ? context
+                              .tr('pos_purchase_title_with_partner')
+                              .replaceAll(
+                                  '{name}',
+                                  _selectedPartner!['PartnerName']
+                                          ?.toString() ??
+                                      '')
+                          : context.tr('pos_purchase_title'))),
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
           flexibleSpace: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: widget.type == 'Sales'
-                    ? [Colors.green, Colors.teal]
-                    : [Colors.orange, Colors.deepOrange],
+                    ? [const Color(0xFF0F766E), const Color(0xFF0D9488)]
+                    : [const Color(0xFFB45309), const Color(0xFFD97706)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -956,7 +978,7 @@ class _PosScreenState extends State<PosScreen> {
             Consumer<PrinterService>(
               builder: (context, printerService, child) {
                 return IconButton(
-                  icon: const Icon(Icons.print),
+                  icon: const Icon(Icons.print_rounded),
                   tooltip: 'طباعة أحدث إضافة بالنظام',
                   onPressed: () async {
                     if (printerService.lastAddedDocument == null) {
@@ -990,7 +1012,7 @@ class _PosScreenState extends State<PosScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(Icons.qr_code_scanner),
+              icon: const Icon(Icons.qr_code_scanner_rounded),
               onPressed: _scanBarcode,
             )
           ],
@@ -1003,85 +1025,169 @@ class _PosScreenState extends State<PosScreen> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                     child: Row(
                       children: [
-                        IconButton(
-                          icon: Icon(Icons.grid_view,
+                        Container(
+                          decoration: BoxDecoration(
+                            color: widget.type == 'Sales'
+                                ? const Color(0xFFF0FDFA)
+                                : const Color(0xFFFFFBEB),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
                               color: widget.type == 'Sales'
-                                  ? Colors.teal
-                                  : Colors.deepOrange,
-                              size: 30),
-                          tooltip: context.tr('pos_catalog_tooltip'),
-                          onPressed: () => _openProductCatalog(posProvider),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _barcodeController,
-                            textAlign: TextAlign.right,
-                            decoration: InputDecoration(
-                              labelText: context.tr('pos_barcode_input'),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: const Icon(Icons.search),
+                                  ? const Color(0xFF99F6E4)
+                                  : const Color(0xFFFDE68A),
                             ),
-                            onSubmitted: _addProductFromBarcode,
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.grid_view_rounded,
+                                color: widget.type == 'Sales'
+                                    ? const Color(0xFF0F766E)
+                                    : const Color(0xFFB45309),
+                                size: 26),
+                            tooltip: context.tr('pos_catalog_tooltip'),
+                            onPressed: () => _openProductCatalog(posProvider),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A)
+                                      .withValues(alpha: 0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              controller: _barcodeController,
+                              textAlign: TextAlign.right,
+                              style: const TextStyle(color: Color(0xFF0F172A)),
+                              decoration: InputDecoration(
+                                labelText: context.tr('pos_barcode_input'),
+                                labelStyle:
+                                    const TextStyle(color: Color(0xFF64748B)),
+                                filled: true,
+                                fillColor: Colors.white,
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: widget.type == 'Sales'
+                                            ? const Color(0xFF0D9488)
+                                            : const Color(0xFFD97706),
+                                        width: 1.5)),
+                                suffixIcon: Icon(Icons.search_rounded,
+                                    color: widget.type == 'Sales'
+                                        ? const Color(0xFF0D9488)
+                                        : const Color(0xFFD97706)),
+                              ),
+                              onSubmitted: _addProductFromBarcode,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12.0, vertical: 4.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          _selectedPartner != null
-                              ? '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${_selectedPartner!['PartnerName']}'
-                              : '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${context.tr('pos_cash_general')}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14),
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () async {
+                        final selected =
+                            await Navigator.push<Map<String, dynamic>>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PartnerSelectionScreen(
+                                type: widget.type, isSelectionOnly: true),
+                          ),
+                        );
+                        if (selected != null) {
+                          setState(() {
+                            _selectedPartner = selected;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(Icons.person_search,
-                              color: widget.type == 'Sales'
-                                  ? Colors.teal
-                                  : Colors.deepOrange),
-                          tooltip: widget.type == 'Sales'
-                              ? context.tr('pos_change_customer')
-                              : context.tr('pos_change_supplier'),
-                          onPressed: () async {
-                            final selected =
-                                await Navigator.push<Map<String, dynamic>>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PartnerSelectionScreen(
-                                    type: widget.type, isSelectionOnly: true),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _selectedPartner != null
+                                    ? '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${_selectedPartner!['PartnerName']}'
+                                    : '${widget.type == 'Sales' ? context.tr('pos_customer') : context.tr('pos_supplier')}: ${context.tr('pos_cash_general')}',
+                                textAlign: TextAlign.right,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    color: Color(0xFF0F172A),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14),
                               ),
-                            );
-                            if (selected != null) {
-                              setState(() {
-                                _selectedPartner = selected;
-                              });
-                            }
-                          },
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: widget.type == 'Sales'
+                                    ? const Color(0xFFF0FDFA)
+                                    : const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.person_search_rounded,
+                                  color: widget.type == 'Sales'
+                                      ? const Color(0xFF0F766E)
+                                      : const Color(0xFFB45309),
+                                  size: 20),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                   if (posProvider.isLoading)
-                    const LinearProgressIndicator(color: Colors.green),
+                    LinearProgressIndicator(
+                        color: widget.type == 'Sales'
+                            ? const Color(0xFF0D9488)
+                            : const Color(0xFFD97706)),
                   Expanded(
                     child: invoiceItems.isEmpty
                         ? Center(
-                            child: Text(context.tr('pos_empty_cart'),
-                                style: const TextStyle(
-                                    fontSize: 16, color: Colors.grey)),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.shopping_cart_outlined,
+                                    size: 56, color: Color(0xFFCBD5E1)),
+                                const SizedBox(height: 10),
+                                Text(context.tr('pos_empty_cart'),
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        color: Color(0xFF64748B))),
+                              ],
+                            ),
                           )
                         : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(12, 2, 12, 16),
                             itemCount: invoiceItems.length,
                             itemBuilder: (context, index) {
                               final item = invoiceItems[index];
@@ -1094,12 +1200,25 @@ class _PosScreenState extends State<PosScreen> {
                               final ProductDiscount? activeDiscount =
                                   item['appliedDiscount'] as ProductDiscount?;
 
-                              return Card(
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color: const Color(0xFFE2E8F0)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF0F172A)
+                                          .withValues(alpha: 0.04),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
                                 child: Padding(
                                   padding:
-                                      const EdgeInsets.symmetric(vertical: 4.0),
+                                      const EdgeInsets.symmetric(vertical: 6.0),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -1119,26 +1238,26 @@ class _PosScreenState extends State<PosScreen> {
                                                             left: 6),
                                                     padding: const EdgeInsets
                                                         .symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2),
+                                                        horizontal: 7,
+                                                        vertical: 3),
                                                     decoration: BoxDecoration(
-                                                      color:
-                                                          Colors.amber.shade100,
+                                                      color: const Color(
+                                                          0xFFFFFBEB),
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                              6),
+                                                              8),
                                                       border: Border.all(
-                                                          color: Colors
-                                                              .amber.shade700),
+                                                          color: const Color(
+                                                              0xFFF59E0B)),
                                                     ),
                                                     child: Text(
                                                       '${context.tr('pos_item_discount')}: ${activeDiscount.formattedLabel}',
-                                                      style: TextStyle(
+                                                      style: const TextStyle(
                                                           fontSize: 10,
                                                           fontWeight:
                                                               FontWeight.bold,
-                                                          color: Colors
-                                                              .amber.shade900),
+                                                          color: Color(
+                                                              0xFFB45309)),
                                                     ),
                                                   ),
                                                 ),
@@ -1150,15 +1269,16 @@ class _PosScreenState extends State<PosScreen> {
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                                    color: Color(0xFF0F172A),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 15),
                                               ),
                                             ),
                                           ],
                                         ),
                                         subtitle: Padding(
                                           padding:
-                                              const EdgeInsets.only(top: 4.0),
+                                              const EdgeInsets.only(top: 6.0),
                                           child: Wrap(
                                             crossAxisAlignment:
                                                 WrapCrossAlignment.center,
@@ -1177,17 +1297,34 @@ class _PosScreenState extends State<PosScreen> {
                                                   },
                                                 )
                                               else
-                                                Text(
-                                                  '${context.tr('pos_item_price')}${(item['price'] as num).toStringAsFixed(3)}',
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontSize: 13,
-                                                      color: Colors.tealAccent),
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFFF0FDFA),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                  child: Text(
+                                                    '${context.tr('pos_item_price')}${(item['price'] as num).toStringAsFixed(3)}',
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 12.5,
+                                                        color:
+                                                            Color(0xFF0F766E)),
+                                                  ),
                                                 ),
                                               Text(
                                                   '${context.tr('pos_item_quantity')}',
-                                                  textAlign: TextAlign.right),
+                                                  textAlign: TextAlign.right,
+                                                  style: const TextStyle(
+                                                      color:
+                                                          Color(0xFF64748B))),
                                               _QuantityEditor(
                                                 initialQuantity:
                                                     item['quantity'],
@@ -1215,24 +1352,31 @@ class _PosScreenState extends State<PosScreen> {
                                                     '${((item['originalPrice'] as num) * (item['quantity'] as num)).toStringAsFixed(3)}',
                                                     style: const TextStyle(
                                                       fontSize: 11,
-                                                      color: Colors.grey,
+                                                      color: Color(0xFF94A3B8),
                                                       decoration: TextDecoration
                                                           .lineThrough,
                                                     ),
                                                   ),
                                                 Text(
                                                   '${(item['total'] as num).toStringAsFixed(3)} KWD',
-                                                  style: const TextStyle(
+                                                  style: TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       fontSize: 15,
-                                                      color: Colors.green),
+                                                      color:
+                                                          widget.type == 'Sales'
+                                                              ? const Color(
+                                                                  0xFF059669)
+                                                              : const Color(
+                                                                  0xFFB45309)),
                                                 ),
                                               ],
                                             ),
                                             IconButton(
-                                              icon: const Icon(Icons.delete,
-                                                  color: Colors.red, size: 20),
+                                              icon: const Icon(
+                                                  Icons.delete_outline_rounded,
+                                                  color: Color(0xFFE11D48),
+                                                  size: 20),
                                               onPressed: () =>
                                                   posProvider.removeItem(index),
                                             ),
@@ -1263,14 +1407,15 @@ class _PosScreenState extends State<PosScreen> {
                                                         : FontWeight.normal,
                                                     color: isSelected
                                                         ? Colors.white
-                                                        : Colors
-                                                            .indigo.shade900,
+                                                        : const Color(
+                                                            0xFF0F766E),
                                                   ),
                                                 ),
                                                 selected: isSelected,
-                                                selectedColor: Colors.indigo,
+                                                selectedColor:
+                                                    const Color(0xFF0F766E),
                                                 backgroundColor:
-                                                    Colors.indigo.shade50,
+                                                    const Color(0xFFF0FDFA),
                                                 onSelected: (_) {
                                                   posProvider
                                                       .toggleDiscountForItem(
@@ -1594,19 +1739,22 @@ class _PosScreenState extends State<PosScreen> {
     final bool canPay = posProvider.invoiceItems.isNotEmpty;
 
     return Container(
-      width: isMobile ? double.infinity : 300,
-      color: Colors.grey[200],
+      width: isMobile ? double.infinity : 310,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(left: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         mainAxisSize: isMobile ? MainAxisSize.min : MainAxisSize.max,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade300),
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Column(
               children: [
@@ -1617,10 +1765,10 @@ class _PosScreenState extends State<PosScreen> {
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87)),
+                            color: Color(0xFF0F172A))),
                     Text('${context.tr('pos_gross_total')}:',
                         style: const TextStyle(
-                            fontSize: 14, color: Colors.black54)),
+                            fontSize: 14, color: Color(0xFF64748B))),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -1632,28 +1780,30 @@ class _PosScreenState extends State<PosScreen> {
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: totalDiscount > 0
-                                ? Colors.redAccent
-                                : Colors.black54)),
+                                ? const Color(0xFFE11D48)
+                                : const Color(0xFF64748B))),
                     Text('${context.tr('pos_total_discount')}:',
                         style: const TextStyle(
-                            fontSize: 14, color: Colors.black54)),
+                            fontSize: 14, color: Color(0xFF64748B))),
                   ],
                 ),
                 _ExtraDiscountInputField(posProvider: posProvider),
-                const Divider(height: 16),
+                const Divider(height: 18, color: Color(0xFFE2E8F0)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('${total.toStringAsFixed(3)} KWD',
-                        style: const TextStyle(
-                            fontSize: 20,
+                        style: TextStyle(
+                            fontSize: 21,
                             fontWeight: FontWeight.bold,
-                            color: Colors.green)),
+                            color: widget.type == 'Sales'
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFB45309))),
                     Text('${context.tr('pos_net_total')}:',
                         style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87)),
+                            color: Color(0xFF0F172A))),
                   ],
                 ),
               ],
@@ -1664,7 +1814,7 @@ class _PosScreenState extends State<PosScreen> {
             context.tr('pos_trans_type'),
             style: const TextStyle(
                 fontSize: 14,
-                color: Colors.black87,
+                color: Color(0xFF0F172A),
                 fontWeight: FontWeight.bold),
             textAlign: TextAlign.right,
           ),
@@ -1673,10 +1823,17 @@ class _PosScreenState extends State<PosScreen> {
             children: [
               Expanded(
                 child: ChoiceChip(
-                  label: Text(context.tr('pos_credit_mode'),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  label: Center(
+                    child: Text(context.tr('pos_credit_mode'),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: !_isCash
+                                ? const Color(0xFFB45309)
+                                : const Color(0xFF475569))),
+                  ),
                   selected: !_isCash,
-                  selectedColor: Colors.orange[200],
+                  selectedColor: const Color(0xFFFEF3C7),
+                  backgroundColor: const Color(0xFFF8FAFC),
                   onSelected: (val) {
                     setState(() {
                       _isCash = !val;
@@ -1687,10 +1844,17 @@ class _PosScreenState extends State<PosScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: ChoiceChip(
-                  label: Text(context.tr('pos_cash_mode'),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  label: Center(
+                    child: Text(context.tr('pos_cash_mode'),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: _isCash
+                                ? const Color(0xFF059669)
+                                : const Color(0xFF475569))),
+                  ),
                   selected: _isCash,
-                  selectedColor: Colors.green[200],
+                  selectedColor: const Color(0xFFD1FAE5),
+                  backgroundColor: const Color(0xFFF8FAFC),
                   onSelected: (val) {
                     setState(() {
                       _isCash = val;
@@ -1706,7 +1870,7 @@ class _PosScreenState extends State<PosScreen> {
               context.tr('pos_payment_account'),
               style: const TextStyle(
                   fontSize: 14,
-                  color: Colors.black87,
+                  color: Color(0xFF0F172A),
                   fontWeight: FontWeight.bold),
               textAlign: TextAlign.right,
             ),
@@ -1715,11 +1879,16 @@ class _PosScreenState extends State<PosScreen> {
               isExpanded: true,
               dropdownColor: Colors.white,
               value: _selectedAccountId,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                border: OutlineInputBorder(),
-                fillColor: Colors.white,
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                fillColor: const Color(0xFFF8FAFC),
                 filled: true,
               ),
               items: _accounts.map((acc) {
@@ -1727,7 +1896,8 @@ class _PosScreenState extends State<PosScreen> {
                   value: acc['AccountID'],
                   child: Text(
                     acc['AccountName']?.toString() ?? '',
-                    style: const TextStyle(color: Colors.black87, fontSize: 14),
+                    style:
+                        const TextStyle(color: Color(0xFF0F172A), fontSize: 14),
                   ),
                 );
               }).toList(),
@@ -1752,13 +1922,16 @@ class _PosScreenState extends State<PosScreen> {
                         _showSplitPaymentDialog(posProvider, total);
                       }
                     },
-              icon: const Icon(Icons.call_split, color: Colors.teal),
+              icon: const Icon(Icons.call_split_rounded,
+                  color: Color(0xFF0D9488)),
               label: Text(context.tr('pos_split_payment'),
                   style: const TextStyle(
-                      color: Colors.teal, fontWeight: FontWeight.bold)),
+                      color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.teal, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                side: const BorderSide(color: Color(0xFF0D9488), width: 1.5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 11),
               ),
             ),
             const SizedBox(height: 12),
@@ -1767,9 +1940,11 @@ class _PosScreenState extends State<PosScreen> {
             onPressed: (!canPay || posProvider.isLoading)
                 ? null
                 : () => _handlePaymentAndPrint(posProvider, total),
-            icon: Icon(widget.type == 'Sales' ? Icons.payment : Icons.save_alt),
+            icon: Icon(widget.type == 'Sales'
+                ? Icons.payment_rounded
+                : Icons.save_alt_rounded),
             label: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              padding: const EdgeInsets.symmetric(vertical: 13.0),
               child: posProvider.isLoading
                   ? const SizedBox(
                       width: 24,
@@ -1781,13 +1956,18 @@ class _PosScreenState extends State<PosScreen> {
                       widget.type == 'Sales'
                           ? context.tr('pos_pay_print')
                           : context.tr('pos_save_and_print'),
-                      style: const TextStyle(fontSize: 18)),
+                      style: const TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.bold)),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  widget.type == 'Sales' ? Colors.green : Colors.deepOrange,
+              backgroundColor: widget.type == 'Sales'
+                  ? const Color(0xFF0F766E)
+                  : const Color(0xFFB45309),
               foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.grey,
+              disabledBackgroundColor: const Color(0xFFCBD5E1),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
             ),
           ),
         ],
@@ -2149,12 +2329,15 @@ class _PosScreenState extends State<PosScreen> {
     final bool hasItems = posProvider.invoiceItems.isNotEmpty;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.grey[900],
-        boxShadow: const [
+        color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        boxShadow: [
           BoxShadow(
-              color: Colors.black26, blurRadius: 4, offset: Offset(0, -2)),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -3)),
         ],
       ),
       child: SafeArea(
@@ -2173,15 +2356,15 @@ class _PosScreenState extends State<PosScreen> {
                         Text(
                           'الإجمالي: ${originalTotal.toStringAsFixed(3)}',
                           style: const TextStyle(
-                              color: Colors.white70, fontSize: 11),
+                              color: Color(0xFF64748B), fontSize: 11.5),
                         ),
                         if (totalDiscount > 0) ...[
                           const SizedBox(width: 8),
                           Text(
                             'الخصم: -${totalDiscount.toStringAsFixed(3)}',
                             style: const TextStyle(
-                                color: Colors.amberAccent,
-                                fontSize: 11,
+                                color: Color(0xFFD97706),
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -2197,14 +2380,16 @@ class _PosScreenState extends State<PosScreen> {
                         const Text(
                           'الصافي: ',
                           style: TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFF0F172A),
                               fontSize: 13,
                               fontWeight: FontWeight.bold),
                         ),
                         Text(
                           '${total.toStringAsFixed(3)} KWD',
-                          style: const TextStyle(
-                            color: Colors.greenAccent,
+                          style: TextStyle(
+                            color: widget.type == 'Sales'
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFB45309),
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -2221,22 +2406,25 @@ class _PosScreenState extends State<PosScreen> {
                   : () {
                       _showCheckoutBottomSheet(posProvider);
                     },
-              icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+              icon: const Icon(Icons.check_circle_outline_rounded,
+                  color: Colors.white),
               label: Text(
                 context.tr('pos_finish_order'),
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    fontSize: 15.5, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    widget.type == 'Sales' ? Colors.teal : Colors.deepOrange,
+                backgroundColor: widget.type == 'Sales'
+                    ? const Color(0xFF0F766E)
+                    : const Color(0xFFB45309),
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFCBD5E1),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 13),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                elevation: 4,
+                elevation: 0,
               ),
             ),
           ],

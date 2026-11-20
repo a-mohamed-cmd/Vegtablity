@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 import '../services/api_service.dart';
+import '../services/integrations/integration_service.dart';
 
 class VoucherProvider extends ChangeNotifier {
   final ApiService _apiService;
@@ -84,7 +85,10 @@ class VoucherProvider extends ChangeNotifier {
       if (vend != null) _cachedVendors = List<Map<String, dynamic>>.from(json.decode(vend));
 
       final String? acc = prefs.getString('cached_accounts');
-      if (acc != null) _cachedAccounts = List<Map<String, dynamic>>.from(json.decode(acc));
+      if (acc != null) {
+        final decoded = List<Map<String, dynamic>>.from(json.decode(acc));
+        _cachedAccounts = await IntegrationPosService.filterOutGatewayAccounts(decoded);
+      }
       
       notifyListeners();
     } catch (e) {
@@ -101,8 +105,12 @@ class VoucherProvider extends ChangeNotifier {
       final resVend = await _apiService.getPartners(type: 'Vendor');
       if (resVend.statusCode == 200) _cachedVendors = List<Map<String, dynamic>>.from(resVend.data);
 
+      await IntegrationPosService().fetchProvidersSummary(onlyEnabled: false);
       final resAcc = await _apiService.getVoucherAccounts();
-      if (resAcc.statusCode == 200) _cachedAccounts = List<Map<String, dynamic>>.from(resAcc.data);
+      if (resAcc.statusCode == 200) {
+        final rawAcc = List<Map<String, dynamic>>.from(resAcc.data);
+        _cachedAccounts = await IntegrationPosService.filterOutGatewayAccounts(rawAcc);
+      }
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('cached_customers', json.encode(_cachedCustomers));

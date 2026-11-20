@@ -1,86 +1,89 @@
 @echo off
-chcp 65001 > nul
-title بناء جميع نسخ Flutter (Android APK + Windows Desktop)
+setlocal EnableExtensions
+cd /d "%~dp0"
+title Build All Flutter Versions (Android APK + Windows Desktop)
 color 0A
 
 echo ========================================================
-echo   🚀 بدء عملية بناء تطبيقات Flutter (Android + Windows)
+echo   Starting Flutter Builds (Android APK + Windows)
+echo   Working Dir: %CD%
 echo ========================================================
 echo.
 
-:: 1. تحديث الحزم
-echo [1/3] 📦 جاري تحديث حزم المشروع (flutter pub get)...
+REM 1. Update packages
+echo [1/5] Updating packages (flutter pub get)...
 call flutter pub get
-if %errorlevel% neq 0 (
-    echo ❌ فشل في جلب الحزم.
+if errorlevel 1 (
+    echo [ERROR] flutter pub get failed.
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
-echo ✅ تم تحديث الحزم بنجاح.
+echo [OK] Packages updated successfully.
 echo.
 
-:: 2. بناء تطبيق Android APK لشركة واشا (Washa Flavor)
-echo [2/4] 📱 جاري بناء تطبيق Android APK لـ واشا (Washa Release)...
+REM 2. Build Android APK for Washa flavor
+echo [2/5] Building Android APK for Washa (washa release)...
 call flutter build apk --flavor washa --release
-if %errorlevel% neq 0 (
-    echo ❌ فشل بناء تطبيق Android APK لـ واشا.
+if errorlevel 1 (
+    echo [ERROR] Failed to build Washa Android APK.
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
-echo ✅ تم بناء تطبيق واشا بنجاح!
-echo 📍 ملف APK: build\app\outputs\flutter-apk\app-washa-release.apk
+echo [OK] Washa Android APK built successfully.
+echo Output: build\app\outputs\flutter-apk\app-washa-release.apk
 echo.
 
-:: 3. بناء تطبيق Android APK لشركة الجوهرة (Jawhara Flavor)
-echo [3/4] 📱 جاري بناء تطبيق Android APK لـ الجوهرة (Jawhara Release)...
+REM 3. Build Android APK for Jawhara flavor
+echo [3/5] Building Android APK for Jawhara (jawhara release)...
 call flutter build apk --flavor jawhara --release
-if %errorlevel% neq 0 (
-    echo ❌ فشل بناء تطبيق Android APK لـ الجوهرة.
+if errorlevel 1 (
+    echo [ERROR] Failed to build Jawhara Android APK.
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
-echo ✅ تم بناء تطبيق الجوهرة بنجاح!
-echo 📍 ملف APK: build\app\outputs\flutter-apk\app-jawhara-release.apk
+echo [OK] Jawhara Android APK built successfully.
+echo Output: build\app\outputs\flutter-apk\app-jawhara-release.apk
 echo.
 
-:: 4. بناء تطبيق الويندوز لشركة واشا (Washa Windows)
-echo [4/5] 💻 جاري بناء تطبيق Windows Desktop لـ واشا (Washa Release)...
+REM 4. Build Windows Desktop for Washa
+echo [4/5] Building Windows Desktop for Washa (washa release)...
 call flutter build windows --release --dart-define=FLAVOR=washa
-if %errorlevel% neq 0 (
-    echo ❌ فشل بناء تطبيق Windows لـ واشا.
+if errorlevel 1 (
+    echo [ERROR] Failed to build Washa Windows Desktop.
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
 if exist "build\windows_washa" rmdir /s /q "build\windows_washa"
 mkdir "build\windows_washa"
 xcopy /E /I /Y "build\windows\x64\runner\Release" "build\windows_washa" > nul
-echo ✅ تم بناء تطبيق Windows واشا بنجاح!
-echo 📍 مجلد واشا Windows: build\windows_washa\
+echo [OK] Washa Windows Desktop built successfully.
+echo Output: build\windows_washa\
 echo.
 
-:: 5. بناء تطبيق الويندوز لشركة الجوهرة (Jawhara Windows)
-echo [5/5] 💻 جاري بناء تطبيق Windows Desktop لـ الجوهرة (Jawhara Release)...
+REM 5. Build Windows Desktop for Jawhara
+echo [5/5] Building Windows Desktop for Jawhara (jawhara release)...
 call flutter build windows --release --dart-define=FLAVOR=jawhara
-if %errorlevel% neq 0 (
-    echo ❌ فشل بناء تطبيق Windows لـ الجوهرة.
+if errorlevel 1 (
+    echo [ERROR] Failed to build Jawhara Windows Desktop.
     pause
-    exit /b %errorlevel%
+    exit /b 1
 )
 if exist "build\windows_jawhara" rmdir /s /q "build\windows_jawhara"
 mkdir "build\windows_jawhara"
 xcopy /E /I /Y "build\windows\x64\runner\Release" "build\windows_jawhara" > nul
-echo ✅ تم بناء تطبيق Windows الجوهرة بنجاح!
-echo 📍 مجلد الجوهرة Windows: build\windows_jawhara\
+echo [OK] Jawhara Windows Desktop built successfully.
+echo Output: build\windows_jawhara\
 echo.
 
 echo ========================================================
-echo   🎉 تم الانتهاء من بناء جميع النسخ بنجاح!
+echo   All builds completed successfully!
 echo ========================================================
 echo.
 
-:: فتح مجلدات المخرجات للمستخدم
-start "" "build\app\outputs\flutter-apk"
-start "" "build\windows_washa"
-start "" "build\windows_jawhara"
+REM Open output folders safely
+if exist "%CD%\build\app\outputs\flutter-apk" start "" explorer.exe "%CD%\build\app\outputs\flutter-apk"
+if exist "%CD%\build\windows_washa" start "" explorer.exe "%CD%\build\windows_washa"
+if exist "%CD%\build\windows_jawhara" start "" explorer.exe "%CD%\build\windows_jawhara"
 
 pause
+endlocal

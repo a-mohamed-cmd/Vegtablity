@@ -40,11 +40,13 @@ class BarcodePrintViewModel extends ChangeNotifier {
       // Execute API endpoint which calls [Inventory].[sp_Product_GetForSales]
       final response = await _apiService.getProductsForSales();
       if (response.statusCode == 200 && response.data != null) {
-        final List<dynamic> productsList = List<dynamic>.from(response.data as List);
+        final List<dynamic> productsList =
+            List<dynamic>.from(response.data as List);
 
         final Set<String> catSet = {};
         for (var p in productsList) {
-          final catName = p['CatName']?.toString().trim() ?? p['cat_name']?.toString().trim();
+          final catName = p['CatName']?.toString().trim() ??
+              p['cat_name']?.toString().trim();
           if (catName != null && catName.isNotEmpty) {
             catSet.add(catName);
           }
@@ -56,7 +58,8 @@ class BarcodePrintViewModel extends ChangeNotifier {
         _filterProducts();
       } else {
         _isLoading = false;
-        _errorMessage = 'حدث خطأ عند جلب المنتجات من السيرفر (${response.statusCode})';
+        _errorMessage =
+            'حدث خطأ عند جلب المنتجات من السيرفر (${response.statusCode})';
         notifyListeners();
       }
     } on DioException catch (dioErr) {
@@ -73,13 +76,28 @@ class BarcodePrintViewModel extends ChangeNotifier {
   void _filterProducts() {
     final query = searchController.text.trim().toLowerCase();
     _filteredProducts = _allProducts.where((product) {
-      final name = (product['ProductName'] ?? product['product_name'] ?? product['name'] ?? '').toString().toLowerCase();
-      final nameEn = (product['ProductNameEn'] ?? product['product_name_en'] ?? '').toString().toLowerCase();
-      final barcode = (product['Barcode'] ?? product['barcode'] ?? '').toString().toLowerCase();
-      final catName = (product['CatName'] ?? product['cat_name'] ?? '').toString();
+      final name = (product['ProductName'] ??
+              product['product_name'] ??
+              product['name'] ??
+              '')
+          .toString()
+          .toLowerCase();
+      final nameEn =
+          (product['ProductNameEn'] ?? product['product_name_en'] ?? '')
+              .toString()
+              .toLowerCase();
+      final barcode = (product['Barcode'] ?? product['barcode'] ?? '')
+          .toString()
+          .toLowerCase();
+      final catName =
+          (product['CatName'] ?? product['cat_name'] ?? '').toString();
 
-      final matchesSearch = query.isEmpty || name.contains(query) || nameEn.contains(query) || barcode.contains(query);
-      final matchesCategory = _selectedCategory == 'ALL' || catName == _selectedCategory;
+      final matchesSearch = query.isEmpty ||
+          name.contains(query) ||
+          nameEn.contains(query) ||
+          barcode.contains(query);
+      final matchesCategory =
+          _selectedCategory == 'ALL' || catName == _selectedCategory;
 
       return matchesSearch && matchesCategory;
     }).toList();

@@ -23,7 +23,8 @@ class PrinterBase {
     return '-' * (paperSize == 80 ? 48 : 32);
   }
 
-  static String getCurrencySymbol(Map<String, dynamic>? companySettings, {bool isArabic = true}) {
+  static String getCurrencySymbol(Map<String, dynamic>? companySettings,
+      {bool isArabic = true}) {
     final rawCurrency = companySettings?['CurrencySymbol']?.toString() ?? '';
     if (rawCurrency.isEmpty) return isArabic ? 'د.ك' : 'KWD';
     return rawCurrency;
@@ -40,7 +41,9 @@ class PrinterBase {
         item['ItemName'] ??
         item['item_name'] ??
         item['productName'] ??
-        (isArabic ? (item['name_ar'] ?? item['name_en']) : (item['name_en'] ?? item['name_ar'])) ??
+        (isArabic
+            ? (item['name_ar'] ?? item['name_en'])
+            : (item['name_en'] ?? item['name_ar'])) ??
         item['description'] ??
         item['Description'];
 
@@ -128,9 +131,11 @@ class PrinterBase {
   }
 
   /// Converts a base64 encoded image to ESC/POS raster format (GS v 0) for network printers.
-  static Future<List<int>> convertImageToEscPos(String base64Image, {int targetWidth = 200}) async {
+  static Future<List<int>> convertImageToEscPos(String base64Image,
+      {int targetWidth = 200}) async {
     try {
-      final String cleanBase64 = base64Image.contains(',') ? base64Image.split(',').last : base64Image;
+      final String cleanBase64 =
+          base64Image.contains(',') ? base64Image.split(',').last : base64Image;
       final Uint8List imageBytes = base64Decode(cleanBase64);
 
       final ui.Codec codec = await ui.instantiateImageCodec(imageBytes);
@@ -151,9 +156,11 @@ class PrinterBase {
       );
 
       final ui.Picture picture = recorder.endRecording();
-      final ui.Image resizedImage = await picture.toImage(targetWidth, targetHeight);
+      final ui.Image resizedImage =
+          await picture.toImage(targetWidth, targetHeight);
 
-      final ByteData? byteData = await resizedImage.toByteData(format: ui.ImageByteFormat.rawRgba);
+      final ByteData? byteData =
+          await resizedImage.toByteData(format: ui.ImageByteFormat.rawRgba);
       if (byteData == null) return [];
 
       final Uint8List rgbaBytes = byteData.buffer.asUint8List();

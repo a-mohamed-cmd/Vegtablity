@@ -89,7 +89,8 @@ class _PaymentGatewayInvoicesScreenState
   void _showSnack(String message, {Color color = Colors.teal}) {
     if (!mounted) return;
     final cleanMsg = DbErrorHelper.format(message, isArabic: _isAr);
-    if (color == Colors.red || color.toARGB32() == Colors.red.shade700.toARGB32()) {
+    if (color == Colors.red ||
+        color.toARGB32() == Colors.red.shade700.toARGB32()) {
       AppSnackBar.show(context, cleanMsg, isError: true);
     } else if (color == Colors.orange) {
       AppSnackBar.show(context, cleanMsg, isWarning: true);
@@ -130,8 +131,7 @@ class _PaymentGatewayInvoicesScreenState
     final encodedText = Uri.encodeComponent(text);
     final waNativeUri =
         Uri.parse('whatsapp://send?phone=$phone&text=$encodedText');
-    final waWebUri =
-        Uri.parse('https://wa.me/$phone?text=$encodedText');
+    final waWebUri = Uri.parse('https://wa.me/$phone?text=$encodedText');
     try {
       bool opened = false;
       try {
@@ -331,9 +331,8 @@ class _PaymentGatewayInvoicesScreenState
               'id': data['InvID'] ?? item.invId,
               'PartnerName': data['PartnerName'] ?? item.customerName,
               'type': data['InvType'] ?? 'Sales',
-              'created_at': data['InvDate'] ??
-                  data['CreatedAt'] ??
-                  item.createdAt,
+              'created_at':
+                  data['InvDate'] ?? data['CreatedAt'] ?? item.createdAt,
               'total_amount': _parseNum(data['NetAmount']),
               'paid_amount': _parseNum(data['PaidAmount']),
               'voucher_paid_amount': _parseNum(data['VoucherPaidAmount']),
@@ -383,9 +382,9 @@ class _PaymentGatewayInvoicesScreenState
       'InvDate': item.createdAt,
       'PartnerName': item.customerName,
       'total_amount': item.amount,
-      'paid_amount': item.linkStatus.toLowerCase() == 'paid' ? item.amount : 0.0,
-      'remainder':
-          item.linkStatus.toLowerCase() == 'paid' ? 0.0 : item.amount,
+      'paid_amount':
+          item.linkStatus.toLowerCase() == 'paid' ? item.amount : 0.0,
+      'remainder': item.linkStatus.toLowerCase() == 'paid' ? 0.0 : item.amount,
       'PaymentAccountName': providerDisplayName,
       'PaymentUrl': item.paymentUrl,
       'payment_url': item.paymentUrl,
@@ -508,7 +507,8 @@ class _PaymentGatewayInvoicesScreenState
     final shiftId = Provider.of<ShiftProvider>(context, listen: false).shiftId;
     final paperSize =
         Provider.of<PrinterService>(context, listen: false).paperSize;
-    final userId = Provider.of<AuthProvider>(context, listen: false).userId ?? 1;
+    final userId =
+        Provider.of<AuthProvider>(context, listen: false).userId ?? 1;
     final defaultCustName = context.tr('pgw_default_cash_customer');
 
     final res = await vm.createPaymentLink(
@@ -559,8 +559,8 @@ class _PaymentGatewayInvoicesScreenState
       return;
     }
 
-    final amountCtrl =
-        TextEditingController(text: item.remainingRefundable.toStringAsFixed(3));
+    final amountCtrl = TextEditingController(
+        text: item.remainingRefundable.toStringAsFixed(3));
     final reasonCtrl =
         TextEditingController(text: context.tr('pgw_refund_default_reason'));
     bool isSubmitting = false;
@@ -580,7 +580,8 @@ class _PaymentGatewayInvoicesScreenState
         builder: (ctx, setDialogState) => AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('${context.tr('pgw_refund_dialog_title')} $providerLabel'),
+          title:
+              Text('${context.tr('pgw_refund_dialog_title')} $providerLabel'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -788,12 +789,23 @@ class _PaymentGatewayInvoicesScreenState
     return Consumer<PaymentGatewayViewModel>(
       builder: (context, vm, _) {
         return Scaffold(
-          backgroundColor: Colors.grey.shade100,
+          backgroundColor: const Color(0xFFF4F7FA),
           appBar: AppBar(
-            title: Text(context.tr('pgw_title')),
-            backgroundColor: Colors.indigo.shade800,
+            title: Text(context.tr('pgw_title'),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            backgroundColor: Colors.transparent,
             foregroundColor: Colors.white,
             elevation: 0,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF0369A1), Color(0xFF0284C7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
             actions: [
               IconButton(
                 tooltip: vm.isCreateCardExpanded
@@ -805,7 +817,7 @@ class _PaymentGatewayInvoicesScreenState
                     color: vm.isCreateCardExpanded
                         ? Colors.white.withValues(alpha: 0.22)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(vm.isCreateCardExpanded
                       ? Icons.link_off
@@ -823,7 +835,7 @@ class _PaymentGatewayInvoicesScreenState
                     color: vm.isFilterCardExpanded
                         ? Colors.white.withValues(alpha: 0.22)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(vm.isFilterCardExpanded
                       ? Icons.filter_alt
@@ -833,7 +845,7 @@ class _PaymentGatewayInvoicesScreenState
               ),
               IconButton(
                 tooltip: context.tr('pgw_tooltip_refresh_list'),
-                icon: const Icon(Icons.refresh),
+                icon: const Icon(Icons.refresh_rounded),
                 onPressed: vm.isLoading ? null : () => vm.loadLinks(),
               ),
             ],
@@ -845,14 +857,16 @@ class _PaymentGatewayInvoicesScreenState
               _buildCollapsibleFilterCard(vm),
               Expanded(
                 child: vm.isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(color: Color(0xFF0284C7)))
                     : vm.links.isEmpty
                         ? _buildEmptyState()
                         : RefreshIndicator(
                             onRefresh: () => vm.loadLinks(),
                             child: ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(
-                                  12, 8, 12, 12),
+                              padding:
+                                  const EdgeInsets.fromLTRB(14, 10, 14, 14),
                               itemCount: vm.links.length,
                               itemBuilder: (_, idx) =>
                                   _buildLinkCard(vm, vm.links[idx]),
@@ -870,23 +884,36 @@ class _PaymentGatewayInvoicesScreenState
   Widget _buildKpiBar(PaymentGatewayViewModel vm) {
     final curr = context.tr('pgw_currency_kwd');
     return Container(
-      color: Colors.indigo.shade800,
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0369A1), Color(0xFF0284C7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 16),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 680;
           final items = [
-            _kpiTile(context.tr('pgw_kpi_paid'),
+            _kpiTile(
+                context.tr('pgw_kpi_paid'),
                 '${vm.summaryPaid.toStringAsFixed(3)} $curr',
-                Icons.check_circle_outline, Colors.greenAccent.shade200),
-            _kpiTile(context.tr('pgw_kpi_pending'),
+                Icons.check_circle_outline_rounded,
+                const Color(0xFF6EE7B7)),
+            _kpiTile(
+                context.tr('pgw_kpi_pending'),
                 '${vm.summaryPending.toStringAsFixed(3)} $curr',
-                Icons.hourglass_bottom, Colors.amberAccent.shade200),
-            _kpiTile(context.tr('pgw_kpi_refunded'),
+                Icons.hourglass_bottom_rounded,
+                const Color(0xFFFCD34D)),
+            _kpiTile(
+                context.tr('pgw_kpi_refunded'),
                 '${vm.summaryRefunded.toStringAsFixed(3)} $curr',
-                Icons.undo, Colors.redAccent.shade100),
+                Icons.undo_rounded,
+                const Color(0xFFFDA4AF)),
             _kpiTile(context.tr('pgw_kpi_links_count'), '${vm.totalCount}',
-                Icons.receipt_long_outlined, Colors.lightBlueAccent.shade100),
+                Icons.receipt_long_outlined, const Color(0xFFBAE6FD)),
           ];
           if (isWide) {
             return Row(
@@ -917,16 +944,23 @@ class _PaymentGatewayInvoicesScreenState
 
   Widget _kpiTile(String title, String value, IconData icon, Color accent) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: accent, size: 22),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: accent, size: 20),
+          ),
+          const SizedBox(width: 9),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -960,37 +994,48 @@ class _PaymentGatewayInvoicesScreenState
         duration: const Duration(milliseconds: 200),
         opacity: vm.isCreateCardExpanded ? 1.0 : 0.0,
         child: vm.isCreateCardExpanded
-            ? Card(
-                margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-                elevation: 1.5,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            ? Container(
+                margin: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
                 child: Column(
                   children: [
                     InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       onTap: vm.toggleCreateCard,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                            horizontal: 14, vertical: 12),
                         child: Row(
                           children: [
                             CircleAvatar(
-                              radius: 15,
-                              backgroundColor: Colors.indigo.shade50,
-                              child: Icon(Icons.add_link,
-                                  color: Colors.indigo.shade700, size: 18),
+                              radius: 16,
+                              backgroundColor: const Color(0xFFE0F2FE),
+                              child: const Icon(Icons.add_link,
+                                  color: Color(0xFF0369A1), size: 18),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 context.tr('pgw_create_card_title'),
                                 style: const TextStyle(
+                                    color: Color(0xFF0F172A),
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 13.5),
+                                    fontSize: 14),
                               ),
                             ),
-                            const Icon(Icons.keyboard_arrow_up),
+                            const Icon(Icons.keyboard_arrow_up_rounded,
+                                color: Color(0xFF64748B)),
                           ],
                         ),
                       ),
@@ -1002,28 +1047,31 @@ class _PaymentGatewayInvoicesScreenState
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.orange.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border:
-                                    Border.all(color: Colors.orange.shade200),
+                                color: const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: const Color(0xFFD97706)
+                                        .withValues(alpha: 0.3)),
                               ),
                               child: Text(
                                 context.tr('pgw_no_gateway_warning'),
                                 style: const TextStyle(
-                                    color: Colors.deepOrange,
+                                    color: Color(0xFFB45309),
                                     fontWeight: FontWeight.w600),
                               ),
                             )
                           : Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Divider(height: 12),
+                                const Divider(
+                                    height: 12, color: Color(0xFFE2E8F0)),
                                 Row(
                                   children: [
                                     Expanded(
                                       child: ChoiceChip(
                                         label: Center(
-                                            child: Text(context.tr('pgw_mode_single'))),
+                                            child: Text(
+                                                context.tr('pgw_mode_single'))),
                                         selected: !vm.isConsolidatedMode,
                                         onSelected: (_) =>
                                             vm.setConsolidatedMode(false),
@@ -1033,7 +1081,8 @@ class _PaymentGatewayInvoicesScreenState
                                     Expanded(
                                       child: ChoiceChip(
                                         label: Center(
-                                            child: Text(context.tr('pgw_mode_consolidated'))),
+                                            child: Text(context
+                                                .tr('pgw_mode_consolidated'))),
                                         selected: vm.isConsolidatedMode,
                                         onSelected: (_) =>
                                             vm.setConsolidatedMode(true),
@@ -1043,28 +1092,26 @@ class _PaymentGatewayInvoicesScreenState
                                 ),
                                 const SizedBox(height: 10),
                                 DropdownButtonFormField<int>(
-                                  value:
-                                      vm.selectedCreateProvider?.providerId,
+                                  value: vm.selectedCreateProvider?.providerId,
                                   decoration: InputDecoration(
                                     labelText: context.tr('pgw_label_gateway'),
                                     border: const OutlineInputBorder(),
                                     isDense: true,
                                   ),
-                                  items: vm.configuredGateways
-                                      .map(
-                                        (g) {
-                                          final gName = _isAr
-                                              ? g.providerNameAr
-                                              : (g.providerNameEn.isNotEmpty
-                                                  ? g.providerNameEn
-                                                  : g.providerNameAr);
-                                          return DropdownMenuItem<int>(
-                                            value: g.providerId,
-                                            child: Text('$gName (${g.providerCode})'),
-                                          );
-                                        },
-                                      )
-                                      .toList(),
+                                  items: vm.configuredGateways.map(
+                                    (g) {
+                                      final gName = _isAr
+                                          ? g.providerNameAr
+                                          : (g.providerNameEn.isNotEmpty
+                                              ? g.providerNameEn
+                                              : g.providerNameAr);
+                                      return DropdownMenuItem<int>(
+                                        value: g.providerId,
+                                        child:
+                                            Text('$gName (${g.providerCode})'),
+                                      );
+                                    },
+                                  ).toList(),
                                   onChanged: (val) {
                                     for (final g in vm.configuredGateways) {
                                       if (g.providerId == val) {
@@ -1081,12 +1128,13 @@ class _PaymentGatewayInvoicesScreenState
                                       child: TextField(
                                         controller: _customerNameCtrl,
                                         decoration: InputDecoration(
-                                          labelText:
-                                              context.tr('pgw_label_customer_name'),
+                                          labelText: context
+                                              .tr('pgw_label_customer_name'),
                                           border: const OutlineInputBorder(),
                                           isDense: true,
                                           suffixIcon: IconButton(
-                                            tooltip: context.tr('pgw_tooltip_pick_customer'),
+                                            tooltip: context.tr(
+                                                'pgw_tooltip_pick_customer'),
                                             icon: const Icon(
                                                 Icons.person_search_outlined),
                                             onPressed: () =>
@@ -1106,7 +1154,8 @@ class _PaymentGatewayInvoicesScreenState
                                         controller: _customerPhoneCtrl,
                                         keyboardType: TextInputType.phone,
                                         decoration: InputDecoration(
-                                          labelText: context.tr('pgw_label_phone'),
+                                          labelText:
+                                              context.tr('pgw_label_phone'),
                                           border: const OutlineInputBorder(),
                                           isDense: true,
                                         ),
@@ -1123,7 +1172,8 @@ class _PaymentGatewayInvoicesScreenState
                                           controller: _invIdCtrl,
                                           keyboardType: TextInputType.number,
                                           decoration: InputDecoration(
-                                            labelText: context.tr('pgw_label_inv_id'),
+                                            labelText:
+                                                context.tr('pgw_label_inv_id'),
                                             border: const OutlineInputBorder(),
                                             isDense: true,
                                             suffixIcon: vm.isLookingUpInvoice
@@ -1138,8 +1188,8 @@ class _PaymentGatewayInvoicesScreenState
                                                     ),
                                                   )
                                                 : IconButton(
-                                                    tooltip:
-                                                        context.tr('pgw_tooltip_lookup_inv'),
+                                                    tooltip: context.tr(
+                                                        'pgw_tooltip_lookup_inv'),
                                                     icon: const Icon(Icons
                                                         .manage_search_rounded),
                                                     onPressed: () =>
@@ -1153,11 +1203,11 @@ class _PaymentGatewayInvoicesScreenState
                                       Expanded(
                                         child: TextField(
                                           controller: _amountCtrl,
-                                          keyboardType:
-                                              const TextInputType.numberWithOptions(
-                                                  decimal: true),
+                                          keyboardType: const TextInputType
+                                              .numberWithOptions(decimal: true),
                                           decoration: InputDecoration(
-                                            labelText: context.tr('pgw_label_required_amount'),
+                                            labelText: context.tr(
+                                                'pgw_label_required_amount'),
                                             border: const OutlineInputBorder(),
                                             isDense: true,
                                           ),
@@ -1187,12 +1237,14 @@ class _PaymentGatewayInvoicesScreenState
                                                 keyboardType:
                                                     TextInputType.number,
                                                 decoration: InputDecoration(
-                                                  labelText: context.tr('pgw_label_inv_id'),
+                                                  labelText: context
+                                                      .tr('pgw_label_inv_id'),
                                                   border:
                                                       const OutlineInputBorder(),
                                                   isDense: true,
                                                   suffixIcon: IconButton(
-                                                    tooltip: context.tr('pgw_tooltip_lookup_rem'),
+                                                    tooltip: context.tr(
+                                                        'pgw_tooltip_lookup_rem'),
                                                     icon: const Icon(
                                                         Icons.search,
                                                         size: 18),
@@ -1212,8 +1264,10 @@ class _PaymentGatewayInvoicesScreenState
                                                         .numberWithOptions(
                                                         decimal: true),
                                                 decoration: InputDecoration(
-                                                  labelText: context.tr('pgw_label_amount'),
-                                                  border: const OutlineInputBorder(),
+                                                  labelText: context
+                                                      .tr('pgw_label_amount'),
+                                                  border:
+                                                      const OutlineInputBorder(),
                                                   isDense: true,
                                                 ),
                                               ),
@@ -1223,12 +1277,13 @@ class _PaymentGatewayInvoicesScreenState
                                               onPressed: () =>
                                                   _handleAddConsolidatedRow(vm),
                                               icon: const Icon(Icons.add),
-                                              tooltip: context.tr('pgw_tooltip_add_to_list'),
+                                              tooltip: context.tr(
+                                                  'pgw_tooltip_add_to_list'),
                                             ),
                                           ],
                                         ),
-                                        if (vm.consolidatedItems
-                                            .isNotEmpty) ...[
+                                        if (vm
+                                            .consolidatedItems.isNotEmpty) ...[
                                           const SizedBox(height: 8),
                                           Wrap(
                                             spacing: 6,
@@ -1244,8 +1299,8 @@ class _PaymentGatewayInvoicesScreenState
                                                     style: const TextStyle(
                                                         fontSize: 12),
                                                   ),
-                                                  onDeleted: () =>
-                                                      vm.removeConsolidatedInvoice(
+                                                  onDeleted: () => vm
+                                                      .removeConsolidatedInvoice(
                                                           i),
                                                 );
                                               },
@@ -1320,49 +1375,72 @@ class _PaymentGatewayInvoicesScreenState
         duration: const Duration(milliseconds: 200),
         opacity: vm.isFilterCardExpanded ? 1.0 : 0.0,
         child: vm.isFilterCardExpanded
-            ? Card(
-                margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                elevation: 1,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            ? Container(
+                margin: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
                 child: Column(
                   children: [
                     InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       onTap: vm.toggleFilterCard,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                            horizontal: 14, vertical: 12),
                         child: Row(
                           children: [
-                            Icon(Icons.filter_list,
-                                color: Colors.indigo.shade700, size: 20),
-                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0F2FE),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.filter_list_rounded,
+                                  color: Color(0xFF0369A1), size: 18),
+                            ),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 context.tr('pgw_filter_title'),
                                 style: const TextStyle(
+                                    color: Color(0xFF0F172A),
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 13.5),
+                                    fontSize: 14),
                               ),
                             ),
-                            const Icon(Icons.keyboard_arrow_up),
+                            const Icon(Icons.keyboard_arrow_up_rounded,
+                                color: Color(0xFF64748B)),
                           ],
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                       child: Column(
                         children: [
                           TextField(
                             controller: _searchCtrl,
+                            style: const TextStyle(color: Color(0xFF0F172A)),
                             decoration: InputDecoration(
                               hintText: context.tr('pgw_search_hint'),
-                              prefixIcon: const Icon(Icons.search),
+                              hintStyle:
+                                  const TextStyle(color: Color(0xFF94A3B8)),
+                              prefixIcon: const Icon(Icons.search_rounded,
+                                  color: Color(0xFF0284C7)),
                               suffixIcon: _searchCtrl.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear),
+                                      icon: const Icon(Icons.clear_rounded,
+                                          color: Color(0xFF64748B)),
                                       onPressed: () {
                                         _searchCtrl.clear();
                                         vm.setSearchText('');
@@ -1370,8 +1448,20 @@ class _PaymentGatewayInvoicesScreenState
                                       },
                                     )
                                   : null,
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
                               border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xFFE2E8F0))),
+                              enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xFFE2E8F0))),
+                              focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                      color: Color(0xFF0284C7), width: 1.5)),
                               isDense: true,
                             ),
                             onChanged: (v) {
@@ -1380,21 +1470,34 @@ class _PaymentGatewayInvoicesScreenState
                             },
                             onSubmitted: (_) => vm.loadLinks(goToPage: 1),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Row(
                             children: [
                               Expanded(
                                 child: DropdownButtonFormField<String>(
                                   value: vm.filterProviderCode,
+                                  dropdownColor: Colors.white,
                                   decoration: InputDecoration(
                                     labelText: context.tr('pgw_filter_gateway'),
-                                    border: const OutlineInputBorder(),
+                                    labelStyle: const TextStyle(
+                                        color: Color(0xFF64748B)),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFE2E8F0))),
+                                    enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFE2E8F0))),
                                     isDense: true,
                                   ),
                                   items: [
                                     DropdownMenuItem(
                                         value: 'ALL',
-                                        child: Text(context.tr('pgw_filter_all_gateways'))),
+                                        child: Text(context
+                                            .tr('pgw_filter_all_gateways'))),
                                     const DropdownMenuItem(
                                         value: 'TAP',
                                         child: Text('Tap Payments')),
@@ -1414,36 +1517,56 @@ class _PaymentGatewayInvoicesScreenState
                               Expanded(
                                 child: DropdownButtonFormField<String>(
                                   value: vm.filterStatus,
+                                  dropdownColor: Colors.white,
                                   decoration: InputDecoration(
                                     labelText: context.tr('pgw_filter_status'),
-                                    border: const OutlineInputBorder(),
+                                    labelStyle: const TextStyle(
+                                        color: Color(0xFF64748B)),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF8FAFC),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFE2E8F0))),
+                                    enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFE2E8F0))),
                                     isDense: true,
                                   ),
                                   items: [
                                     DropdownMenuItem(
                                         value: 'ALL',
-                                        child: Text(context.tr('pgw_filter_all_statuses'))),
+                                        child: Text(context
+                                            .tr('pgw_filter_all_statuses'))),
                                     DropdownMenuItem(
                                         value: 'Pending',
-                                        child: Text(context.tr('pgw_status_pending'))),
+                                        child: Text(
+                                            context.tr('pgw_status_pending'))),
                                     DropdownMenuItem(
                                         value: 'Paid',
-                                        child: Text(context.tr('pgw_status_paid'))),
+                                        child: Text(
+                                            context.tr('pgw_status_paid'))),
                                     DropdownMenuItem(
                                         value: 'PartiallyRefunded',
-                                        child: Text(context.tr('pgw_status_partially_refunded'))),
+                                        child: Text(context.tr(
+                                            'pgw_status_partially_refunded'))),
                                     DropdownMenuItem(
                                         value: 'Refunded',
-                                        child: Text(context.tr('pgw_status_refunded'))),
+                                        child: Text(
+                                            context.tr('pgw_status_refunded'))),
                                     DropdownMenuItem(
                                         value: 'Failed',
-                                        child: Text(context.tr('pgw_status_failed'))),
+                                        child: Text(
+                                            context.tr('pgw_status_failed'))),
                                     DropdownMenuItem(
                                         value: 'Expired',
-                                        child: Text(context.tr('pgw_status_expired'))),
+                                        child: Text(
+                                            context.tr('pgw_status_expired'))),
                                     DropdownMenuItem(
                                         value: 'Cancelled',
-                                        child: Text(context.tr('pgw_status_cancelled'))),
+                                        child: Text(context
+                                            .tr('pgw_status_cancelled'))),
                                   ],
                                   onChanged: (v) {
                                     if (v != null) vm.setFilterStatus(v);
@@ -1453,13 +1576,16 @@ class _PaymentGatewayInvoicesScreenState
                               const SizedBox(width: 8),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.indigo.shade700,
+                                  backgroundColor: const Color(0xFF0369A1),
                                   foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 13),
+                                      horizontal: 14, vertical: 14),
                                 ),
                                 onPressed: () => vm.loadLinks(goToPage: 1),
-                                child: const Icon(Icons.search),
+                                child: const Icon(Icons.search_rounded),
                               ),
                             ],
                           ),
@@ -1479,11 +1605,22 @@ class _PaymentGatewayInvoicesScreenState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.link_off, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE0F2FE),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.link_off_rounded,
+                size: 54, color: Color(0xFF0369A1)),
+          ),
+          const SizedBox(height: 14),
           Text(
             context.tr('pgw_empty_links'),
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xFF475569),
+                fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -1496,15 +1633,24 @@ class _PaymentGatewayInvoicesScreenState
     final isBusy = vm.isLinkBusy(item.linkId);
     final canUserRefund = context.watch<AuthProvider>().canRefundPaymentGateway;
     final providerTitle = _providerDisplayName(vm, item);
-    final displayCustName =
-        (item.customerName == 'عميل نقدي' && !_isAr)
-            ? context.tr('pgw_default_cash_customer')
-            : item.customerName;
+    final displayCustName = (item.customerName == 'عميل نقدي' && !_isAr)
+        ? context.tr('pgw_default_cash_customer')
+        : item.customerName;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      elevation: 1.5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -1515,20 +1661,21 @@ class _PaymentGatewayInvoicesScreenState
                 Text(
                   '${context.tr('pgw_invoice_prefix')} #${item.invId}',
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15.5),
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15.5),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     '#${item.linkId}',
-                    style:
-                        const TextStyle(fontSize: 11, color: Colors.black54),
+                    style: const TextStyle(fontSize: 11, color: Colors.black54),
                   ),
                 ),
                 if (item.isConsolidated) ...[
@@ -1610,7 +1757,7 @@ class _PaymentGatewayInvoicesScreenState
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
               ),
             ],
-            const Divider(height: 16),
+            const Divider(height: 18, color: Color(0xFFE2E8F0)),
             Wrap(
               spacing: 6,
               runSpacing: 6,
@@ -1625,25 +1772,28 @@ class _PaymentGatewayInvoicesScreenState
                           if (!mounted) return;
                           _showSnack(context.tr('pgw_link_copied'));
                         },
-                  icon: const Icon(Icons.copy, size: 17),
-                  label: Text(context.tr('pgw_btn_copy')),
+                  icon: const Icon(Icons.copy_rounded,
+                      size: 17, color: Color(0xFF0369A1)),
+                  label: Text(context.tr('pgw_btn_copy'),
+                      style: const TextStyle(color: Color(0xFF0369A1))),
                 ),
                 TextButton.icon(
                   onPressed: item.paymentUrl.isEmpty
                       ? null
                       : () => _sendWhatsApp(item),
-                  icon: const Icon(Icons.chat, size: 17, color: Colors.green),
+                  icon: const Icon(Icons.chat_rounded,
+                      size: 17, color: Color(0xFF059669)),
                   label: Text(context.tr('pgw_btn_whatsapp'),
-                      style: const TextStyle(color: Colors.green)),
+                      style: const TextStyle(color: Color(0xFF059669))),
                 ),
                 TextButton.icon(
                   onPressed: item.paymentUrl.isEmpty || isBusy
                       ? null
                       : () => _showQrPopup(vm, item),
-                  icon: const Icon(Icons.qr_code_2,
-                      size: 18, color: Colors.deepPurple),
+                  icon: const Icon(Icons.qr_code_2_rounded,
+                      size: 18, color: Color(0xFF6D28D9)),
                   label: Text(context.tr('pgw_btn_print_qr'),
-                      style: const TextStyle(color: Colors.deepPurple)),
+                      style: const TextStyle(color: Color(0xFF6D28D9))),
                 ),
               ],
             ),
@@ -1679,9 +1829,11 @@ class _PaymentGatewayInvoicesScreenState
                     if (item.canRefund && canUserRefund)
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.shade600,
+                          backgroundColor: const Color(0xFFE11D48),
                           foregroundColor: Colors.white,
                           elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 8),
                           minimumSize: const Size(0, 36),
@@ -1689,11 +1841,15 @@ class _PaymentGatewayInvoicesScreenState
                         ),
                         onPressed:
                             isBusy ? null : () => _showRefundDialog(vm, item),
-                        icon: const Icon(Icons.undo, size: 17),
+                        icon: const Icon(Icons.undo_rounded, size: 17),
                         label: Text(context.tr('pgw_btn_refund')),
                       ),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0369A1),
+                        side: const BorderSide(color: Color(0xFFBAE6FD)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 8),
                         minimumSize: const Size(0, 36),
@@ -1705,10 +1861,10 @@ class _PaymentGatewayInvoicesScreenState
                           ? const SizedBox(
                               width: 14,
                               height: 14,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Color(0xFF0284C7)),
                             )
-                          : const Icon(Icons.sync, size: 17),
+                          : const Icon(Icons.sync_rounded, size: 17),
                       label: Text(context.tr('pgw_btn_check_status')),
                     ),
                   ],
@@ -1724,15 +1880,25 @@ class _PaymentGatewayInvoicesScreenState
   Widget _buildPaginationBar(PaymentGatewayViewModel vm) {
     final perPage = context.tr('pgw_per_page');
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           DropdownButton<int>(
             value: vm.pageSize,
+            dropdownColor: Colors.white,
+            style: const TextStyle(
+                color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
             underline: const SizedBox.shrink(),
             items: [
               DropdownMenuItem(value: 10, child: Text('10 / $perPage')),
@@ -1748,16 +1914,19 @@ class _PaymentGatewayInvoicesScreenState
           IconButton(
             tooltip: context.tr('pgw_prev_page'),
             onPressed: (vm.hasPrevPage && !vm.isLoading) ? vm.prevPage : null,
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left_rounded),
           ),
           Text(
             '${context.tr('pgw_page_word')} ${vm.pageNumber} ${context.tr('pgw_of_word')} ${vm.totalPages} (${vm.totalCount})',
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Color(0xFF0F172A)),
           ),
           IconButton(
             tooltip: context.tr('pgw_next_page'),
             onPressed: (vm.hasNextPage && !vm.isLoading) ? vm.nextPage : null,
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.chevron_right_rounded),
           ),
         ],
       ),

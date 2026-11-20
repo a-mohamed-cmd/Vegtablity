@@ -114,6 +114,7 @@ Namespace Helpers
         Public Const SP_ACCOUNT_DELETE As String = "[Accounting].[sp_Account_Delete]"
         Public Const SP_ACCOUNT_SEARCH As String = "[Accounting].[sp_Account_Search]"
         Public Const SP_ACCOUNT_GETPARENTS As String = "[Accounting].[sp_Account_GetParents]"
+        Public Const SP_GET_PAYMENT_ACCOUNTS As String = "[Accounting].[sp_GetPaymentAccounts]"
 
         ' =============================================
         ' Accounting Schema - Vouchers

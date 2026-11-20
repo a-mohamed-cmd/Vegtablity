@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/integration_models.dart';
 import '../api_service.dart';
+import 'myfatoorah_gateway_service.dart';
 
 class IntegrationPosService {
   Future<Dio> _buildDio() async {
@@ -96,38 +97,15 @@ class IntegrationPosService {
           }
         }
       } else if (code == 'MYFATOORAH') {
-        final isLive = provider.environmentMode.toLowerCase() == 'live';
-        final baseUrl = provider.baseUrl.trim().isNotEmpty
-            ? provider.baseUrl.trim().replaceAll(RegExp(r'/$'), '')
-            : (isLive ? 'https://api.myfatoorah.com' : 'https://apitest.myfatoorah.com');
-        final res = await gwDio.post(
-          '$baseUrl/v2/SendPayment',
-          data: {
-            'NotificationOption': 'LNK',
-            'CustomerName': custName,
-            'DisplayCurrencyIso': currencyCode.isEmpty ? 'KWD' : currencyCode,
-            'MobileCountryCode': '+965',
-            'CustomerMobile': phoneDigits,
-            'InvoiceValue': double.parse(amount.toStringAsFixed(3)),
-            'Language': 'ar',
-            'CallBackUrl': callbackUrl,
-            'ErrorUrl': callbackUrl,
-            'CustomerReference': 'INV_$invId',
-          },
+        return await MyFatoorahGatewayService().createPaymentLink(
+          provider: provider,
+          invId: invId,
+          amount: amount,
+          currencyCode: currencyCode,
+          customerName: custName,
+          phoneDigits: phoneDigits,
+          callbackUrl: callbackUrl,
         );
-        if (res.data is Map) {
-          final map = Map<String, dynamic>.from(res.data);
-          final dObj = map['Data'] is Map ? Map<String, dynamic>.from(map['Data']) : <String, dynamic>{};
-          final payUrl = (dObj['InvoiceURL'] ?? '').toString();
-          final extId = (dObj['InvoiceId'] ?? '').toString();
-          if (payUrl.isNotEmpty) {
-            return {
-              'PaymentUrl': payUrl,
-              'ExternalChargeID': extId,
-              'ExternalInvoiceID': extId,
-            };
-          }
-        }
       } else if (code == 'UPAYMENTS') {
         final isLive = provider.environmentMode.toLowerCase() == 'live';
         final baseUrl = provider.baseUrl.trim().isNotEmpty
@@ -175,19 +153,66 @@ class IntegrationPosService {
     return null;
   }
 
-  Future<Map<String, dynamic>> fetchProvidersSummary() async {
+  Future<Map<String, dynamic>> fetchProvidersSummary({bool onlyEnabled = true}) async {
     try {
       final dio = await _buildDio();
-      final res = await dio.get('/integrations/providers', queryParameters: {'only_enabled': true});
+      final res = await dio.get('/integrations/providers', queryParameters: {'only_enabled': onlyEnabled});
       if (res.statusCode == 200 && res.data is Map) {
         final rawList = (res.data['providers'] as List?) ?? [];
+        final providers = rawList
+            .map((e) => IntegrationProviderModel.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        await cacheGatewayAccountIds(providers);
         return {
-          'providers': rawList.map((e) => IntegrationProviderModel.fromJson(Map<String, dynamic>.from(e))).toList(),
+          'providers': providers,
           'isTalabatConfigured': res.data['is_talabat_configured'] == true,
         };
       }
     } catch (_) {}
     return {'providers': <IntegrationProviderModel>[], 'isTalabatConfigured': false};
+  }
+
+  static Future<void> cacheGatewayAccountIds(List<IntegrationProviderModel> providers) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = prefs.getStringList('cached_gateway_account_ids') ?? const <String>[];
+      final ids = <String>{...existing};
+      for (final p in providers) {
+        if (p.isPaymentGateway && p.linkedAccountId != null && p.linkedAccountId! > 0) {
+          ids.add(p.linkedAccountId!.toString());
+        }
+      }
+      await prefs.setStringList('cached_gateway_account_ids', ids.toList());
+    } catch (_) {}
+  }
+
+  static Future<List<Map<String, dynamic>>> filterOutGatewayAccounts(
+    List<Map<String, dynamic>> accounts, {
+    List<IntegrationProviderModel>? knownProviders,
+  }) async {
+    final ids = <int>{};
+    if (knownProviders != null) {
+      for (final p in knownProviders) {
+        if (p.isPaymentGateway && p.linkedAccountId != null && p.linkedAccountId! > 0) {
+          ids.add(p.linkedAccountId!);
+        }
+      }
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getStringList('cached_gateway_account_ids') ?? const <String>[];
+      for (final s in cached) {
+        final parsed = int.tryParse(s);
+        if (parsed != null && parsed > 0) ids.add(parsed);
+      }
+    } catch (_) {}
+
+    if (ids.isEmpty) return accounts;
+    return accounts.where((acc) {
+      final raw = acc['AccountID'];
+      final accId = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+      return accId == null || !ids.contains(accId);
+    }).toList();
   }
 
   String _extractErrorMessage(dynamic e, String fallback) {

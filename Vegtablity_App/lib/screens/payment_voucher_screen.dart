@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/voucher_provider.dart';
 import '../services/api_service.dart';
+import '../services/integrations/integration_service.dart';
 import '../providers/shift_provider.dart';
 import '../services/printer_service.dart';
 import '../core/localization/app_localizations.dart';
@@ -74,23 +75,37 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
 
   Future<void> _loadAccounts() async {
     final voucherProv = Provider.of<VoucherProvider>(context, listen: false);
-    setState(() {
-      _accounts = voucherProv.cachedAccounts;
-      if (_accounts.isNotEmpty) {
-        _selectedAccountId = _accounts.first['AccountID'];
-      }
-    });
+    final filteredCached = await IntegrationPosService.filterOutGatewayAccounts(
+      List<Map<String, dynamic>>.from(voucherProv.cachedAccounts),
+    );
+    if (mounted) {
+      setState(() {
+        _accounts = filteredCached;
+        if (_accounts.isNotEmpty &&
+            !_accounts.any((a) => a['AccountID'] == _selectedAccountId)) {
+          _selectedAccountId = _accounts.first['AccountID'];
+        }
+      });
+    }
 
     final api = Provider.of<ApiService>(context, listen: false);
     try {
       final resp = await api.getVoucherAccounts();
       if (resp.statusCode == 200) {
-        setState(() {
-          _accounts = List<Map<String, dynamic>>.from(resp.data);
-          if (_accounts.isNotEmpty && _selectedAccountId == null) {
-            _selectedAccountId = _accounts.first['AccountID'];
-          }
-        });
+        final filtered = await IntegrationPosService.filterOutGatewayAccounts(
+          List<Map<String, dynamic>>.from(resp.data),
+        );
+        if (mounted) {
+          setState(() {
+            _accounts = filtered;
+            if (_accounts.isNotEmpty &&
+                (_selectedAccountId == null ||
+                    !_accounts
+                        .any((a) => a['AccountID'] == _selectedAccountId))) {
+              _selectedAccountId = _accounts.first['AccountID'];
+            }
+          });
+        }
       }
     } catch (e) {
       // Use cached data
@@ -304,11 +319,23 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
           }
         },
         child: Scaffold(
-          backgroundColor: const Color(0xFF12121E),
+          backgroundColor: const Color(0xFFF4F7FA),
           appBar: AppBar(
-            backgroundColor: const Color(0xFF1E1E2C),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFBE123C), Color(0xFFE11D48)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white, size: 20),
               onPressed: () {
                 if (_selectedPartner != null) {
                   setState(() {
@@ -324,46 +351,66 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
             ),
             title: Row(
               children: [
-                const Icon(Icons.arrow_circle_up, color: Colors.orangeAccent),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.arrow_circle_up_rounded,
+                      color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 10),
                 Text(context.tr('pv_screen_title'),
                     style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18)),
               ],
             ),
             bottom: _selectedPartner != null
                 ? PreferredSize(
-                    preferredSize: const Size.fromHeight(50),
+                    preferredSize: const Size.fromHeight(54),
                     child: Padding(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                            horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
-                          color: Colors.orangeAccent.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                              color: Colors.orangeAccent.withOpacity(0.4)),
+                              color: Colors.white.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.storefront,
-                                color: Colors.orangeAccent, size: 18),
+                            const Icon(Icons.storefront_rounded,
+                                color: Colors.white, size: 18),
                             const SizedBox(width: 8),
-                            Text(
+                            Expanded(
+                              child: Text(
                                 '${context.tr('pv_supplier_label')}${_selectedPartner!['PartnerName']}',
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                    color: Colors.orangeAccent,
-                                    fontWeight: FontWeight.bold)),
-                            const Spacer(),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
                             GestureDetector(
                               onTap: () => setState(() {
                                 _selectedPartner = null;
                                 _unpaidInvoices = [];
                               }),
-                              child: const Icon(Icons.close,
-                                  color: Colors.white54, size: 18),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close_rounded,
+                                    color: Colors.white, size: 16),
+                              ),
                             ),
                           ],
                         ),
@@ -377,7 +424,8 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
               constraints: const BoxConstraints(maxWidth: 800),
               child: voucherProv.isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: Colors.orangeAccent))
+                      child:
+                          CircularProgressIndicator(color: Color(0xFFE11D48)))
                   : _selectedPartner == null
                       ? _buildPartnerSelector()
                       : _buildInvoiceList(),
@@ -396,48 +444,131 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
   Widget _buildPartnerSelector() => Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              controller: _searchCtrl,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: context.tr('pv_search_hint'),
-                hintStyle: const TextStyle(color: Colors.white38),
-                prefixIcon:
-                    const Icon(Icons.search, color: Colors.orangeAccent),
-                filled: true,
-                fillColor: const Color(0xFF1E1E2C),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              onChanged: _filterPartners,
+              child: TextField(
+                controller: _searchCtrl,
+                style: const TextStyle(color: Color(0xFF0F172A)),
+                decoration: InputDecoration(
+                  hintText: context.tr('pv_search_hint'),
+                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      color: Color(0xFFBE123C)),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                          color: Color(0xFFE11D48), width: 1.5)),
+                ),
+                onChanged: _filterPartners,
+              ),
             ),
           ),
           Expanded(
             child: _filteredPartners.isEmpty
                 ? Center(
-                    child: Text(context.tr('pv_no_suppliers'),
-                        style: const TextStyle(color: Colors.white38)))
-                : ListView.builder(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.storefront_outlined,
+                            size: 56, color: Color(0xFFCBD5E1)),
+                        const SizedBox(height: 10),
+                        Text(context.tr('pv_no_suppliers'),
+                            style: const TextStyle(
+                                color: Color(0xFF64748B), fontSize: 15)),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                     itemCount: _filteredPartners.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (ctx, i) {
                       final p = _filteredPartners[i];
-                      return ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFF2A2A3C),
-                          child: Icon(Icons.storefront_outlined,
-                              color: Colors.orangeAccent),
+                      final name = (p['PartnerName'] ?? '-').toString();
+                      final initial = name.isNotEmpty
+                          ? name.characters.first.toUpperCase()
+                          : '?';
+                      return Material(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => _selectPartner(p),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border:
+                                  Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A)
+                                      .withValues(alpha: 0.03),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: const Color(0xFFFFF1F2),
+                                  child: Text(
+                                    initial,
+                                    style: const TextStyle(
+                                        color: Color(0xFFBE123C),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(name,
+                                          style: const TextStyle(
+                                              color: Color(0xFF0F172A),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15)),
+                                      if ((p['Phone'] ?? '')
+                                          .toString()
+                                          .isNotEmpty)
+                                        Text(p['Phone'] ?? '',
+                                            style: const TextStyle(
+                                                color: Color(0xFF64748B),
+                                                fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right_rounded,
+                                    color: Color(0xFF94A3B8), size: 22),
+                              ],
+                            ),
+                          ),
                         ),
-                        title: Text(p['PartnerName'] ?? '-',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
-                        subtitle: Text(p['Phone'] ?? '',
-                            style: const TextStyle(color: Colors.white38)),
-                        trailing: const Icon(Icons.arrow_forward_ios,
-                            color: Colors.white38, size: 14),
-                        onTap: () => _selectPartner(p),
                       );
                     },
                   ),
@@ -451,11 +582,21 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.check_circle_outline,
-                color: Colors.orangeAccent, size: 64),
-            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF1F2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline_rounded,
+                  color: Color(0xFFBE123C), size: 56),
+            ),
+            const SizedBox(height: 14),
             Text(context.tr('pv_no_dues'),
-                style: const TextStyle(color: Colors.white54, fontSize: 16)),
+                style: const TextStyle(
+                    color: Color(0xFF475569),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
           ],
         ),
       );
@@ -463,27 +604,35 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
           child: DropdownButtonFormField<int>(
             isExpanded: true,
             value: _selectedAccountId,
-            dropdownColor: const Color(0xFF1E1E2C),
+            dropdownColor: Colors.white,
             decoration: InputDecoration(
               labelText: context.tr('pv_account_label'),
-              labelStyle: const TextStyle(color: Colors.white54),
+              labelStyle: const TextStyle(color: Color(0xFF64748B)),
               filled: true,
-              fillColor: const Color(0xFF1E1E2C),
+              fillColor: Colors.white,
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFE11D48), width: 1.5)),
             ),
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(
+                color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
             items: _accounts
                 .map((a) => DropdownMenuItem<int>(
                       value: a['AccountID'],
                       child: Text(a['AccountName'] ?? '',
                           style: const TextStyle(
-                              color: Colors.white, fontSize: 13)),
+                              color: Color(0xFF0F172A), fontSize: 13)),
                     ))
                 .toList(),
             onChanged: (v) => setState(() => _selectedAccountId = v),
@@ -493,17 +642,24 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: TextField(
             controller: _descCtrl,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Color(0xFF0F172A)),
             decoration: InputDecoration(
               hintText: context.tr('pv_note_hint'),
-              hintStyle: const TextStyle(color: Colors.white38),
+              hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
               filled: true,
-              fillColor: const Color(0xFF1E1E2C),
+              fillColor: Colors.white,
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFE11D48), width: 1.5)),
               prefixIcon:
-                  const Icon(Icons.note_alt_outlined, color: Colors.white38),
+                  const Icon(Icons.note_alt_outlined, color: Color(0xFF64748B)),
             ),
           ),
         ),
@@ -512,15 +668,27 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
           Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const Icon(Icons.wifi_off,
-                      color: Colors.orangeAccent, size: 48),
-                  const SizedBox(height: 12),
-                  Text(context.tr('pv_no_invoices'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.orangeAccent)),
-                ],
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: const Color(0xFFD97706).withValues(alpha: 0.25)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.wifi_off_rounded,
+                        color: Color(0xFFD97706), size: 42),
+                    const SizedBox(height: 10),
+                    Text(context.tr('pv_no_invoices'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Color(0xFFB45309),
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
             ),
           ),
@@ -531,20 +699,29 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(
-                  color: Colors.orangeAccent,
+                  color: Color(0xFFBE123C),
                   fontWeight: FontWeight.bold,
                   fontSize: 18),
               onChanged: (v) => setState(() {}),
               decoration: InputDecoration(
                 labelText: context.tr('pv_free_payment_label'),
-                labelStyle: const TextStyle(color: Colors.white54),
+                labelStyle: const TextStyle(color: Color(0xFF64748B)),
                 filled: true,
-                fillColor: const Color(0xFF1E1E2C),
-                suffixText: ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
-                suffixStyle: const TextStyle(color: Colors.white54),
+                fillColor: Colors.white,
+                suffixText:
+                    ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                suffixStyle: const TextStyle(
+                    color: Color(0xFF475569), fontWeight: FontWeight.w600),
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFE11D48), width: 1.5)),
               ),
             ),
           )
@@ -570,19 +747,27 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: selected ? const Color(0xFF2E1A0A) : const Color(0xFF1E1E2C),
-        borderRadius: BorderRadius.circular(14),
+        color: selected ? const Color(0xFFFFF1F2) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color:
-              selected ? Colors.orangeAccent.withOpacity(0.6) : Colors.white12,
+          color: selected ? const Color(0xFFE11D48) : const Color(0xFFE2E8F0),
           width: selected ? 1.5 : 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color:
+                (selected ? const Color(0xFFE11D48) : const Color(0xFF0F172A))
+                    .withValues(alpha: selected ? 0.08 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         onTap: () => setState(() => _selectedMap[id] = !selected),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -590,8 +775,10 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                 children: [
                   Checkbox(
                     value: selected,
-                    activeColor: Colors.orangeAccent,
-                    checkColor: Colors.black,
+                    activeColor: const Color(0xFFE11D48),
+                    checkColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5)),
                     onChanged: (v) =>
                         setState(() => _selectedMap[id] = v ?? false),
                   ),
@@ -601,11 +788,13 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                       children: [
                         Text('${context.tr('pv_purchase_invoice_label')}$id',
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold)),
+                                color: Color(0xFF0F172A),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15)),
+                        const SizedBox(height: 2),
                         Text(_formatDate(inv['InvDate']),
                             style: const TextStyle(
-                                color: Colors.white38, fontSize: 12)),
+                                color: Color(0xFF64748B), fontSize: 12)),
                       ],
                     ),
                   ),
@@ -615,24 +804,37 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                       Text(
                           '${context.tr('pv_total_label')}${net.toStringAsFixed(3)}',
                           style: const TextStyle(
-                              color: Colors.white54, fontSize: 12)),
-                      Text(
-                          context.tr('pv_remainder_label').replaceAll(
-                              '{amount}', remainder.toStringAsFixed(3)),
-                          style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontWeight: FontWeight.bold)),
+                              color: Color(0xFF64748B), fontSize: 12)),
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF1F2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                            context.tr('pv_remainder_label').replaceAll(
+                                '{amount}', remainder.toStringAsFixed(3)),
+                            style: const TextStyle(
+                                color: Color(0xFFBE123C),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                      ),
                     ],
                   ),
                 ],
               ),
               if (selected)
                 Padding(
-                  padding: const EdgeInsets.only(top: 8, right: 12, left: 12),
+                  padding: const EdgeInsets.only(top: 10, right: 8, left: 8),
                   child: Row(
                     children: [
                       Text(context.tr('pv_payment_amount_label'),
-                          style: const TextStyle(color: Colors.white70)),
+                          style: const TextStyle(
+                              color: Color(0xFF475569),
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: TextFormField(
                           initialValue: (_payAmountMap[id] ?? remainder)
@@ -643,18 +845,29 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                             FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))
                           ],
                           style: const TextStyle(
-                              color: Colors.orangeAccent,
-                              fontWeight: FontWeight.bold),
+                              color: Color(0xFFBE123C),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15),
                           decoration: InputDecoration(
                             isDense: true,
-                            suffixText: ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
+                            suffixText:
+                                ' ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                             suffixStyle: const TextStyle(
-                                color: Colors.white38, fontSize: 12),
+                                color: Color(0xFF64748B), fontSize: 12),
                             filled: true,
-                            fillColor: const Color(0xFF12121E),
+                            fillColor: Colors.white,
                             border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide.none),
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFCBD5E1))),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide:
+                                    const BorderSide(color: Color(0xFFCBD5E1))),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFFE11D48), width: 1.5)),
                           ),
                           onChanged: (v) {
                             final parsed = double.tryParse(v) ?? 0;
@@ -679,10 +892,14 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
         : (double.tryParse(_freePaymentCtrl.text) ?? 0.0);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E1E2C),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
         boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, -2))
+          BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -3))
         ],
       ),
       child: SafeArea(
@@ -695,28 +912,30 @@ class _PaymentVoucherScreenState extends State<PaymentVoucherScreen> {
                 Text(
                     context.tr('pv_selected_invoices').replaceAll(
                         '{count}', _selectedAllocations.length.toString()),
-                    style:
-                        const TextStyle(color: Colors.white54, fontSize: 12)),
+                    style: const TextStyle(
+                        color: Color(0xFF64748B), fontSize: 12)),
                 Text(
                     '${context.tr('pv_total_label')}${total.toStringAsFixed(3)} ${Provider.of<SettingsProvider>(context, listen: false).currencySymbol}',
                     style: const TextStyle(
-                        color: Colors.orangeAccent,
+                        color: Color(0xFFBE123C),
                         fontWeight: FontWeight.bold,
-                        fontSize: 16)),
+                        fontSize: 17)),
               ],
             ),
             const Spacer(),
             ElevatedButton.icon(
-              icon: const Icon(Icons.payment),
+              icon: const Icon(Icons.payment_rounded, size: 19),
               label: Text(context.tr('pv_submit_button'),
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.black)),
+                      fontWeight: FontWeight.bold, color: Colors.white)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orangeAccent,
+                backgroundColor: const Color(0xFFBE123C),
+                foregroundColor: Colors.white,
+                elevation: 0,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(14)),
               ),
               onPressed: _isLoading ? null : _submitPayment,
             ),

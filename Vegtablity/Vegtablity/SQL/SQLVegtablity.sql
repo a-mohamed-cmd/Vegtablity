@@ -1,4 +1,4 @@
--- إنشاء قاعدة البيانات
+﻿-- إنشاء قاعدة البيانات
 -- إنشاء قاعدة البيانات
 -- يمكنك تحديد مسار الملفات (MDF, LDF) بدقة كالتالي:
 --IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'VegtablityDB')
@@ -20654,5 +20654,490 @@ BEGIN
     WHERE (@ArchiveID IS NOT NULL AND a.ArchiveID = @ArchiveID)
        OR (@ArchiveID IS NULL AND @OriginalInvID IS NOT NULL AND a.OriginalInvID = @OriginalInvID)
     ORDER BY a.ArchiveID DESC;
+END
+GO
+
+-- =========================================================================
+-- تحديث إجراء جلب حسابات الصندوق والبنوك لاستبعاد حسابات بوابات الدفع افتراضياً
+-- (@IncludePaymentGateways = 0 للسندات والمشتريات، و = 1 لفواتير المبيعات عند الحاجة)
+-- =========================================================================
+IF OBJECT_ID('[Accounting].[sp_GetPaymentAccounts]', 'P') IS NOT NULL
+    DROP PROCEDURE [Accounting].[sp_GetPaymentAccounts];
+GO
+CREATE PROCEDURE [Accounting].[sp_GetPaymentAccounts]
+    @IncludePaymentGateways BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        c.AccountID,
+        c.AccountCode,
+        c.AccountName
+    FROM [Accounting].[ChartOfAccounts] c
+    WHERE c.AccountCode LIKE '11%'
+      AND c.IsTransactional = 1
+      AND (
+          ISNULL(@IncludePaymentGateways, 0) = 1
+          OR NOT EXISTS (
+              SELECT 1
+              FROM [Settings].[IntegrationProviders] ip
+              WHERE ip.ProviderCategory = 'PAYMENT_GATEWAY'
+                AND ip.LinkedAccountID = c.AccountID
+          )
+      )
+    ORDER BY c.AccountCode;
+END
+GO
+
+-- =========================================================================
+-- تحديث إجراء التوليد التلقائي لحسابات بوابات الدفع الإلكتروني:
+-- 1) حساب المدين لبوابة الدفع: يُنشأ تحت الحساب الرئيسي '11' بالرقم التسلسلي التالي وباسم البوابة
+-- 2) حساب مصروف العمولات: يُنشأ تحت الحساب '65' (ويُنشأ '65' تلقائياً إن لم يوجد) بالرقم التالي
+--    وباسم: مصروف عمولات - <اسم البوابة> (مثل مصروف عمولات - بوابة الدفع MyFatoorah)
+-- =========================================================================
+IF OBJECT_ID('[Accounting].[sp_Integration_EnsureProviderEntityAndAccount]', 'P') IS NOT NULL
+    DROP PROCEDURE [Accounting].[sp_Integration_EnsureProviderEntityAndAccount];
+GO
+CREATE PROCEDURE [Accounting].[sp_Integration_EnsureProviderEntityAndAccount]
+    @ProviderID INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @ProviderCode NVARCHAR(50),
+            @ProviderNameAr NVARCHAR(150),
+            @ProviderCategory NVARCHAR(50),
+            @LinkedAccountID INT,
+            @CommissionAccountID INT,
+            @PartnerID INT,
+            @ConnectionStatus NVARCHAR(50);
+
+    SELECT
+        @ProviderCode = ProviderCode,
+        @ProviderNameAr = ProviderNameAr,
+        @ProviderCategory = ProviderCategory,
+        @LinkedAccountID = LinkedAccountID,
+        @CommissionAccountID = CommissionAccountID,
+        @PartnerID = PartnerID,
+        @ConnectionStatus = ConnectionStatus
+    FROM [Settings].[IntegrationProviders]
+    WHERE ProviderID = @ProviderID;
+
+    -- قاعدة صارمة: لا يتم إنشاء أي حساب أو عميل إلا إذا نجح اختبار الاتصال
+    IF @ConnectionStatus NOT IN ('SandboxVerified', 'LiveVerified')
+        RETURN;
+
+    DECLARE @TranCounter INT = @@TRANCOUNT;
+    IF @TranCounter > 0
+        SAVE TRANSACTION sp_EnsureProv_SP;
+    ELSE
+        BEGIN TRANSACTION;
+
+    BEGIN TRY
+        -- أ)1: التأكد من وجود الحساب الرئيسي لعمولات بوابات الدفع تحت الكود '65' (أو إنشاؤه تلقائياً إذا لم يكن موجوداً)
+        DECLARE @CommParentID INT = NULL,
+                @CommParentCode NVARCHAR(20) = '65',
+                @CommParentLevel INT = 1;
+
+        SELECT TOP 1
+            @CommParentID = AccountID,
+            @CommParentCode = AccountCode,
+            @CommParentLevel = ISNULL(AccountLevel, 1)
+        FROM [Accounting].[ChartOfAccounts]
+        WHERE AccountCode = '65';
+
+        IF @CommParentID IS NULL
+        BEGIN
+            DECLARE @ExpenseRootID INT = NULL;
+            SELECT TOP 1 @ExpenseRootID = AccountID
+            FROM [Accounting].[ChartOfAccounts]
+            WHERE AccountType = 'Expenses' AND ParentAccountID IS NULL
+            ORDER BY AccountLevel ASC, AccountCode ASC;
+
+            IF @ExpenseRootID IS NULL
+                SELECT TOP 1 @ExpenseRootID = AccountID
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE AccountCode IN ('5', '6', '42', '4') AND AccountType = 'Expenses'
+                ORDER BY AccountLevel ASC;
+
+            INSERT INTO [Accounting].[ChartOfAccounts] (
+                AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional
+            )
+            VALUES (
+                '65',
+                N'مصروف عمولات بوابات الدفع الإلكتروني',
+                @ExpenseRootID,
+                'Expenses',
+                CASE WHEN @ExpenseRootID IS NULL THEN 0 ELSE 1 END,
+                0 -- حساب رئيسي تجميعي لا يقبل القيود المباشرة
+            );
+            SET @CommParentID = SCOPE_IDENTITY();
+            SET @CommParentCode = '65';
+            SET @CommParentLevel = CASE WHEN @ExpenseRootID IS NULL THEN 0 ELSE 1 END;
+        END
+        ELSE
+        BEGIN
+            UPDATE [Accounting].[ChartOfAccounts]
+            SET IsTransactional = 0
+            WHERE AccountID = @CommParentID
+              AND IsTransactional <> 0;
+        END
+
+        -- أ)2: إنشاء حساب مصروف عمولات فرعي خاص بالبوابة تحت الحساب '65' برقم الحساب التالي وباسم:
+        -- مصروف عمولات - <اسم البوابة> (مثلاً: مصروف عمولات - بوابة الدفع MyFatoorah)
+        IF @ProviderCategory = 'PAYMENT_GATEWAY' AND @CommParentID IS NOT NULL AND (
+            @CommissionAccountID IS NULL
+            OR @CommissionAccountID = @CommParentID
+            OR NOT EXISTS (
+                SELECT 1
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE AccountID = @CommissionAccountID
+                  AND IsTransactional = 1
+            )
+        )
+        BEGIN
+            DECLARE @SpecificCommName NVARCHAR(150) = N'مصروف عمولات - ' + @ProviderNameAr;
+            SET @CommissionAccountID = NULL;
+
+            SELECT TOP 1 @CommissionAccountID = AccountID
+            FROM [Accounting].[ChartOfAccounts]
+            WHERE ParentAccountID = @CommParentID
+              AND (AccountName = @SpecificCommName OR AccountName LIKE N'%' + @ProviderCode + N'%')
+              AND IsTransactional = 1;
+
+            IF @CommissionAccountID IS NULL
+            BEGIN
+                DECLARE @MaxCommChildCode NVARCHAR(20) = NULL;
+                SELECT @MaxCommChildCode = MAX(AccountCode)
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE ParentAccountID = @CommParentID AND ISNUMERIC(AccountCode) = 1;
+
+                DECLARE @NewCommChildCode NVARCHAR(20);
+                IF @MaxCommChildCode IS NULL
+                    SET @NewCommChildCode = @CommParentCode + '01';
+                ELSE
+                    SET @NewCommChildCode = CAST((CAST(@MaxCommChildCode AS BIGINT) + 1) AS NVARCHAR(20));
+
+                WHILE EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = @NewCommChildCode)
+                    SET @NewCommChildCode = CAST((CAST(@NewCommChildCode AS BIGINT) + 1) AS NVARCHAR(20));
+
+                INSERT INTO [Accounting].[ChartOfAccounts] (
+                    AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional
+                )
+                VALUES (
+                    @NewCommChildCode,
+                    @SpecificCommName,
+                    @CommParentID,
+                    'Expenses',
+                    @CommParentLevel + 1,
+                    1
+                );
+                SET @CommissionAccountID = SCOPE_IDENTITY();
+            END
+
+            IF @CommissionAccountID IS NOT NULL
+            BEGIN
+                UPDATE [Settings].[IntegrationProviders]
+                SET CommissionAccountID = @CommissionAccountID
+                WHERE ProviderID = @ProviderID;
+            END
+        END
+
+        -- ب) إذا كان المزود منصة توصيل (مثل Talabat أو Jahez): يُعامل كـ عميل مبيعات في [Sales].[Partners]
+        IF @ProviderCategory = 'DELIVERY_PLATFORM'
+        BEGIN
+            IF @PartnerID IS NULL OR NOT EXISTS (SELECT 1 FROM [Sales].[Partners] WHERE PartnerID = @PartnerID)
+            BEGIN
+                SELECT TOP 1 @PartnerID = PartnerID
+                FROM [Sales].[Partners]
+                WHERE PartnerType = 'Customer'
+                  AND (PartnerName = @ProviderNameAr OR PartnerName LIKE N'%' + @ProviderCode + N'%');
+
+                IF @PartnerID IS NULL
+                BEGIN
+                    INSERT INTO [Sales].[Partners] (PartnerName, PartnerType, Phone, Address, CurrentBalance, IsActive)
+                    VALUES (@ProviderNameAr, 'Customer', N'', N'منصة طلبات وتوصيل إلكترونية (' + @ProviderCode + N')', 0, 1);
+
+                    SET @PartnerID = SCOPE_IDENTITY();
+                END
+            END
+
+            SELECT @LinkedAccountID = AccountID FROM [Sales].[Partners] WHERE PartnerID = @PartnerID;
+
+            UPDATE [Settings].[IntegrationProviders]
+            SET PartnerID = @PartnerID,
+                LinkedAccountID = @LinkedAccountID
+            WHERE ProviderID = @ProviderID;
+
+            IF @TranCounter = 0
+                COMMIT TRANSACTION;
+            RETURN;
+        END
+
+        -- ج) إذا كان المزود بوابة دفع إلكتروني (Tap / MyFatoorah / UPayments):
+        -- يُنشأ له حساب فرعي جديد تحت حساب '11' ويأخذ الرقم التالي تلقائياً باسم البوابة
+        IF @ProviderCategory = 'PAYMENT_GATEWAY' AND (
+            @LinkedAccountID IS NULL
+            OR NOT EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountID = @LinkedAccountID AND IsTransactional = 1)
+        )
+        BEGIN
+            DECLARE @CashParentID INT = NULL;
+            SELECT TOP 1 @CashParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '11';
+            IF @CashParentID IS NULL
+                SELECT TOP 1 @CashParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountID = 10;
+            IF @CashParentID IS NULL
+                SELECT TOP 1 @CashParentID = AccountID FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = '1102' OR AccountName LIKE N'%البنك%';
+
+            IF @CashParentID IS NOT NULL
+            BEGIN
+                DECLARE @ParentCode NVARCHAR(20), @ParentLevel INT;
+                SELECT @ParentCode = AccountCode, @ParentLevel = ISNULL(AccountLevel, 1)
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE AccountID = @CashParentID;
+
+                -- التحقق أولاً من عدم وجود حساب فرعي مسبق لنفس البوابة تحت الحساب 11
+                SET @LinkedAccountID = NULL;
+                SELECT TOP 1 @LinkedAccountID = AccountID
+                FROM [Accounting].[ChartOfAccounts]
+                WHERE ParentAccountID = @CashParentID
+                  AND (AccountName = @ProviderNameAr OR AccountName LIKE N'%' + @ProviderCode + N'%')
+                  AND IsTransactional = 1;
+
+                IF @LinkedAccountID IS NULL
+                BEGIN
+                    UPDATE [Accounting].[ChartOfAccounts] SET IsTransactional = 0 WHERE AccountID = @CashParentID;
+
+                    DECLARE @MaxChildCode NVARCHAR(20) = NULL;
+                    SELECT @MaxChildCode = MAX(AccountCode)
+                    FROM [Accounting].[ChartOfAccounts]
+                    WHERE ParentAccountID = @CashParentID AND ISNUMERIC(AccountCode) = 1;
+
+                    DECLARE @NewAccountCode NVARCHAR(20);
+                    IF @MaxChildCode IS NULL
+                        SET @NewAccountCode = @ParentCode + '01';
+                    ELSE
+                        SET @NewAccountCode = CAST((CAST(@MaxChildCode AS BIGINT) + 1) AS NVARCHAR(20));
+
+                    WHILE EXISTS (SELECT 1 FROM [Accounting].[ChartOfAccounts] WHERE AccountCode = @NewAccountCode)
+                        SET @NewAccountCode = CAST((CAST(@NewAccountCode AS BIGINT) + 1) AS NVARCHAR(20));
+
+                    INSERT INTO [Accounting].[ChartOfAccounts] (
+                        AccountCode, AccountName, ParentAccountID, AccountType, AccountLevel, IsTransactional
+                    )
+                    VALUES (
+                        @NewAccountCode,
+                        @ProviderNameAr,
+                        @CashParentID,
+                        'Assets',
+                        @ParentLevel + 1,
+                        1
+                    );
+
+                    SET @LinkedAccountID = SCOPE_IDENTITY();
+                END
+
+                IF @LinkedAccountID IS NOT NULL
+                BEGIN
+                    UPDATE [Settings].[IntegrationProviders]
+                    SET LinkedAccountID = @LinkedAccountID
+                    WHERE ProviderID = @ProviderID;
+                END
+            END
+        END
+
+        IF @TranCounter = 0
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @TranCounter = 0
+        BEGIN
+            IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        END
+        ELSE IF XACT_STATE() <> -1
+        BEGIN
+            ROLLBACK TRANSACTION sp_EnsureProv_SP;
+        END
+
+        DECLARE @ErrMsg NVARCHAR(4000) = ERROR_MESSAGE(), @ErrSev INT = ERROR_SEVERITY(), @ErrState INT = ERROR_STATE();
+        RAISERROR(@ErrMsg, @ErrSev, @ErrState);
+    END CATCH
+END
+GO
+
+-- التأكد من اسم MyFatoorah وتطبيق هيكل الحسابات التلقائي (11 و 65) لأي بوابة مختبرة
+UPDATE [Settings].[IntegrationProviders]
+SET ProviderNameAr = N'بوابة الدفع MyFatoorah',
+    DefaultCurrency = ISNULL(NULLIF(DefaultCurrency, ''), 'KWD')
+WHERE ProviderCode = 'MYFATOORAH'
+  AND (ProviderNameAr IS NULL OR ProviderNameAr = '' OR DefaultCurrency IS NULL OR DefaultCurrency = '');
+GO
+
+DECLARE @MigProv2ID INT;
+DECLARE cur_mig_v2 CURSOR LOCAL FAST_FORWARD FOR
+    SELECT ProviderID
+    FROM [Settings].[IntegrationProviders]
+    WHERE ConnectionStatus IN ('SandboxVerified', 'LiveVerified');
+OPEN cur_mig_v2;
+FETCH NEXT FROM cur_mig_v2 INTO @MigProv2ID;
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    EXEC [Accounting].[sp_Integration_EnsureProviderEntityAndAccount] @ProviderID = @MigProv2ID;
+    FETCH NEXT FROM cur_mig_v2 INTO @MigProv2ID;
+END
+CLOSE cur_mig_v2;
+DEALLOCATE cur_mig_v2;
+GO
+
+-- =========================================================================
+-- إيقاف إنشاء قيد فرق الكاش المكرر داخل [Sales].[sp_Shift_Close]
+-- والاكتفاء بالتوليد التلقائي عبر التريجر [Sales].[trg_Shifts_StatusChange]
+-- عند تحديث Status إلى 'Closed' لتفادي توليد قيدين لنفس العجز/الزيادة
+-- =========================================================================
+IF OBJECT_ID('[Sales].[sp_Shift_Close]', 'P') IS NOT NULL
+    DROP PROCEDURE [Sales].[sp_Shift_Close];
+GO
+CREATE PROCEDURE [Sales].[sp_Shift_Close]
+    @ShiftID    INT,
+    @EndingCash DECIMAL(18,3)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        -- ① إغلاق الوردية (تحديث Status = 'Closed' يُفعّل التريجر trg_Shifts_StatusChange تلقائياً
+        --    لإنشاء قيد تسوية فرق الكاش مرة واحدة فقط وترحيل الفواتير والسندات التابعة للوردية)
+        UPDATE [Sales].[Shifts]
+        SET EndTime    = GETDATE(),
+            EndingCash = @EndingCash,
+            Status     = 'Closed'
+        WHERE ShiftID = @ShiftID AND Status = 'Open';
+
+        IF @@ROWCOUNT = 0
+            THROW 50001, N'الوردية غير موجودة أو مغلقة بالفعل', 1;
+
+        -- ② حساب بيانات الملخص للعرض فقط (دون إنشاء قيد يومية مكرر)
+        DECLARE @StartingCash           DECIMAL(18,3) = 0;
+        DECLARE @TotalPaidSalesCash     DECIMAL(18,3) = 0;
+        DECLARE @TotalPaidPurchasesCash DECIMAL(18,3) = 0;
+        DECLARE @TotalReceiptV          DECIMAL(18,3) = 0;
+        DECLARE @TotalPaymentV          DECIMAL(18,3) = 0;
+        DECLARE @ExpectedCash           DECIMAL(18,3) = 0;
+        DECLARE @Difference             DECIMAL(18,3) = 0;
+
+        SELECT @StartingCash = ISNULL(StartingCash, 0)
+        FROM [Sales].[Shifts]
+        WHERE ShiftID = @ShiftID;
+
+        SELECT @TotalPaidSalesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+        FROM (
+            SELECT sp.Amount AS PaidCash
+            FROM [Sales].[InvoicePaymentSplits] sp
+            INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+              AND (
+                  c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+            UNION ALL
+            SELECT h.PaidAmount AS PaidCash
+            FROM [Sales].[InvoiceHeader] h
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Sales' AND h.ShiftID = @ShiftID
+              AND h.PaidAmount > 0
+              AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+              AND (
+                  c.AccountID IS NULL
+                  OR c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+        ) CashSalesUnion;
+
+        SELECT @TotalPaidPurchasesCash = ISNULL(SUM(CAST(PaidCash AS DECIMAL(18,3))), 0)
+        FROM (
+            SELECT sp.Amount AS PaidCash
+            FROM [Sales].[InvoicePaymentSplits] sp
+            INNER JOIN [Sales].[InvoiceHeader] h ON sp.InvID = h.InvID
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON sp.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+              AND (
+                  c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountID IS NULL AND (c.AccountName IS NULL OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+            UNION ALL
+            SELECT h.PaidAmount AS PaidCash
+            FROM [Sales].[InvoiceHeader] h
+            LEFT JOIN [Accounting].[ChartOfAccounts] c ON h.PaymentAccountID = c.AccountID
+            WHERE h.InvType = 'Purchase' AND h.ShiftID = @ShiftID
+              AND h.PaidAmount > 0
+              AND NOT EXISTS (SELECT 1 FROM [Sales].[InvoicePaymentSplits] sp WHERE sp.InvID = h.InvID)
+              AND (
+                  c.AccountID IS NULL
+                  OR c.AccountCode = '1101'
+                  OR c.AccountCode LIKE '1101%'
+                  OR (c.AccountCode IS NULL AND (LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+              )
+        ) CashPurchasesUnion;
+
+        SELECT @TotalReceiptV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers] v
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+            CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+        ) = c.AccountID
+        WHERE v.VoucherType = 'Receipt' AND v.ShiftID = @ShiftID
+          AND (
+              c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR v.PaymentMethod = 'Cash'
+              OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          );
+
+        SELECT @TotalPaymentV = ISNULL(SUM(CAST(v.Amount AS DECIMAL(18,3))), 0)
+        FROM [Accounting].[Vouchers] v
+        LEFT JOIN [Accounting].[ChartOfAccounts] c ON (
+            CASE WHEN ISNUMERIC(v.PaymentMethod) = 1 THEN CAST(v.PaymentMethod AS INT) ELSE v.AccountID END
+        ) = c.AccountID
+        WHERE v.VoucherType = 'Payment' AND v.ShiftID = @ShiftID
+          AND (
+              c.AccountCode = '1101'
+              OR c.AccountCode LIKE '1101%'
+              OR v.PaymentMethod = 'Cash'
+              OR (c.AccountID IS NULL AND (v.PaymentMethod IS NULL OR v.PaymentMethod = '' OR LOWER(c.AccountName) LIKE '%cash%' OR c.AccountName LIKE N'%كاش%' OR c.AccountName LIKE N'%صندوق%'))
+          );
+
+        SET @ExpectedCash = @StartingCash
+                          + @TotalPaidSalesCash
+                          - @TotalPaidPurchasesCash
+                          + @TotalReceiptV
+                          - @TotalPaymentV;
+
+        SET @Difference = @EndingCash - @ExpectedCash;
+
+        COMMIT TRANSACTION;
+
+        -- إرجاع ملخص الإغلاق
+        SELECT
+            @ShiftID                AS ShiftID,
+            @StartingCash           AS StartingCash,
+            @TotalPaidSalesCash     AS TotalPaidSales,
+            @TotalPaidSalesCash     AS TotalCashSales,
+            @TotalPaidSalesCash     AS CashSales,
+            @TotalPaidPurchasesCash AS TotalPaidPurchases,
+            @TotalPaidPurchasesCash AS TotalCashPurchases,
+            @TotalReceiptV          AS TotalReceiptVouchers,
+            @TotalPaymentV          AS TotalPaymentVouchers,
+            @ExpectedCash           AS ExpectedCash,
+            @EndingCash             AS ActualCash,
+            @Difference             AS Difference;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END
 GO
